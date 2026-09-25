@@ -281,6 +281,7 @@ class CharacterMotor {
     this.edgeGuard = false;
     this.climbInput = 0; this.ladder = null; this.ladderCd = 0; this.climbing = false; this.climbDist = 0;
     this.onTerrain = false; this.sliding = false;
+    this.accelK = o.accelK ?? 1; this.frictionK = o.frictionK ?? 1; // v24: bots get momentum (players keep the snappy Quake-style values)
     this._c = [];
   }
 
@@ -330,7 +331,7 @@ class CharacterMotor {
   _friction(dt, hasInput) {
     const v = this.vel, sp = Math.hypot(v.x, v.z);
     if (sp < 0.02) { v.x = 0; v.z = 0; return; }
-    const P = CFG.player, fr = hasInput ? P.friction : P.brakeFriction;
+    const P = CFG.player, fr = (hasInput ? P.friction : P.brakeFriction) * this.frictionK;
     const drop = Math.max(sp, P.stopSpeed) * fr * dt, ns = Math.max(sp - drop, 0) / sp;
     v.x *= ns; v.z *= ns;
   }
@@ -338,7 +339,7 @@ class CharacterMotor {
   _accelerate(wx, wz, wishSpeed, accel, dt, cap = Infinity) {
     const v = this.vel, ws = Math.min(wishSpeed, cap), cur = v.x * wx + v.z * wz, add = ws - cur;
     if (add <= 0) return;
-    let as = accel * wishSpeed * dt; if (as > add) as = add;
+    let as = accel * this.accelK * wishSpeed * dt; if (as > add) as = add;
     v.x += as * wx; v.z += as * wz;
   }
 

@@ -1,0 +1,20 @@
+import { chromium } from 'playwright'; import http from 'node:http'; import fs from 'node:fs'; import path from 'node:path';
+const ROOT = process.cwd(), T = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript' };
+const srv = http.createServer((q, s) => { const p = path.join(ROOT, decodeURIComponent(new URL(q.url, 'http://x').pathname)); if (!fs.existsSync(p) || fs.statSync(p).isDirectory()) { s.writeHead(404); s.end(); return; } s.writeHead(200, { 'Content-Type': T[path.extname(p)] || 'application/octet-stream' }); fs.createReadStream(p).pipe(s); });
+await new Promise((r) => srv.listen(0, '127.0.0.1', r));
+const b = await chromium.launch({ channel: 'chrome', args: ['--use-angle=d3d11', '--enable-gpu'] });
+const p = await b.newPage({ viewport: { width: 1280, height: 720 } });
+await p.goto(`http://127.0.0.1:${srv.address().port}/index.html`); await p.waitForFunction(() => window.app && window.SF2);
+await p.evaluate(async () => { const S = SF2.Settings.data; S.quality = 'high'; Object.assign(S.lobby, { map: 0, rule: 'tdm', allies: 12, enemies: 12 }); await app.startMatch(); app.state = 'playing'; app.audio.init(); app.match.player.spawnProtect = 1e9; });
+await p.waitForTimeout(6000);
+const cdp = await p.context().newCDPSession(p);
+await cdp.send('HeapProfiler.enable'); await cdp.send('HeapProfiler.startSampling', { samplingInterval: 4096, includeObjectsCollectedByMajorGC: true, includeObjectsCollectedByMinorGC: true });
+await p.waitForTimeout(15000); // real rAF frames: sim + render + HUD + audio
+const { profile } = await cdp.send('HeapProfiler.stopSampling');
+const sites = new Map();
+const walk = (n, stack) => { const f = n.callFrame, name = `${f.functionName || '(anon)'} @${(f.url || '').split('/').pop()}:${f.lineNumber + 1}`, st = [...stack, name]; const self = n.selfSize; if (self) { const key = st.slice(-2).join(' ← '); sites.set(key, (sites.get(key) || 0) + self); } for (const c of n.children || []) walk(c, st); };
+walk(profile.head, []);
+const total = [...sites.values()].reduce((a, b) => a + b, 0);
+console.log('sampled live+allocated bytes (15 s):', (total / 1e6).toFixed(1), 'MB');
+console.table([...sites.entries()].sort((a, b) => b[1] - a[1]).slice(0, 16).map(([k, v]) => ({ site: k.slice(0, 110), MB: +(v / 1e6).toFixed(2) })));
+await b.close(); srv.close();

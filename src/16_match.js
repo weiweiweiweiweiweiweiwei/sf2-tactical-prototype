@@ -63,7 +63,7 @@ class Match {
     proxy.castShadow = true; proxy.userData.noAO = true; this.scene.add(proxy); this.shadowProxy = proxy;
     this.applyEnvIntensity();
     progress(0.84, '編譯著色器'); await nextFrame();
-    app.post.configure(this, Settings.data.quality);
+    app.post.configure(this, activeQuality());
     this.startRound();
     this.player.updateCamera(1); this.weapons.update(0, app.input, { x: 0, y: 0 });
     if (app.renderer.compileAsync) { await app.renderer.compileAsync(this.scene, this.camera); await app.renderer.compileAsync(this.weapons.scene, this.weapons.camera); }
@@ -125,6 +125,7 @@ class Match {
       this.envRT = app.pmrem.fromScene(new RoomEnvironment(), 0.04); this.scene.environment = this.envRT.texture;
     }
     if (!this.scene.background) this.scene.background = new THREE.Color(def.background ?? 0x15181b);
+    this.envTex = this.scene.environment; // kept so the low preset can drop world IBL and restore it later
     this.envK = hdr ? def.envIntensity : Math.max(0.6, def.envIntensity);
   }
 
@@ -454,7 +455,7 @@ class Match {
     this.nextSpawnLoadoutIndex = i === this.loadoutIndex ? null : i;
     const L = Settings.data.loadouts[i];
     this.audio.mech('queue');
-    this.app.hud.toast(i === this.loadoutIndex ? `配裝 [F${i + 1}] ${L.name} 已在使用中` : `配裝 [F${i + 1}] ${L.name}（${WEAPON_DEFS[L.primary].name} + ${WEAPON_DEFS[L.secondary].name}）已排入，下次重生時套用`);
+    this.app.hud.toast(i === this.loadoutIndex ? `配裝 ${LOADOUT_KEYS[i]} 已在使用中` : `配裝 ${LOADOUT_KEYS[i]}（${WEAPON_DEFS[L.primary].name} + ${WEAPON_DEFS[L.secondary].name}）已排入，下次重生時套用`);
   }
 
   /* ------------------------------ weapon drops / pickups ------------------------------ */
@@ -585,7 +586,7 @@ class Match {
 
   /* ------------------------------ frame ------------------------------ */
   tick(dt, mouse) {
-    const p = this.player, h = CFG.fixedStep, hud = this.app.hud, input = this.app.input, rb = this.rules.roundBased;
+    const p = this.player, h = CFG.fixedStep, hud = this.app.hud, input = this.app.input, rb = this.rules.roundBased, PR = this.prof || (this.prof = new FrameProfiler()), t0 = performance.now();
     this.time += dt;
     if (this.phase === 'freeze') {
       this.freezeT -= dt;
@@ -613,6 +614,7 @@ class Match {
       this.acc -= h; steps++;
     }
     if (steps >= 14) this.acc = 0;
+    const t1 = performance.now();
     const alpha = this.acc / h;
     p.update(dt);
     const respawns = this.rules.respawns;
@@ -621,9 +623,10 @@ class Match {
       else if (respawns && this.phase === 'live') { b.respawnT -= dt; if (b.respawnT <= 0) { const sp = this.pickSpawn(b.team); b.respawn(sp, sp.spawnYaw ?? this.spawns[b.team].yaw); } }
     }
     this.rules.tick(dt);
+    const t2 = performance.now();
     if (!p.alive) {
       if (respawns) {
-        p.respawnT -= dt; hud.setDeathTimer(`RESPAWN IN ${Math.max(0, p.respawnT).toFixed(1)}s${this.nextSpawnLoadoutIndex !== null ? `  ·  下次配裝 F${this.nextSpawnLoadoutIndex + 1}` : ''}`);
+        p.respawnT -= dt; hud.setDeathTimer(`RESPAWN IN ${Math.max(0, p.respawnT).toFixed(1)}s${this.nextSpawnLoadoutIndex !== null ? `  ·  下次配裝 ${LOADOUT_KEYS[this.nextSpawnLoadoutIndex]}` : ''}`);
         if (p.respawnT <= 0 && this.phase === 'live') { const sp = this.pickSpawn(p.team); p.respawn(sp, sp.spawnYaw ?? this.spawns[p.team].yaw); hud.showDeath(false); }
       } else {
         if (p.spectating && !p.spectating.alive) this.nextSpectate();
@@ -643,7 +646,9 @@ class Match {
     for (const fn of this.builder.animated) fn(dt, this.time);
     for (const m of this.builder.shafts) m.uniforms.uTime.value = this.time;
     this.spotT -= dt; if (this.spotT <= 0) { this.spotT = 0.15; this.updateSpotting(); }
+    this.soldierLOD();
     this.audio.setListener(this.camera.position, this.camera.getWorldDirection(TMP_V1));
+    const t3 = performance.now();
 
     const w = this.weapons.current;
     hud.setHealth(p.hp, p); hud.setWeapon(this.weapons); hud.setScore(this);
@@ -670,6 +675,17 @@ class Match {
     hud.markers(this.rules.markers([]), this.camera);
     hud.scoreboard(input.down('Tab') ? this : null);
     hud.update(dt, this);
+    const t4 = performance.now(); PR.add('sim', t1 - t0); PR.add('ai', t2 - t1); PR.add('fx', t3 - t2); PR.add('hud', t4 - t3);
+  }
+
+  // v24: soldiers beyond ~15 m draw the ~8× lighter body (24 full bodies were ~0.5 M triangles a frame with shadows — the
+  // main cost on integrated GPUs). Distance is scaled by the scope zoom so an enemy seen through a scope keeps full detail.
+  soldierLOD() {
+    const cam = this.camera, ws = this.weapons, zoom = Math.tan(cam.fov * 0.00872665) / Math.tan((ws.baseFov || cam.fov) * 0.00872665);
+    for (const b of this.bots) {
+      const s = b.model, far = s.body.geometry === s.lod[1], d = s.root.position.distanceTo(cam.position) * zoom;
+      if (far ? d < 13 : d > 16) s.body.geometry = s.lod[far ? 0 : 1];
+    }
   }
 
   updateSpotting() {

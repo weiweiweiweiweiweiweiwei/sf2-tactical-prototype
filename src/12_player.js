@@ -6,7 +6,8 @@
 class Combatant {
   constructor(game, team, name, isPlayer) {
     this.game = game; this.team = team; this.name = name; this.isPlayer = isPlayer;
-    this.motor = new CharacterMotor(game.collision, { radius: CFG.player.radius, height: CFG.player.height, crouchHeight: CFG.player.crouchHeight });
+    // v24: bots accelerate / brake at ~60 % of the player's rate — with the player's instant stops their A-D strafes and dodges looked like teleports
+    this.motor = new CharacterMotor(game.collision, { radius: CFG.player.radius, height: CFG.player.height, crouchHeight: CFG.player.crouchHeight, accelK: isPlayer ? 1 : 0.6, frictionK: isPlayer ? 1 : 0.6 });
     this.alive = true; this.hp = 100; this.spawnProtect = 0; this.respawnT = 0; this.yaw = 0;
     this.kills = 0; this.deaths = 0; this.assists = 0; this.score = 0; this.headshots = 0;
     this.damageLog = new Map(); this.lastPart = 'chest'; this.holdE = false; this.carrying = false;
@@ -231,7 +232,7 @@ class Player extends Combatant {
     if (g.nextSpawnLoadoutIndex !== null && g.nextSpawnLoadoutIndex !== g.loadoutIndex) { // F1–F5 queue: the new kit is issued only now
       g.loadoutIndex = g.nextSpawnLoadoutIndex;
       g.weapons.rebuild(loadoutDefs(g.mode, Settings.data.loadouts[g.loadoutIndex]));
-      g.app.hud.toast(`已換上配裝 [F${g.loadoutIndex + 1}] ${Settings.data.loadouts[g.loadoutIndex].name}`);
+      g.app.hud.toast(`已換上配裝 ${LOADOUT_KEYS[g.loadoutIndex]}`);
     }
     g.nextSpawnLoadoutIndex = null;
     this.setSpectate(null);

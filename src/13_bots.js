@@ -207,7 +207,7 @@ class BotAI {
   // HIT DODGE: an emergency side-slide perpendicular to the incoming fire (toward the clearer side), or a crouch.
   _dodge(fromPos) {
     if (this.dodgeCd > 0 || !this.bot.alive || this.bot.motor.climbing) return;
-    this.dodgeCd = rand(1.1, 2.0);
+    this.dodgeCd = rand(1.8, 3.2);
     const my = this.bot.motor.pos, dx = fromPos.x - my.x, dz = fromPos.z - my.z, L = Math.hypot(dx, dz) || 1;
     if (Math.random() < 0.38) { this.crouchT = rand(0.7, 1.4); return; }
     let px = -dz / L, pz = dx / L;
@@ -215,7 +215,7 @@ class BotAI {
     const hl = col.raycast(o, new THREE.Vector3(px, 0, pz), 2.5), hr = col.raycast(o, new THREE.Vector3(-px, 0, -pz), 2.5);
     const left = hl ? hl.t : 2.5, right = hr ? hr.t : 2.5;
     if (right > left + 0.3 || (Math.abs(right - left) <= 0.3 && Math.random() < 0.5)) { px = -px; pz = -pz; }
-    this.dodgeX = px; this.dodgeZ = pz; this.dodgeT = rand(0.26, 0.42); this.strafeDir = 0; this.strafeT = 0;
+    this.dodgeX = px; this.dodgeZ = pz; this.dodgeT = rand(0.4, 0.65); this.strafeDir = 0; this.strafeT = 0;
     if (Math.random() < 0.12) this.wantJump = true;
   }
 
@@ -223,7 +223,7 @@ class BotAI {
   onSuppressed(fromPos) {
     if (!this.bot.alive || this.suppressCd > 0) return;
     this.suppressCd = 0.8; this.alertT = 3;
-    if (this.state === 'ENGAGE' || this.state === 'COVER') { if (Math.random() < 0.55) this._dodge(fromPos); return; }
+    if (this.state === 'ENGAGE' || this.state === 'COVER') { if (Math.random() < 0.35) this._dodge(fromPos); return; }
     if (this.state === 'MELEE' || this.bot.carrying) return;
     const my = this.bot.motor.pos, d = my.distanceTo(fromPos), err = clamp(d * 0.2, 0.6, 8), a = Math.random() * 6.283;
     const est = new THREE.Vector3(fromPos.x + Math.cos(a) * err, fromPos.y, fromPos.z + Math.sin(a) * err);
@@ -434,7 +434,7 @@ class BotAI {
       case 'COVER': this._cover(dt); break;
     }
     if (this.dodgeT > 0 && (this.state === 'ENGAGE' || this.state === 'COVER' || this.state === 'INVESTIGATE')) { // dodge overrides the legs, not the aim
-      this.dodgeT -= dt; this.wishX = this.dodgeX; this.wishZ = this.dodgeZ; this.wishSpeed = CFG.bot.runSpeed * 1.22;
+      this.dodgeT -= dt; this.wishX = this.dodgeX; this.wishZ = this.dodgeZ; this.wishSpeed = CFG.bot.runSpeed * 0.8; // v24: was ×1.22 for 0.26–0.42 s (read as a teleport)
     }
     if (bot.motor.crouching) this.wishSpeed *= 0.45;
     this._stuckCheck(dt);
@@ -498,13 +498,19 @@ class BotAI {
       } else if (dist < rMin && kind !== 'shotgun') { // too close for this weapon: back off
         const dx = bot.motor.pos.x - t.motor.pos.x, dz = bot.motor.pos.z - t.motor.pos.z, d = Math.hypot(dx, dz) || 1;
         this.wishX = dx / d; this.wishZ = dz / d; this.wishSpeed = 2.4;
-      } else { // TACTICAL STRAFE: A/D shuffle that never stops while firing, orbiting toward my preferred range (semi-circle)
+      } else { // TACTICAL STRAFE while firing, orbiting toward my preferred range. v24: human rhythm — 0.8–1.8 s strides, a reversal
+        // only half the time, and ~25 % planted-feet bursts (was a 0.3–0.85 s A/D jiggle reversing 72 % of the time)
         this.strafeT -= dt;
-        if (this.strafeT <= 0) { this.strafeT = rand(0.3, 0.85) * (kind === 'sniper' ? 1.7 : 1); this.strafeDir = this.strafeDir === 0 ? (Math.random() < 0.5 ? -1 : 1) : Math.random() < 0.72 ? -this.strafeDir : this.strafeDir; }
+        if (this.strafeT <= 0) {
+          const plant = this.strafeDir !== 0 && Math.random() < 0.25;
+          this.strafeT = (plant ? rand(0.5, 1.1) : rand(0.8, 1.8)) * (kind === 'sniper' ? 1.5 : 1);
+          this.strafeDir = plant ? 0 : this.lastStrafe && Math.random() < 0.5 ? this.lastStrafe : -(this.lastStrafe || (Math.random() < 0.5 ? -1 : 1));
+          if (this.strafeDir) this.lastStrafe = this.strafeDir;
+        }
         const sx = Math.cos(bot.yaw) * this.strafeDir, sz = -Math.sin(bot.yaw) * this.strafeDir, want = (rMin + rMax) / 2, radial = clamp((dist - want) / want, -0.45, 0.45);
         let wx = sx - Math.sin(bot.yaw) * radial, wz = sz - Math.cos(bot.yaw) * radial; const wl = Math.hypot(wx, wz) || 1; wx /= wl; wz /= wl;
         const av = this._avoidance(wx, wz);
-        this.wishX = wx + av.x; this.wishZ = wz + av.z; this.wishSpeed = kind === 'sniper' ? 1.3 : 2.3 + D.strafe * 0.9;
+        this.wishX = wx + av.x; this.wishZ = wz + av.z; this.wishSpeed = this.strafeDir === 0 ? (Math.abs(radial) > 0.3 ? 1.2 : 0) : kind === 'sniper' ? 1.2 : 1.8 + D.strafe * 0.7;
       }
       this.reactT -= dt;
       if (dist < 1.4 && this.meleeCd <= 0 && this.reactT <= 0) { this.meleeCd = 1.3; if (Math.random() < 0.65) this._grab(t); }

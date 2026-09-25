@@ -165,12 +165,12 @@ function terrainShade(T, B, px = 256) {
   return c;
 }
 
-// v17 `look`: film grade in DaVinci Resolve units (see LOOK_DEFAULT in 15_postfx.js), measured against SF2 screenshots:
+// `look`: SF2 / UE3-style levels (see LOOK_DEFAULT in 15_postfx.js), matched to SF2 screenshots in v17 and carried over in v24:
 // SF2 interiors sit at mean luma ≈ 0.16–0.18 with chroma ≈ 0.01–0.02, its sunny exteriors at luma ≈ 0.45, chroma ≈ 0.035.
 const MAPS = [
   {
     id: 'warehouse', name: '廢棄倉庫', en: 'WAREHOUSE', desc: '室內 · 貨櫃巷道與二樓鐵網走廊 · 60×40', slogan: 'CLOSE QUARTERS · 室內近戰與中距離交火',
-    look: { exposure: 0.66, sat: 26, contrast: 1.16, pivot: 0.3, gamma: [-0.035, 0, 0, 0], shadowSat: 0.5, highSat: 0.65 }, // low-key interior: pools of light, near-neutral shadows
+    look: { exposure: 0.66, desat: 0.53, contrast: 1.16, pivot: 0.3, midtones: 1.05 }, // low-key interior: pools of light, near-neutral shadows
     bounds: { minX: -30, maxX: 30, minZ: -20, maxZ: 20 }, indoor: true, navLevels: [0, 4.2],
     hdri: 'empty_warehouse_01', hdriBackground: false, background: 0x15181b, envIntensity: 0.3,
     sun: { pos: [-16, 42, 10], color: 0xfff0d2, intensity: 3.6 }, hemi: [0xb9c4d0, 0x3b352d, 0.12], exposure: 1.0,
@@ -239,7 +239,7 @@ const MAPS = [
   },
   {
     id: 'desert', name: '沙漠小鎮', en: 'DESERT TOWN', desc: '戶外 · 烈日廣場、屋頂狙擊點 · 80×56', slogan: 'HIGH NOON · 屋頂、巷弄與中央噴泉廣場',
-    look: { sat: 30, contrast: 1.14, pivot: 0.4, gain: [1.06, 1, 1, 1], shadowSat: 0.6, highSat: 0.7 },
+    look: { desat: 0.44, contrast: 1.14, pivot: 0.4, highlights: 1.06 },
     bounds: { minX: -40, maxX: 40, minZ: -28, maxZ: 28 }, indoor: false, navLevels: [0, 3.8],
     hdri: 'qwantani_noon_puresky', hdriBackground: true, envIntensity: 0.48, sky: { turbidity: 6, rayleigh: 1.2, elevation: 55, azimuth: 150 },
     sun: { pos: [30, 60, -20], color: 0xfff1d6, intensity: 3.0, auto: true }, hemi: [0xdce8ff, 0x8a6c48, 0.55], exposure: 0.9,
@@ -291,7 +291,7 @@ const MAPS = [
   },
   {
     id: 'harbor', name: '港口碼頭', en: 'HARBOR DOCKS', desc: '戶外黃昏 · 貨櫃迷宮、龍門吊、貨櫃塔 · 84×48', slogan: 'SUNSET PORT · 貨櫃掩體與高處狙擊塔',
-    look: { exposure: 0.92, sat: 40, contrast: 1.1, pivot: 0.38, shadowSat: 0.6, highSat: 0.8 },
+    look: { exposure: 0.92, desat: 0.29, contrast: 1.1, pivot: 0.38 },
     bounds: { minX: -42, maxX: 42, minZ: -24, maxZ: 24 }, indoor: false, navLevels: [0, 5.2],
     hdri: 'industrial_sunset_02_puresky', hdriBackground: true, envIntensity: 0.55, bgIntensity: 0.8, sky: { turbidity: 9, rayleigh: 2.5, elevation: 7, azimuth: 250 },
     sun: { pos: [-60, 18, 30], color: 0xffc38a, intensity: 3.2, auto: true }, hemi: [0x9fb4d8, 0x4a3a2c, 0.55], exposure: 1.0,
@@ -347,7 +347,7 @@ const MAPS = [
   },
   {
     id: 'office', name: '辦公大樓', en: 'OFFICE TOWER', desc: '室內 · 挑高中庭、玻璃會議室、雙層陽台 · 56×40', slogan: 'CORPORATE · 隔間、走廊與中庭陽台的近距離交戰',
-    look: { exposure: 0.66, sat: 42, contrast: 1.12, pivot: 0.32, gamma: [-0.02, 0, 0, 0], shadowSat: 0.6, highSat: 0.7 },
+    look: { exposure: 0.66, desat: 0.22, contrast: 1.12, pivot: 0.32, midtones: 1.03 },
     bounds: { minX: -28, maxX: 28, minZ: -20, maxZ: 20 }, indoor: true, navLevels: [0, 3.6],
     hdri: 'modern_buildings_2', hdriBackground: true, envIntensity: 0.3, sky: { turbidity: 4, rayleigh: 1, elevation: 35, azimuth: 120 }, bloom: 1.2,
     sun: { pos: [35, 40, 25], color: 0xfff3e0, intensity: 2.4, auto: true }, hemi: [0xe8eef8, 0x5a5044, 0.25], exposure: 0.78,
@@ -414,7 +414,7 @@ const MAPS = [
   },
   {
     id: 'snow', name: '雪地基地', en: 'SNOW BASE', desc: '戶外 · 長視距狙擊、地堡與瞭望塔 · 100×64', slogan: 'FROSTBITE · 長距離狙擊與地堡攻防',
-    look: { exposure: 0.76, sat: 46, contrast: 1.18, pivot: 0.5, lift: [-0.03, 0, 0, 0], highSat: 0.8 },
+    look: { exposure: 0.76, desat: 0.14, contrast: 1.18, pivot: 0.5, shadows: 0.03 },
     bounds: { minX: -50, maxX: 50, minZ: -32, maxZ: 32 }, indoor: false, navLevels: [0, 3.5, 4.0],
     hdri: 'snow_field_puresky', hdriBackground: true, envIntensity: 0.5, sky: { turbidity: 10, rayleigh: 0.6, elevation: 20, azimuth: 200 },
     sun: { pos: [40, 35, -30], color: 0xe8f0ff, intensity: 2.2, auto: true }, hemi: [0xdfe8f5, 0xa0a8b4, 0.5], exposure: 0.82,
@@ -464,7 +464,7 @@ const MAPS = [
     },
   },  {
     id: 'ruins', name: '遺跡山丘', en: 'RUINS HILL', desc: '戶外巨型地圖 · 中央兩層山丘與遺跡塔、坡道與梯子 · 200×120', slogan: 'KING OF THE HILL · 攻上山丘遺跡，奪下制高點',
-    look: { sat: 30, contrast: 1.14, pivot: 0.4, gain: [1.05, 1, 1, 1], tint: 12, shadowSat: 0.6, highSat: 0.7 },
+    look: { desat: 0.45, contrast: 1.14, pivot: 0.4, highlights: [1.061, 1.046, 1.061] },
     bounds: { minX: -100, maxX: 100, minZ: -60, maxZ: 60 }, indoor: false, navLevels: [0, 2.4, 3.6, 5.4, 10.2], radarRange: 38,
     hdri: 'kloofendal_48d_partly_cloudy_puresky', hdriBackground: true, envIntensity: 0.5, sky: { turbidity: 4, rayleigh: 1.3, elevation: 42, azimuth: 215 },
     sun: { pos: [-40, 62, 28], color: 0xfff0d8, intensity: 3.0, auto: true }, hemi: [0xd8e4f5, 0x66683f, 0.5], exposure: 0.86,
@@ -604,7 +604,7 @@ const MAPS = [
   },
   {
     id: 'ridge', name: '山嶺前哨', en: 'RIDGE OUTPOST', desc: '超大山地地圖 · 山路、陡坡、岩石區、三層樓建築（樓梯＋梯子登頂）· 280×280', slogan: 'HOLD THE PASS · 翻越山嶺，拿下山口要塞',
-    look: { sat: 34, contrast: 1.15, pivot: 0.38, gain: [1.1, 1, 1, 1], shadowSat: 0.6, highSat: 0.7 },
+    look: { desat: 0.34, contrast: 1.15, pivot: 0.38, highlights: 1.1 },
     bounds: { minX: -140, maxX: 140, minZ: -140, maxZ: 140 }, indoor: false, navLevels: [], navStep: 2.5, viewMult: 1.4, radarRange: 50,
     hdri: 'kloofendal_48d_partly_cloudy_puresky', hdriBackground: true, envIntensity: 0.5, sky: { turbidity: 5, rayleigh: 1.4, elevation: 38, azimuth: 225 },
     sun: { pos: [-50, 70, 30], color: 0xfff0d8, intensity: 3.1, auto: true }, hemi: [0xd8e4f5, 0x5f6a3c, 0.52], exposure: 0.86,

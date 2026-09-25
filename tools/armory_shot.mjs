@@ -1,4 +1,4 @@
-// Screenshots the armory (倉庫) card grid after the background thumbnail renders finish: node tools/armory_shot.mjs [waitMs]
+// Screenshots the armory (倉庫) page (+ page 2 / set B) after the background thumbnail renders finish: node tools/armory_shot.mjs [waitMs]
 import { chromium } from 'playwright'; import http from 'node:http'; import fs from 'node:fs'; import path from 'node:path';
 const ROOT = process.cwd(), T = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.webp': 'image/webp', '.png': 'image/png' };
 const srv = http.createServer((q, s) => { const p = path.join(ROOT, decodeURIComponent(new URL(q.url, 'http://x').pathname)); if (!fs.existsSync(p) || fs.statSync(p).isDirectory()) { s.writeHead(404); s.end(); return; } s.writeHead(200, { 'Content-Type': T[path.extname(p)] || 'application/octet-stream' }); fs.createReadStream(p).pipe(s); });
@@ -12,5 +12,6 @@ const r = await p.evaluate(() => { const done = Object.keys(window.app.thumbs ||
 await p.waitForTimeout(1500);
 r.cardsWithRender = await p.evaluate(() => document.querySelectorAll('#whList .whGun .th img:not(.ln)').length);
 await p.screenshot({ path: 'tools/out/armory.png' });
-await p.evaluate(() => { document.getElementById('whList').scrollTop = 900; }); await p.waitForTimeout(300); await p.screenshot({ path: 'tools/out/armory_scrolled.png' });
+await p.evaluate(() => { document.querySelector('#whPager button[data-p="1"]:not([disabled])')?.click(); document.querySelector('#whSets button[data-i="1"]')?.click(); }); await p.waitForTimeout(900); await p.screenshot({ path: 'tools/out/armory_page2.png' });
+r.lobbyHidden = await p.evaluate(() => !document.getElementById('lobby').classList.contains('on'));
 console.log(JSON.stringify({ ...r, errs })); await b.close(); srv.close();

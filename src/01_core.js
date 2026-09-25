@@ -11,7 +11,6 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
-import { BokehPass } from 'three/addons/postprocessing/BokehPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { SMAAPass } from 'three/addons/postprocessing/SMAAPass.js';
 import { Pass, FullScreenQuad } from 'three/addons/postprocessing/Pass.js';
@@ -329,6 +328,8 @@ const DEFAULT_LOADOUTS = [
   { name: '火力支援', primary: 'm249', secondary: 'p226' },
 ];
 
+const LOADOUT_KEYS = 'ABCDE'; // v24: the 5 loadout sets are letters (SF2 armory tabs), no names; F1–F5 queue them in a match
+
 const MODES = {
   general: { name: '一般模式', desc: '配裝主武器 + 副武器 + 刀 + 三種投擲物', slots: ['primary', 'secondary', 'knife', 'he', 'flash', 'smoke'] },
   rifle: { name: '步槍戰', desc: '只能使用步槍 / 衝鋒槍 / 機槍與刀', slots: ['primary', 'knife'], primaryFilter: ['rifle', 'smg', 'lmg'], fallback: 'm4a1' },
@@ -401,11 +402,34 @@ function calcDamage(def, part, dist, mult = 1) {
   return base * m * mult;
 }
 
+// v24: lightweight per-frame profiler (EMA + worst of the last window) → window.__stats / tools/check.mjs / FPS overlay.
+class FrameProfiler {
+  constructor() { this.k = {}; }
+  add(name, ms) { const e = this.k[name] || (this.k[name] = { avg: ms, max: 0, winMax: 0, n: 0 }); e.avg += (ms - e.avg) * 0.05; e.winMax = Math.max(e.winMax, ms); if (++e.n >= 120) { e.max = e.winMax; e.winMax = 0; e.n = 0; } }
+  snapshot() { const o = {}; for (const [k, e] of Object.entries(this.k)) o[k] = { avg: +e.avg.toFixed(2), max: +Math.max(e.max, e.winMax).toFixed(1) }; return o; }
+}
+
+// v24 input latency: a GPU that cannot finish a frame within one refresh lets the browser queue 2–3 frames, so the picture
+// trails the mouse by 50–100 ms even at a decent FPS. A fence after each frame tells how many submitted frames the GPU has
+// not finished yet (WebGL2 updates sync status between tasks, i.e. by the next rAF).
+class GpuPacer {
+  constructor(gl) { this.gl = gl; this.ok = !!(gl && gl.fenceSync); this.fences = []; this.skips = 0; }
+  inFlight() {
+    const gl = this.gl;
+    while (this.fences.length && gl.getSyncParameter(this.fences[0], gl.SYNC_STATUS) === gl.SIGNALED) gl.deleteSync(this.fences.shift());
+    return this.fences.length;
+  }
+  mark() {
+    if (!this.ok) return;
+    const gl = this.gl, f = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0); gl.flush();
+    if (f) this.fences.push(f); if (this.fences.length > 4) gl.deleteSync(this.fences.shift());
+  }
+}
+
 const Settings = {
   data: {
-    sens: 2.0, zoomSens: 1.0, volume: 0.8, fov: 75, quality: 'high', hdri: true, dof: true, adsMode: 'toggle', announcer: true, showFps: true, hipMode: 'precise', killcam: true,
+    sens: 2.0, zoomSens: 1.0, volume: 0.8, fov: 75, quality: 'high', hdri: true, adsMode: 'toggle', announcer: true, showFps: true, hipMode: 'precise', killcam: true,
     hudStyle: 'minimal', // v19: 'minimal' (SF2) | 'panel' (v5)
-    look: {}, // v17: per-map player grade (Resolve units), see LOOK_DEFAULT
     loadouts: DEFAULT_LOADOUTS.map((l) => Object.assign({}, l)),
     lobby: { map: 5, mode: 'general', rule: 'dom', difficulty: 1, allies: 6, enemies: 6, loadout: 0,
       ruleCfg: Object.fromEntries(Object.entries(RULES).map(([k, r]) => [k, Object.assign({}, r.def)])) },

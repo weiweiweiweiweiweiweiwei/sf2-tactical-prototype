@@ -180,7 +180,7 @@ class AudioEngine {
   }
 
   constructor() {
-    this.ctx = null; this.volume = Settings.data.volume; this.voiceEnds = []; this.lastCasing = 0; this.lastBounce = 0; // v23: voices counted by scheduled end time
+    this.ctx = null; this.volume = Settings.data.volume; this.voiceList = []; this.lastCasing = 0; this.lastBounce = 0; // v24: active bank voices {src, g, end} in start order (voice stealing)
     this.listener = new THREE.Vector3(); this.acoustics = ACOUSTICS.warehouse; this.ambNodes = [];
   }
 
@@ -189,14 +189,32 @@ class AudioEngine {
     const AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return;
     const ctx = this.ctx = new AC({ latencyHint: 'interactive' });
+    this.nodesMade = 0; this.busResets = 0;
+    if (/[?&]check=/.test(location.search)) // tools/check.mjs --audio: count node churn (every SFX builds a small graph)
+      for (const f of ['createGain', 'createBiquadFilter', 'createPanner', 'createOscillator', 'createBufferSource', 'createDelay', 'createWaveShaper', 'createStereoPanner']) { const o = ctx[f].bind(ctx); ctx[f] = (...a) => { this.nodesMade++; return o(...a); }; }
     // v23: never stay silent — resume whenever the browser suspends / interrupts the context (device switch, tab restore)
     ctx.onstatechange = () => { if (ctx.state !== 'running' && ctx.state !== 'closed') setTimeout(() => ctx.resume().catch(() => {}), 120); };
     document.addEventListener('visibilitychange', () => { if (!document.hidden && ctx.state !== 'running') ctx.resume().catch(() => {}); });
     this.master = ctx.createGain(); this.master.gain.value = this.volume;
+    this.noise = this._makeNoise(3);
+    this.tinn = ctx.createOscillator(); this.tinn.frequency.value = 3900; this.tinn.start();
+    this._buildBus();
+    this.setAcoustics(this.acoustics);
+    setInterval(() => this._watchdog(), 500);
+  }
+
+  // Shared output stages. The muffle / echo low-passes and the compressor are recursive: ONE non-finite sample (an unstable
+  // per-voice filter, a degenerate panner) leaves them outputting NaN forever = the game goes permanently silent. v24: the
+  // watchdog rebuilds all of them (and cuts every voice still wired to the old inputs) when the output is ever non-finite.
+  _buildBus() {
+    const ctx = this.ctx;
+    for (const n of [this.master, this.tinn, this.dry, this.reverbIn, this.wet, this.echoIn, this.muffle, this.comp, this.tinnG, ...(this.echoTaps || []).map((e) => e.g)])
+      if (n) try { n.disconnect(); } catch (e) { /* was not connected */ }
     this.muffle = ctx.createBiquadFilter(); this.muffle.type = 'lowpass'; this.muffle.frequency.value = 22000; this.muffle.Q.value = 0.5;
     this.comp = ctx.createDynamicsCompressor();
     this.comp.threshold.value = -14; this.comp.knee.value = 10; this.comp.ratio.value = 6; this.comp.attack.value = 0.002; this.comp.release.value = 0.2;
-    this.master.connect(this.muffle); this.muffle.connect(this.comp); this.comp.connect(ctx.destination);
+    this.probe = ctx.createAnalyser(); this.probe.fftSize = 2048; this.probeIn = ctx.createAnalyser(); this.probeIn.fftSize = 2048; this.probeBuf = new Float32Array(2048);
+    this.master.connect(this.muffle); this.muffle.connect(this.comp); this.comp.connect(ctx.destination); this.comp.connect(this.probe); this.master.connect(this.probeIn);
     this.dry = ctx.createGain(); this.dry.connect(this.master);
     this.reverbIn = ctx.createGain(); this.convolver = ctx.createConvolver(); this.wet = ctx.createGain(); this.wet.gain.value = 1;
     this.reverbIn.connect(this.convolver); this.convolver.connect(this.wet); this.wet.connect(this.master);
@@ -207,10 +225,21 @@ class AudioEngine {
       this.echoIn.connect(d); d.connect(lp); lp.connect(g); g.connect(this.master);
       return { d, g };
     });
-    this.noise = this._makeNoise(3);
-    this.tinn = ctx.createOscillator(); this.tinnG = ctx.createGain(); this.tinn.frequency.value = 3900; this.tinnG.gain.value = 0;
-    this.tinn.connect(this.tinnG); this.tinnG.connect(this.comp); this.tinn.start();
-    this.setAcoustics(this.acoustics);
+    this.tinnG = ctx.createGain(); this.tinnG.gain.value = 0; this.tinn.connect(this.tinnG); this.tinnG.connect(this.comp);
+    this.voiceList = [];
+  }
+
+  // Poisoned stages show up either as NaN at the output or (Chrome resets a bad biquad itself, the compressor then stays mute
+  // for seconds) as silence while the bus input clearly carries sound — measured with an injected NaN sample in tools/_audiowd.mjs.
+  _peak(an) { const a = this.probeBuf; an.getFloatTimeDomainData(a); let pk = 0; for (let i = 0; i < a.length; i++) { const v = a[i]; if (!Number.isFinite(v)) return Infinity; if (v > pk) pk = v; else if (-v > pk) pk = -v; } return pk; }
+  _watchdog() {
+    if (!this.ctx || this.ctx.state !== 'running') return;
+    const out = this._peak(this.probe), inp = this.master.gain.value > 0.01 ? this._peak(this.probeIn) : 0;
+    this.muteTicks = out < 1e-5 && inp > 0.02 && Number.isFinite(inp) ? (this.muteTicks || 0) + 1 : 0;
+    if (out === Infinity || this.muteTicks >= 2) {
+      this.busResets++; this.muteTicks = 0; console.warn(`[audio] output bus ${out === Infinity ? 'non-finite' : 'mute'} — rebuilt`);
+      this._buildBus(); this.setAcoustics(this.acoustics);
+    }
   }
 
   setVolume(v) { this.volume = v; if (this.master) this.master.gain.setTargetAtTime(v, this.ctx.currentTime, 0.02); }
@@ -250,17 +279,21 @@ class AudioEngine {
   }
 
   // Active bank voices, from their scheduled end times (does not depend on `onended` ever firing).
-  _voices() { const now = this.ctx.currentTime; if (this.voiceEnds.length && this.voiceEnds[0] <= now) this.voiceEnds = this.voiceEnds.filter((e) => e > now); return this.voiceEnds.length; }
+  _voices() { const now = this.ctx.currentTime; if (this.voiceList.some((v) => v.end <= now)) this.voiceList = this.voiceList.filter((v) => v.end > now); return this.voiceList.length; }
+  // v24 voice stealing: when the pool is full the OLDEST sound fades out (10 ms) instead of the new one being dropped —
+  // in a big firefight the old rule silenced every new gunshot, footstep and impact until earlier reverb tails ended.
+  _steal(max) { while (this._voices() >= max) { const v = this.voiceList.shift(), t = this.ctx.currentTime; try { v.g.gain.cancelScheduledValues(t); v.g.gain.setTargetAtTime(0, t, 0.01); v.src.stop(t + 0.06); } catch (e) { /* already stopped */ } } }
 
   setListener(pos, fwd) {
     if (!this.ctx || !Number.isFinite(pos.x + pos.y + pos.z + fwd.x + fwd.y + fwd.z)) return; // a NaN reaching the graph silences the compressor for good
     this.listener.copy(pos);
     const l = this.ctx.listener, t = this.ctx.currentTime;
+    const turn = Math.abs(fwd.y) < 0.995; // v24: looking straight up / down makes forward ∥ up (orientation undefined) → keep the last one
     if (l.positionX) {
       l.positionX.setValueAtTime(pos.x, t); l.positionY.setValueAtTime(pos.y, t); l.positionZ.setValueAtTime(pos.z, t);
-      l.forwardX.setValueAtTime(fwd.x, t); l.forwardY.setValueAtTime(fwd.y, t); l.forwardZ.setValueAtTime(fwd.z, t);
-      l.upX.setValueAtTime(0, t); l.upY.setValueAtTime(1, t); l.upZ.setValueAtTime(0, t);
-    } else { l.setPosition(pos.x, pos.y, pos.z); l.setOrientation(fwd.x, fwd.y, fwd.z, 0, 1, 0); }
+      if (turn) { l.forwardX.setValueAtTime(fwd.x, t); l.forwardY.setValueAtTime(fwd.y, t); l.forwardZ.setValueAtTime(fwd.z, t); }
+      if (!this.upSet) { this.upSet = true; l.upX.value = 0; l.upY.value = 1; l.upZ.value = 0; } // constant: once, not 3 automation events per frame
+    } else { l.setPosition(pos.x, pos.y, pos.z); if (turn) l.setOrientation(fwd.x, fwd.y, fwd.z, 0, 1, 0); }
   }
 
   // v23: HRTF (costly convolution per voice) only near the listener or when asked (footsteps); distant sources pan cheaply.
@@ -287,7 +320,8 @@ class AudioEngine {
   playBank(name, pos = null, o = {}) {
     if (!this.ctx || !AudioEngine.banksReady) return;
     const bank = AudioEngine.banks[name];
-    if (!bank || this._voices() > (pos ? 44 : 90)) return; // own (non-positional) sounds are never the ones dropped
+    if (!bank) return;
+    this._steal(40);
     const ctx = this.ctx, t = ctx.currentTime;
     const src = ctx.createBufferSource(); src.buffer = pick(bank); src.playbackRate.value = rand(0.965, 1.035) * (o.rate || 1);
     const g = ctx.createGain(); g.gain.value = o.gain ?? 1;
@@ -305,7 +339,7 @@ class AudioEngine {
     const s = ctx.createGain(); s.gain.value = send; node.connect(s); s.connect(this.reverbIn);
     if (echo > 0) { const e = ctx.createGain(); e.gain.value = echo; node.connect(e); e.connect(this.echoIn); }
     src.start(t + delay);
-    const end = t + delay + src.buffer.duration / src.playbackRate.value, ve = this.voiceEnds; let i = ve.length; while (i > 0 && ve[i - 1] > end) i--; ve.splice(i, 0, end);
+    this.voiceList.push({ src, g, end: t + delay + src.buffer.duration / src.playbackRate.value });
   }
 
   gunshot(sound, pos = null, rate = 1) { this.playBank(sound, pos, { gain: pos ? 1.1 : 0.95, rate }); }
@@ -361,7 +395,7 @@ class AudioEngine {
 
   // Footsteps: dry, strictly positional (HRTF + inverse distance); o.pitch = per-soldier timbre, o.occluded = heard through a wall.
   footstep(pos, surface = 'concrete', loud = 1, o = {}) {
-    if (!this.ctx || (pos && this._voices() > 46)) return;
+    if (!this.ctx) return;
     const t = this.ctx.currentTime, k = o.pitch || 1, out = this._bus(pos, 0.03, 3, o.occluded ? 720 : 0, 1.1, true);
     if (o.occluded) loud *= 0.6;
     const rand = (a, b) => (a + Math.random() * (b - a)) * k;
@@ -465,7 +499,7 @@ class AudioEngine {
   }
 
   impact(pos, material) {
-    if (!this.ctx || this._voices() > 40) return;
+    if (!this.ctx) return;
     const t = this.ctx.currentTime, out = this._bus(pos, 0.2, 2);
     if (material === 'metal') {
       this._nb(t, out, 'bandpass', rand(2500, 4000), 6, 0.35, 0.001, 0.06);

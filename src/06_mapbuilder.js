@@ -359,8 +359,8 @@ class MapBuilder {
   }
 
   light(x, y, z, color, intensity, distance) {
-    if (this.dry || this.lightCount >= (Settings.data.quality === 'low' ? 0 : 3)) return; // point lights are per-pixel: keep the budget tiny
-    const l = new THREE.PointLight(color, intensity, distance, 1.6); l.position.set(x, y, z); this.scene.add(l); this.lightCount++;
+    if (this.dry || this.lightCount >= 3) return; // point lights are per-pixel: keep the budget tiny (the quality preset may hide them, see PostFX.configure)
+    const l = new THREE.PointLight(color, intensity, distance, 1.6); l.position.set(x, y, z); l.userData.mapLight = true; this.scene.add(l); this.lightCount++;
   }
 
   // Volumetric light shaft from a roof opening down along the sun direction.
@@ -533,8 +533,8 @@ class MapBuilder {
   // v7: instanced, wind-swayed grass tufts around the camera on a world-locked jittered grid (no swimming), only where
   // the terrain is grass (not rock / road / pads) and walkable; tufts shrink toward the radius so nothing pops. ≤ 0.5 m tall.
   grass(o = {}) {
-    if (this.dry || !this.T || Settings.data.quality === 'low') return;
-    const T = this.T, cell = o.cell ?? 0.95, R = o.radius ?? (Settings.data.quality === 'high' ? 36 : 26), cap = Math.ceil((Math.PI * R * R) / (cell * cell));
+    if (this.dry || !this.T || activeQuality() === 'low') return;
+    const T = this.T, cell = o.cell ?? 0.95, R = o.radius ?? (activeQuality() === 'high' || activeQuality() === 'ultra' ? 36 : 26), cap = Math.ceil((Math.PI * R * R) / (cell * cell));
     const tex = this.tf.simple('grassTuft', 128, (ctx, S) => {
       ctx.clearRect(0, 0, S, S);
       for (let i = 0; i < 30; i++) {

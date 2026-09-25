@@ -360,6 +360,7 @@ class Effects {
     this.botLights = [new THREE.PointLight(0xffb060, 0, 10, 2), new THREE.PointLight(0xffb060, 0, 10, 2)]; this.botLights.forEach((l) => scene.add(l));
     this.botLightIdx = 0; this.botLightT = [0, 0];
     this.boomLight = new THREE.PointLight(0xffa050, 0, 22, 2); scene.add(this.boomLight); this.boomT = 0;
+    for (const l of [this.playerLight, ...this.botLights, this.boomLight]) l.userData.fx = true;
     this.playerLightT = 0;
     this.smokes = [];
   }

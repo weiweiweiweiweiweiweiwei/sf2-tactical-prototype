@@ -31,7 +31,7 @@ class WeaponSystem {
     this.baseFov = Settings.data.fov; this.fov = this.baseFov; this.drawT = 0; this.sprintT = 0;
     this.kickPos = new THREE.Vector3(); this.kickVel = new THREE.Vector3(); this.kickRot = new THREE.Vector3(); this.kickRotVel = new THREE.Vector3();
     this.swayX = 0; this.swayY = 0; this.bobPhase = 0; this.bobAmt = 0; this.roll = 0; this.landY = 0; this.landV = 0;
-    this.focusDist = 20; this.focusT = 0;
+    this.focusT = 0;
     this.leftArm = models.leftArm(); this.leftArm.group.visible = false; this.root.add(this.leftArm.group);
     this.grabT = 0; this.grabCd = 0; this.grabHit = false;
     this._pos = new THREE.Vector3();
@@ -277,7 +277,6 @@ class WeaponSystem {
       const ray = w.aimRay(), h = g.collision.raycast(ray.o, ray.d, 150);
       let d = h ? h.t : 150, aim = null;
       for (const c of g.combatants) if (c !== p && c.alive) { c.updateHitboxes(); for (const hb of c.hitboxes) { const r = CollisionWorld.rayBox(ray.o, ray.d, hb, d); if (r && r.t < d) { d = r.t; aim = c; } } }
-      this.focusDist = damp(this.focusDist, d, 10, 0.08);
       // SF2 crosshair ID: the soldier under the crosshair (walls block it) shows his name — red for enemies
       this.aimTarget = p.alive && aim && d < 90 && !g.effects.smokeBlocks(ray.o, TMP_V2.copy(ray.o).addScaledVector(ray.d, d)) ? aim : null;
       hud.setAimName(this.aimTarget ? this.aimTarget.name : '', this.aimTarget ? this.aimTarget.team !== p.team : false);

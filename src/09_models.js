@@ -610,6 +610,11 @@ const TEAM_PALETTE = {
   alpha: { uniform: 0x7d7152, pants: 0x6a6146, vest: 0x4b5237, pouch: 0x59603f, helmet: 0x6e6a52, glove: 0x2a2a26, boot: 0x3a3228, skin: 0xc49a78, band: 0x2f7fe0, face: 0xc49a78, goggle: 0x111111 },
   bravo: { uniform: 0x2e2f33, pants: 0x28292c, vest: 0x4a1a17, pouch: 0x2a2a2a, helmet: 0x232323, glove: 0x1a1a1a, boot: 0x1e1e1e, skin: 0xb48868, band: 0xd8382c, face: 0x1b1b1b, goggle: 0x222222 },
 };
+// v24: three r160 draws every shadow caster with ONE shared depth material, so skinned soldiers interleaved with static meshes
+// flipped its shader program ~46× per frame (each getProgram allocates a parameter object + key string → GC stutter).
+// One depth material for all skinned meshes keeps both programs stable; on the prototype so SkeletonUtils corpse clones get it too.
+THREE.SkinnedMesh.prototype.customDepthMaterial = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking });
+
 class SoldierFactory {
   constructor(tf, weaponModels) {
     this.wm = weaponModels; this.cache = {};
@@ -618,8 +623,9 @@ class SoldierFactory {
     this.gunMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.4, metalness: 0.7 });
     this.baseMat.userData.keep = this.gunMat.userData.keep = true;
   }
-  _geo(team) {
-    if (this.cache[team]) return this.cache[team];
+  // lod 1 (v24): the same soldier with ~8× fewer triangles for distant bots — plain boxes, low-segment spheres / capsules.
+  _geo(team, lod = 0) {
+    const ck = team + (lod ? ':lod' : ''); if (this.cache[ck]) return this.cache[ck];
     const P = TEAM_PALETTE[team], parts = {};
     const add = (part, g, hex, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0, sx = 1, sy = 1, sz = 1) => {
       g = g.index ? g.toNonIndexed() : g; g.scale(sx, sy, sz);
@@ -631,8 +637,10 @@ class SoldierFactory {
       for (const k of Object.keys(g.attributes)) if (!['position', 'normal', 'uv', 'color'].includes(k)) g.deleteAttribute(k);
       (parts[part] = parts[part] || []).push(g);
     };
-    const RB = (w, h, d, r) => new RoundedBoxGeometry(w, h, d, 2, r);
-    const cap = (r, l) => new THREE.CapsuleGeometry(r, l, 4, 10);
+    const RB = (w, h, d, r) => (lod ? new THREE.BoxGeometry(w, h, d) : new RoundedBoxGeometry(w, h, d, 2, r));
+    const cap = (r, l) => (lod ? new THREE.CapsuleGeometry(r, l, 1, 6) : new THREE.CapsuleGeometry(r, l, 4, 10));
+    const sph = (r, ws, hs, ...arc) => new THREE.SphereGeometry(r, lod ? Math.max(6, ws >> 1) : ws, lod ? Math.max(4, hs >> 1) : hs, ...arc);
+    const tor = (r, t) => new THREE.TorusGeometry(r, t, lod ? 3 : 6, lod ? 8 : 20);
     const limb = (part, a, b, r, hex) => {
       const A = new THREE.Vector3(...a), B = new THREE.Vector3(...b), d = new THREE.Vector3().subVectors(B, A), len = d.length();
       const g = cap(r, Math.max(0.01, len - r)); g.translate(0, len / 2, 0);
@@ -652,16 +660,16 @@ class SoldierFactory {
     for (const x of [-0.12, 0, 0.12]) add('torso', RB(0.085, 0.11, 0.05, 0.015), P.pouch, x, 0.33, -0.16);
     add('torso', RB(0.3, 0.32, 0.13, 0.04), P.pouch, 0, 0.44, 0.2);
     add('torso', RB(0.06, 0.2, 0.05, 0.02), 0x1e1e1e, 0.1, 0.62, 0.22);
-    for (const sx of [-1, 1]) { const s = new THREE.SphereGeometry(0.075, 10, 8); add('torso', s, P.uniform, sx * 0.235, 0.53, 0); add('torso', RB(0.05, 0.05, 0.1, 0.02), P.band, sx * 0.25, 0.44, 0); }
-    add('torso', new THREE.CylinderGeometry(0.055, 0.06, 0.08, 10), P.uniform, 0, 0.62, 0);
+    for (const sx of [-1, 1]) { const s = sph(0.075, 10, 8); add('torso', s, P.uniform, sx * 0.235, 0.53, 0); add('torso', RB(0.05, 0.05, 0.1, 0.02), P.band, sx * 0.25, 0.44, 0); }
+    add('torso', new THREE.CylinderGeometry(0.055, 0.06, 0.08, lod ? 6 : 10), P.uniform, 0, 0.62, 0);
     // head (pivot at neck)
-    add('head', new THREE.SphereGeometry(0.105, 16, 12), P.face, 0, 0.1, 0, 0, 0, 0, 0.95, 1.12, 1);
+    add('head', sph(0.105, 16, 12), P.face, 0, 0.1, 0, 0, 0, 0, 0.95, 1.12, 1);
     add('head', RB(0.08, 0.035, 0.02, 0.008), P.goggle, 0, 0.1, -0.097);
-    add('head', new THREE.SphereGeometry(0.132, 18, 10, 0, Math.PI * 2, 0, Math.PI * 0.52), P.helmet, 0, 0.12, 0.004);
-    add('head', new THREE.TorusGeometry(0.128, 0.012, 6, 20), P.helmet, 0, 0.125, 0.004, Math.PI / 2);
+    add('head', sph(0.132, 18, 10, 0, Math.PI * 2, 0, Math.PI * 0.52), P.helmet, 0, 0.12, 0.004);
+    add('head', tor(0.128, 0.012), P.helmet, 0, 0.125, 0.004, Math.PI / 2);
     add('head', RB(0.2, 0.045, 0.04, 0.015), P.goggle, 0, 0.18, -0.115, 0.3);
     add('head', RB(0.05, 0.05, 0.04, 0.01), 0x151515, 0, 0.22, -0.12);
-    add('head', new THREE.TorusGeometry(0.133, 0.01, 6, 20), P.band, 0, 0.16, 0.004, Math.PI / 2 - 0.12);
+    add('head', tor(0.133, 0.01), P.band, 0, 0.16, 0.004, Math.PI / 2 - 0.12);
     for (const sx of [-1, 1]) add('head', RB(0.04, 0.07, 0.06, 0.015), 0x252525, sx * 0.11, 0.1, 0);
     // arms (pivot at shoulder line), rifle-ready pose
     limb('arms', [0.23, 0, 0], [0.21, -0.22, -0.1], 0.06, P.uniform);
@@ -671,33 +679,34 @@ class SoldierFactory {
     add('arms', RB(0.07, 0.07, 0.09, 0.025), P.glove, 0.07, -0.14, -0.34); add('arms', RB(0.07, 0.07, 0.09, 0.025), P.glove, -0.02, -0.07, -0.52);
     const out = {};
     for (const [k, v] of Object.entries(parts)) out[k] = mergeGeometries(v, false);
-    this.cache[team] = out;
+    this.cache[ck] = out;
     return out;
   }
 
   create(team, weaponId) {
-    const G = this._geo(team), mat = this.baseMat.clone(); mat.userData.keep = false;
-    const root = new THREE.Group(), legs = [], bones = [], parts = [];
+    const G = this._geo(team), G1 = this._geo(team, 1), mat = this.baseMat.clone(); mat.userData.keep = false;
+    const root = new THREE.Group(), legs = [], bones = [], parts = [], parts1 = [];
     const bone = (name, parent, x, y, z) => { const b = new THREE.Bone(); b.name = name; b.position.set(x, y, z); parent.add(b); bones.push(b); return b; };
-    [-0.105, 0.105].forEach((sx, i) => { const hip = bone('hip' + i, root, sx, 0.92, 0), knee = bone('knee' + i, hip, 0, -0.42, 0); legs.push({ hip, knee }); parts.push([G.thigh, hip], [G.shin, knee]); });
+    [-0.105, 0.105].forEach((sx, i) => { const hip = bone('hip' + i, root, sx, 0.92, 0), knee = bone('knee' + i, hip, 0, -0.42, 0); legs.push({ hip, knee }); parts.push([G.thigh, hip], [G.shin, knee]); parts1.push([G1.thigh, hip], [G1.shin, knee]); });
     const torso = bone('torso', root, 0, 0.92, 0), head = bone('head', torso, 0, 0.66, 0), arms = bone('arms', torso, 0, 0.5, 0);
-    parts.push([G.torso, torso], [G.head, head], [G.arms, arms]);
+    parts.push([G.torso, torso], [G.head, head], [G.arms, arms]); parts1.push([G1.torso, torso], [G1.head, head], [G1.arms, arms]);
     root.updateMatrixWorld(true);
-    const body = new THREE.SkinnedMesh(this._skinGeo(team, parts, bones), mat); body.name = 'body';
+    const lod = [this._skinGeo(team, parts, bones), this._skinGeo(team, parts1, bones, 1)]; // same bones / skinIndex layout → swappable per frame
+    const body = new THREE.SkinnedMesh(lod[0], mat); body.name = 'body';
     body.castShadow = true; body.receiveShadow = true; body.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0.9, 0), 1.8); // covers crouch / death poses
     root.add(body); body.bind(new THREE.Skeleton(bones));
     // First-person spectating hides the head: a bone's `visible` does not hide skinned vertices, so collapse the bone instead.
     Object.defineProperty(head, 'visible', { configurable: true, get() { return this._vis !== false; }, set(v) { this._vis = v; this.scale.setScalar(v ? 1 : 1e-4); } });
     const gunHolder = new THREE.Group(); gunHolder.position.set(0.06, -0.1, -0.32); arms.add(gunHolder);
     const muzzle = new THREE.Object3D(); gunHolder.add(muzzle);
-    const s = { root, legs, torso, head, arms, gunHolder, muzzle, mat, gun: null };
+    const s = { root, legs, torso, head, arms, gunHolder, muzzle, mat, gun: null, body, lod }; // lod: NOT in userData (clone() would JSON-copy it)
     this.setWeapon(s, weaponId);
     return s;
   }
 
   // Bind-pose geometry for one team: every part transformed by its bone's bind matrix, skinIndex = that bone, weight 1.
-  _skinGeo(team, parts, bones) {
-    const key = team + ':skin'; if (this.cache[key]) return this.cache[key];
+  _skinGeo(team, parts, bones, lod = 0) {
+    const key = team + ':skin' + (lod ? ':lod' : ''); if (this.cache[key]) return this.cache[key];
     const list = parts.map(([geo, b]) => {
       const g = geo.clone().applyMatrix4(b.matrixWorld), n = g.attributes.position.count, bi = bones.indexOf(b);
       const si = new Uint16Array(n * 4), sw = new Float32Array(n * 4);
