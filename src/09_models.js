@@ -601,8 +601,10 @@ class WeaponModels {
 }
 
 /* =====================================================================
-   SOLDIER FACTORY — vertex-coloured capsule/rounded-box soldiers,
-   one merged mesh per rigid part (≈8 draw calls per character).
+   SOLDIER FACTORY — vertex-coloured capsule/rounded-box soldiers.
+   v22: one rigidly skinned mesh per character (each part weighted 100 % to its bone)
+   + the gun = 2 draw calls (was 8). Bones keep the old part names/hierarchy, so
+   walk / crouch / flinch / killcam / death-limp code drives them unchanged.
    ===================================================================== */
 const TEAM_PALETTE = {
   alpha: { uniform: 0x7d7152, pants: 0x6a6146, vest: 0x4b5237, pouch: 0x59603f, helmet: 0x6e6a52, glove: 0x2a2a26, boot: 0x3a3228, skin: 0xc49a78, band: 0x2f7fe0, face: 0xc49a78, goggle: 0x111111 },
@@ -675,21 +677,36 @@ class SoldierFactory {
 
   create(team, weaponId) {
     const G = this._geo(team), mat = this.baseMat.clone(); mat.userData.keep = false;
-    const mk = (geo) => { const m = new THREE.Mesh(geo, mat); m.castShadow = true; m.receiveShadow = true; return m; };
-    const root = new THREE.Group(), legs = [];
-    for (const sx of [-0.105, 0.105]) {
-      const hip = new THREE.Group(); hip.position.set(sx, 0.92, 0); root.add(hip); hip.add(mk(G.thigh));
-      const knee = new THREE.Group(); knee.position.set(0, -0.42, 0); hip.add(knee); knee.add(mk(G.shin));
-      legs.push({ hip, knee });
-    }
-    const torso = new THREE.Group(); torso.position.set(0, 0.92, 0); root.add(torso); torso.add(mk(G.torso));
-    const head = new THREE.Group(); head.position.set(0, 0.66, 0); torso.add(head); head.add(mk(G.head));
-    const arms = new THREE.Group(); arms.position.set(0, 0.5, 0); torso.add(arms); arms.add(mk(G.arms));
+    const root = new THREE.Group(), legs = [], bones = [], parts = [];
+    const bone = (name, parent, x, y, z) => { const b = new THREE.Bone(); b.name = name; b.position.set(x, y, z); parent.add(b); bones.push(b); return b; };
+    [-0.105, 0.105].forEach((sx, i) => { const hip = bone('hip' + i, root, sx, 0.92, 0), knee = bone('knee' + i, hip, 0, -0.42, 0); legs.push({ hip, knee }); parts.push([G.thigh, hip], [G.shin, knee]); });
+    const torso = bone('torso', root, 0, 0.92, 0), head = bone('head', torso, 0, 0.66, 0), arms = bone('arms', torso, 0, 0.5, 0);
+    parts.push([G.torso, torso], [G.head, head], [G.arms, arms]);
+    root.updateMatrixWorld(true);
+    const body = new THREE.SkinnedMesh(this._skinGeo(team, parts, bones), mat); body.name = 'body';
+    body.castShadow = true; body.receiveShadow = true; body.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0.9, 0), 1.8); // covers crouch / death poses
+    root.add(body); body.bind(new THREE.Skeleton(bones));
+    // First-person spectating hides the head: a bone's `visible` does not hide skinned vertices, so collapse the bone instead.
+    Object.defineProperty(head, 'visible', { configurable: true, get() { return this._vis !== false; }, set(v) { this._vis = v; this.scale.setScalar(v ? 1 : 1e-4); } });
     const gunHolder = new THREE.Group(); gunHolder.position.set(0.06, -0.1, -0.32); arms.add(gunHolder);
     const muzzle = new THREE.Object3D(); gunHolder.add(muzzle);
     const s = { root, legs, torso, head, arms, gunHolder, muzzle, mat, gun: null };
     this.setWeapon(s, weaponId);
     return s;
+  }
+
+  // Bind-pose geometry for one team: every part transformed by its bone's bind matrix, skinIndex = that bone, weight 1.
+  _skinGeo(team, parts, bones) {
+    const key = team + ':skin'; if (this.cache[key]) return this.cache[key];
+    const list = parts.map(([geo, b]) => {
+      const g = geo.clone().applyMatrix4(b.matrixWorld), n = g.attributes.position.count, bi = bones.indexOf(b);
+      const si = new Uint16Array(n * 4), sw = new Float32Array(n * 4);
+      for (let i = 0; i < n; i++) { si[i * 4] = bi; sw[i * 4] = 1; }
+      g.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(si, 4)); g.setAttribute('skinWeight', new THREE.Float32BufferAttribute(sw, 4));
+      return g;
+    });
+    const merged = mergeGeometries(list, false); list.forEach((g) => g.dispose());
+    return (this.cache[key] = merged);
   }
 
   setWeapon(s, id) {

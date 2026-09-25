@@ -75,11 +75,11 @@ class Bot extends Combatant {
   die(dir, force) {
     this.alive = false; this.hp = 0; this.respawnT = CFG.respawn; this.holdE = false; this.motor.climbInput = 0;
     this.model.head.visible = true;
-    const corpse = this.model.root.clone(true);
+    const corpse = SkeletonUtils.clone(this.model.root); // v22: skinned soldier — rebinds the clone to its own bones
     corpse.position.set(0, 0, 0); corpse.rotation.set(0, 0, 0);
     corpse.traverse((o) => { if (o.isMesh) { o.castShadow = true; if (o.material === this.model.mat) o.material = this.model.mat.clone(); if (o.material.emissive) o.material.emissive.setRGB(0, 0, 0); } });
     const hd = dir.clone().setY(0); if (hd.lengthSq() < 1e-4) hd.set(Math.sin(this.yaw), 0, Math.cos(this.yaw));
-    const hips = [corpse.children[0], corpse.children[1]], torso = corpse.children[2], knees = hips.map((h) => h.children.find((c) => c.isGroup)), head = torso.children[1], arms = torso.children[2];
+    const N = (n) => corpse.getObjectByName(n), hips = [N('hip0'), N('hip1')], torso = N('torso'), knees = [N('knee0'), N('knee1')], head = N('head'), arms = N('arms');
     const limp = knees[0] && knees[1] && head && arms ? { t: 0, hips, knees, torso, head, arms, h0: hips.map((h) => h.rotation.x), k0: knees.map((n) => n.rotation.x), a0: arms.rotation.x, hd0: head.rotation.x, t0: torso.rotation.x,
       hipT: [rand(-0.35, 0.65), rand(-0.35, 0.65)], kneeT: [-rand(0.25, 1.15), -rand(0.25, 1.15)], armT: -rand(0.8, 1.35), armZ: rand(-0.35, 0.35), headT: rand(-0.55, 0.6), headZ: rand(-0.6, 0.6), torsoT: rand(-0.3, 0.25) } : null;
     this.game.physics.spawnCorpse(corpse, this.motor.pos, this.yaw, hd.normalize(), force, limp);

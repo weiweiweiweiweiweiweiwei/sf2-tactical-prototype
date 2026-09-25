@@ -318,9 +318,15 @@ class Effects {
     const decalMat = (map) => new THREE.MeshBasicMaterial({ map, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 });
     this.decalMats = { concrete: decalMat(tf.bulletHole('concrete')), metal: decalMat(tf.bulletHole('metal')), wood: decalMat(tf.bulletHole('wood')), glass: decalMat(tf.bulletHole('glass')) };
     this.scorchMat = new THREE.MeshBasicMaterial({ map: this.tex.scorch, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 });
-    this.decals = []; this.decalIdx = 0;
-    const dGeo = new THREE.PlaneGeometry(0.12, 0.12);
-    for (let i = 0; i < 180; i++) { const m = new THREE.Mesh(dGeo, this.decalMats.concrete); m.visible = false; m.userData.noAO = true; scene.add(m); this.decals.push(m); }
+    // v22: bullet holes = one InstancedMesh per surface type sharing a 100-slot ring (CLAUDE.md §4.5: max 100, oldest overwritten).
+    // Was 180 separate meshes → up to 180 draw calls after a long fight (measured 173 of a 324-call frame); now ≤ 4.
+    const dGeo = new THREE.PlaneGeometry(0.12, 0.12), zero = new THREE.Matrix4().makeScale(0, 0, 0);
+    this.decalCap = 100; this.decalIdx = 0; this.decalSlot = new Array(this.decalCap).fill(null); this.decalMeshes = {}; this._decalObj = new THREE.Object3D(); this._decalZero = zero;
+    for (const [k, mat] of Object.entries(this.decalMats)) {
+      const im = new THREE.InstancedMesh(dGeo, mat, this.decalCap); im.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+      for (let i = 0; i < this.decalCap; i++) im.setMatrixAt(i, zero);
+      im.frustumCulled = false; im.visible = false; im.userData.noAO = true; scene.add(im); this.decalMeshes[k] = im;
+    }
     this.scorches = []; this.scorchIdx = 0;
     for (let i = 0; i < 8; i++) { const m = new THREE.Mesh(new THREE.PlaneGeometry(3.4, 3.4), this.scorchMat); m.visible = false; m.userData.noAO = true; scene.add(m); this.scorches.push(m); }
     this.tracers = [];
@@ -359,11 +365,14 @@ class Effects {
   }
 
   decal(point, normal, material = 'concrete') {
-    const m = this.decals[this.decalIdx]; this.decalIdx = (this.decalIdx + 1) % this.decals.length;
-    m.material = this.decalMats[material] || this.decalMats.concrete;
-    m.position.copy(point).addScaledVector(normal, 0.004);
-    m.lookAt(TMP_V1.copy(point).add(normal)); m.rotateZ(Math.random() * Math.PI * 2);
-    const s = rand(0.75, 1.2); m.scale.set(s, s, s); m.visible = true;
+    const key = this.decalMeshes[material] ? material : 'concrete', i = this.decalIdx, prev = this.decalSlot[i];
+    this.decalIdx = (i + 1) % this.decalCap;
+    if (prev && prev !== key) { const pm = this.decalMeshes[prev]; pm.setMatrixAt(i, this._decalZero); pm.instanceMatrix.needsUpdate = true; }
+    this.decalSlot[i] = key;
+    const o = this._decalObj; o.position.copy(point).addScaledVector(normal, 0.004);
+    o.lookAt(TMP_V1.copy(point).add(normal)); o.rotateZ(Math.random() * Math.PI * 2);
+    const sc = rand(0.75, 1.2); o.scale.set(sc, sc, sc); o.updateMatrix();
+    const im = this.decalMeshes[key]; im.setMatrixAt(i, o.matrix); im.instanceMatrix.needsUpdate = true; im.visible = true;
   }
 
   tracer(from, to, speed = 380, len = 3.5, color = 0xffd98a) {
