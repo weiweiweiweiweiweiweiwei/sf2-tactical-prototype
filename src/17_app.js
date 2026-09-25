@@ -33,6 +33,7 @@ class App {
     addEventListener('beforeunload', (e) => { if (this.match && (this.state === 'playing' || this.state === 'paused')) { e.preventDefault(); e.returnValue = ''; } });
     AudioEngine.prepareBanks().catch((e) => console.warn('audio banks', e));
     setTimeout(() => { try { this.makeIcons(); } catch (e) { console.warn('weapon icons', e); } }, 400);
+    this.thumbStart = performance.now() + 1500; this._queueThumbs([...PRIMARY_IDS, ...SECONDARY_IDS]); // v20 armory card renders, built in the lobby's idle frames
     requestAnimationFrame((t) => this.loop(t));
   }
 
@@ -385,6 +386,41 @@ class App {
       this.whPivot = new THREE.Group(); sc.add(this.whPivot); this.whT = 0;
     } catch (e) { console.warn('warehouse preview unavailable', e); this.whR = null; }
   }
+  // v20: card thumbnails — each gun's real 3D model rendered once (side view, transparent background) into a data URL.
+  // Uses the preview renderer at thumbnail size and restores it in the same task, so the live preview never flickers.
+  _makeThumbs(ids) {
+    this.thumbs = this.thumbs || {};
+    const todo = ids.filter((id) => !this.thumbs[id]);
+    if (!todo.length || !this.whR) return;
+    const r = this.whR, cam = this.whCam, cv = r.domElement, pr = r.getPixelRatio(), TW = 360, TH = 150, P = this.whPivot;
+    const keep = { pos: cam.position.clone(), aspect: cam.aspect, rx: P.rotation.x, ry: P.rotation.y, kids: [...P.children] };
+    r.setPixelRatio(1); r.setSize(TW * 2, TH * 2, false); cam.aspect = TW / TH; cam.position.set(0, 0.1, 2.05); cam.lookAt(0, 0, 0); cam.updateProjectionMatrix();
+    const out = document.createElement('canvas'); out.width = TW; out.height = TH; const ctx = out.getContext('2d');
+    P.rotation.set(0.04, 0.16, 0); const expo = r.toneMappingExposure; r.toneMappingExposure = 1.9; // brighter studio exposure: dark guns read on the card
+    for (const id of todo) {
+      P.clear();
+      try { P.add(this.models.preview(WEAPON_DEFS[id])); } catch (e) { console.warn('thumb', id, e); continue; }
+      r.setClearColor(0x000000, 0); r.clear(); r.render(this.whScene, cam);
+      ctx.clearRect(0, 0, TW, TH); ctx.drawImage(cv, 0, 0, TW, TH); this.thumbs[id] = out.toDataURL('image/webp', 0.92);
+    }
+    r.toneMappingExposure = expo; P.clear(); keep.kids.forEach((k) => P.add(k)); P.rotation.set(keep.rx, keep.ry, 0);
+    cam.position.copy(keep.pos); cam.lookAt(0, 0, 0); cam.aspect = keep.aspect; cam.updateProjectionMatrix(); r.setPixelRatio(pr);
+    const w = cv.clientWidth, h = cv.clientHeight; if (w && h) r.setSize(w, h, false);
+  }
+  // Thumbnails render one per frame in the background (building a procedural gun model takes ~20–80 ms), newest request first;
+  // cards show the line icon until their render is ready and swap it in place.
+  _queueThumbs(ids, front = false) {
+    this.thumbs = this.thumbs || {};
+    const need = ids.filter((id) => !this.thumbs[id]), q = (this.thumbQ || []).filter((id) => !need.includes(id));
+    this.thumbQ = front ? [...need, ...q] : [...q, ...need];
+  }
+  _pumpThumb() {
+    if (!this.whR) this._initPreview();
+    const id = this.thumbQ.shift(); if (!id || !this.whR) return;
+    this._makeThumbs([id]);
+    const img = document.querySelector(`#whList .whGun[data-id="${id}"] .th img`);
+    if (img && this.thumbs[id]) { img.src = this.thumbs[id]; img.classList.remove('ln'); }
+  }
   _renderPreview(dt) {
     if (!this.whR || !this.$('warehouse').classList.contains('on')) return;
     const cv = this.$('whCanvas'), w = cv.clientWidth, h = cv.clientHeight;
@@ -407,13 +443,15 @@ class App {
     [...$('whTabs').children].forEach((b) => { b.classList.toggle('on', b.dataset.cat === W.cat); b.onclick = () => { W.cat = b.dataset.cat; W.sel = LO[W.slot][W.cat]; this.audio.uiClick(); this.renderWarehouse(); }; });
     const list = $('whList'); list.innerHTML = '';
     const ids = W.cat === 'primary' ? PRIMARY_IDS : SECONDARY_IDS, groups = {};
+    this._queueThumbs(ids, true);
     for (const id of ids) (groups[WEAPON_DATABASE[id].type] = groups[WEAPON_DATABASE[id].type] || []).push(id);
     for (const [type, arr] of Object.entries(groups)) {
       const h = document.createElement('h4'); h.textContent = TYPE_LABEL[type]; list.appendChild(h);
       for (const id of arr) {
         const st = weaponStats(id), eq = LO[W.slot][W.cat] === id, c = document.createElement('button');
-        c.className = 'whGun' + (eq ? ' eq' : '') + (W.sel === id ? ' sel' : '');
-        c.innerHTML = `${WEAPON_ICONS[id] ? `<img class="ico" src="${WEAPON_ICONS[id]}">` : ''}<b>${WEAPON_DEFS[id].name}</b><small>${st.rpm} RPM · ${st.mag} 發 · ${WEAPON_DEFS[id].fireMode}${eq ? ' · 已裝備' : ''}</small><i style="width:${st.damage}%"></i>`;
+        c.className = 'whGun' + (eq ? ' eq' : '') + (W.sel === id ? ' sel' : ''); c.dataset.id = id;
+        const th = this.thumbs && this.thumbs[id] ? `<img src="${this.thumbs[id]}" alt="">` : WEAPON_ICONS[id] ? `<img class="ln" src="${WEAPON_ICONS[id]}" alt="">` : '';
+        c.innerHTML = `<div class="th">${th}${eq ? '<em>已裝備</em>' : ''}</div><div class="meta"><div class="cls">${TYPE_LABEL[type]}</div><b>${WEAPON_DEFS[id].name}</b><p>${WEAPON_BLURBS[id] || WEAPON_DEFS[id].desc || ''}</p><small>${st.rpm} RPM · ${st.mag} 發 · ${WEAPON_DEFS[id].fireMode}</small></div><i style="width:${st.damage}%"></i>`;
         c.onmouseenter = () => { if (W.sel !== id) { W.sel = id; this._whInfo(); } };
         c.onclick = () => { LO[W.slot][W.cat] = id; W.sel = id; Settings.save(); this.audio.uiClick(); this.renderWarehouse(); };
         list.appendChild(c);
@@ -424,7 +462,7 @@ class App {
   _whInfo() {
     const $ = this.$, id = this.wh.sel, s = WEAPON_DATABASE[id], d = WEAPON_DEFS[id], st = weaponStats(id);
     $('whName').textContent = d.name; $('whType').textContent = `${TYPE_LABEL[s.type]} · ${s.slot === 'primary' ? '主武器' : '副武器'} · ${{ '3d_sight': '機械 / 全息瞄具', red_dot: '紅點瞄具', '2d_scope_overlay': '狙擊鏡', none: '無瞄具' }[s.adsType]}`;
-    $('whDesc').textContent = d.desc;
+    $('whBlurb').textContent = WEAPON_BLURBS[id] || ''; $('whDesc').textContent = d.desc;
     const bars = [['傷害', st.damage], ['射速', st.fireRate], ['精準', st.accuracy], ['後座控制', st.control], ['機動性', st.mobility]];
     $('whBars').innerHTML = bars.map(([k, v]) => `<div class="bar"><span>${k}</span><div><i style="width:${v}%"></i></div><b>${v}</b></div>`).join('');
     const body = Math.ceil(100 / s.damage), head = s.slot === 'primary' && s.type !== 'shotgun' ? '1（爆頭必殺）' : `${Math.ceil(100 / (s.damage * (d.headMult || 4)))}`;
@@ -438,7 +476,7 @@ class App {
     requestAnimationFrame((t) => this.loop(t));
     let dt = clamp((now - this.last) / 1000, 0, 0.1); this.last = now;
     this.input.gameActive = this.state === 'playing' || this.state === 'paused';
-    if (this.state === 'lobby') this._renderPreview(dt);
+    if (this.state === 'lobby') { this._renderPreview(dt); if (this.thumbQ && this.thumbQ.length && performance.now() > this.thumbStart) this._pumpThumb(); }
     this.fpsAcc += dt; this.fpsFrames++;
     if (this.fpsAcc >= 0.5) { this.fpsText = `${Math.round(this.fpsFrames / this.fpsAcc)} FPS`; this.fpsAcc = 0; this.fpsFrames = 0; }
     const mouse = this.input.consumeMouse(this._mouse);

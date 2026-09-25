@@ -271,6 +271,40 @@ Object.assign(WEAPON_DEFS, {
 const PRIMARY_IDS = Object.keys(WEAPON_DATABASE).filter((k) => WEAPON_DATABASE[k].slot === 'primary');
 const SECONDARY_IDS = Object.keys(WEAPON_DATABASE).filter((k) => WEAPON_DATABASE[k].slot === 'secondary');
 const WEAPON_ICONS = {}; // id → line-art dataURL (generated at boot)
+// v20 armory card intros (one line, role-focused; SF2-style list supplied by the user where the gun matches).
+const WEAPON_BLURBS = {
+  m4a1: '泛用性最高的標準步槍，後座力易控。',
+  g36c: '緊湊型步槍，機動性佳；消音器讓你不上敵方雷達。',
+  ak47: '單發破壞力極高，但後座力大，需要精準的點射技巧。',
+  scarl: '單發傷害與穿透力優異的模組化步槍。',
+  famas: '高射速的犢牛式步槍，近距離爆發力強。',
+  aug: '內建基礎瞄具，適合中遠距離穩定輸出。',
+  mp5: '經典衝鋒槍，腰射穩定、容錯率高。',
+  p90: '50 發大彈匣，適合持續火力壓制與近距離掃射。',
+  ump45: '衝鋒槍中單發傷害較高的一把，射速偏慢但穩定。',
+  vector: '利用特殊槍機設計將後座力降至最低，近戰秒傷極高。',
+  mp7: '極高的射速與極佳的機動性，跑動射擊的首選。',
+  m249: '標準輕機槍，擁有 100 發彈鏈，適合架點與穿透障礙物。',
+  rpk: '以 AK 為基礎延伸的機槍，單發傷害不俗。',
+  negev: '高射速彈鏈機槍，壓制力強但左右晃動大。',
+  pkm: '重型通用機槍，射程與穿透最佳，但極其笨重。',
+  mg42: '德製高射速機槍，連射時的壓制力極強，也極難控制。',
+  remington870: '泵動式散彈槍，貼身一槍致命，節奏要算準。',
+  benelli_m4: '半自動散彈槍，連發速度快，近距離清點利器。',
+  m1014: '美軍制式半自動散彈槍，容量大、表現穩定。',
+  saiga12: 'AK 系統彈匣供彈散彈槍，換彈最快。',
+  ksg: '雙彈倉泵動散彈槍，14 發容量，持久作戰。',
+  cheytac_m200: '重型反器材狙擊槍，穿透力與傷害封頂。',
+  awp: '經典重型狙擊槍，擁有極高的致死率（一發斃命）。',
+  barrett: '反器材狙擊槍，打到哪裡都倒，後座驚人。',
+  kar98k: '二戰經典栓動步槍，開鏡快、輕巧靈活。',
+  svd: '經典蘇聯連發狙擊槍，射速快。',
+  p226: '標準副武器，穩定可靠的半自動手槍。',
+  deagle: '大口徑手槍，單發威力驚人，但後座大。',
+  glock18: '全自動手槍，近距離秒傷媲美衝鋒槍。',
+  usp: '消音手槍，安靜不上雷達，最精準的副武器。',
+  m1911: '經典 .45 手槍，單發威力可靠。',
+};
 const TYPE_LABEL = { assault: '突擊步槍', smg: '衝鋒槍', lmg: '輕機槍', shotgun: '散彈槍', sniper: '狙擊槍', pistol: '手槍' };
 
 // 0–100 stat bars for the Warehouse UI.
