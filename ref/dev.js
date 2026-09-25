@@ -49,3 +49,22 @@ w.sf2ref = async () => {
 w.errs = w.errs || [];
 if (!w._errHook) { w._errHook = true; w.addEventListener('error', (e) => w.errs.push(e.message)); }
 export default true;
+// ---- spawn line-of-sight tools: every alpha × bravo spawn point, eye height 1.6 m ----
+w.losPairs = () => {
+  const m = w.app.match, V = w.SF2.THREE.Vector3, out = [];
+  for (const p of m.spawns.alpha.pts) for (const q of m.spawns.bravo.pts) {
+    const a = new V(p.x, p.y + 1.6, p.z), b = new V(q.x, q.y + 1.6, q.z);
+    if (m.collision.segmentClear(a, b)) out.push([a, b]);
+  }
+  return out;
+};
+// where do the visible rays cross the planes x = xs[i]?  → [min z, max z] per plane
+w.losCorridor = (pairs, xs) => xs.map((x) => { let lo = 1e9, hi = -1e9; for (const [a, b] of pairs) { const t = (x - a.x) / (b.x - a.x); if (t < 0 || t > 1) continue; const z = a.z + (b.z - a.z) * t, y = a.y + (b.y - a.y) * t; lo = Math.min(lo, z); hi = Math.max(hi, z); } return { x, z: [+lo.toFixed(1), +hi.toFixed(1)] }; });
+// how many visible pairs survive candidate blockers [[x0,y0,z0,x1,y1,z1], …] (mirrored in x when mirror = true)
+w.tryBlock = (pairs, boxes, mirror = true) => {
+  const V = w.SF2.THREE.Vector3, CW = w.app.match.collision.constructor, all = [];
+  for (const [x0, y0, z0, x1, y1, z1] of boxes) { all.push({ min: new V(x0, y0, z0), max: new V(x1, y1, z1) }); if (mirror) all.push({ min: new V(-x1, y0, -z1), max: new V(-x0, y0 + (y1 - y0), -z0) }); }
+  let n = 0; const d = new V();
+  for (const [a, b] of pairs) { d.subVectors(b, a); const L = d.length(); d.divideScalar(L); if (!all.some((bx) => CW.rayBox(a, d, bx, L))) n++; }
+  return n;
+};

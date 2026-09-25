@@ -218,6 +218,9 @@ const MAPS = [
         [-8.6, 0, 1.2], [-14.6, 0.9, 0.9], [-27.6, -15.6, 1.2], [-26.3, -15.9, 0.9], [-27.6, 15.6, 1.2], [-9.5, -15.2, 1.1], [-15.5, 16.2, 1.2]];
       b.sym((s) => {
         for (const [x, z, sz] of K) b.crate(x * s, z * s, sz);
+        // v18 spawn screen: 2.5 m crate wall across the centre aisle (no spawn-to-spawn sightline; exits on both flanks)
+        for (const z of [-1.89, -0.63, 0.63, 1.89]) { b.crate(-23.4 * s, z * s, 1.26); b.crate(-23.4 * s, z * s, 1.2, 1.26); }
+        b.crate(-23.4 * s, 3.2 * s, 1.2, 1.3); b.crate(-23.4 * s, -3.2 * s, 1.2, 1.3);
         b.crate(-27.6 * s, -15.6 * s, 0.8, 1.2);
         for (const [x, z, r] of [[-27.9, -9.6, 1], [-27.2, -10.3, 0], [-28.2, -10.5, 1], [-10.6, 18.6, 0], [-11.3, 19.1, 1]]) b.barrel(x * s, z * s, r);
         b.pallet(-26 * s, 10.5 * s, 0, 1.0); b.pallet(-26 * s, 12 * s);
@@ -275,6 +278,9 @@ const MAPS = [
         b.box(X(-9), 0, Z(7.7), X(-5), 1.2, Z(8.3), 'plaster', { radar: 'sandbag' });
         b.tree(X(-9.5), Z(5.2)); b.tree(X(-13.5), Z(-4.8)); b.tree(X(-35), Z(14)); b.tree(X(-36), Z(-20));
         b.car(X(-23), Z(1.8), 0.2); b.car(X(-3.5), Z(-14), Math.PI / 2);
+        // v18 spawn screens: two staggered adobe walls across the main street — an S-bend you can walk through but not see through
+        b.box(X(-30.3), 0, Z(-6), X(-29.7), 2.6, Z(0.5), 'plaster', { radar: 'wall' }); b.deco(X(-30.4), 2.6, Z(-6), X(-29.6), 2.72, Z(0.6), 'plasterWhite');
+        b.box(X(-26.3), 0, Z(-0.8), X(-25.7), 2.6, Z(5), 'plaster', { radar: 'wall' }); b.deco(X(-26.4), 2.6, Z(-0.9), X(-25.6), 2.72, Z(5), 'plasterWhite');
         b.wallX(Z(-17.5), Math.min(X(-19), X(-6)), Math.max(X(-19), X(-6)), 0, 4.2, 0.8, 'plaster',
           (s > 0 ? [[-17, -14.8], [-12.6, -10.4], [-8.2, -6]] : [[6, 8.2], [10.4, 12.6], [14.8, 17]]).map(([a, bb]) => ({ a, b: bb, y1: 3 })), { radar: 'wall' });
         for (const [x, z, sz] of [[-26, -3, 1.2], [-26, -1.8, 0.9], [-17, -2.6, 1.1], [-33, 9, 1.2], [-22, 23, 1.2], [-3, 23, 1.1], [-16, -23, 1.2], [-28, -24, 1.2]]) b.crate(X(x), Z(z), sz);
@@ -382,6 +388,7 @@ const MAPS = [
         for (const x of [-19, -13.5, -8, 8, 13.5, 19]) Wz(s, x, 8.1, 19.8, []);
         Wz(s, 0, 8.1, 19.8, [{ a: 12, b: 13.6 }]);
         b.box(X(-23), 0, Z(-3), X(-21.6), 1.1, Z(3), 'desk', { radar: 'crate' }); b.deco(X(-23.2), 1.1, Z(-3.1), X(-21.5), 1.16, Z(3.1), 'whiteSteel');
+        b.box(X(-22.5), 1.16, Z(-3.1), X(-22.1), 2.4, Z(3.1), 'officeWall', { radar: false }); // v18 reception screen on the desk: blocks the spawn-to-spawn sightline, keeps the 2.5 m walkway to the door
         for (const z of [-6, 5.5]) b.box(X(-27.2), 0, Z(z), X(-26.2), 0.8, Z(z + 2.4), 'partition', { material: 'carpet', radar: 'crate', penetrable: true });
         b.box(X(-26), 0, Z(12.5), X(-21), 0.76, Z(15.5), 'desk', { material: 'wood', radar: 'crate', penetrable: true });
         for (const [cx, cz] of [[-17, 3], [-17, -6], [-12.5, 3], [-12.5, -6]]) {
@@ -441,6 +448,8 @@ const MAPS = [
         b.deco(X(-37.8), 6.4, Z(14.2), X(-34.2), 6.6, Z(17.8), 'roof');
         b.cyl(X(-15), Z(21), 2, 0, 5, 'whiteSteel', { seg: 24 }); b.cyl(X(-9.5), Z(23), 1.6, 0, 4, 'whiteSteel', { seg: 24 });
         b.car(X(-20), Z(-6), 0.3, 'darkSteel'); b.car(X(-40), Z(-18), Math.PI / 2 + 0.2, 'darkSteel');
+        // v18 spawn screens: staggered concrete T-walls in front of the spawn (walkable, no spawn-to-spawn sightline across the field)
+        b.box(X(-40.5), 0, Z(-8), X(-39.7), 2.4, Z(-0.5), 'concreteWall', { radar: 'wall' }); b.box(X(-37.3), 0, Z(-1.5), X(-36.5), 2.4, Z(8), 'concreteWall', { radar: 'wall' });
         for (const [x, z, sz] of [[-22, -12, 1.2], [-22, -13.3, 0.9], [-12, -18, 1.2], [-28, 6, 1.1], [-5, -12, 1.1], [-44, 14, 1.1], [-44, -12, 1.1]]) b.crate(X(x), Z(z), sz);
         for (const [x, z, r] of [[-17, -24, 3.2], [-30, 26, 3.6], [-8, 16, 2.4], [-40, 3.5, 2.2]]) {
           b.box(X(x) - r * 0.55, 0, Z(z) - r * 0.55, X(x) + r * 0.55, r * 0.9, Z(z) + r * 0.55, null, { material: 'concrete', radar: 'solid' });
