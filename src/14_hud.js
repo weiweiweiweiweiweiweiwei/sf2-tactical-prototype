@@ -19,7 +19,8 @@ class HUD {
       markers: $('markers'), toast: $('toast'), aim: $('aimName'), charge: $('charge'), chargeFill: $('chargeFill'),
     };
     this.mk = []; this.toastT = 0; this._pv = new THREE.Vector3();
-    this.el.wIcon = $('wIcon'); this.el.fireMode = $('fireMode');
+    this.el.wIcon = $('wIcon'); this.el.fireMode = $('fireMode'); this.el.ammoFill = $('ammoFill'); this.el.timerBot = $('timerBotT');
+    this.applyStyle();
     this.segs = []; for (let i = 0; i < 10; i++) { const s = document.createElement('i'); $('hpSegs').appendChild(s); this.segs.push(s); }
     this.cache = {}; this.vignette = 0; this.white = 0; this.feed = []; this.radarT = 0; this.sbT = 0;
     this.dd = [];
@@ -36,6 +37,8 @@ class HUD {
     if (prop === 'text') el.textContent = val; else el.style[prop] = val;
   }
   _cls(key, el, cls, on) { if (this.cache[key] === on) return; this.cache[key] = on; el.classList.toggle(cls, on); }
+
+  applyStyle() { this.el.root.classList.toggle('minimal', Settings.data.hudStyle !== 'panel'); } // v19: SF2 minimal HUD (default) or the v5 panel HUD
 
   show(on) { this.el.root.classList.toggle('hidden', !on); if (!on) { this.showDeath(false); this.scoreboard(null); } }
   reset() {
@@ -82,6 +85,7 @@ class HUD {
     if (w.kind === 'knife') { this._set('mag', this.el.mag, 'text', '∞'); this._set('res', this.el.res, 'text', ''); }
     else if (w.kind === 'grenade') { this._set('mag', this.el.mag, 'text', String(w.count)); this._set('res', this.el.res, 'text', ''); }
     else { this._set('mag', this.el.mag, 'text', String(w.ammo)); this._set('res', this.el.res, 'text', '/ ' + w.reserveAmmo); }
+    this._set('amf', this.el.ammoFill, 'width', (w.mag ? clamp(w.ammo / w.mag, 0, 1) * 100 : 100).toFixed(1) + '%');
     const low = w.mag && w.ammo <= Math.ceil(w.mag * 0.25);
     this._cls('magLow', this.el.mag, 'low', !!low);
     const sig = ws.weapons.map((x, i) => `${i}${x.def.id}${x.kind === 'grenade' ? x.count : ''}${i === ws.index ? '*' : ''}`).join('|');
@@ -106,7 +110,7 @@ class HUD {
     const a = rounds ? m.roundWins.alpha : m.score.alpha, b = rounds ? m.roundWins.bravo : m.score.bravo;
     this._set('sa', this.el.scoreA, 'text', String(a)); this._set('sb', this.el.scoreB, 'text', String(b));
     const s = Math.max(0, Math.ceil(m.timeLeft));
-    this._set('tm', this.el.timer, 'text', `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`);
+    const tt = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; this._set('tm', this.el.timer, 'text', tt); this._set('tmB', this.el.timerBot, 'text', tt.padStart(5, '0'));
     this._set('tg', this.el.target, 'text', rounds ? `第 ${m.round} 回合 · 搶 ${m.target} 勝` : `${RULES[m.rule].name} · 目標 ${m.target} 分`);
     this._set('md', this.el.mode, 'text', rounds ? `存活 ${m.aliveCount('alpha')} vs ${m.aliveCount('bravo')}${m.rule === 'relic' ? (m.player.team === 'alpha' ? ' · 進攻' : ' · 防守') : ''}` : MODES[m.mode].name);
     this._set('ba', this.el.barA, 'width', clamp(a / m.target, 0, 1) * 50 + '%'); this._set('bb', this.el.barB, 'width', clamp(b / m.target, 0, 1) * 50 + '%');

@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SF2 Tactical Prototype v17</title>
+<title>SF2 Tactical Prototype v19</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Teko:wght@400;500;600&family=Rajdhani:wght@500;600;700&family=Noto+Sans+TC:wght@500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Teko:wght@300;400;500;600&family=Rajdhani:wght@500;600;700&family=Noto+Sans+TC:wght@500;700&display=swap" rel="stylesheet">
 <style>
 :root{
   --hud:#e8efe9; --dim:rgba(232,239,233,.55); --faint:rgba(232,239,233,.28); --accent:#7dffa6; --accent2:#3ddc84;
@@ -424,12 +424,62 @@ body.grading #pause{display:none!important}
 #gpBody input[type=number]{width:100%;font-family:Consolas,monospace;font-size:11px;background:#0c0f0e;color:#fff;border:1px solid #2c3531;padding:2px 4px;border-radius:2px}
 .gpW{display:grid;grid-template-columns:78px repeat(4,1fr);gap:4px;align-items:center;margin:3px 0}
 .gpW label{display:flex;align-items:center;gap:2px;font-size:10px;color:#aaa}.gpW .c1{color:#ff7a70}.gpW .c2{color:#7dff95}.gpW .c3{color:#8fb0ff}
+
+/* =================== v19 · SF2-style minimal HUD (設定 → HUD 樣式) ===================
+   Bare thin numerals + hairlines, no panels: health bottom-left, ammo bottom-right, score top-centre, timer bottom-centre. */
+#hud.minimal{--ink:rgba(238,240,234,.93);--ink2:rgba(238,240,234,.58);--hair:rgba(238,240,234,.2)}
+#hud.minimal .panel{background:none!important;box-shadow:none!important;clip-path:none!important;backdrop-filter:none!important}
+#hud.minimal #hpbox::before,#hud.minimal #ammobox::before{display:none}
+#hud.minimal #hpbox,#hud.minimal #ammobox,#hud.minimal #scorebar,#hud.minimal #timerBot{text-shadow:0 1px 2px rgba(0,0,0,.75),0 0 10px rgba(0,0,0,.35)}
+#hud.minimal #hpbox{left:34px;bottom:24px;width:210px;min-width:0;padding:0}
+#hud.minimal #hpbox .lbl{display:none}
+#hud.minimal #hpbox .row{align-items:flex-end;gap:12px}
+#hud.minimal #hpNum{font:300 46px/.8 var(--num);color:var(--ink);letter-spacing:1px}
+#hud.minimal #hpNum::before{content:'✚';font:600 13px/1 var(--font);margin-right:9px;vertical-align:7px;color:var(--ink2)}
+#hud.minimal #kda{font:600 11px var(--font);color:var(--ink2);letter-spacing:1px;margin-left:auto}
+#hud.minimal #hpbox .bar{display:block;height:2px;margin-top:7px;background:var(--hair);border-radius:0;overflow:hidden;gap:0}
+#hud.minimal #hpbox .bar i{display:none}
+#hud.minimal #hpbox .bar #hpFill{display:block;background:var(--ink);transition:width .15s}
+#hud.minimal #hpbox.low #hpNum{color:#ff5d52}#hud.minimal #hpbox.low .bar #hpFill{background:#ff5d52}
+#hud.minimal #ammobox{right:34px;bottom:24px;width:240px;min-width:0;padding:0;display:grid;grid-template-areas:"row" "line" "top" "slots"}
+#hud.minimal #ammoRow{grid-area:row;align-items:flex-end;gap:7px}
+#hud.minimal #ammoMag{font:300 46px/.8 var(--num);color:var(--ink);letter-spacing:1px}#hud.minimal #ammoMag.low{color:#ff5d52}
+#hud.minimal #ammoRes{font:300 21px/1 var(--num);color:var(--ink2)}
+#hud.minimal #ammoLine{grid-area:line;display:block;height:2px;margin-top:7px;background:var(--hair);overflow:hidden}
+#hud.minimal #ammoFill{display:block;height:100%;width:100%;margin-left:auto;background:var(--ink);transition:width .08s}
+#hud.minimal #ammobox .wtop{grid-area:top;margin:5px 0 0;gap:8px}
+#hud.minimal #weaponName{font:600 11px var(--font);letter-spacing:2px;color:var(--ink2)}
+#hud.minimal #wIcon{height:16px;filter:grayscale(1) brightness(1.5);opacity:.55}
+#hud.minimal #fireMode{background:none;clip-path:none;color:var(--ink2);border:1px solid var(--hair);padding:0 5px;font-size:10px}
+#hud.minimal #slots{grid-area:slots;margin-top:3px;gap:9px}
+#hud.minimal #slots div{background:none;clip-path:none;padding:0;font:600 10px var(--font);color:rgba(238,240,234,.38);letter-spacing:.5px}
+#hud.minimal #slots div.on{background:none;color:var(--ink)}
+#hud.minimal #scorebar{top:12px;gap:18px;overflow:visible;align-items:center;padding:5px 46px 6px!important;background:linear-gradient(90deg,transparent,rgba(0,0,0,.32) 22%,rgba(0,0,0,.32) 78%,transparent)!important}
+#hud.minimal #matchMode,#hud.minimal #kda{display:none}
+#hud.minimal #scorebar .tm{background:none!important;clip-path:none;min-width:0;padding:0}
+#hud.minimal #scorebar .tm small{display:none}
+#hud.minimal #scorebar .tm b{font:400 34px/.9 var(--num);letter-spacing:1px}
+#hud.minimal #scorebar .ta b{color:#a9cfff}#hud.minimal #scorebar .tb b{color:#ffa39b}
+#hud.minimal #scorebar .mid{padding:0;min-width:0;gap:1px}
+#hud.minimal #scorebar .mid b{display:none}
+#hud.minimal #scorebar .mid span{font:600 11px var(--font);color:var(--ink2);letter-spacing:1px}
+#hud.minimal #scorebar .bar{height:1px;bottom:0;opacity:.85}
+#timerBot{display:none}
+#hud.minimal #timerBot{position:absolute;left:50%;bottom:20px;transform:translateX(-50%);display:flex;align-items:center;gap:12px;font:300 25px/1 var(--num);color:var(--ink);letter-spacing:2px}
+#hud.minimal #timerBot i{width:74px;height:1px;background:linear-gradient(90deg,transparent,rgba(238,240,234,.5))}
+#hud.minimal #timerBot i:last-child{transform:scaleX(-1)}
+#hud.minimal #compass{top:54px;opacity:.72}
+#hud.minimal #radarWrap{width:156px;height:156px;left:24px;top:20px;padding:3px}
+#hud.minimal #radarWrap.panel{box-shadow:0 0 0 1px rgba(238,240,234,.28)!important;background:rgba(0,0,0,.22)!important}
+#hud.minimal #killfeed .kf{background:linear-gradient(90deg,transparent,rgba(0,0,0,.34));clip-path:none;padding:2px 10px;font-size:14px}
+#hud.minimal #killfeed .kf.me{background:linear-gradient(90deg,transparent,rgba(110,75,10,.45))}
+#hud.minimal #fps{left:auto;right:10px;bottom:4px;transform:none;opacity:.55}
 </style>
 </head>
 <body>
 <canvas id="game"></canvas>
 
-<div id="hud" class="hidden">
+<div id="hud" class="hidden minimal">
   <div id="vignette"></div><div id="lowhp"></div><div id="flashWhite"></div>
   <div id="scope"><div class="lens"></div><div class="lh"></div><div class="lv"></div>
     <div class="tk l"></div><div class="tk r"></div><div class="tk t"></div><div class="tk b"></div><div class="cd"></div><div class="zl" id="zoomLbl"></div></div>
@@ -450,6 +500,7 @@ body.grading #pause{display:none!important}
     <div id="objBar"></div><div id="lockout"></div>
     <div id="capture"><div class="cring" id="capRing"><b id="capLetter"></b></div><div class="lbl" id="capLbl"></div></div>
     <div id="interact"></div><div id="toast"></div>
+    <div id="timerBot"><i></i><b id="timerBotT">15:00</b><i></i></div>
     <div id="killfeed"></div>
     <div id="announce"><div class="m" id="annMain"></div><div class="s" id="annSub"></div></div>
     <div id="points"></div>
@@ -461,6 +512,7 @@ body.grading #pause{display:none!important}
       <div class="bar" id="hpSegs"><div id="hpFill"></div></div></div>
     <div id="ammobox" class="panel"><div class="wtop"><span id="fireMode">AUTO</span><img id="wIcon" alt=""><div id="weaponName">M4A1</div></div>
       <div id="ammoRow"><div id="ammoMag">30</div><div id="ammoRes">/ 120</div></div>
+      <div id="ammoLine"><i id="ammoFill"></i></div>
       <div id="slots"></div></div>
   </div>
   <div id="freeze"><div class="fz"><div class="fr" id="fzRound">準備開戰</div><div class="fn" id="fzNum">5</div><div class="fs" id="fzSub">可轉動視角與切換武器 · 倒數結束後才能移動與開火</div><div class="fh" id="fzHint">點擊滑鼠左鍵鎖定視角</div></div></div>
@@ -568,6 +620,7 @@ body.grading #pause{display:none!important}
   <div class="opt"><span>開鏡模式</span><select id="optAds"><option value="toggle">切換 Toggle</option><option value="hold">按住 Hold</option></select><span></span></div>
   <div class="opt"><span>擊殺語音</span><input type="checkbox" id="optAnn"><span></span></div>
   <div class="opt"><span>死亡回放 KILLCAM</span><input type="checkbox" id="optKc"><span></span></div>
+  <div class="opt"><span>HUD 樣式</span><select id="optHud"><option value="minimal">極簡（SF2 風格，v19）</option><option value="panel">戰術面板（v5–v18）</option></select><span></span></div>
   <div class="opt"><span>顯示 FPS</span><input type="checkbox" id="optFps"><span></span></div>
   <div class="row-btns"><button class="btn" id="setClose">完成</button></div>
 </div></div>

@@ -133,7 +133,10 @@ class Match {
     const k = this.envK, seen = new Set();
     const set = (m, mul) => { if (!m || seen.has(m) || !('envMapIntensity' in m)) return; seen.add(m); if (m.userData.env === undefined) m.userData.env = m.envMapIntensity || 1; m.envMapIntensity = m.userData.env * k * mul; };
     this.scene.traverse((o) => { const ms = Array.isArray(o.material) ? o.material : [o.material]; ms.forEach((m) => set(m, 1)); });
-    this.weapons.scene.traverse((o) => { const ms = Array.isArray(o.material) ? o.material : [o.material]; ms.forEach((m) => set(m, 2.2)); }); // viewmodel: stronger reflections so dark gun metal reads as metal, not a black cut-out
+    // viewmodel: reflections normalised to the same average brightness on every map (v19) — dark gun metal still reads as metal on dim maps
+    // (up to ×2.2, the v16 value) but no longer turns chrome-white under bright HDRI skies (harbor sunset was ×4 brighter than desert)
+    const ml = this.vmEnv && this.vmEnv.userData.meanLum, vmMul = ml ? clamp(0.2 / (ml * k), 0.6, 2.2) : 2.2;
+    this.weapons.scene.traverse((o) => { const ms = Array.isArray(o.material) ? o.material : [o.material]; ms.forEach((m) => set(m, vmMul)); });
   }
 
   _zonePoints(z) {

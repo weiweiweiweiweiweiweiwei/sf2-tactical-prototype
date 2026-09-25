@@ -364,6 +364,7 @@ function calcDamage(def, part, dist, mult = 1) {
 const Settings = {
   data: {
     sens: 2.0, zoomSens: 1.0, volume: 0.8, fov: 75, quality: 'high', hdri: true, dof: true, adsMode: 'toggle', announcer: true, showFps: true, hipMode: 'precise', killcam: true,
+    hudStyle: 'minimal', // v19: 'minimal' (SF2) | 'panel' (v5)
     look: {}, // v17: per-map player grade (Resolve units), see LOOK_DEFAULT
     loadouts: DEFAULT_LOADOUTS.map((l) => Object.assign({}, l)),
     lobby: { map: 5, mode: 'general', rule: 'dom', difficulty: 1, allies: 6, enemies: 6, loadout: 0,

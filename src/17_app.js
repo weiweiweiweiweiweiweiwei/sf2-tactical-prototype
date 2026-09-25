@@ -201,6 +201,9 @@ class App {
     const g = new THREE.DataTexture(d, tex.image.width, tex.image.height, tex.format, tex.type);
     g.mapping = THREE.EquirectangularReflectionMapping; g.colorSpace = tex.colorSpace; g.minFilter = g.magFilter = THREE.LinearFilter; g.needsUpdate = true;
     const env = this.pmrem.fromEquirectangular(g).texture; g.dispose();
+    let s = 0, ws = 0; const H = tex.image.height, W = tex.image.width; // solid-angle weighted mean luminance → normalises viewmodel reflections per map
+    for (let j = 0; j < H; j += 2) { const w = Math.cos((0.5 - (j + 0.5) / H) * Math.PI); for (let i = 0; i < W; i += 2) { const k = (j * W + i) * ch; s += (0.2126 * f(d[k]) + 0.7152 * f(d[k + 1]) + 0.0722 * f(d[k + 2])) * w; ws += w; } }
+    env.userData.meanLum = s / ws;
     return env;
   }
 
@@ -275,7 +278,7 @@ class App {
     bindRange('optFov', 'fov', (v) => String(Math.round(v)), (v) => { if (this.match) { this.match.weapons.baseFov = v; if (!this.match.weapons.ads) this.match.weapons.fov = v; } });
     const sel = (id, key, apply) => { const el = $(id); el.value = String(S[key]); el.addEventListener('change', () => { S[key] = el.value; if (apply) apply(el.value); Settings.save(); }); };
     sel('optQuality', 'quality', (q) => { this.tex.setQuality(q); if (this.match) this.post.configure(this.match, q); });
-    sel('optAds', 'adsMode'); sel('optHip', 'hipMode');
+    sel('optAds', 'adsMode'); sel('optHip', 'hipMode'); sel('optHud', 'hudStyle', () => this.hud.applyStyle());
     const chk = (id, key) => { const el = $(id); el.checked = !!S[key]; el.addEventListener('change', () => { S[key] = el.checked; Settings.save(); }); };
     chk('optHdri', 'hdri'); chk('optDof', 'dof'); chk('optAnn', 'announcer'); chk('optFps', 'showFps'); chk('optKc', 'killcam');
   }
