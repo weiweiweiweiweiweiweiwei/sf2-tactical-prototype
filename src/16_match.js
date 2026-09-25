@@ -247,14 +247,14 @@ class Match {
     }
     hits.sort((a, b) => a.t - b.t);
     if (shooter.isPlayer && (!pellet || opts.pellet === 0)) this.stats.shots++;
-    let power = def.penetration || 0, bodies = def.kind === 'sniper' ? 2 : def.kind === 'lmg' ? 1 : 0, mult = 1, endT = range, hitPlayer = false, kills = 0;
+    let power = Math.max(1, def.penetration || 0), bodies = def.kind === 'sniper' ? 2 : def.kind === 'lmg' ? 1 : 0, mult = 1, endT = range, hitPlayer = false, kills = 0;
     const cam = this.camera.position, loudShooter = shooter.isPlayer || origin.distanceTo(cam) < 45, fx = !pellet || opts.pellet < 3;
     for (const h of hits) {
       if (h.type === 'world') {
         const near = loudShooter || h.point.distanceTo(cam) < 30;
         if (near && fx) this.effects.impact(h, !pellet || opts.pellet === 0);
         if (h.material === 'glass') { mult *= 0.92; continue; }
-        if (h.penetrable && power > 0) { power--; mult *= 0.6; continue; }
+        if (h.penetrable && power > 0) { power--; mult *= 0.5; continue; } // §4.2: thin walls (wood, partitions) ×0.5; concrete / rock / containers stop the round
         endT = h.t; break;
       }
       const point = origin.clone().addScaledVector(dir, h.t);

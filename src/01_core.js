@@ -38,7 +38,7 @@ const CFG = {
 const POINTS = { head: 50, body: 30, knife: 50, grenade: 40, assist: 15, capture: 75, relic: 150 };
 
 // Hit-zone multipliers (chest = weapon base damage).
-const PART_MULT = { head: 1, chest: 1, stomach: 0.9, thigh: 0.72, shin: 0.55, foot: 0.4 };
+const PART_MULT = { head: 2.5, chest: 1, stomach: 0.9, thigh: 0.75, shin: 0.75, foot: 0.75 }; // CLAUDE.md §4.2 (v21): head ×2.5, chest 1, abdomen 0.9, limbs 0.75
 const PART_LABEL = { head: '頭部', chest: '胸部', stomach: '腹部', thigh: '大腿', shin: '小腿', foot: '腳' };
 
 /* ---------------------------------------------------------------------
@@ -47,175 +47,175 @@ const PART_LABEL = { head: '頭部', chest: '胸部', stomach: '腹部', thigh: 
    hipSpread, adsSpread, adsFov, adsType, mobility, maxAmmo, reloadTime,
    modelUrl) plus optional tuning; `compileWeapon` turns it into the
    runtime definition. Adding a weapon = adding one entry.
-     • Primary (rifle / SMG / LMG / sniper): headshot = instant kill.
-     • Rifles 23–24 dmg → chest 5 · thigh 6–7 · foot 11 shots.
-     • Pistols: headshot needs 2 shots.
+     • v21 damage model (CLAUDE.md §4.2): damageNear / damageFar with linear falloff between falloffStart and
+       falloffEnd (m); parts head ×2.5 · chest 1 · abdomen 0.9 · limbs 0.75; sniper headshot = kill.
+     • Rifles 25–34 near → 3–4 chest hits close, 4–5 far; rifle headshots need 2.
    ------------------------------------------------------------------- */
 const WEAPON_DATABASE = {
   m4a1: {
-    name: 'M4A1', type: 'assault', slot: 'primary', damage: 24, fireRate: 0.09,
+    name: 'M4A1', type: 'assault', slot: 'primary', damageNear: 26, damageFar: 20, falloffStart: 25, falloffEnd: 60, fireRate: 0.09,
     recoilPitch: 0.012, recoilYaw: 0.009, recoilRecovery: 9,
     hipSpread: 0.075, adsSpread: 0.0022, adsFov: 55, adsType: '3d_sight', mobility: 0.95, maxAmmo: 30, reloadTime: 2.2, modelUrl: null,
     model: 'm4', sound: 'm4', tracerEvery: 2, penetration: 1, desc: '均衡的全自動步槍，全息瞄具。',
   },
   g36c: {
-    name: 'G36C 黃金', type: 'assault', slot: 'primary', damage: 23, fireRate: 0.08,
+    name: 'G36C 黃金', type: 'assault', slot: 'primary', damageNear: 25, damageFar: 19, falloffStart: 25, falloffEnd: 60, fireRate: 0.08,
     recoilPitch: 0.011, recoilYaw: 0.012, recoilRecovery: 10,
     hipSpread: 0.07, adsSpread: 0.0018, adsFov: 50, adsType: 'red_dot', mobility: 0.95, maxAmmo: 30, reloadTime: 2.0, modelUrl: null,
     model: 'g36c', sound: 'g36s', suppressed: true, tracerEvery: 0, penetration: 1, desc: '提把紅點 + 消音器，槍聲小、不暴露雷達。',
   },
   mp5: {
-    name: 'MP5', type: 'smg', slot: 'primary', damage: 19, fireRate: 0.07,
+    name: 'MP5', type: 'smg', slot: 'primary', damageNear: 25, damageFar: 16, falloffStart: 10, falloffEnd: 35, fireRate: 0.07,
     recoilPitch: 0.008, recoilYaw: 0.008, recoilRecovery: 12,
     hipSpread: 0.055, adsSpread: 0.003, adsFov: 58, adsType: '3d_sight', mobility: 1.02, maxAmmo: 30, reloadTime: 2.0, modelUrl: null,
-    model: 'mp5', sound: 'mp5', falloff: 0.965, range: 170, tracerEvery: 3, desc: '經典衝鋒槍，腰射較穩定。',
+    model: 'mp5', sound: 'mp5', range: 170, tracerEvery: 3, desc: '經典衝鋒槍，腰射較穩定。',
   },
   p90: {
-    name: 'P90', type: 'smg', slot: 'primary', damage: 18, fireRate: 0.066,
+    name: 'P90', type: 'smg', slot: 'primary', damageNear: 22, damageFar: 14, falloffStart: 10, falloffEnd: 35, fireRate: 0.066,
     recoilPitch: 0.006, recoilYaw: 0.007, recoilRecovery: 14,
     hipSpread: 0.05, adsSpread: 0.0035, adsFov: 60, adsType: 'red_dot', mobility: 1.05, maxAmmo: 50, reloadTime: 2.5, modelUrl: null,
-    model: 'p90', sound: 'p90', falloff: 0.96, range: 160, tracerEvery: 3, desc: '無托結構、頂置 50 發彈匣，射速最快。',
+    model: 'p90', sound: 'p90', range: 160, tracerEvery: 3, desc: '無托結構、頂置 50 發彈匣，射速最快。',
   },
   remington870: {
-    name: 'Remington 870', type: 'shotgun', slot: 'primary', damage: 18, pellets: 8, fireRate: 1.0,
+    name: 'Remington 870', type: 'shotgun', slot: 'primary', damageNear: 18, damageFar: 4, falloffStart: 5, falloffEnd: 25, pellets: 8, fireRate: 1.0,
     recoilPitch: 0.08, recoilYaw: 0.02, recoilRecovery: 6,
     hipSpread: 0.11, adsSpread: 0.075, adsFov: 65, adsType: 'none', mobility: 0.9, maxAmmo: 8, reloadTime: 3.5, modelUrl: null,
-    model: 'm870', sound: 'm870', falloff: 0.82, range: 60, headKill: false, headMult: 2, shellReload: 0.44, tracerEvery: 0, desc: '泵動式散彈槍，8 顆彈丸，貼身一槍致命。',
+    model: 'm870', sound: 'm870', range: 60, shellReload: 0.44, tracerEvery: 0, desc: '泵動式散彈槍，8 顆彈丸，貼身一槍致命。',
   },
   m249: {
-    name: 'M249', type: 'lmg', slot: 'primary', damage: 24, fireRate: 0.075,
+    name: 'M249', type: 'lmg', slot: 'primary', damageNear: 28, damageFar: 21, falloffStart: 30, falloffEnd: 80, fireRate: 0.075,
     recoilPitch: 0.011, recoilYaw: 0.014, recoilRecovery: 8,
     hipSpread: 0.09, adsSpread: 0.004, adsFov: 55, adsType: '3d_sight', mobility: 0.8, maxAmmo: 100, reloadTime: 5.5, modelUrl: null,
-    model: 'm249', sound: 'm249', penetration: 2, falloff: 0.995, range: 300, adsSpeed: 10, reserveMult: 2, tracerEvery: 2, desc: '輕機槍：100 發彈鏈，換彈慢、移動慢。',
+    model: 'm249', sound: 'm249', penetration: 2, range: 300, adsSpeed: 10, reserveMult: 2, tracerEvery: 2, desc: '輕機槍：100 發彈鏈，換彈慢、移動慢。',
   },
   cheytac_m200: {
-    name: 'CheyTac M200', type: 'sniper', slot: 'primary', damage: 115, fireRate: 1.2,
+    name: 'CheyTac M200', type: 'sniper', slot: 'primary', damageNear: 120, damageFar: 105, falloffStart: 60, falloffEnd: 200, fireRate: 1.2,
     recoilPitch: 0.075, recoilYaw: 0.01, recoilRecovery: 5,
     hipSpread: 0.15, adsSpread: 0.0, adsFov: 15, adsType: '2d_scope_overlay', mobility: 0.8, maxAmmo: 5, reloadTime: 3.2, modelUrl: null,
     model: 'm200', sound: 'm200', zoomFovs: [15, 7], penetration: 2, range: 450, adsSpeed: 16, tracerEvery: 1, desc: '栓動狙擊，站定開鏡第 1 幀 100% 精準。',
   },
   p226: {
-    name: 'P226', type: 'pistol', slot: 'secondary', damage: 26, fireRate: 0.18,
+    name: 'P226', type: 'pistol', slot: 'secondary', damageNear: 28, damageFar: 18, falloffStart: 10, falloffEnd: 35, fireRate: 0.18,
     recoilPitch: 0.03, recoilYaw: 0.005, recoilRecovery: 12,
     hipSpread: 0.03, adsSpread: 0.004, adsFov: 60, adsType: '3d_sight', mobility: 1.0, maxAmmo: 15, reloadTime: 1.5, modelUrl: null,
-    model: 'p226', sound: 'p226', headMult: 2.1, falloff: 0.97, range: 160, desc: '半自動手槍，爆頭 2 槍。',
+    model: 'p226', sound: 'p226', range: 160, desc: '半自動手槍，爆頭 2 槍。',
   },
   deagle: {
-    name: 'Desert Eagle', type: 'pistol', slot: 'secondary', damage: 45, fireRate: 0.3,
+    name: 'Desert Eagle', type: 'pistol', slot: 'secondary', damageNear: 50, damageFar: 34, falloffStart: 12, falloffEnd: 40, fireRate: 0.3,
     recoilPitch: 0.05, recoilYaw: 0.012, recoilRecovery: 7,
     hipSpread: 0.04, adsSpread: 0.004, adsFov: 58, adsType: '3d_sight', mobility: 0.97, maxAmmo: 7, reloadTime: 2.1, modelUrl: null,
-    model: 'deagle', sound: 'deagle', headMult: 2.0, falloff: 0.97, range: 180, penetration: 1, desc: '.50 大口徑，身體 3 槍、爆頭 2 槍。',
+    model: 'deagle', sound: 'deagle', range: 180, penetration: 1, desc: '.50 大口徑，身體 3 槍、爆頭 2 槍。',
   },
   /* ------------------------------ v5 arsenal (31 guns, ≥5 per class) ------------------------------ */
   ak47: {
-    name: 'AK-47', type: 'assault', slot: 'primary', damage: 24.5, fireRate: 0.1, recoilPitch: 0.016, recoilYaw: 0.012, recoilRecovery: 7,
+    name: 'AK-47', type: 'assault', slot: 'primary', damageNear: 34, damageFar: 25, falloffStart: 25, falloffEnd: 60, fireRate: 0.1, recoilPitch: 0.016, recoilYaw: 0.012, recoilRecovery: 7,
     hipSpread: 0.08, adsSpread: 0.0028, adsFov: 58, adsType: '3d_sight', mobility: 0.93, maxAmmo: 30, reloadTime: 2.5, modelUrl: null,
-    sound: 'ak', penetration: 2, falloff: 0.988, bloomPerShot: 0.005, bloomMax: 0.032, tp: { len: 0.9, body: 'wood', mag: 'curve' }, desc: '7.62mm 重火力，後座力大、穿透強，機械瞄具。',
+    sound: 'ak', penetration: 2, bloomPerShot: 0.005, bloomMax: 0.032, tp: { len: 0.9, body: 'wood', mag: 'curve' }, desc: '7.62mm 重火力，後座力大、穿透強，機械瞄具。',
   },
   scarl: {
-    name: 'SCAR-L', type: 'assault', slot: 'primary', damage: 23.5, fireRate: 0.096, recoilPitch: 0.011, recoilYaw: 0.008, recoilRecovery: 10,
+    name: 'SCAR-L', type: 'assault', slot: 'primary', damageNear: 28, damageFar: 21, falloffStart: 25, falloffEnd: 60, fireRate: 0.096, recoilPitch: 0.011, recoilYaw: 0.008, recoilRecovery: 10,
     hipSpread: 0.072, adsSpread: 0.0019, adsFov: 52, adsType: '3d_sight', mobility: 0.94, maxAmmo: 30, reloadTime: 2.3, modelUrl: null,
     sound: 'scar', penetration: 1, tp: { len: 0.88, body: 'tan', mag: 'box' }, desc: '沙色模組化步槍，後座柔和、全息瞄具。',
   },
   famas: {
-    name: 'FAMAS', type: 'assault', slot: 'primary', damage: 21.5, fireRate: 0.06, recoilPitch: 0.0105, recoilYaw: 0.013, recoilRecovery: 11,
+    name: 'FAMAS', type: 'assault', slot: 'primary', damageNear: 25, damageFar: 18, falloffStart: 25, falloffEnd: 60, fireRate: 0.06, recoilPitch: 0.0105, recoilYaw: 0.013, recoilRecovery: 11,
     hipSpread: 0.07, adsSpread: 0.0028, adsFov: 56, adsType: '3d_sight', mobility: 0.96, maxAmmo: 25, reloadTime: 2.7, modelUrl: null,
     sound: 'm4', rate: 1.12, tp: { len: 0.76, body: 'dark', mag: 'box', bull: true }, desc: '法國無托步槍，射速 1000 RPM，提把機械瞄具。',
   },
   aug: {
-    name: 'Steyr AUG', type: 'assault', slot: 'primary', damage: 22.5, fireRate: 0.085, recoilPitch: 0.0095, recoilYaw: 0.007, recoilRecovery: 11,
+    name: 'Steyr AUG', type: 'assault', slot: 'primary', damageNear: 27, damageFar: 22, falloffStart: 25, falloffEnd: 70, fireRate: 0.085, recoilPitch: 0.0095, recoilYaw: 0.007, recoilRecovery: 11,
     hipSpread: 0.07, adsSpread: 0.0014, adsFov: 40, adsType: 'red_dot', mobility: 0.95, maxAmmo: 30, reloadTime: 2.4, modelUrl: null,
     sound: 'm4', rate: 0.94, tp: { len: 0.8, body: 'green', mag: 'box', bull: true, scope: true }, desc: '無托步槍，內建 1.5 倍光學瞄具，最精準的突擊步槍。',
   },
   ump45: {
-    name: 'UMP45', type: 'smg', slot: 'primary', damage: 22, fireRate: 0.092, recoilPitch: 0.0105, recoilYaw: 0.009, recoilRecovery: 11,
+    name: 'UMP45', type: 'smg', slot: 'primary', damageNear: 30, damageFar: 18, falloffStart: 10, falloffEnd: 35, fireRate: 0.092, recoilPitch: 0.0105, recoilYaw: 0.009, recoilRecovery: 11,
     hipSpread: 0.055, adsSpread: 0.003, adsFov: 58, adsType: 'red_dot', mobility: 1.0, maxAmmo: 25, reloadTime: 2.1, modelUrl: null,
-    sound: 'ump', falloff: 0.955, range: 150, tp: { len: 0.62, body: 'dark', mag: 'box' }, desc: '.45 大口徑衝鋒槍，單發傷害高、射速慢。',
+    sound: 'ump', range: 150, tp: { len: 0.62, body: 'dark', mag: 'box' }, desc: '.45 大口徑衝鋒槍，單發傷害高、射速慢。',
   },
   vector: {
-    name: 'KRISS Vector', type: 'smg', slot: 'primary', damage: 16, fireRate: 0.052, recoilPitch: 0.0055, recoilYaw: 0.006, recoilRecovery: 15,
+    name: 'KRISS Vector', type: 'smg', slot: 'primary', damageNear: 20, damageFar: 12, falloffStart: 10, falloffEnd: 30, fireRate: 0.052, recoilPitch: 0.0055, recoilYaw: 0.006, recoilRecovery: 15,
     hipSpread: 0.05, adsSpread: 0.0035, adsFov: 60, adsType: 'red_dot', mobility: 1.04, maxAmmo: 25, reloadTime: 1.9, modelUrl: null,
-    sound: 'vector', falloff: 0.95, range: 130, tp: { len: 0.6, body: 'dark', mag: 'box' }, desc: 'Super V 減後座系統，1150 RPM 極速但彈匣小。',
+    sound: 'vector', range: 130, tp: { len: 0.6, body: 'dark', mag: 'box' }, desc: 'Super V 減後座系統，1150 RPM 極速但彈匣小。',
   },
   mp7: {
-    name: 'MP7A1', type: 'smg', slot: 'primary', damage: 17, fireRate: 0.063, recoilPitch: 0.0065, recoilYaw: 0.0065, recoilRecovery: 14,
+    name: 'MP7A1', type: 'smg', slot: 'primary', damageNear: 22, damageFar: 15, falloffStart: 10, falloffEnd: 35, fireRate: 0.063, recoilPitch: 0.0065, recoilYaw: 0.0065, recoilRecovery: 14,
     hipSpread: 0.048, adsSpread: 0.003, adsFov: 60, adsType: 'red_dot', mobility: 1.06, maxAmmo: 40, reloadTime: 2.0, modelUrl: null,
-    sound: 'mp7', falloff: 0.96, range: 160, penetration: 1, tp: { len: 0.52, body: 'dark', mag: 'none' }, desc: '4.6mm 穿甲彈，體積最小、機動性最高。',
+    sound: 'mp7', range: 160, penetration: 1, tp: { len: 0.52, body: 'dark', mag: 'none' }, desc: '4.6mm 穿甲彈，體積最小、機動性最高。',
   },
   rpk: {
-    name: 'RPK', type: 'lmg', slot: 'primary', damage: 24, fireRate: 0.1, recoilPitch: 0.013, recoilYaw: 0.012, recoilRecovery: 8,
+    name: 'RPK', type: 'lmg', slot: 'primary', damageNear: 30, damageFar: 22, falloffStart: 30, falloffEnd: 80, fireRate: 0.1, recoilPitch: 0.013, recoilYaw: 0.012, recoilRecovery: 8,
     hipSpread: 0.085, adsSpread: 0.0035, adsFov: 56, adsType: '3d_sight', mobility: 0.85, maxAmmo: 75, reloadTime: 4.2, modelUrl: null,
     sound: 'ak', rate: 0.92, penetration: 2, reserveMult: 3, tp: { len: 1.04, body: 'wood', mag: 'drum' }, desc: 'AK 系重槍管機槍，75 發彈鼓，機械瞄具。',
   },
   negev: {
-    name: 'Negev', type: 'lmg', slot: 'primary', damage: 20, fireRate: 0.066, recoilPitch: 0.01, recoilYaw: 0.015, recoilRecovery: 8,
+    name: 'Negev', type: 'lmg', slot: 'primary', damageNear: 25, damageFar: 19, falloffStart: 30, falloffEnd: 80, fireRate: 0.066, recoilPitch: 0.01, recoilYaw: 0.015, recoilRecovery: 8,
     hipSpread: 0.095, adsSpread: 0.0045, adsFov: 54, adsType: 'red_dot', mobility: 0.8, maxAmmo: 150, reloadTime: 5.8, modelUrl: null,
     sound: 'm249', rate: 1.08, reserveMult: 2, tp: { len: 1.0, body: 'dark', mag: 'belt' }, desc: '150 發彈鏈、900 RPM 壓制火力，左右晃動大。',
   },
   pkm: {
-    name: 'PKM', type: 'lmg', slot: 'primary', damage: 23.5, fireRate: 0.09, recoilPitch: 0.014, recoilYaw: 0.013, recoilRecovery: 7,
+    name: 'PKM', type: 'lmg', slot: 'primary', damageNear: 32, damageFar: 25, falloffStart: 30, falloffEnd: 90, fireRate: 0.09, recoilPitch: 0.014, recoilYaw: 0.013, recoilRecovery: 7,
     hipSpread: 0.09, adsSpread: 0.004, adsFov: 55, adsType: '3d_sight', mobility: 0.76, maxAmmo: 100, reloadTime: 6.2, modelUrl: null,
     sound: 'pkm', penetration: 2, reserveMult: 2, tp: { len: 1.12, body: 'dark', mag: 'belt' }, desc: '7.62×54R 通用機槍，穿透與射程最佳，非常笨重。',
   },
   mg42: {
-    name: 'MG42', type: 'lmg', slot: 'primary', damage: 22, fireRate: 0.05, recoilPitch: 0.012, recoilYaw: 0.018, recoilRecovery: 7,
+    name: 'MG42', type: 'lmg', slot: 'primary', damageNear: 26, damageFar: 19, falloffStart: 30, falloffEnd: 80, fireRate: 0.05, recoilPitch: 0.012, recoilYaw: 0.018, recoilRecovery: 7,
     hipSpread: 0.1, adsSpread: 0.005, adsFov: 56, adsType: '3d_sight', mobility: 0.74, maxAmmo: 50, reloadTime: 5.0, modelUrl: null,
     sound: 'mg42', penetration: 2, reserveMult: 3, tp: { len: 1.18, body: 'dark', mag: 'drum' }, desc: '「希特勒電鋸」1200 RPM，散熱槍管套，極難控制。',
   },
   benelli_m4: {
-    name: 'Benelli M4', type: 'shotgun', slot: 'primary', damage: 15, pellets: 8, fireRate: 0.26, recoilPitch: 0.06, recoilYaw: 0.02, recoilRecovery: 7,
+    name: 'Benelli M4', type: 'shotgun', slot: 'primary', damageNear: 15, damageFar: 3.5, falloffStart: 5, falloffEnd: 25, pellets: 8, fireRate: 0.26, recoilPitch: 0.06, recoilYaw: 0.02, recoilRecovery: 7,
     hipSpread: 0.1, adsSpread: 0.068, adsFov: 64, adsType: '3d_sight', mobility: 0.9, maxAmmo: 7, reloadTime: 3.3, modelUrl: null,
-    sound: 'm870', rate: 1.06, pump: false, shellReload: 0.45, falloff: 0.8, range: 55, headKill: false, headMult: 2, tracerEvery: 0, tp: { len: 0.98, body: 'dark', mag: 'none' }, desc: '半自動散彈槍（戰術版伸縮托），連發速度快。',
+    sound: 'm870', rate: 1.06, pump: false, shellReload: 0.45, range: 55, tracerEvery: 0, tp: { len: 0.98, body: 'dark', mag: 'none' }, desc: '半自動散彈槍（戰術版伸縮托），連發速度快。',
   },
   m1014: {
-    name: 'M1014', type: 'shotgun', slot: 'primary', damage: 16, pellets: 8, fireRate: 0.3, recoilPitch: 0.065, recoilYaw: 0.02, recoilRecovery: 7,
+    name: 'M1014', type: 'shotgun', slot: 'primary', damageNear: 16, damageFar: 3.5, falloffStart: 5, falloffEnd: 25, pellets: 8, fireRate: 0.3, recoilPitch: 0.065, recoilYaw: 0.02, recoilRecovery: 7,
     hipSpread: 0.105, adsSpread: 0.072, adsFov: 64, adsType: '3d_sight', mobility: 0.88, maxAmmo: 8, reloadTime: 3.8, modelUrl: null,
-    sound: 'm870', rate: 1.0, pump: false, shellReload: 0.46, falloff: 0.8, range: 55, headKill: false, headMult: 2, tracerEvery: 0, tp: { len: 1.02, body: 'tan', mag: 'none' }, desc: 'Benelli M4 的美軍版（固定托、沙色），8 發管式彈倉。',
+    sound: 'm870', rate: 1.0, pump: false, shellReload: 0.46, range: 55, tracerEvery: 0, tp: { len: 1.02, body: 'tan', mag: 'none' }, desc: 'Benelli M4 的美軍版（固定托、沙色），8 發管式彈倉。',
   },
   saiga12: {
-    name: 'Saiga-12', type: 'shotgun', slot: 'primary', damage: 13, pellets: 9, fireRate: 0.22, recoilPitch: 0.07, recoilYaw: 0.022, recoilRecovery: 7,
+    name: 'Saiga-12', type: 'shotgun', slot: 'primary', damageNear: 13, damageFar: 3, falloffStart: 5, falloffEnd: 22, pellets: 9, fireRate: 0.22, recoilPitch: 0.07, recoilYaw: 0.022, recoilRecovery: 7,
     hipSpread: 0.11, adsSpread: 0.08, adsFov: 64, adsType: '3d_sight', mobility: 0.9, maxAmmo: 8, reloadTime: 3.0, modelUrl: null,
-    sound: 'saiga', pump: false, falloff: 0.79, range: 50, headKill: false, headMult: 2, tracerEvery: 0, tp: { len: 0.95, body: 'dark', mag: 'box' }, desc: 'AK 系統半自動散彈槍，彈匣供彈、換彈最快。',
+    sound: 'saiga', pump: false, range: 50, tracerEvery: 0, tp: { len: 0.95, body: 'dark', mag: 'box' }, desc: 'AK 系統半自動散彈槍，彈匣供彈、換彈最快。',
   },
   ksg: {
-    name: 'KSG', type: 'shotgun', slot: 'primary', damage: 17, pellets: 8, fireRate: 0.8, recoilPitch: 0.075, recoilYaw: 0.02, recoilRecovery: 6,
+    name: 'KSG', type: 'shotgun', slot: 'primary', damageNear: 17, damageFar: 4, falloffStart: 5, falloffEnd: 25, pellets: 8, fireRate: 0.8, recoilPitch: 0.075, recoilYaw: 0.02, recoilRecovery: 6,
     hipSpread: 0.1, adsSpread: 0.07, adsFov: 64, adsType: 'red_dot', mobility: 0.9, maxAmmo: 14, reloadTime: 5.2, modelUrl: null,
-    sound: 'm870', rate: 0.96, shellReload: 0.36, falloff: 0.82, range: 60, headKill: false, headMult: 2, tracerEvery: 0, tp: { len: 0.72, body: 'dark', mag: 'none', bull: true }, desc: '雙管式彈倉無托泵動散彈槍，14 發容量。',
+    sound: 'm870', rate: 0.96, shellReload: 0.36, range: 60, tracerEvery: 0, tp: { len: 0.72, body: 'dark', mag: 'none', bull: true }, desc: '雙管式彈倉無托泵動散彈槍，14 發容量。',
   },
   awp: {
-    name: 'AWP', type: 'sniper', slot: 'primary', damage: 115, fireRate: 1.45, recoilPitch: 0.07, recoilYaw: 0.01, recoilRecovery: 5,
+    name: 'AWP', type: 'sniper', slot: 'primary', damageNear: 115, damageFar: 100, falloffStart: 60, falloffEnd: 200, fireRate: 1.45, recoilPitch: 0.07, recoilYaw: 0.01, recoilRecovery: 5,
     hipSpread: 0.15, adsSpread: 0.0, adsFov: 18, adsType: '2d_scope_overlay', mobility: 0.78, maxAmmo: 10, reloadTime: 3.6, modelUrl: null,
     sound: 'awp', zoomFovs: [18, 8], penetration: 2, range: 450, adsSpeed: 15, tracerEvery: 1, tp: { len: 1.18, body: 'green', mag: 'box', scope: true }, desc: '經典綠色拇指孔槍托，10 發彈匣，一槍斃命。',
   },
   barrett: {
-    name: 'Barrett M82', type: 'sniper', slot: 'primary', damage: 140, fireRate: 0.45, recoilPitch: 0.11, recoilYaw: 0.02, recoilRecovery: 4,
+    name: 'Barrett M82', type: 'sniper', slot: 'primary', damageNear: 150, damageFar: 135, falloffStart: 60, falloffEnd: 220, fireRate: 0.45, recoilPitch: 0.11, recoilYaw: 0.02, recoilRecovery: 4,
     hipSpread: 0.18, adsSpread: 0.0, adsFov: 20, adsType: '2d_scope_overlay', mobility: 0.7, maxAmmo: 10, reloadTime: 4.2, modelUrl: null,
     sound: 'barrett', bolt: false, zoomFovs: [20, 9], penetration: 3, range: 500, adsSpeed: 12, tracerEvery: 1, tp: { len: 1.4, body: 'dark', mag: 'box', scope: true }, desc: '.50 BMG 半自動反器材步槍，打腿也一槍倒，後座驚人。',
   },
   kar98k: {
-    name: 'Kar98k', type: 'sniper', slot: 'primary', damage: 100, fireRate: 1.3, recoilPitch: 0.06, recoilYaw: 0.01, recoilRecovery: 6,
+    name: 'Kar98k', type: 'sniper', slot: 'primary', damageNear: 105, damageFar: 90, falloffStart: 50, falloffEnd: 180, fireRate: 1.3, recoilPitch: 0.06, recoilYaw: 0.01, recoilRecovery: 6,
     hipSpread: 0.12, adsSpread: 0.0, adsFov: 28, adsType: '2d_scope_overlay', mobility: 0.9, maxAmmo: 5, reloadTime: 3.0, modelUrl: null,
     sound: 'kar98', zoomFovs: [28, 14], penetration: 2, range: 400, adsSpeed: 17, tracerEvery: 1, tp: { len: 1.1, body: 'wood', mag: 'none', scope: true }, desc: '二戰木製栓動步槍，低倍鏡、開鏡快、輕巧。',
   },
   svd: {
-    name: 'SVD Dragunov', type: 'sniper', slot: 'primary', damage: 70, fireRate: 0.32, recoilPitch: 0.045, recoilYaw: 0.012, recoilRecovery: 7,
+    name: 'SVD Dragunov', type: 'sniper', slot: 'primary', damageNear: 60, damageFar: 50, falloffStart: 50, falloffEnd: 180, fireRate: 0.32, recoilPitch: 0.045, recoilYaw: 0.012, recoilRecovery: 7,
     hipSpread: 0.1, adsSpread: 0.0008, adsFov: 26, adsType: '2d_scope_overlay', mobility: 0.86, maxAmmo: 10, reloadTime: 3.0, modelUrl: null,
     sound: 'svd', bolt: false, zoomFovs: [26, 13], penetration: 2, range: 400, adsSpeed: 16, tracerEvery: 1, tp: { len: 1.2, body: 'wood', mag: 'box', scope: true }, desc: '半自動精確射手步槍：身體 2 槍、爆頭 1 槍，射速快。',
   },
   glock18: {
-    name: 'Glock 18', type: 'pistol', slot: 'secondary', damage: 18, fireRate: 0.05, recoilPitch: 0.018, recoilYaw: 0.014, recoilRecovery: 12,
+    name: 'Glock 18', type: 'pistol', slot: 'secondary', damageNear: 20, damageFar: 12, falloffStart: 8, falloffEnd: 30, fireRate: 0.05, recoilPitch: 0.018, recoilYaw: 0.014, recoilRecovery: 12,
     hipSpread: 0.035, adsSpread: 0.006, adsFov: 62, adsType: '3d_sight', mobility: 1.02, maxAmmo: 20, reloadTime: 1.6, modelUrl: null,
-    sound: 'p226', rate: 1.12, auto: true, headMult: 3.0, falloff: 0.96, range: 120, tp: { len: 0.2, body: 'dark', pistol: true }, desc: '全自動手槍，1200 RPM，爆頭 2 槍。',
+    sound: 'p226', rate: 1.12, auto: true, range: 120, tp: { len: 0.2, body: 'dark', pistol: true }, desc: '全自動手槍，1200 RPM，爆頭 2 槍。',
   },
   usp: {
-    name: 'USP-S', type: 'pistol', slot: 'secondary', damage: 24, fireRate: 0.16, recoilPitch: 0.024, recoilYaw: 0.006, recoilRecovery: 12,
+    name: 'USP-S', type: 'pistol', slot: 'secondary', damageNear: 26, damageFar: 17, falloffStart: 10, falloffEnd: 35, fireRate: 0.16, recoilPitch: 0.024, recoilYaw: 0.006, recoilRecovery: 12,
     hipSpread: 0.026, adsSpread: 0.0035, adsFov: 60, adsType: '3d_sight', mobility: 1.0, maxAmmo: 12, reloadTime: 1.7, modelUrl: null,
-    sound: 'usp', suppressed: true, headMult: 2.3, falloff: 0.97, range: 170, tp: { len: 0.34, body: 'dark', pistol: true }, desc: '消音手槍：安靜、不暴露雷達、最精準的副武器。',
+    sound: 'usp', suppressed: true, range: 170, tp: { len: 0.34, body: 'dark', pistol: true }, desc: '消音手槍：安靜、不暴露雷達、最精準的副武器。',
   },
   m1911: {
-    name: 'Colt M1911', type: 'pistol', slot: 'secondary', damage: 34, fireRate: 0.2, recoilPitch: 0.04, recoilYaw: 0.01, recoilRecovery: 9,
+    name: 'Colt M1911', type: 'pistol', slot: 'secondary', damageNear: 34, damageFar: 22, falloffStart: 10, falloffEnd: 35, fireRate: 0.2, recoilPitch: 0.04, recoilYaw: 0.01, recoilRecovery: 9,
     hipSpread: 0.032, adsSpread: 0.0045, adsFov: 60, adsType: '3d_sight', mobility: 1.0, maxAmmo: 7, reloadTime: 1.8, modelUrl: null,
-    sound: 'm1911', headMult: 2.0, falloff: 0.97, range: 170, tp: { len: 0.22, body: 'steel', pistol: true }, desc: '.45 ACP 經典手槍：身體 3 槍、爆頭 2 槍。',
+    sound: 'm1911', range: 170, tp: { len: 0.22, body: 'steel', pistol: true }, desc: '.45 ACP 經典手槍：身體 3 槍、爆頭 2 槍。',
   },
 };
 
@@ -235,8 +235,8 @@ function compileWeapon(id, s) {
   const def = Object.assign({}, t, {
     id, name: s.name, kind: t.kind, type: s.type, slot: s.slot, model: s.model || id, modelUrl: s.modelUrl || null, desc: s.desc || '',
     mag: s.maxAmmo, reserve: s.maxAmmo * (s.reserveMult || (s.type === 'sniper' ? 5 : 4)), interval: s.fireRate, auto,
-    damage: s.damage, pellets: s.pellets || 1, headKill: s.headKill ?? (s.slot === 'primary'), headMult: s.headMult || 4,
-    falloff: s.falloff ?? (s.type === 'sniper' ? 1 : 0.99), range: s.range || 260, penetration: s.penetration || 0,
+    damage: s.damageNear, damageNear: s.damageNear, damageFar: s.damageFar ?? s.damageNear, falloffStart: s.falloffStart ?? 1e6, falloffEnd: s.falloffEnd ?? 1e6 + 1,
+    pellets: s.pellets || 1, headKill: s.headKill ?? (s.type === 'sniper'), headMult: s.headMult || PART_MULT.head, range: s.range || 260, penetration: s.penetration || 0,
     hipBase: s.hipSpread, adsBase: s.adsSpread, spreadBase: s.hipSpread, spreadCrouch: 0.8,
     recoil: { first: s.recoilPitch * 0.75, climb: s.recoilPitch, climbShots: 10, late: s.recoilPitch * 0.75, h: s.recoilYaw, hStart: 6, jitter: s.recoilYaw * 0.35 },
     recoilRecovery: s.recoilRecovery, adsFov: s.adsFov, adsType: s.adsType, adsRecoilMult: 1, adsSpeed: s.adsSpeed || (s.type === 'smg' ? 24 : 20),
@@ -311,7 +311,7 @@ const TYPE_LABEL = { assault: '突擊步槍', smg: '衝鋒槍', lmg: '輕機槍'
 function weaponStats(id) {
   const s = WEAPON_DATABASE[id], d = WEAPON_DEFS[id];
   return {
-    damage: clamp(Math.round((s.damage * (s.pellets || 1)) / 60 * 100), 5, 100),
+    damage: clamp(Math.round((s.damageNear * (s.pellets || 1)) / 60 * 100), 5, 100),
     fireRate: clamp(Math.round(60 / s.fireRate / 950 * 100), 5, 100),
     accuracy: clamp(Math.round((1 - clamp(s.adsSpread / 0.08, 0, 1)) * 60 + (1 - clamp(s.hipSpread / 0.16, 0, 1)) * 40), 5, 100),
     control: clamp(Math.round((1 - clamp(s.recoilPitch / 0.09, 0, 1)) * 100), 5, 100),
@@ -389,10 +389,15 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const TMP_V1 = new THREE.Vector3(), TMP_V2 = new THREE.Vector3(), TMP_V3 = new THREE.Vector3(), TMP_V4 = new THREE.Vector3();
 function mulberry32(seed) { let a = seed >>> 0; return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 
+// v21 (CLAUDE.md §4.2): linear falloff damageNear → damageFar between falloffStart and falloffEnd; sniper headshots always kill.
+// Knife / grab / grenades keep their own single `damage` (+ optional exponential `falloff`).
 function calcDamage(def, part, dist, mult = 1) {
   if (part === 'head' && def.headKill) return 999;
-  const m = part === 'head' ? (def.headMult || 4) : PART_MULT[part] ?? 1;
-  return def.damage * m * Math.pow(def.falloff ?? 1, dist / 10) * mult;
+  const m = part === 'head' ? (def.headMult ?? PART_MULT.head) : PART_MULT[part] ?? 1;
+  let base;
+  if (def.damageNear !== undefined) { const t = clamp((dist - def.falloffStart) / Math.max(1e-3, def.falloffEnd - def.falloffStart), 0, 1); base = def.damageNear + (def.damageFar - def.damageNear) * t; }
+  else base = def.damage * Math.pow(def.falloff ?? 1, dist / 10);
+  return base * m * mult;
 }
 
 const Settings = {

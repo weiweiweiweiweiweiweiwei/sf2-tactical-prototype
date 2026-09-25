@@ -465,8 +465,8 @@ class App {
     $('whBlurb').textContent = WEAPON_BLURBS[id] || ''; $('whDesc').textContent = d.desc;
     const bars = [['傷害', st.damage], ['射速', st.fireRate], ['精準', st.accuracy], ['後座控制', st.control], ['機動性', st.mobility]];
     $('whBars').innerHTML = bars.map(([k, v]) => `<div class="bar"><span>${k}</span><div><i style="width:${v}%"></i></div><b>${v}</b></div>`).join('');
-    const body = Math.ceil(100 / s.damage), head = s.slot === 'primary' && s.type !== 'shotgun' ? '1（爆頭必殺）' : `${Math.ceil(100 / (s.damage * (d.headMult || 4)))}`;
-    $('whNums').innerHTML = [['傷害', s.pellets ? `${s.damage} × ${s.pellets}` : s.damage], ['射速', `${st.rpm} RPM`], ['彈匣', s.maxAmmo], ['換彈', `${s.reloadTime}s`], ['身體擊殺', s.pellets ? '近距離 1' : `${body} 發`], ['爆頭擊殺', head], ['開鏡 FOV', s.adsFov], ['移動', `${Math.round(s.mobility * 100)}%`]]
+    const body = Math.ceil(100 / d.damageNear), bodyFar = Math.ceil(100 / d.damageFar), head = d.headKill ? '1（必殺）' : `${Math.ceil(100 / (d.damageNear * d.headMult))} 發`;
+    $('whNums').innerHTML = [['傷害 近→遠', s.pellets ? `${d.damageNear}→${d.damageFar} ×${s.pellets}` : `${d.damageNear}→${d.damageFar}`], ['射速', `${st.rpm} RPM`], ['彈匣', s.maxAmmo], ['換彈', `${s.reloadTime}s`], ['身體擊殺', s.pellets ? '近距離 1' : body === bodyFar ? `${body} 發` : `${body}→${bodyFar} 發`], ['爆頭擊殺', head], ['衰減距離', `${d.falloffStart}–${d.falloffEnd} m`], ['移動', `${Math.round(s.mobility * 100)}%`]]
       .map(([k, v]) => `<div><span>${k}</span><b>${v}</b></div>`).join('');
     if (this.whPivot) { this.whPivot.clear(); try { this.whPivot.add(this.models.preview(d)); } catch (e) { console.warn(e); } }
   }
