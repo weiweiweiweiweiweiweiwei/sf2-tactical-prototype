@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SF2 Tactical Prototype v19</title>
+<title>SF2 Tactical Prototype v23</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Teko:wght@300;400;500;600&family=Rajdhani:wght@500;600;700&family=Noto+Sans+TC:wght@500;700&display=swap" rel="stylesheet">
@@ -222,6 +222,7 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
 .modeDesc{font-size:13px;color:var(--dim);margin-top:5px;min-height:18px}
 .btn.start{margin-top:auto;align-self:flex-end;width:100%;font-size:30px;padding:16px;letter-spacing:10px}
 #lbMsg{font-size:13px;color:var(--warn);min-height:16px}
+#gpuWarn{display:none;font-size:12px;line-height:1.45;color:#ffd27a;background:rgba(80,55,0,.35);border:1px solid rgba(255,200,80,.4);border-radius:3px;padding:6px 8px;margin:4px 0}#gpuWarn.on{display:block}#gpuWarn b{color:#fff}
 .lb-foot{position:absolute;left:0;right:0;bottom:4px;text-align:center;font-size:13px;color:var(--faint);letter-spacing:1px}
 
 /* ---- loader ---- */
@@ -584,7 +585,7 @@ body.grading #pause{display:none!important}
       <div class="row2"><div><h3 id="lbTargetLbl">勝利分數</h3><div class="pills" id="lbTarget"></div></div><div><h3 id="lbTimeLbl">時間限制</h3><div class="pills" id="lbTime"></div></div></div>
       <div class="row2"><div><h3>難度</h3><div class="pills" id="lbDiff"></div></div>
         <div><h3>出場配裝</h3><div class="pills" id="lbLoadout"></div><button class="btn ghost" id="lbWarehouse" style="margin-top:6px;font-size:13px;padding:5px 10px">編輯配裝 · 倉庫</button><div id="lbLoadoutInfo"></div></div></div>
-      <div id="lbMsg"></div>
+      <div id="lbMsg"></div><div id="gpuWarn"></div>
       <button class="btn start" id="lbStart">出 發 · GO</button>
     </aside>
   </div>
@@ -642,6 +643,7 @@ body.grading #pause{display:none!important}
   <div class="opt"><span>開鏡模式</span><select id="optAds"><option value="toggle">切換 Toggle</option><option value="hold">按住 Hold</option></select><span></span></div>
   <div class="opt"><span>擊殺語音</span><input type="checkbox" id="optAnn"><span></span></div>
   <div class="opt"><span>死亡回放 KILLCAM</span><input type="checkbox" id="optKc"><span></span></div>
+  <div class="opt"><span>顯示卡</span><span id="optGpu" style="font-size:13px;color:var(--dim)"></span><span></span></div>
   <div class="opt"><span>HUD 樣式</span><select id="optHud"><option value="minimal">極簡（SF2 風格，v19）</option><option value="panel">戰術面板（v5–v18）</option></select><span></span></div>
   <div class="opt"><span>顯示 FPS</span><input type="checkbox" id="optFps"><span></span></div>
   <div class="row-btns"><button class="btn" id="setClose">完成</button></div>

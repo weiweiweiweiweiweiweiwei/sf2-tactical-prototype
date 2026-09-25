@@ -159,9 +159,9 @@ class CollisionWorld {
       const top = b.max.y;
       if (top <= y + up && top >= y - maxDown && top > best) { best = top; surf = b.surface; }
     }
-    for (const rp of this.ramps) {
-      if (x < rp.minX || x > rp.maxX || z < rp.minZ || z > rp.maxZ) continue;
-      const s = this.rampHeight(rp, x, z);
+    for (const rp of this.ramps) { // v23: support while the footprint overlaps the ramp (like box ledges), not only the centre
+      if (x + r <= rp.minX || x - r >= rp.maxX || z + r <= rp.minZ || z - r >= rp.maxZ) continue;
+      const s = this.rampHeight(rp, clamp(x, rp.minX, rp.maxX), clamp(z, rp.minZ, rp.maxZ));
       if (s <= y + Math.max(up, 0.06) && s >= y - maxDown && s > best) { best = s; surf = rp.surface; }
     }
     const T = this.terrain;
@@ -373,6 +373,7 @@ class CharacterMotor {
       }
     } else if (hasInput) this._accelerate(wishX, wishZ, wishSpeed, P.airAccel, dt, P.airCap);
 
+    this._unwedgeRamps();
     const wasGrounded = this.grounded;
     if (!this.grounded) this.vel.y += CFG.gravity * dt; else this.vel.y = Math.min(this.vel.y, 0);
     const fallSpeed = -this.vel.y;
@@ -399,6 +400,17 @@ class CharacterMotor {
     this.stepOffset = damp(this.stepOffset, 0, 16, dt);
   }
 
+  // v23 safety net: a body below a ramp's surface inside its footprint (knock-back, teleport, old saves) is pushed out through the nearest side.
+  _unwedgeRamps() {
+    const w = this.world, p = this.pos, r = this.radius, h = this.height;
+    for (const rp of w.ramps) {
+      if (p.x + r <= rp.minX || p.x - r >= rp.maxX || p.z + r <= rp.minZ || p.z - r >= rp.maxZ || p.y + h <= rp.y0) continue;
+      if (p.y >= w.rampHeight(rp, clamp(p.x, rp.minX, rp.maxX), clamp(p.z, rp.minZ, rp.maxZ)) - CFG.player.stepHeight) continue;
+      const opts = [[rp.minX - r - 1e-3 - p.x, 0], [rp.maxX + r + 1e-3 - p.x, 0], [0, rp.minZ - r - 1e-3 - p.z], [0, rp.maxZ + r + 1e-3 - p.z]].sort((a, b) => Math.abs(a[0] + a[1]) - Math.abs(b[0] + b[1]));
+      for (const [dx, dz] of opts) if (w.fits(p.x + dx, p.y, p.z + dz, r, h)) { p.x += dx; p.z += dz; break; }
+    }
+  }
+
   _moveAxis(axis, amount, guard) {
     if (amount === 0) return;
     const w = this.world, p = this.pos, r = this.radius, h = this.height, P = CFG.player;
@@ -419,7 +431,13 @@ class CharacterMotor {
     for (const rp of w.ramps) {
       if (p.x + r <= rp.minX || p.x - r >= rp.maxX || p.z + r <= rp.minZ || p.z - r >= rp.maxZ || p.y + h <= rp.y0) continue;
       const top = w.rampMaxUnder(rp, p.x, p.z, r), allow = this.grounded ? P.stepHeight : P.airStep;
-      if (top > p.y + allow && p.y < top - 0.02) { p[axis] -= amount; this.vel[axis] = 0; }
+      if (!(top > p.y + allow && p.y < top - 0.02)) continue;
+      // v23: the ramp's side is a wall that refuses moves INTO it; a body already wedged beside it may always move out
+      // (before, every move on the axis was reverted → players who dropped off the low side of a ramp were stuck for good)
+      const depth = (x, z) => Math.min(x + r - rp.minX, rp.maxX - x + r, z + r - rp.minZ, rp.maxZ - z + r);
+      const bx = axis === 'x' ? p.x - amount : p.x, bz = axis === 'z' ? p.z - amount : p.z;
+      if (depth(p.x, p.z) < depth(bx, bz)) continue;
+      p[axis] -= amount; this.vel[axis] = 0;
     }
     const T = w.terrain;
     if (T) { // heightfield: follow walkable slopes, refuse to walk up anything steeper than 45°
@@ -448,8 +466,8 @@ class CharacterMotor {
       this.vel.y = 0;
     }
     for (const rp of w.ramps) {
-      if (p.x < rp.minX || p.x > rp.maxX || p.z < rp.minZ || p.z > rp.maxZ) continue;
-      const s = w.rampHeight(rp, p.x, p.z);
+      if (p.x + r <= rp.minX || p.x - r >= rp.maxX || p.z + r <= rp.minZ || p.z - r >= rp.maxZ) continue;
+      const s = w.rampHeight(rp, clamp(p.x, rp.minX, rp.maxX), clamp(p.z, rp.minZ, rp.maxZ));
       if (p.y < s && prevY >= s - CFG.player.stepHeight - 0.05) { p.y = s; if (this.vel.y < 0) { this.vel.y = 0; hitGround = true; } }
     }
     if (w.terrain) { const th = w.terrain.heightAt(p.x, p.z); if (p.y < th) { p.y = th; if (this.vel.y < 0) { this.vel.y = 0; hitGround = true; } } }

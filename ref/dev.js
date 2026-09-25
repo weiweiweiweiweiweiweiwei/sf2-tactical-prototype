@@ -68,3 +68,27 @@ w.tryBlock = (pairs, boxes, mirror = true) => {
   for (const [a, b] of pairs) { d.subVectors(b, a); const L = d.length(); d.divideScalar(L); if (!all.some((bx) => CW.rayBox(a, d, bx, L))) n++; }
   return n;
 };
+// ---- ramp side-fall probe: step off each ramp's long sides at many points, then try to walk out in 8 directions ----
+w.rampProbe = () => {
+  const app = w.app, m = app.match, pl = m.player, mo = pl.motor, col = m.collision, V = w.SF2.THREE.Vector3, keys = app.input.keys, res = [];
+  app.state = 'playing'; while (!m.canMove()) m.tick(1 / 30, { x: 0, y: 0 });
+  pl.spawnProtect = 1e9;
+  const run = (secs) => { for (let i = 0; i < secs * 60; i++) { m.score.alpha = m.score.bravo = 0; m.timeLeft = 900; m.tick(1 / 60, { x: 0, y: 0 }); } }; // keep the match live for the whole probe
+  let invalid = 0;
+  for (const rp of col.ramps) {
+    const alongZ = rp.axis !== 'x';
+    for (let k = 0.15; k <= 0.9; k += 0.15) for (const side of [-1, 1]) {
+      const a = alongZ ? rp.minZ + (rp.maxZ - rp.minZ) * k : rp.minX + (rp.maxX - rp.minX) * k;
+      const x = alongZ ? (side < 0 ? rp.minX + 0.2 : rp.maxX - 0.2) : a, z = alongZ ? a : (side < 0 ? rp.minZ + 0.2 : rp.maxZ - 0.2);
+      mo.teleport(new V(x, col.rampHeight(rp, x, z) + 0.05, z)); mo.vel.set(0, 0, 0);
+      pl.yaw = alongZ ? (side < 0 ? Math.PI / 2 : -Math.PI / 2) : (side < 0 ? 0 : Math.PI); // face outward over the side
+      keys.clear(); keys.add('KeyW'); run(0.35); keys.clear(); run(1.2);
+      const land = mo.pos.clone(); let best = 0;
+      for (let d = 0; d < 8; d++) { mo.teleport(land.clone()); mo.vel.set(0, 0, 0); pl.yaw = d * Math.PI / 4; keys.add('KeyW'); run(1.5); keys.clear(); best = Math.max(best, Math.hypot(mo.pos.x - land.x, mo.pos.z - land.z)); }
+      if (!m.canMove()) { invalid++; continue; }
+      if (best < 1.2) res.push({ at: [+land.x.toFixed(2), +land.y.toFixed(2), +land.z.toFixed(2)], best: +best.toFixed(2) });
+    }
+  }
+  keys.clear(); app.state = 'paused';
+  return { ramps: col.ramps.length, invalid, stuck: res.length, samples: col.ramps.length * 12, examples: res.slice(0, 6) };
+};

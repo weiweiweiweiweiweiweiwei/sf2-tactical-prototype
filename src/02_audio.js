@@ -180,7 +180,7 @@ class AudioEngine {
   }
 
   constructor() {
-    this.ctx = null; this.volume = Settings.data.volume; this.voices = 0; this.lastCasing = 0; this.lastBounce = 0;
+    this.ctx = null; this.volume = Settings.data.volume; this.voiceEnds = []; this.lastCasing = 0; this.lastBounce = 0; // v23: voices counted by scheduled end time
     this.listener = new THREE.Vector3(); this.acoustics = ACOUSTICS.warehouse; this.ambNodes = [];
   }
 
@@ -189,6 +189,9 @@ class AudioEngine {
     const AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return;
     const ctx = this.ctx = new AC({ latencyHint: 'interactive' });
+    // v23: never stay silent — resume whenever the browser suspends / interrupts the context (device switch, tab restore)
+    ctx.onstatechange = () => { if (ctx.state !== 'running' && ctx.state !== 'closed') setTimeout(() => ctx.resume().catch(() => {}), 120); };
+    document.addEventListener('visibilitychange', () => { if (!document.hidden && ctx.state !== 'running') ctx.resume().catch(() => {}); });
     this.master = ctx.createGain(); this.master.gain.value = this.volume;
     this.muffle = ctx.createBiquadFilter(); this.muffle.type = 'lowpass'; this.muffle.frequency.value = 22000; this.muffle.Q.value = 0.5;
     this.comp = ctx.createDynamicsCompressor();
@@ -246,8 +249,11 @@ class AudioEngine {
     return buf;
   }
 
+  // Active bank voices, from their scheduled end times (does not depend on `onended` ever firing).
+  _voices() { const now = this.ctx.currentTime; if (this.voiceEnds.length && this.voiceEnds[0] <= now) this.voiceEnds = this.voiceEnds.filter((e) => e > now); return this.voiceEnds.length; }
+
   setListener(pos, fwd) {
-    if (!this.ctx) return;
+    if (!this.ctx || !Number.isFinite(pos.x + pos.y + pos.z + fwd.x + fwd.y + fwd.z)) return; // a NaN reaching the graph silences the compressor for good
     this.listener.copy(pos);
     const l = this.ctx.listener, t = this.ctx.currentTime;
     if (l.positionX) {
@@ -257,19 +263,21 @@ class AudioEngine {
     } else { l.setPosition(pos.x, pos.y, pos.z); l.setOrientation(fwd.x, fwd.y, fwd.z, 0, 1, 0); }
   }
 
-  _panner(pos, ref = 4, roll = 1.1) {
+  // v23: HRTF (costly convolution per voice) only near the listener or when asked (footsteps); distant sources pan cheaply.
+  _panner(pos, ref = 4, roll = 1.1, hrtf = false) {
+    if (!Number.isFinite(pos.x + pos.y + pos.z)) pos = this.listener;
     const p = this.ctx.createPanner();
-    p.panningModel = 'HRTF'; p.distanceModel = 'inverse'; p.refDistance = ref; p.rolloffFactor = roll; p.maxDistance = 250;
+    p.panningModel = hrtf || this.listener.distanceTo(pos) < 14 ? 'HRTF' : 'equalpower'; p.distanceModel = 'inverse'; p.refDistance = ref; p.rolloffFactor = roll; p.maxDistance = 250;
     if (p.positionX) { p.positionX.value = pos.x; p.positionY.value = pos.y; p.positionZ.value = pos.z; } else p.setPosition(pos.x, pos.y, pos.z);
     return p;
   }
 
   // Generic output bus for live-synth SFX.
-  _bus(pos, send = 0.3, ref = 4, lowpass = 0, roll = 1.1) {
+  _bus(pos, send = 0.3, ref = 4, lowpass = 0, roll = 1.1, hrtf = false) {
     const g = this.ctx.createGain();
     let node = g;
     if (lowpass) { const f = this._filter('lowpass', lowpass, 0.7); node.connect(f); node = f; }
-    if (pos) { const p = this._panner(pos, ref, roll); node.connect(p); node = p; }
+    if (pos) { const p = this._panner(pos, ref, roll, hrtf); node.connect(p); node = p; }
     node.connect(this.dry);
     if (send > 0) { const s = this.ctx.createGain(); s.gain.value = send * this.acoustics.wet * 2.6; node.connect(s); s.connect(this.reverbIn); }
     return g;
@@ -279,7 +287,7 @@ class AudioEngine {
   playBank(name, pos = null, o = {}) {
     if (!this.ctx || !AudioEngine.banksReady) return;
     const bank = AudioEngine.banks[name];
-    if (!bank || this.voices > 44) return;
+    if (!bank || this._voices() > (pos ? 44 : 90)) return; // own (non-positional) sounds are never the ones dropped
     const ctx = this.ctx, t = ctx.currentTime;
     const src = ctx.createBufferSource(); src.buffer = pick(bank); src.playbackRate.value = rand(0.965, 1.035) * (o.rate || 1);
     const g = ctx.createGain(); g.gain.value = o.gain ?? 1;
@@ -297,7 +305,7 @@ class AudioEngine {
     const s = ctx.createGain(); s.gain.value = send; node.connect(s); s.connect(this.reverbIn);
     if (echo > 0) { const e = ctx.createGain(); e.gain.value = echo; node.connect(e); e.connect(this.echoIn); }
     src.start(t + delay);
-    this.voices++; src.onended = () => { this.voices--; };
+    const end = t + delay + src.buffer.duration / src.playbackRate.value, ve = this.voiceEnds; let i = ve.length; while (i > 0 && ve[i - 1] > end) i--; ve.splice(i, 0, end);
   }
 
   gunshot(sound, pos = null, rate = 1) { this.playBank(sound, pos, { gain: pos ? 1.1 : 0.95, rate }); }
@@ -353,8 +361,8 @@ class AudioEngine {
 
   // Footsteps: dry, strictly positional (HRTF + inverse distance); o.pitch = per-soldier timbre, o.occluded = heard through a wall.
   footstep(pos, surface = 'concrete', loud = 1, o = {}) {
-    if (!this.ctx || this.voices > 46) return;
-    const t = this.ctx.currentTime, k = o.pitch || 1, out = this._bus(pos, 0.03, 3, o.occluded ? 720 : 0, 1.1);
+    if (!this.ctx || (pos && this._voices() > 46)) return;
+    const t = this.ctx.currentTime, k = o.pitch || 1, out = this._bus(pos, 0.03, 3, o.occluded ? 720 : 0, 1.1, true);
     if (o.occluded) loud *= 0.6;
     const rand = (a, b) => (a + Math.random() * (b - a)) * k;
     switch (surface) {
@@ -457,7 +465,7 @@ class AudioEngine {
   }
 
   impact(pos, material) {
-    if (!this.ctx || this.voices > 40) return;
+    if (!this.ctx || this._voices() > 40) return;
     const t = this.ctx.currentTime, out = this._bus(pos, 0.2, 2);
     if (material === 'metal') {
       this._nb(t, out, 'bandpass', rand(2500, 4000), 6, 0.35, 0.001, 0.06);

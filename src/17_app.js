@@ -11,12 +11,14 @@ class App {
     r.shadowMap.enabled = true; r.shadowMap.type = THREE.PCFSoftShadowMap;
     r.toneMapping = THREE.ACESFilmicToneMapping; r.toneMappingExposure = 1.0; r.outputColorSpace = THREE.SRGBColorSpace;
     this.pmrem = new THREE.PMREMGenerator(r);
-    if (!Settings.data.qDetected) { // first run: pick a safe default from the GPU name
-      let name = '';
-      try { const gl = r.getContext(), ext = gl.getExtension('WEBGL_debug_renderer_info'); name = ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : ''; } catch (e) { /* hidden */ }
-      const integrated = /Intel|UHD|Iris|Mali|Adreno|PowerVR|SwiftShader|llvmpipe|Basic Render|Radeon\(TM\) Graphics|Radeon Graphics|Vega/i.test(name) && !/NVIDIA|GeForce|RTX|GTX|Radeon RX|Radeon Pro|Arc/i.test(name);
-      Settings.data.quality = integrated ? 'medium' : 'high'; Settings.data.qDetected = true; Settings.data.gpu = name; Settings.save();
-    }
+    // v23: read the GPU the browser actually uses on EVERY launch (a laptop browser can silently switch to the integrated GPU)
+    let name = '';
+    try { const gl = r.getContext(), ext = gl.getExtension('WEBGL_debug_renderer_info'); name = ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : ''; } catch (e) { /* hidden */ }
+    const integrated = /Intel|UHD|Iris|Mali|Adreno|PowerVR|SwiftShader|llvmpipe|Basic Render|Radeon\(TM\) Graphics|Radeon Graphics|Vega/i.test(name) && !/NVIDIA|GeForce|RTX|GTX|Radeon RX|Radeon Pro|Arc/i.test(name);
+    this.gpuName = name.replace(/^ANGLE \([^,]*, /, '').replace(/ \(0x[0-9A-Fa-f]+\).*$/, '').replace(/ Direct3D.*$/, '').replace(/, D3D.*$/, '') || '未知'; this.gpuIntegrated = integrated;
+    this.gpuShort = this.gpuName.replace(/NVIDIA GeForce |AMD /g, '').replace(/Intel\(R\) /, 'Intel ').replace(/ Graphics$/, '');
+    if (!Settings.data.qDetected) { Settings.data.quality = integrated ? 'medium' : 'high'; Settings.data.qDetected = true; } // first run: safe default
+    Settings.data.gpu = name; Settings.save();
     this.frameMs = 16; this.dynT = 0;
     this.tex = new TextureFactory(r); this.tex.setQuality(Settings.data.quality);
     this.mats = new MaterialLib(this.tex);
@@ -29,6 +31,8 @@ class App {
     this.$ = (id) => document.getElementById(id);
     this.buildLobby(); this.bindInput(); this.bindMenus(); this.onResize();
     this.grading = new GradePanel(this);
+    this.$('optGpu').textContent = this.gpuName + (this.gpuIntegrated ? '（內顯）' : '');
+    if (this.gpuIntegrated) { const w = this.$('gpuWarn'); w.classList.add('on'); w.innerHTML = `⚠ 瀏覽器目前使用<b>內顯 ${this.gpuName}</b>，會明顯卡頓、聲音斷續。若電腦有獨立顯卡（NVIDIA），請到 <b>Windows 設定 → 系統 → 顯示器 → 圖形</b>，把瀏覽器（Chrome / Edge）設為<b>「高效能」</b>，再完全關閉並重開瀏覽器。`; }
     addEventListener('resize', () => this.onResize());
     addEventListener('beforeunload', (e) => { if (this.match && (this.state === 'playing' || this.state === 'paused')) { e.preventDefault(); e.returnValue = ''; } });
     AudioEngine.prepareBanks().catch((e) => console.warn('audio banks', e));
@@ -499,7 +503,7 @@ class App {
         // dynamic resolution: keep the GPU out of overload (prevents hangs / TDR on weaker cards)
         this.frameMs = lerp(this.frameMs, dt * 1000, 0.05); this.dynT += dt;
         if (this.dynT > 2) { this.dynT = 0; if (this.frameMs > 24) this.post.setScale(this.post.scale * 0.85); else if (this.frameMs < 13 && this.post.scale < 1) this.post.setScale(this.post.scale + 0.08); }
-        this.hud.setFps(this.fpsText, Settings.data.showFps);
+        this.hud.setFps(`${this.fpsText} · ${this.gpuShort}${this.gpuIntegrated ? '（內顯）' : ''}`, Settings.data.showFps);
         const st = window.__stats || (window.__stats = { frames: 0, seconds: 0 }); st.frames++; st.seconds += dt; st.avgFps = Math.round(st.frames / Math.max(1e-3, st.seconds)); st.frameMs = +this.frameMs.toFixed(2); st.fps = this.fpsText; // tools/check.mjs
       }
       if (this.state === 'shot') {
@@ -510,8 +514,13 @@ class App {
         m.effects.update(dt); for (const fn of m.builder.animated) fn(dt, this.shotT);
         this.post.render(dt, false);
       } else if (this.state === 'playing' || this.state === 'paused' || this.state === 'ended') {
-        const showVM = m.player.alive && m.weapons.current.vm.group.visible && this.state !== 'ended';
-        this.post.render(this.state === 'playing' ? dt : 0, showVM);
+        // v23: a paused / finished match only redraws ~10×/s (unless the grade panel is open) — a forgotten paused tab no longer pins the GPU at 100 %
+        const idle = this.state !== 'playing' && !this.grading.open;
+        if (!idle || now - (this.idleDrawT || 0) > 100) {
+          this.idleDrawT = now;
+          const showVM = m.player.alive && m.weapons.current.vm.group.visible && this.state !== 'ended';
+          this.post.render(this.state === 'playing' ? dt : 0, showVM);
+        }
       }
     }
     this.input.endFrame();
