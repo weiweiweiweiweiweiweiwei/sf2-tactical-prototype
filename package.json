@@ -1,0 +1,14 @@
+{
+  "name": "sf2-web-fps",
+  "version": "0.17.0",
+  "private": true,
+  "type": "module",
+  "description": "Browser tactical FPS (SF2 feel x COD look). Sources in src/, build with sh src/build.sh.",
+  "scripts": {
+    "build": "sh src/build.sh",
+    "check": "node tools/check.mjs"
+  },
+  "devDependencies": {
+    "playwright": "1.63.0"
+  }
+}

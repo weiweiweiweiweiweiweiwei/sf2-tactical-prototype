@@ -1,0 +1,6 @@
+node_modules/
+tools/out/
+.claude/settings.local.json
+_v*_test.html
+ref/*.webp
+ref/*.png
