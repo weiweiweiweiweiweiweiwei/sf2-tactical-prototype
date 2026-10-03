@@ -173,7 +173,7 @@ class HUD {
     const on = !!m; this._cls('sbOn', this.el.sb, 'on', on);
     if (!on) return;
     const rows = (team) => m.combatants.filter((c) => c.team === team).sort((a, b) => b.score - a.score || b.kills - a.kills)
-      .map((c) => `<tr class="${c.isPlayer ? 'me' : ''}${c.alive ? '' : ' dead'}"><td>${c.isPlayer ? '★ ' : ''}${c.name}${c.isPlayer ? '' : ' <small style="opacity:.5">BOT</small>'}</td><td>${c.score}</td><td>${c.kills}</td><td>${c.assists}</td><td>${c.deaths}</td></tr>`).join('');
+      .map((c) => `<tr class="${c.isPlayer ? 'me' : ''}${c.alive ? '' : ' dead'}"><td>${c.isPlayer ? '★ ' : ''}${c.name}${c.isBot ? ' <small style="opacity:.5">BOT</small>' : ''}</td><td>${c.score}</td><td>${c.kills}</td><td>${c.assists}</td><td>${c.deaths}</td></tr>`).join('');
     this.el.sbA.innerHTML = rows('alpha'); this.el.sbB.innerHTML = rows('bravo');
     const rounds = m.rules.roundBased;
     this.el.sbScoreA.textContent = rounds ? `${m.roundWins.alpha} 勝 · ${m.score.alpha} 分` : `${m.score.alpha} 分`;
@@ -219,8 +219,8 @@ class HUD {
       catwalk: 'rgba(110,170,255,.22)', ramp: 'rgba(255,205,80,.35)', sandbag: 'rgba(200,185,140,.45)', fence: 'rgba(170,180,190,.3)', glass: 'rgba(140,210,240,.35)', ladder: 'rgba(255,150,40,.85)' };
     for (const r of m.builder.radar) { const cc = col[r.kind]; if (!cc) continue; ctx.fillStyle = cc; ctx.fillRect(r.x0, r.z0, r.x1 - r.x0, r.z1 - r.z0); }
     for (const [team, cc] of [['alpha', 'rgba(99,179,255,.16)'], ['bravo', 'rgba(255,93,82,.16)']]) { const z = m.builder.zones[team]; if (z) { ctx.fillStyle = cc; ctx.fillRect(z.x0, z.z0, z.x1 - z.x0, z.z1 - z.z0); } }
-    for (const b of m.bots) {
-      if (!b.alive) continue;
+    for (const b of m.combatants) { // bots, friends (host) and ghosts (client)
+      if (!b.alive || !b.model || b === p) continue;
       const pos = b.model.root.position;
       if (b.team === p.team) { ctx.fillStyle = 'rgba(99,179,255,.95)'; }
       else { if (m.time - b.spottedT > 1.6) continue; ctx.fillStyle = `rgba(255,70,55,${clamp(1 - (m.time - b.spottedT) / 1.6, 0.2, 1).toFixed(2)})`; }

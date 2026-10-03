@@ -71,11 +71,11 @@ class Weapon {
     return [pitch * rand(0.9, 1.1), yaw];
   }
 
-  // v25: the aim ray comes from the owner's eye and AIM angles, not from the camera. The local player's aim = view +
-  // recoil + punch (what the crosshair shows); a remote human's aim angles arrive in its UserCmd and already include them.
+  // v25: the aim ray comes from the owner's eye and AIM angles, not from the camera. Aim = view + recoil + punch (what the
+  // crosshair shows); a remote human's view angles and recoil offsets both arrive in its UserCmd.
   static _o = new THREE.Vector3(); static _d = new THREE.Vector3(); static _r = new THREE.Vector3(); static _u = new THREE.Vector3();
   aimRay() {
-    const p = this.owner, local = this.local, yaw = local ? p.yaw + p.recoilYaw : p.yaw, pitch = local ? p.pitch + p.recoilPitch + p.punch : p.pitch;
+    const p = this.owner, local = this.local, yaw = local ? p.yaw + p.recoilYaw : p.yaw + (p.aimDY || 0), pitch = local ? p.pitch + p.recoilPitch + p.punch : p.pitch + (p.aimDP || 0);
     const cp = Math.cos(pitch), sp = Math.sin(pitch), sy = Math.sin(yaw), cy = Math.cos(yaw), m = p.motor;
     if (local) Weapon._o.set(m.pos.x, m.pos.y + p.eyeH + m.stepOffset, m.pos.z); else p.eyePos(Weapon._o);
     return { o: Weapon._o, d: Weapon._d.set(-sy * cp, sp, -cy * cp), r: Weapon._r.set(cy, 0, -sy), u: Weapon._u.set(sy * sp, cp, cy * sp) };
@@ -98,11 +98,12 @@ class Weapon {
     if (this.ammo <= 0) { this._mech('dry'); this.cooldown = 0.22; if (this.tryReload()) ws.setAds(false, true); return false; }
     this.ammo--;
     this.cooldown = Math.max(Math.min(this.cooldown, 0), -this.interval) + this.interval;
-    if (g.time - this.lastShot > this.interval * 2.2) this.sprayPhase = rand(0, Math.PI * 2);
+    const now = ws.clock; // the arsenal's fixed-step clock (identical on host and client)
+    if (now - this.lastShot > this.interval * 2.2) this.sprayPhase = rand(0, Math.PI * 2);
     const ray = this.aimRay();
     const res = this._shoot(ray, ws, shotRng(p.netId | 0, ++this.shotN));
-    this.shots = g.time - this.lastShot < this.interval * 2.2 ? this.shots + 1 : 1;
-    this.lastShot = g.time;
+    this.shots = now - this.lastShot < this.interval * 2.2 ? this.shots + 1 : 1;
+    this.lastShot = now;
     this.bloom = Math.min(this.bloom + (this.spreadPerShot || 0), this.spreadMax || 0);
     this.cur = Math.min(this.cur + (this.bloomPerShot || 0), this.bloomMax || 0); // applies from the NEXT shot
     const mz = this.muzzleWorld(ray, ws);
@@ -138,7 +139,7 @@ class Weapon {
   tick(h, ws) {
     this.cooldown -= h;
     if (!ws.trigger && this.cooldown < 0) this.cooldown = 0;
-    const spraying = this.game.time - this.lastShot < (this.interval || 0.1) * 1.6; // bloom only recovers once you stop spraying
+    const spraying = ws.clock - this.lastShot < (this.interval || 0.1) * 1.6; // bloom only recovers once you stop spraying
     this.bloom = damp(this.bloom, 0, spraying ? 1 : (this.spreadRecover || 5), h);
     if (!spraying) { this.cur = damp(this.cur, 0, 11, h); if (this.cur < 2e-4) this.cur = 0; } // quick recenter to a perfect first shot
     if (this.autoReloadT > 0) { this.autoReloadT -= h; if (this.autoReloadT <= 0 && this.tryReload()) ws.setAds(false, true); }

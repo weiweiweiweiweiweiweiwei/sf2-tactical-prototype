@@ -10,6 +10,7 @@ class Arsenal {
     this.game = game; this.owner = owner; this.weapons = []; this.index = 0; this.lastIndex = 0; this.remote = false;
     this.ads = false; this.zoomLevel = 0; this.adsT = 0; this.trigger = false; this.unscopeT = 0; this.scopedIn = false; this.scopeLevel = 0;
     this.grabT = 0; this.grabCd = 0; this.grabHit = false; this.prevBtn = 0; this.drawT = 0; this.heat = 0; this.lastShotT = -9;
+    this.clock = 0; // seconds of fixed steps this arsenal has run: weapon timing reads this, so host and client agree exactly
   }
   init(defs) {
     this.weapons = this._make(defs);
@@ -120,7 +121,7 @@ class Arsenal {
   // One fixed step. Edges (press / release) come from comparing with the previous command's buttons.
   tick(h, cmd) {
     const g = this.game, p = this.owner, btn = cmd.btn, pressed = btn & ~this.prevBtn, released = this.prevBtn & ~btn;
-    this.prevBtn = btn;
+    this.prevBtn = btn; this.clock += h;
     if (p.alive) {
       if (cmd.sw) this.switchTo(cmd.sw - 1);
       if (pressed & BTN.QUICK) this.quickSwitch();

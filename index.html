@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SF2 Tactical Prototype v24</title>
+<title>SF2 Tactical Prototype v25</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Teko:wght@300;400;500;600&family=Rajdhani:wght@500;600;700&family=Noto+Sans+TC:wght@500;700&display=swap" rel="stylesheet">
@@ -533,7 +533,7 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
 <!-- ROOM / LOBBY -->
 <div id="lobby" class="screen on"><div class="lbz">
   <div class="lb-top">
-    <div class="lb-brand">SPECIAL FORCE <span>2</span><small>TACTICAL PROTOTYPE · v24</small></div>
+    <div class="lb-brand">SPECIAL FORCE <span>2</span><small>TACTICAL PROTOTYPE · v25</small></div>
     <div class="lb-room">ROOM #0427 · <b>單機練習房</b> · <span id="lbStatus">等待中</span></div>
     <button class="btn ghost" id="lbWh" title="倉庫：編輯 5 組配裝">🗄 倉庫 WAREHOUSE</button>
     <button class="btn ghost icon" id="lbFull" title="全螢幕">⛶</button>
@@ -6309,11 +6309,11 @@ class Weapon {
     return [pitch * rand(0.9, 1.1), yaw];
   }
 
-  // v25: the aim ray comes from the owner's eye and AIM angles, not from the camera. The local player's aim = view +
-  // recoil + punch (what the crosshair shows); a remote human's aim angles arrive in its UserCmd and already include them.
+  // v25: the aim ray comes from the owner's eye and AIM angles, not from the camera. Aim = view + recoil + punch (what the
+  // crosshair shows); a remote human's view angles and recoil offsets both arrive in its UserCmd.
   static _o = new THREE.Vector3(); static _d = new THREE.Vector3(); static _r = new THREE.Vector3(); static _u = new THREE.Vector3();
   aimRay() {
-    const p = this.owner, local = this.local, yaw = local ? p.yaw + p.recoilYaw : p.yaw, pitch = local ? p.pitch + p.recoilPitch + p.punch : p.pitch;
+    const p = this.owner, local = this.local, yaw = local ? p.yaw + p.recoilYaw : p.yaw + (p.aimDY || 0), pitch = local ? p.pitch + p.recoilPitch + p.punch : p.pitch + (p.aimDP || 0);
     const cp = Math.cos(pitch), sp = Math.sin(pitch), sy = Math.sin(yaw), cy = Math.cos(yaw), m = p.motor;
     if (local) Weapon._o.set(m.pos.x, m.pos.y + p.eyeH + m.stepOffset, m.pos.z); else p.eyePos(Weapon._o);
     return { o: Weapon._o, d: Weapon._d.set(-sy * cp, sp, -cy * cp), r: Weapon._r.set(cy, 0, -sy), u: Weapon._u.set(sy * sp, cp, cy * sp) };
@@ -6336,11 +6336,12 @@ class Weapon {
     if (this.ammo <= 0) { this._mech('dry'); this.cooldown = 0.22; if (this.tryReload()) ws.setAds(false, true); return false; }
     this.ammo--;
     this.cooldown = Math.max(Math.min(this.cooldown, 0), -this.interval) + this.interval;
-    if (g.time - this.lastShot > this.interval * 2.2) this.sprayPhase = rand(0, Math.PI * 2);
+    const now = ws.clock; // the arsenal's fixed-step clock (identical on host and client)
+    if (now - this.lastShot > this.interval * 2.2) this.sprayPhase = rand(0, Math.PI * 2);
     const ray = this.aimRay();
     const res = this._shoot(ray, ws, shotRng(p.netId | 0, ++this.shotN));
-    this.shots = g.time - this.lastShot < this.interval * 2.2 ? this.shots + 1 : 1;
-    this.lastShot = g.time;
+    this.shots = now - this.lastShot < this.interval * 2.2 ? this.shots + 1 : 1;
+    this.lastShot = now;
     this.bloom = Math.min(this.bloom + (this.spreadPerShot || 0), this.spreadMax || 0);
     this.cur = Math.min(this.cur + (this.bloomPerShot || 0), this.bloomMax || 0); // applies from the NEXT shot
     const mz = this.muzzleWorld(ray, ws);
@@ -6376,7 +6377,7 @@ class Weapon {
   tick(h, ws) {
     this.cooldown -= h;
     if (!ws.trigger && this.cooldown < 0) this.cooldown = 0;
-    const spraying = this.game.time - this.lastShot < (this.interval || 0.1) * 1.6; // bloom only recovers once you stop spraying
+    const spraying = ws.clock - this.lastShot < (this.interval || 0.1) * 1.6; // bloom only recovers once you stop spraying
     this.bloom = damp(this.bloom, 0, spraying ? 1 : (this.spreadRecover || 5), h);
     if (!spraying) { this.cur = damp(this.cur, 0, 11, h); if (this.cur < 2e-4) this.cur = 0; } // quick recenter to a perfect first shot
     if (this.autoReloadT > 0) { this.autoReloadT -= h; if (this.autoReloadT <= 0 && this.tryReload()) ws.setAds(false, true); }
@@ -6603,6 +6604,7 @@ class Arsenal {
     this.game = game; this.owner = owner; this.weapons = []; this.index = 0; this.lastIndex = 0; this.remote = false;
     this.ads = false; this.zoomLevel = 0; this.adsT = 0; this.trigger = false; this.unscopeT = 0; this.scopedIn = false; this.scopeLevel = 0;
     this.grabT = 0; this.grabCd = 0; this.grabHit = false; this.prevBtn = 0; this.drawT = 0; this.heat = 0; this.lastShotT = -9;
+    this.clock = 0; // seconds of fixed steps this arsenal has run: weapon timing reads this, so host and client agree exactly
   }
   init(defs) {
     this.weapons = this._make(defs);
@@ -6713,7 +6715,7 @@ class Arsenal {
   // One fixed step. Edges (press / release) come from comparing with the previous command's buttons.
   tick(h, cmd) {
     const g = this.game, p = this.owner, btn = cmd.btn, pressed = btn & ~this.prevBtn, released = this.prevBtn & ~btn;
-    this.prevBtn = btn;
+    this.prevBtn = btn; this.clock += h;
     if (p.alive) {
       if (cmd.sw) this.switchTo(cmd.sw - 1);
       if (pressed & BTN.QUICK) this.quickSwitch();
@@ -7216,7 +7218,7 @@ class Player extends Human {
     }
     g.nextSpawnLoadoutIndex = null;
     this.setSpectate(null);
-    this.motor.teleport(point);
+    this.motor.teleport(point); this.life = (this.life || 0) + 1;
     this.yaw = yaw; this.pitch = 0; this.resetRecoil(); this.punch = 0; this.punchV = 0; this.shake = 0; this.slideT = 0; this.slideK = 0; this.mantleT = 0; this.mantleK = 0;
     this.hp = 100; this.alive = true; this.spawnProtect = CFG.spawnProtect; this.eyeH = CFG.player.eye; this.killer = null; this.carrying = false;
     this.damageLog.clear();
@@ -7234,9 +7236,10 @@ const BTN = { JUMP: 1, CROUCH: 2, SPRINT: 4, FIRE: 8, ALT: 16, USE: 32, RELOAD: 
 const BTN_EDGES = BTN.JUMP | BTN.RELOAD | BTN.GRAB | BTN.INTERACT | BTN.QUICK;
 
 class UserCmd {
-  constructor() { this.seq = 0; this.f = 0; this.r = 0; this.yaw = 0; this.pitch = 0; this.btn = 0; this.sw = 0; this.zoom = 0; }
-  // f / r: −1, 0, 1 · yaw / pitch: aim angles in radians · sw: weapon index + 1 requested this tick (0 = none) · zoom: ADS level
-  copy(o) { this.seq = o.seq; this.f = o.f; this.r = o.r; this.yaw = o.yaw; this.pitch = o.pitch; this.btn = o.btn; this.sw = o.sw; this.zoom = o.zoom; return this; }
+  constructor() { this.seq = 0; this.f = 0; this.r = 0; this.yaw = 0; this.pitch = 0; this.ay = 0; this.ap = 0; this.btn = 0; this.sw = 0; this.zoom = 0; }
+  // f / r: −1, 0, 1 · yaw / pitch: view angles (movement heading) · ay / ap: recoil + punch on top of them = where the
+  // crosshair really points · sw: weapon index + 1 requested this tick (0 = none) · zoom: ADS level
+  copy(o) { this.seq = o.seq; this.f = o.f; this.r = o.r; this.yaw = o.yaw; this.pitch = o.pitch; this.ay = o.ay; this.ap = o.ap; this.btn = o.btn; this.sw = o.sw; this.zoom = o.zoom; return this; }
 }
 
 // Samples the keyboard / mouse into one UserCmd per fixed tick. Presses that start and end between two ticks (a quick
@@ -7249,7 +7252,7 @@ class CmdBuilder {
   build(player, ws, active) {
     const inp = this.input, c = this.cmd, k = (code) => inp.down(code);
     c.seq = ++this.seq; c.sw = 0; c.btn = 0; c.f = 0; c.r = 0;
-    c.yaw = player.yaw; c.pitch = player.pitch; c.zoom = ws ? ws.zoomLevel : 0;
+    c.yaw = player.yaw; c.pitch = player.pitch; c.ay = player.recoilYaw || 0; c.ap = (player.recoilPitch || 0) + (player.punch || 0); c.zoom = ws ? ws.zoomLevel : 0;
     if (active) {
       c.f = (k('KeyW') || k('ArrowUp') ? 1 : 0) - (k('KeyS') || k('ArrowDown') ? 1 : 0);
       c.r = (k('KeyD') || k('ArrowRight') ? 1 : 0) - (k('KeyA') || k('ArrowLeft') ? 1 : 0);
@@ -7279,12 +7282,33 @@ const BOT_NAMES = {
   bravo: ['Viper', 'Ghost', 'Raven', 'Cobra', 'Wolf', 'Hawk', 'Jackal', 'Scorpion', 'Reaper', 'Mamba', 'Vulture', 'Kraken'],
 };
 const FOV_COS = Math.cos(THREE.MathUtils.degToRad(60)); // 120° vision cone
+
+// Soldier body animation shared by bots, remote humans on the host and ghosts on a client (v25): walk cycle blended into a
+// one-knee kneel (right thigh forward, left knee on the ground) when crouching, aim pitch, flinch springs, spawn-shield glow.
+function animateSoldier(c, dt, hs, crouching, aimPitch, armsDown) {
+  const M = c.model;
+  c.walkPhase = (c.walkPhase || 0) + dt * hs * 2.4;
+  const amp = clamp(hs / 4.5, 0, 1), sw = Math.sin(c.walkPhase) * amp * 0.7, ck = c.crouchK = damp(c.crouchK || 0, crouching ? 1 : 0, 14, dt);
+  M.legs[0].hip.rotation.x = lerp(sw, 0.12, ck); M.legs[1].hip.rotation.x = lerp(-sw, 1.45, ck);
+  M.legs[0].knee.rotation.x = lerp(Math.max(0, -Math.sin(c.walkPhase)) * amp * 0.9, -1.62, ck); M.legs[1].knee.rotation.x = lerp(Math.max(0, Math.sin(c.walkPhase)) * amp * 0.9, -1.45, ck);
+  const hipY = lerp(0.92, 0.52, ck); M.legs[0].hip.position.y = M.legs[1].hip.position.y = hipY;
+  M.torso.position.y = hipY + Math.abs(Math.cos(c.walkPhase)) * 0.025 * amp * (1 - ck);
+  M.arms.rotation.x = damp(M.arms.rotation.x, aimPitch, 12, dt); M.head.rotation.x = M.arms.rotation.x * 0.6;
+  const fl = c.fl;
+  if (fl) { // damped springs for the flinch
+    for (const [a, v] of [['x', 'vx'], ['z', 'vz'], ['h', 'vh']]) { fl[v] += (-fl[a] * 160 - fl[v] * 16) * dt; fl[a] += fl[v] * dt; }
+    M.torso.rotation.x = fl.x * 0.75; M.torso.rotation.z = fl.z * 0.6; M.head.rotation.x += fl.h * 0.55;
+  }
+  if (armsDown) M.arms.rotation.x = damp(M.arms.rotation.x, -0.5, 10, dt);
+  if (c.spawnProtect > 0) { const k = 0.35 + 0.25 * Math.sin(c.game.time * 14); M.mat.emissive.setRGB(0.06 * k, 0.18 * k, 0.34 * k); }
+  else if (M.mat.emissive.r > 0 || M.mat.emissive.b > 0) M.mat.emissive.setRGB(0, 0, 0);
+}
 const PREF_RANGE = { sniper: [30, 75], rifle: [10, 34], lmg: [12, 38], smg: [6, 22], shotgun: [2, 9], pistol: [5, 18], knife: [0, 2] };
 
 class Bot extends Combatant {
   constructor(game, team, idx, weaponId) {
     super(game, team, BOT_NAMES[team][idx % BOT_NAMES[team].length], false);
-    this.idx = idx; this.aimPitch = 0; this.walkPhase = Math.random() * 6; this.stepDist = 0; this.spottedT = -10; this.stepPitch = rand(0.9, 1.12);
+    this.idx = idx; this.isBot = true; this.aimPitch = 0; this.walkPhase = Math.random() * 6; this.stepDist = 0; this.spottedT = -10; this.stepPitch = rand(0.9, 1.12);
     this.model = game.app.soldiers.create(team, WEAPON_DEFS[weaponId].model || weaponId);
     game.scene.add(this.model.root);
     this.setWeapon(weaponId);
@@ -7353,7 +7377,7 @@ class Bot extends Combatant {
   }
 
   respawn(point, yaw) {
-    this.motor.teleport(point);
+    this.motor.teleport(point); this.life = (this.life || 0) + 1;
     this.yaw = yaw + rand(-0.3, 0.3); this.hp = 100; this.alive = true; this.spawnProtect = CFG.spawnProtect; this.carrying = false;
     this.ammo = this.def.mag || 0; this.reloadT = 0; this.damageLog.clear();
     this.nades = this.game.mode === 'general' ? { he: 1, flash: 1 } : { he: 0, flash: 0 };
@@ -7389,22 +7413,7 @@ class Bot extends Combatant {
     this.ai.update(dt);
     const m = this.motor, M = this.model;
     M.root.position.lerpVectors(m.prevPos, m.pos, alpha); M.root.rotation.y = this.yaw;
-    const hs = m.horizontalSpeed(); this.walkPhase += dt * hs * 2.4;
-    const amp = clamp(hs / 4.5, 0, 1), sw = Math.sin(this.walkPhase) * amp * 0.7, ck = this.crouchK = damp(this.crouchK || 0, m.crouching ? 1 : 0, 14, dt);
-    // walk cycle blended into a one-knee kneel (right thigh forward, left knee on the ground) when crouching
-    M.legs[0].hip.rotation.x = lerp(sw, 0.12, ck); M.legs[1].hip.rotation.x = lerp(-sw, 1.45, ck);
-    M.legs[0].knee.rotation.x = lerp(Math.max(0, -Math.sin(this.walkPhase)) * amp * 0.9, -1.62, ck); M.legs[1].knee.rotation.x = lerp(Math.max(0, Math.sin(this.walkPhase)) * amp * 0.9, -1.45, ck);
-    const hipY = lerp(0.92, 0.52, ck); M.legs[0].hip.position.y = M.legs[1].hip.position.y = hipY;
-    M.torso.position.y = hipY + Math.abs(Math.cos(this.walkPhase)) * 0.025 * amp * (1 - ck);
-    M.arms.rotation.x = damp(M.arms.rotation.x, this.aimPitch, 12, dt); M.head.rotation.x = M.arms.rotation.x * 0.6;
-    const fl = this.fl;
-    if (fl) { // damped springs for the flinch
-      for (const [a, v] of [['x', 'vx'], ['z', 'vz'], ['h', 'vh']]) { fl[v] += (-fl[a] * 160 - fl[v] * 16) * dt; fl[a] += fl[v] * dt; }
-      M.torso.rotation.x = fl.x * 0.75; M.torso.rotation.z = fl.z * 0.6; M.head.rotation.x += fl.h * 0.55;
-    }
-    if (this.reloadT > 0 || m.climbing) M.arms.rotation.x = damp(M.arms.rotation.x, -0.5, 10, dt);
-    if (this.spawnProtect > 0) { const k = 0.35 + 0.25 * Math.sin(this.game.time * 14); M.mat.emissive.setRGB(0.06 * k, 0.18 * k, 0.34 * k); }
-    else if (M.mat.emissive.r > 0 || M.mat.emissive.b > 0) M.mat.emissive.setRGB(0, 0, 0);
+    animateSoldier(this, dt, m.horizontalSpeed(), m.crouching, this.aimPitch, this.reloadT > 0 || m.climbing);
     if (this.def.kind === 'sniper') this._glint();
     if (this.tag) { this.tag.position.set(M.root.position.x, M.root.position.y + 2.1, M.root.position.z); this.tag.visible = !this.tag.userData.hide && this.tag.position.distanceTo(this.game.camera.position) < 70; }
   }
@@ -7926,6 +7935,144 @@ class TeamIntel {
   stale(p, now) { const t = this.seen.get(this._k(p)); return t === undefined ? 1 : clamp((now - t) / 60, 0, 1); }
 }
 /* =====================================================================
+   v25 NETWORK SOLDIERS
+   NetPlayer — a friend's soldier inside the HOST's match. Steered by the UserCmds his client sends: the same Human
+               movement and Arsenal weapon rules as the local player, a soldier model like a bot, and the host decides
+               every hit, kill and respawn.
+   Ghost     — anyone else as seen on a CLIENT: the host's player, bots, other friends. Pure display, drawn ~100 ms in
+               the past between two snapshots so movement stays smooth whatever the packet timing.
+   ===================================================================== */
+class NetPlayer extends Human {
+  constructor(game, team, name, peer, opts = {}) {
+    super(game, team, name, false);
+    this.peer = peer; this.isNet = true; this.aimPitch = 0; this.walkPhase = 0; this.stepPitch = rand(0.92, 1.08);
+    this.hipMode = opts.hipMode === 'shotgun' ? 'shotgun' : 'precise';
+    this.loadout = NetPlayer.validLoadout(opts.loadout); this.nextLoadout = null;
+    this.arsenal = new Arsenal(game, this); this.arsenal.remote = true; this.arsenal.init(loadoutDefs(game.mode, this.loadout));
+    this.model = game.app.soldiers.create(team, this.def.model || this.def.id); game.scene.add(this.model.root); this.modelGun = this.def.id;
+    if (team === game.player.team) this.tag = Bot.prototype._makeTag.call(this);
+    this.pending = new Map(); this.ackSeq = 0; this.holeT = 0; this.respawnT = 0;
+  }
+  static validLoadout(l) {
+    const ok = (id, slot) => id && WEAPON_DATABASE[id] && WEAPON_DATABASE[id].slot === slot;
+    return { primary: l && ok(l.primary, 'primary') ? l.primary : 'm4a1', secondary: l && ok(l.secondary, 'secondary') ? l.secondary : 'p226' };
+  }
+  gear() { return this.arsenal; }
+  get def() { return this.arsenal.current.def; }
+  get ammo() { return this.arsenal.current.ammo || 0; }
+  get muzzlePos() { this.model.root.updateMatrixWorld(); return this.model.muzzle.getWorldPosition(new THREE.Vector3()); }
+  lookDir(out) { const cp = Math.cos(this.pitch); return out.set(-Math.sin(this.yaw) * cp, Math.sin(this.pitch), -Math.cos(this.yaw) * cp); }
+  // footsteps / landings are positional and muffled through walls, like a bot's
+  _sfx(kind, surface, loud) {
+    const g = this.game, p = TMP_V3.copy(this.motor.pos).setY(this.motor.pos.y + 0.1), d = p.distanceTo(g.camera.position);
+    if (d > 34) return;
+    if (kind !== 'step') { g.audio.land(p, surface, loud); return; }
+    const occluded = d > 3 && !g.collision.segmentClear(g.camera.position, TMP_V4.copy(p).setY(p.y + 0.5));
+    g.audio.footstep(p, surface, loud, { pitch: this.stepPitch, occluded });
+  }
+
+  // Commands arrive in packets (each carries the last few, so one lost packet costs nothing), possibly out of order:
+  // they are kept by sequence number and replayed strictly in order.
+  pushCmds(list) { for (const c of list) if (c.seq > this.ackSeq && !this.pending.has(c.seq)) this.pending.set(c.seq, c); }
+  // Every command is simulated exactly once, in order, with the same fixed step the client used — never invented. None
+  // arrived yet (jitter): the soldier waits this tick (his own client already predicted it). A backlog is worked off two
+  // per tick. So the host replays the client's input stream exactly: same position, same shots, same spread.
+  // A missing number (packet lost or still in flight) is waited for up to 4 ticks (~33 ms), then skipped.
+  step(h) {
+    const n = this.pending.size > 4 ? 2 : 1;
+    let ran = 0;
+    for (let i = 0; i < n; i++) {
+      let cmd = this.pending.get(this.ackSeq + 1);
+      if (!cmd) {
+        if (!this.pending.size) break;
+        if (this.ackSeq && ++this.holeT < 4) break; // (first commands of a session: start from the oldest one at once)
+        cmd = this.pending.get(Math.min(...this.pending.keys()));
+      }
+      this.holeT = 0; this.pending.delete(cmd.seq); ran++;
+      if (this.alive) { this.yaw = cmd.yaw; this.pitch = cmd.pitch; this.aimPitch = cmd.pitch; this.aimDY = cmd.ay; this.aimDP = cmd.ap; }
+      this.curSeq = cmd.seq; // the command being simulated (tests compare it with the client's)
+      this.fixedUpdate(h, cmd);
+      this.arsenal.tick(h, cmd);
+      this.ackSeq = cmd.seq;
+    }
+    if (!ran) { this.motor.prevPos.copy(this.motor.pos); this.stalls = (this.stalls || 0) + 1; }
+  }
+
+  update(dt, alpha) {
+    if (!this.alive) return;
+    if (this.spawnProtect > 0) this.spawnProtect = Math.max(0, this.spawnProtect - dt);
+    const m = this.motor, M = this.model, w = this.arsenal.current;
+    if (this.modelGun !== w.def.id) { this.modelGun = w.def.id; this.game.app.soldiers.setWeapon(M, w.def.model || w.def.id); }
+    M.root.position.lerpVectors(m.prevPos, m.pos, alpha); M.root.rotation.y = this.yaw;
+    animateSoldier(this, dt, m.horizontalSpeed(), m.crouching, this.aimPitch, w.reloading || m.climbing);
+    if (this.tag) { this.tag.position.set(M.root.position.x, M.root.position.y + 2.1, M.root.position.z); this.tag.visible = this.tag.position.distanceTo(this.game.camera.position) < 70; }
+  }
+
+  onDamaged(amount, attacker, fromPos) { if (this.game.net) this.game.net.onRemoteDamaged(this, amount, fromPos); }
+  die(dir, force) {
+    Bot.prototype.die.call(this, dir, force);
+    this.arsenal.exitADS(); this.arsenal.trigger = false;
+  }
+  respawn(point, yaw) {
+    if (this.nextLoadout) { this.loadout = this.nextLoadout; this.nextLoadout = null; this.arsenal.rebuild(loadoutDefs(this.game.mode, this.loadout)); }
+    this.motor.teleport(point); this.life = (this.life || 0) + 1;
+    this.yaw = yaw; this.pitch = 0; this.aimPitch = 0; this.hp = 100; this.alive = true; this.spawnProtect = CFG.spawnProtect; this.carrying = false;
+    this.slideT = 0; this.mantleT = 0; this.damageLog.clear();
+    this.arsenal.resetLoadout();
+    this.model.root.visible = true; this.model.head.visible = true; this.model.root.position.copy(this.motor.pos); if (this.tag) this.tag.visible = true;
+  }
+  remove() {
+    this.alive = false; this.removed = true; this.game.scene.remove(this.model.root);
+    if (this.tag) { this.game.scene.remove(this.tag); this.tag.material.map.dispose(); }
+  }
+}
+NetPlayer.prototype.flinch = Bot.prototype.flinch;
+
+class Ghost extends Combatant {
+  constructor(game, info) {
+    super(game, info.team, info.name, false);
+    this.netId = info.id; this.kind = info.kind; this.isBot = info.kind === 'bot'; this.isNet = info.kind !== 'bot';
+    this.aimPitch = 0; this.walkPhase = Math.random() * 6; this.buf = []; this.speed = 0; this.weaponId = NET_WEAPONS[info.w] || 'm4a1';
+    this.model = game.app.soldiers.create(info.team, WEAPON_DEFS[this.weaponId].model || this.weaponId); game.scene.add(this.model.root);
+    this.alive = false; this.model.root.visible = false; this.life = -1;
+    if (info.team === game.player.team) this.tag = Bot.prototype._makeTag.call(this);
+  }
+  get def() { return WEAPON_DEFS[this.weaponId]; }
+  get muzzlePos() { this.model.root.updateMatrixWorld(); return this.model.muzzle.getWorldPosition(new THREE.Vector3()); }
+  lookDir(out) { const cp = Math.cos(this.aimPitch); return out.set(-Math.sin(this.yaw) * cp, Math.sin(this.aimPitch), -Math.cos(this.yaw) * cp); }
+
+  // one entity record from a snapshot taken at host time t
+  push(t, e) {
+    if (e.life !== this.life) { this.life = e.life; this.buf.length = 0; if (e.alive) this._show(true); } // respawned: no sliding in from the old spot
+    if (!e.alive) { if (this.alive && !this.dying) this._show(false); this.alive = false; return; }
+    this.dying = false; this.alive = true;
+    const b = this.buf; if (b.length && t <= b[b.length - 1].t) return;
+    b.push({ t, x: e.x, y: e.y, z: e.z, yaw: e.yaw, pitch: e.pitch, crouch: e.crouch, reload: e.reload }); while (b.length > 40) b.shift();
+    if (NET_WEAPONS[e.w] && NET_WEAPONS[e.w] !== this.weaponId) { this.weaponId = NET_WEAPONS[e.w]; this.game.app.soldiers.setWeapon(this.model, this.def.model || this.weaponId); }
+    this.spawnProtect = e.protect ? 1 : 0;
+  }
+  _show(on) { this.model.root.visible = on; this.model.head.visible = true; if (this.tag) this.tag.visible = on; }
+  // render time = latest host time − interpolation delay; hold the last pose briefly if packets stop
+  update(dt, renderT) {
+    const b = this.buf; if (!this.alive || !b.length) return;
+    let a = b[0], c = b[b.length - 1], k = 0;
+    if (renderT <= a.t) c = a;
+    else if (renderT < c.t) { let i = 1; while (b[i].t < renderT) i++; a = b[i - 1]; c = b[i]; k = (renderT - a.t) / Math.max(1e-4, c.t - a.t); }
+    else a = c;
+    const m = this.motor, ox = m.pos.x, oz = m.pos.z;
+    m.pos.set(lerp(a.x, c.x, k), lerp(a.y, c.y, k), lerp(a.z, c.z, k)); m.prevPos.copy(m.pos); m.crouching = (k < 0.5 ? a : c).crouch;
+    this.yaw = a.yaw + wrapAngle(c.yaw - a.yaw) * k; this.aimPitch = lerp(a.pitch, c.pitch, k);
+    this.speed = damp(this.speed, Math.hypot(m.pos.x - ox, m.pos.z - oz) / Math.max(1e-3, dt), 10, dt);
+    const M = this.model; M.root.position.copy(m.pos); M.root.rotation.y = this.yaw;
+    animateSoldier(this, dt, Math.min(this.speed, 9), m.crouching, this.aimPitch, (k < 0.5 ? a : c).reload);
+    if (this.tag) { this.tag.position.set(m.pos.x, m.pos.y + 2.1, m.pos.z); this.tag.visible = this.tag.position.distanceTo(this.game.camera.position) < 70; }
+  }
+  die(dir, force) { this.dying = true; Bot.prototype.die.call(this, dir, force); this.buf.length = 0; }
+  flinch(part, dir, dmg) { Bot.prototype.flinch.call(this, part, dir, dmg); }
+  onDamaged() {}
+  respawn() {}
+}
+/* =====================================================================
    HUD — cached DOM writes (unchanged values never touch the DOM).
    ===================================================================== */
 class HUD {
@@ -8100,7 +8247,7 @@ class HUD {
     const on = !!m; this._cls('sbOn', this.el.sb, 'on', on);
     if (!on) return;
     const rows = (team) => m.combatants.filter((c) => c.team === team).sort((a, b) => b.score - a.score || b.kills - a.kills)
-      .map((c) => `<tr class="${c.isPlayer ? 'me' : ''}${c.alive ? '' : ' dead'}"><td>${c.isPlayer ? '★ ' : ''}${c.name}${c.isPlayer ? '' : ' <small style="opacity:.5">BOT</small>'}</td><td>${c.score}</td><td>${c.kills}</td><td>${c.assists}</td><td>${c.deaths}</td></tr>`).join('');
+      .map((c) => `<tr class="${c.isPlayer ? 'me' : ''}${c.alive ? '' : ' dead'}"><td>${c.isPlayer ? '★ ' : ''}${c.name}${c.isBot ? ' <small style="opacity:.5">BOT</small>' : ''}</td><td>${c.score}</td><td>${c.kills}</td><td>${c.assists}</td><td>${c.deaths}</td></tr>`).join('');
     this.el.sbA.innerHTML = rows('alpha'); this.el.sbB.innerHTML = rows('bravo');
     const rounds = m.rules.roundBased;
     this.el.sbScoreA.textContent = rounds ? `${m.roundWins.alpha} 勝 · ${m.score.alpha} 分` : `${m.score.alpha} 分`;
@@ -8146,8 +8293,8 @@ class HUD {
       catwalk: 'rgba(110,170,255,.22)', ramp: 'rgba(255,205,80,.35)', sandbag: 'rgba(200,185,140,.45)', fence: 'rgba(170,180,190,.3)', glass: 'rgba(140,210,240,.35)', ladder: 'rgba(255,150,40,.85)' };
     for (const r of m.builder.radar) { const cc = col[r.kind]; if (!cc) continue; ctx.fillStyle = cc; ctx.fillRect(r.x0, r.z0, r.x1 - r.x0, r.z1 - r.z0); }
     for (const [team, cc] of [['alpha', 'rgba(99,179,255,.16)'], ['bravo', 'rgba(255,93,82,.16)']]) { const z = m.builder.zones[team]; if (z) { ctx.fillStyle = cc; ctx.fillRect(z.x0, z.z0, z.x1 - z.x0, z.z1 - z.z0); } }
-    for (const b of m.bots) {
-      if (!b.alive) continue;
+    for (const b of m.combatants) { // bots, friends (host) and ghosts (client)
+      if (!b.alive || !b.model || b === p) continue;
       const pos = b.model.root.position;
       if (b.team === p.team) { ctx.fillStyle = 'rgba(99,179,255,.95)'; }
       else { if (m.time - b.spottedT > 1.6) continue; ctx.fillStyle = `rgba(255,70,55,${clamp(1 - (m.time - b.spottedT) / 1.6, 0.2, 1).toFixed(2)})`; }
@@ -8892,7 +9039,9 @@ class Match {
     this.loadoutIndex = clamp(config.loadout | 0, 0, 4); this.nextSpawnLoadoutIndex = null; this.lastHitSnd = 0;
     this.intel = { alpha: new TeamIntel(this.def.bounds), bravo: new TeamIntel(this.def.bounds) };
     this.drops = []; this.dropSeq = 0; this.pickTarget = null;
+    this.net = null; this.humans = []; this.netSeq = 0; // v25: NetHost / NetClient session, remote humans (host)
   }
+  get isClient() { return !!this.net && this.net.role === 'client'; }
 
   // Game-time scheduler (pauses with the game, unlike setTimeout).
   schedule(delay, fn) { this.timers.push({ t: this.time + delay, fn }); }
@@ -8924,12 +9073,15 @@ class Match {
     progress(0.7, '部署部隊'); await nextFrame();
     this.effects = new Effects(this.scene, app.tex, this.audio);
     this.player = new Player(this);
+    if (this.isClient) this.player.team = this.net.welcome.team; // a client plays on the team the host gave it, with no bots of its own
     this.weapons = new WeaponSystem(this, loadoutDefs(this.mode, Settings.data.loadouts[this.loadoutIndex])); this.weapons.setEnvironment(this.vmEnv || this.scene.environment);
     this.combatants.push(this.player);
-    for (let i = 0; i < this.config.allies - 1; i++) this.bots.push(new Bot(this, 'alpha', i, this.botWeapon()));
-    for (let i = 0; i < this.config.enemies; i++) this.bots.push(new Bot(this, 'bravo', i, this.botWeapon()));
+    if (!this.isClient) {
+      for (let i = 0; i < this.config.allies - 1; i++) this.bots.push(new Bot(this, 'alpha', i, this.botWeapon()));
+      for (let i = 0; i < this.config.enemies; i++) this.bots.push(new Bot(this, 'bravo', i, this.botWeapon()));
+    }
     this.combatants.push(...this.bots);
-    this.combatants.forEach((c, i) => { c.netId = i + 1; }); // v25: stable ids (network snapshots, seeded spread)
+    this.combatants.forEach((c, i) => { c.netId = i + 1; }); this.netSeq = this.combatants.length; // v25: stable ids (network snapshots, seeded spread)
     this.spawns = { alpha: this.makeSpawns('alpha'), bravo: this.makeSpawns('bravo') };
     this.spawnLOS = this.checkSpawnLOS(); window.__debug = Object.assign(window.__debug || {}, { map: def.id, spawnLOS: this.spawnLOS.visible > 0, spawnLOSPairs: this.spawnLOS });
     this.playerModel = app.soldiers.create(this.player.team, 'm4'); this.playerModel.root.visible = false; this.scene.add(this.playerModel.root); // third-person you, for killcams
@@ -8939,7 +9091,7 @@ class Match {
     this.applyEnvIntensity();
     progress(0.84, '編譯著色器'); await nextFrame();
     app.post.configure(this, activeQuality());
-    this.startRound();
+    if (this.isClient) { this.round = 1; this.rules.startRound(); this.net.attach(this); } else this.startRound();
     this.player.updateCamera(1); this.weapons.update(0, app.input, { x: 0, y: 0 });
     if (app.renderer.compileAsync) { await app.renderer.compileAsync(this.scene, this.camera); await app.renderer.compileAsync(this.weapons.scene, this.weapons.camera); }
     else { app.renderer.compile(this.scene, this.camera); app.renderer.compile(this.weapons.scene, this.weapons.camera); }
@@ -9180,10 +9332,12 @@ class Match {
   }
 
   applyDamage(victim, dmg, part, attacker, def, dir, point, opts = {}) {
+    if (this.isClient) return false; // v25: the host decides every hit and reports back hit markers / damage
     if (!victim.alive || this.phase !== 'live') return false;
     if (attacker && attacker !== victim && attacker.team === victim.team) return false; // friendly fire off
-    if (victim.spawnProtect > 0) { if (point) this.effects.shield(point); if (attacker && attacker.isPlayer) { this.app.hud.hitmarker('shield'); this.audio.hit('shield'); } return false; }
+    if (victim.spawnProtect > 0) { if (point) this.effects.shield(point); if (attacker && attacker.isPlayer) { this.app.hud.hitmarker('shield'); this.audio.hit('shield'); } if (attacker && this.net) this.net.onHit(attacker, victim, 'shield', point); return false; }
     victim.hp -= dmg; victim.lastPart = part;
+    if (attacker && attacker !== victim && this.net) this.net.onHit(attacker, victim, victim.hp <= 0 ? 'kill' : part === 'head' ? 'head' : 'body', point);
     if (attacker && attacker !== victim) { const rec = victim.damageLog.get(attacker) || { amt: 0, t: 0 }; rec.amt += dmg; rec.t = this.time; victim.damageLog.set(attacker, rec); }
     if (point && dir) { this.effects.blood(point, dir, part === 'head' ? 18 : 10); if (part === 'head' && def.kind !== 'knife' && def.kind !== 'grab' && point.distanceTo(this.camera.position) < 90) this.effects.helmetSpark(point, dir); }
     if (victim.flinch && dir) victim.flinch(part, dir, dmg);
@@ -9208,9 +9362,9 @@ class Match {
     R.frames.push({ t: this.time, f }); while (R.frames.length && this.time - R.frames[0].t > 5.5) R.frames.shift();
     while (R.shots.length && this.time - R.shots[0].t > 5.5) R.shots.shift();
   }
-  recordShot(shooter, from, to, def) { if (!this.kc || this.kc.t === null) this.rec.shots.push({ t: this.time, i: this.combatants.indexOf(shooter), from: from.clone(), to: to.clone(), def }); }
+  recordShot(shooter, from, to, def) { if (this.net && this.net.role === 'host') this.net.onShot(shooter, from, to, def); if (!this.kc || this.kc.t === null) this.rec.shots.push({ t: this.time, i: this.combatants.indexOf(shooter), from: from.clone(), to: to.clone(), def }); }
   _startKillcam(killer, def) {
-    if (Settings.data.killcam === false || !killer || killer.isPlayer || !this.rules.respawns || this.rec.frames.length < 20) return;
+    if (Settings.data.killcam === false || this.isClient || !killer || killer.isPlayer || !this.rules.respawns || this.rec.frames.length < 20) return;
     const t0 = Math.max(this.rec.frames[0].t, this.time - 3.2), t1 = this.time + 0.35;
     this.kc = { killer, ki: this.combatants.indexOf(killer), def, t: null, t0, t1, delay: 0.9, shotIdx: 0, phase: [] };
     const pw = this.weapons.weapons.find((w) => w.def.slot === 'primary') || this.weapons.current;
@@ -9262,32 +9416,42 @@ class Match {
     if (!p.alive && K.t !== null) p.respawnT = Math.min(p.respawnT, Math.max(0.3, CFG.respawn - p.deathT));
   }
 
+  _killPoints(def, head) { return def.kind === 'knife' || def.kind === 'grab' ? POINTS.knife : def.kind === 'grenade' ? POINTS.grenade : head ? POINTS.head : POINTS.body; }
+  _die(victim, killer, def, dir) { if (victim.isPlayer) victim.die(killer); else victim.die(dir, def.kind === 'sniper' ? 5.5 : def.kind === 'grenade' ? 7 : def.kind === 'knife' ? 1.5 : def.kind === 'shotgun' ? 4 : 2.6); }
+  // your kill: points popup, multi-kill / streak / headshot announcer
+  _killAnnounce(def, head, pts, opts) {
+    const hud = this.app.hud, p = this.player;
+    p.streak++; p.multi = this.time - p.lastKillT < 4 ? p.multi + 1 : 1; p.lastKillT = this.time;
+    hud.points(`+${pts}  ${def.kind === 'knife' ? '刀殺' : def.kind === 'grab' ? '擒拿擊殺' : def.kind === 'grenade' ? '手榴彈擊殺' : head ? '爆頭' : '擊殺'}${opts.collateral ? ' · 穿透' : ''}`);
+    let main = '', sub = '';
+    if (p.multi >= 2) main = ['DOUBLE KILL', 'TRIPLE KILL', 'MULTI KILL', 'ULTRA KILL'][Math.min(p.multi - 2, 3)];
+    else if (this.firstBlood) main = 'FIRST BLOOD';
+    else if (def.kind === 'grenade') main = 'GRENADE KILL';
+    else if (head) main = 'HEADSHOT';
+    else if (def.kind === 'knife') main = 'KNIFE KILL';
+    else if (def.kind === 'grab') main = 'MELEE KILL';
+    const streaks = { 5: 'KILLING SPREE', 8: 'RAMPAGE', 12: 'UNSTOPPABLE', 16: 'GODLIKE' };
+    if (streaks[p.streak]) { if (main) sub = streaks[p.streak]; else main = streaks[p.streak]; }
+    if (head && main !== 'HEADSHOT') sub = sub ? sub + ' · HEADSHOT' : 'HEADSHOT';
+    if (main && !opts.collateral) { hud.announce(main, sub); this.app.speak(main); }
+  }
+  _killFeed(victim, killer, def, head, valid, opts) {
+    this.app.hud.killfeed(valid ? killer.name : killer === victim ? '' : null, killer ? killer.team : 'bravo', killer === victim ? '自爆' : def, victim.name, victim.team, head, (killer && killer.isPlayer) || victim.isPlayer, opts.collateral);
+  }
+
   onKill(victim, killer, def, part, dir, opts) {
     const head = part === 'head' && def.kind !== 'grenade', hud = this.app.hud, p = this.player;
+    if (this.net && this.net.role === 'host') this.net.onKill(victim, killer, def, head, dir, opts);
     victim.deaths++;
     this.rules.onDeath(victim);
     this.dropOnDeath(victim, dir);
-    if (victim.isPlayer) victim.die(killer); else victim.die(dir, def.kind === 'sniper' ? 5.5 : def.kind === 'grenade' ? 7 : def.kind === 'knife' ? 1.5 : def.kind === 'shotgun' ? 4 : 2.6);
+    this._die(victim, killer, def, dir);
     const valid = killer && killer !== victim && killer.team !== victim.team;
     if (valid) {
-      const pts = def.kind === 'knife' || def.kind === 'grab' ? POINTS.knife : def.kind === 'grenade' ? POINTS.grenade : head ? POINTS.head : POINTS.body;
+      const pts = this._killPoints(def, head);
       killer.kills++; if (head) killer.headshots++; killer.score += pts;
       this.addTeam(killer.team, this.rules.killTeamPoints(pts));
-      if (killer.isPlayer) {
-        p.streak++; p.multi = this.time - p.lastKillT < 4 ? p.multi + 1 : 1; p.lastKillT = this.time;
-        hud.points(`+${pts}  ${def.kind === 'knife' ? '刀殺' : def.kind === 'grab' ? '擒拿擊殺' : def.kind === 'grenade' ? '手榴彈擊殺' : head ? '爆頭' : '擊殺'}${opts.collateral ? ' · 穿透' : ''}`);
-        let main = '', sub = '';
-        if (p.multi >= 2) main = ['DOUBLE KILL', 'TRIPLE KILL', 'MULTI KILL', 'ULTRA KILL'][Math.min(p.multi - 2, 3)];
-        else if (this.firstBlood) main = 'FIRST BLOOD';
-        else if (def.kind === 'grenade') main = 'GRENADE KILL';
-        else if (head) main = 'HEADSHOT';
-        else if (def.kind === 'knife') main = 'KNIFE KILL';
-        else if (def.kind === 'grab') main = 'MELEE KILL';
-        const streaks = { 5: 'KILLING SPREE', 8: 'RAMPAGE', 12: 'UNSTOPPABLE', 16: 'GODLIKE' };
-        if (streaks[p.streak]) { if (main) sub = streaks[p.streak]; else main = streaks[p.streak]; }
-        if (head && main !== 'HEADSHOT') sub = sub ? sub + ' · HEADSHOT' : 'HEADSHOT';
-        if (main && !opts.collateral) { hud.announce(main, sub); this.app.speak(main); }
-      }
+      if (killer.isPlayer) this._killAnnounce(def, head, pts, opts);
       this.firstBlood = false;
     }
     for (const [c, rec] of victim.damageLog) {
@@ -9297,12 +9461,23 @@ class Match {
     }
     victim.damageLog.clear();
     if (victim.isPlayer) p.streak = 0;
-    hud.killfeed(valid ? killer.name : killer === victim ? '' : null, killer ? killer.team : 'bravo', killer === victim ? '自爆' : def, victim.name, victim.team, head, (killer && killer.isPlayer) || victim.isPlayer, opts.collateral);
+    this._killFeed(victim, killer, def, head, valid, opts);
     if (victim.isPlayer) {
       hud.showDeath(true, valid ? killer.name : '', def.name, head, this.rules.roundBased);
       if (this.rules.roundBased) this.nextSpectate(); else if (valid) this._startKillcam(killer, def);
     }
     this.checkEnd();
+  }
+
+  // v25 client: the host reported a kill — the same deaths, kill feed and announcements, none of the game logic (scores arrive in snapshots)
+  remoteKill(victim, killer, def, head, dir, opts) {
+    const p = this.player, valid = killer && killer !== victim && killer.team !== victim.team;
+    victim.deaths++;
+    if (victim.alive || victim.isPlayer) this._die(victim, killer, def, dir);
+    if (valid) { const pts = this._killPoints(def, head); killer.kills++; if (head) killer.headshots++; killer.score += pts; if (killer.isPlayer) this._killAnnounce(def, head, pts, opts); this.firstBlood = false; }
+    if (victim.isPlayer) p.streak = 0;
+    this._killFeed(victim, killer, def, head, valid, opts);
+    if (victim.isPlayer) this.app.hud.showDeath(true, valid ? killer.name : '', def.name, head, this.rules.roundBased);
   }
 
   nextSpectate() {
@@ -9327,6 +9502,7 @@ class Match {
   endMatch(winner) {
     if (this.kc) this._endKillcam(false);
     if (this.phase === 'over') return;
+    if (this.net && this.net.role === 'host') this.net.onEnd(winner);
     this.phase = 'over'; this.winner = winner;
     this.app.onMatchEnd(this);
   }
@@ -9338,6 +9514,7 @@ class Match {
     if (i < 0 || i > 4) return;
     this.nextSpawnLoadoutIndex = i === this.loadoutIndex ? null : i;
     const L = Settings.data.loadouts[i];
+    if (this.isClient) this.net.queueLoadout(L); // the host builds the same kit for our soldier at the next respawn
     this.audio.mech('queue');
     this.app.hud.toast(i === this.loadoutIndex ? `配裝 ${LOADOUT_KEYS[i]} 已在使用中` : `配裝 ${LOADOUT_KEYS[i]}（${WEAPON_DEFS[L.primary].name} + ${WEAPON_DEFS[L.secondary].name}）已排入，下次重生時套用`);
   }
@@ -9461,7 +9638,8 @@ class Match {
         const toF = pos.clone().sub(eye).normalize(), view = c.isPlayer ? this.camera.getWorldDirection(new THREE.Vector3()) : c.lookDir(new THREE.Vector3());
         const facing = 0.2 + 0.8 * clamp((view.dot(toF) + 0.25) / 1.25, 0, 1), s = clamp((1 - d / def.radius) * facing * 1.25, 0, 1);
         if (c.isPlayer) { this.app.post.flash(s, 0.6 + 4.2 * s); this.audio.deafen(s * 0.9, 1 + 3 * s); }
-        else c.ai.blind(0.4 + 4.2 * s);
+        else if (c.ai) c.ai.blind(0.4 + 4.2 * s);
+        else if (c.isNet && this.net && this.net.role === 'host') this.net.onFlash(c, s);
       }
     } else {
       this.effects.spawnSmoke(pos, def.duration); this.audio.smokeHiss(pos);
@@ -9472,7 +9650,9 @@ class Match {
   tick(dt, mouse) {
     const p = this.player, h = CFG.fixedStep, hud = this.app.hud, input = this.app.input, rb = this.rules.roundBased, PR = this.prof || (this.prof = new FrameProfiler()), t0 = performance.now();
     this.time += dt;
-    if (this.phase === 'freeze') {
+    const client = this.isClient;
+    if (client) { if (this.phase === 'freeze') hud.freeze(true, Math.max(1, Math.ceil(this.freezeT)), '準備開戰', input.locked); } // phase, clock and score come from the host
+    else if (this.phase === 'freeze') {
       this.freezeT -= dt;
       hud.freeze(true, Math.ceil(this.freezeT), rb ? `ROUND ${this.round}` : '準備開戰', input.locked);
       if (this.freezeT <= 0) { this.phase = 'live'; hud.freeze(false); hud.announce('FIGHT!', rb ? `ROUND ${this.round} · ${RULES[this.rule].name}` : `${RULES[this.rule].name} · ${MODES[this.mode].name}`); }
@@ -9496,6 +9676,7 @@ class Match {
       p.fixedUpdate(h, cmd);
       this.weapons.tick(h, cmd);
       if ((cmd.btn & BTN.INTERACT) && p.alive && this.canMove()) this.onInteract();
+      if (this.net) { if (client) this.net.afterLocalStep(cmd); else this.net.step(h); }
       for (const b of this.bots) b.fixedUpdate(h);
       const ms = []; for (const c of this.combatants) if (c.alive) ms.push(c.motor);
       for (let i = 0; i < ms.length; i++) for (let j = i + 1; j < ms.length; j++) CharacterMotor.separate(ms[i], ms[j]);
@@ -9510,12 +9691,17 @@ class Match {
       if (b.alive) b.update(dt, alpha);
       else if (respawns && this.phase === 'live') { b.respawnT -= dt; if (b.respawnT <= 0) { const sp = this.pickSpawn(b.team); b.respawn(sp, sp.spawnYaw ?? this.spawns[b.team].yaw); } }
     }
-    this.rules.tick(dt);
+    for (const np of this.humans) { // v25 host: friends' soldiers
+      if (np.alive) np.update(dt, alpha);
+      else if (respawns && this.phase === 'live') { np.respawnT -= dt; if (np.respawnT <= 0) { const sp = this.pickSpawn(np.team); np.respawn(sp, sp.spawnYaw ?? this.spawns[np.team].yaw); } }
+    }
+    if (!client) this.rules.tick(dt);
+    if (this.net) this.net.frame(dt);
     const t2 = performance.now();
     if (!p.alive) {
       if (respawns) {
         p.respawnT -= dt; hud.setDeathTimer(`RESPAWN IN ${Math.max(0, p.respawnT).toFixed(1)}s${this.nextSpawnLoadoutIndex !== null ? `  ·  下次配裝 ${LOADOUT_KEYS[this.nextSpawnLoadoutIndex]}` : ''}`);
-        if (p.respawnT <= 0 && this.phase === 'live') { const sp = this.pickSpawn(p.team); p.respawn(sp, sp.spawnYaw ?? this.spawns[p.team].yaw); hud.showDeath(false); }
+        if (!client && p.respawnT <= 0 && this.phase === 'live') { const sp = this.pickSpawn(p.team); p.respawn(sp, sp.spawnYaw ?? this.spawns[p.team].yaw); hud.showDeath(false); }
       } else {
         if (p.spectating && !p.spectating.alive) this.nextSpectate();
         if (p.deathT > 1.6) { hud.showDeath(false); hud.spectate(p.spectating ? `觀戰中：${p.spectating.name} · 左鍵切換隊友 · 等待下一回合` : '全隊陣亡 · 等待下一回合'); }
@@ -9578,8 +9764,8 @@ class Match {
 
   updateSpotting() {
     const cam = this.camera, f = cam.getWorldDirection(new THREE.Vector3());
-    for (const b of this.bots) {
-      if (!b.alive || b.team === this.player.team) continue;
+    for (const b of this.combatants) {
+      if (!b.model || !b.alive || b.team === this.player.team) continue;
       const tgt = b.chestPos(new THREE.Vector3()), to = tgt.clone().sub(cam.position), d = to.length();
       if (d > 80 || f.dot(to) / d < 0.55 || this.effects.smokeBlocks(cam.position, tgt)) continue;
       if (this.collision.segmentClear(cam.position, tgt)) b.spottedT = this.time;
@@ -9601,6 +9787,286 @@ class Match {
     if (this.envRT) this.envRT.dispose();
     this.app.post.dispose(); CAO.uCAOOn.value = 0;
   }
+}
+/* =====================================================================
+   v25 NETWORK — host-authoritative multiplayer.
+   · The HOST runs the real match (bots, hits, kills, score). Each friend is a NetPlayer in it, steered by his UserCmds.
+   · A CLIENT simulates only its own soldier (prediction, same code as the host), draws everyone else as Ghosts from
+     30 Hz snapshots, and shows hits / kills when the host reports them.
+   · Transport: LoopbackTransport links tabs of one browser (BroadcastChannel) with artificial lag / jitter / loss for
+     testing; WebRTC + a signalling service take its place in v26 with the same send / onMessage interface.
+   ===================================================================== */
+const NET_VERSION = 25;
+const NET_WEAPONS = Object.keys(WEAPON_DEFS), NET_WI = Object.fromEntries(NET_WEAPONS.map((k, i) => [k, i]));
+const NET_PHASES = ['loading', 'freeze', 'live', 'roundEnd', 'over'];
+const NET_SNAP_HZ = 30, NET_CMD_EVERY = 2, NET_INTERP = 0.1; // snapshots / s · send a cmd packet every 2nd tick (60 Hz) · ghosts drawn 100 ms behind
+
+class LoopbackTransport {
+  constructor(room, opts = {}) {
+    this.id = Math.random().toString(36).slice(2, 10); this.room = room;
+    this.lag = (+opts.lag || 0) / 1000; this.jitter = (+opts.jitter || 0) / 1000; this.loss = +opts.loss || 0;
+    this.ch = new BroadcastChannel('sf2net:' + room); this.onMessage = null; this.lastRel = new Map();
+    this.stats = { sent: 0, recv: 0, bytesOut: 0, lost: 0 };
+    this.ch.onmessage = (e) => this._recv(e.data);
+  }
+  // reliable = ordered and never dropped (events); unreliable = may be lost (cmds, snapshots — the next one replaces it)
+  send(to, data, reliable = true) {
+    this.stats.sent++; this.stats.bytesOut += data instanceof ArrayBuffer ? data.byteLength : JSON.stringify(data).length;
+    this.ch.postMessage({ from: this.id, to, rel: reliable, data });
+  }
+  _recv(m) {
+    if (m.to !== '*' && m.to !== this.id) return;
+    if (!m.rel && this.loss > 0 && Math.random() < this.loss) { this.stats.lost++; return; }
+    let at = performance.now() / 1000 + this.lag + Math.random() * this.jitter;
+    if (m.rel) { const last = this.lastRel.get(m.from) || 0; if (at < last) at = last; this.lastRel.set(m.from, at); }
+    const deliver = () => { this.stats.recv++; if (this.onMessage) this.onMessage(m.from, m.data); };
+    const ms = (at - performance.now() / 1000) * 1000;
+    if (ms > 0.5) setTimeout(deliver, ms); else deliver();
+  }
+  close() { this.onMessage = null; this.ch.close(); }
+}
+
+// Binary packets for the two high-rate streams. Everything else is small JSON (reliable events).
+const NetCodec = {
+  CMD: 1, SNAP: 2, CMD_SIZE: 22, ENT_SIZE: 22, SHOT_SIZE: 27,
+  encodeCmds(list) {
+    const v = new DataView(new ArrayBuffer(2 + list.length * 22)); v.setUint8(0, 1); v.setUint8(1, list.length);
+    let o = 2;
+    for (const c of list) { v.setUint32(o, c.seq); v.setInt8(o + 4, c.f); v.setInt8(o + 5, c.r); v.setUint16(o + 6, c.btn); v.setUint8(o + 8, c.sw); v.setUint8(o + 9, c.zoom); v.setFloat32(o + 10, c.yaw); v.setFloat32(o + 14, c.pitch); v.setInt16(o + 18, clamp(Math.round(c.ay * 10000), -32000, 32000)); v.setInt16(o + 20, clamp(Math.round(c.ap * 10000), -32000, 32000)); o += 22; }
+    return v.buffer;
+  },
+  decodeCmds(buf) {
+    const v = new DataView(buf), n = v.getUint8(1), out = []; let o = 2;
+    for (let i = 0; i < n; i++, o += 22) {
+      const c = new UserCmd(); c.seq = v.getUint32(o); c.f = clamp(v.getInt8(o + 4), -1, 1); c.r = clamp(v.getInt8(o + 5), -1, 1); c.btn = v.getUint16(o + 6); c.sw = v.getUint8(o + 8); c.zoom = Math.min(3, v.getUint8(o + 9));
+      c.yaw = v.getFloat32(o + 10); c.pitch = clamp(v.getFloat32(o + 14), -1.6, 1.6); if (!Number.isFinite(c.yaw)) c.yaw = 0; if (!Number.isFinite(c.pitch)) c.pitch = 0; c.ay = v.getInt16(o + 18) / 10000; c.ap = v.getInt16(o + 20) / 10000;
+      out.push(c);
+    }
+    return out;
+  },
+  // per-client snapshot: shared header + this client's own authoritative extras + every soldier + recent shots
+  encodeSnap(s) {
+    const v = new DataView(new ArrayBuffer(29 + 17 + 1 + s.ents.length * 22 + 1 + s.shots.length * 27)); let o = 0;
+    v.setUint8(o, 2); v.setUint32(o + 1, s.tick); v.setFloat32(o + 5, s.time); v.setUint32(o + 9, s.ack); v.setInt16(o + 13, s.scoreA); v.setInt16(o + 15, s.scoreB);
+    v.setFloat32(o + 17, s.timeLeft); v.setUint8(o + 21, s.phase); v.setFloat32(o + 22, s.phaseT); v.setUint8(o + 26, s.winsA); v.setUint8(o + 27, s.winsB); v.setUint8(o + 28, s.round); o = 29;
+    v.setFloat32(o, s.vx); v.setFloat32(o + 4, s.vy); v.setFloat32(o + 8, s.vz); v.setUint8(o + 12, s.hp); v.setUint16(o + 13, s.ammo); v.setUint16(o + 15, s.reserve); o += 17;
+    v.setUint8(o++, s.ents.length);
+    for (const e of s.ents) {
+      v.setUint16(o, e.id); v.setUint8(o + 2, e.flags); v.setUint8(o + 3, e.w); v.setUint8(o + 4, e.life & 255);
+      v.setFloat32(o + 5, e.x); v.setFloat32(o + 9, e.y); v.setFloat32(o + 13, e.z);
+      v.setInt16(o + 17, Math.round(wrapAngle(e.yaw) * 10000)); v.setInt16(o + 19, Math.round(clamp(e.pitch, -1.6, 1.6) * 10000)); v.setUint8(o + 21, clamp(Math.round(e.hp), 0, 255)); o += 22;
+    }
+    v.setUint8(o++, s.shots.length);
+    for (const h of s.shots) { v.setUint16(o, h.id); v.setUint8(o + 2, h.w); for (let i = 0; i < 3; i++) { v.setFloat32(o + 3 + i * 4, h.from[i]); v.setFloat32(o + 15 + i * 4, h.to[i]); } o += 27; }
+    return v.buffer;
+  },
+  decodeSnap(buf) {
+    const v = new DataView(buf); let o = 0;
+    const s = { tick: v.getUint32(1), time: v.getFloat32(5), ack: v.getUint32(9), scoreA: v.getInt16(13), scoreB: v.getInt16(15), timeLeft: v.getFloat32(17), phase: v.getUint8(21), phaseT: v.getFloat32(22), winsA: v.getUint8(26), winsB: v.getUint8(27), round: v.getUint8(28) };
+    o = 29; s.vx = v.getFloat32(o); s.vy = v.getFloat32(o + 4); s.vz = v.getFloat32(o + 8); s.hp = v.getUint8(o + 12); s.ammo = v.getUint16(o + 13); s.reserve = v.getUint16(o + 15); o += 17;
+    const n = v.getUint8(o++); s.ents = [];
+    for (let i = 0; i < n; i++, o += 22) {
+      const f = v.getUint8(o + 2);
+      s.ents.push({ id: v.getUint16(o), alive: !!(f & 1), crouch: !!(f & 2), reload: !!(f & 4), protect: !!(f & 8), w: v.getUint8(o + 3), life: v.getUint8(o + 4),
+        x: v.getFloat32(o + 5), y: v.getFloat32(o + 9), z: v.getFloat32(o + 13), yaw: v.getInt16(o + 17) / 10000, pitch: v.getInt16(o + 19) / 10000, hp: v.getUint8(o + 21) });
+    }
+    const ns = v.getUint8(o++); s.shots = [];
+    for (let i = 0; i < ns; i++, o += 27) { const f = [], t = []; for (let k = 0; k < 3; k++) { f.push(v.getFloat32(o + 3 + k * 4)); t.push(v.getFloat32(o + 15 + k * 4)); } s.shots.push({ id: v.getUint16(o), w: v.getUint8(o + 2), from: f, to: t }); }
+    return s;
+  },
+};
+
+// What any soldier looks like on the wire (the local player of the host, a bot, or a NetPlayer).
+function netEntity(m, c) {
+  const p = c.isPlayer, w = p ? m.weapons.current : c.arsenal ? c.arsenal.current : null, def = w ? w.def : c.def;
+  const reload = w ? w.reloading : c.reloadT > 0;
+  return { id: c.netId, flags: (c.alive ? 1 : 0) | (c.motor.crouching ? 2 : 0) | (reload ? 4 : 0) | (c.spawnProtect > 0 ? 8 : 0), w: NET_WI[def.id] ?? 0, life: c.life || 0,
+    x: c.motor.pos.x, y: c.motor.pos.y, z: c.motor.pos.z, yaw: c.yaw, pitch: p ? c.pitch : c.isNet ? c.pitch : c.aimPitch || 0, hp: c.alive ? c.hp : 0 };
+}
+const v3arr = (v) => [+v.x.toFixed(3), +v.y.toFixed(3), +v.z.toFixed(3)];
+
+class NetHost {
+  constructor(app, match, transport) {
+    this.role = 'host'; this.app = app; this.m = match; this.t = transport; this.peers = new Map(); this.snapT = 0; this.tick = 0; this.shots = [];
+    match.net = this; match.humans = match.humans || []; match.netSeq = Math.max(match.netSeq || 0, ...match.combatants.map((c) => c.netId || 0));
+    transport.onMessage = (from, d) => this._msg(from, d);
+    match.player.name = (app.netOpts && app.netOpts.name) || '房主';
+    transport.send('*', { k: 'host', v: NET_VERSION, room: transport.room });
+  }
+  _msg(from, d) {
+    if (d instanceof ArrayBuffer) {
+      const np = this.peers.get(from);
+      if (np && new DataView(d).getUint8(0) === NetCodec.CMD) { np.pushCmds(NetCodec.decodeCmds(d)); np.heardT = this.m.time; }
+      return;
+    }
+    if (!d || typeof d !== 'object') return;
+    if (d.k === 'join') this._join(from, d);
+    else if (d.k === 'hello') this.t.send(from, { k: 'host', v: NET_VERSION, room: this.t.room });
+    else if (d.k === 'leave') this._drop(from, '離開了房間');
+    else if (d.k === 'loadout') { const np = this.peers.get(from); if (np) np.nextLoadout = NetPlayer.validLoadout(d); }
+  }
+  _balance() { const n = (t) => this.m.combatants.filter((c) => !c.isBot && c.team === t).length; return n('bravo') <= n('alpha') ? 'bravo' : 'alpha'; }
+  _join(from, d) {
+    if (d.v !== NET_VERSION) { this.t.send(from, { k: 'reject', why: '版本不同，請重新整理頁面' }); return; }
+    const m = this.m;
+    if (!this.peers.has(from)) {
+      if (m.phase === 'over' || m.rules.roundBased) { this.t.send(from, { k: 'reject', why: m.phase === 'over' ? '對戰已結束' : 'v25 只支援團隊死鬥' }); return; }
+      const team = d.team === 'alpha' || d.team === 'bravo' ? d.team : this._balance();
+      const bot = m.bots.filter((b) => b.team === team).pop(); if (bot) this._removeBot(bot); // a friend takes a bot's place
+      const np = new NetPlayer(m, team, String(d.name || 'Friend').slice(0, 14), from, d);
+      np.netId = ++m.netSeq; np.heardT = m.time; m.humans.push(np); m.combatants.push(np); this.peers.set(from, np);
+      const sp = m.pickSpawn(team); np.respawn(sp, sp.spawnYaw ?? m.spawns[team].yaw);
+      m.applyEnvIntensity();
+      for (const [peer] of this.peers) if (peer !== from) this.t.send(peer, { k: 'roster', add: this._info(np) });
+      this.app.hud.toast(`${np.name} 加入了對戰（${team === 'alpha' ? '藍隊' : '紅隊'}）`);
+    }
+    const np = this.peers.get(from), c = m.config;
+    this.t.send(from, { k: 'welcome', v: NET_VERSION, you: np.netId, team: np.team, name: np.name, life: np.life, pos: v3arr(np.motor.pos), yaw: np.yaw,
+      cfg: { map: c.map, mode: c.mode, rule: c.rule, ruleCfg: c.ruleCfg, difficulty: c.difficulty, allies: c.allies, enemies: c.enemies },
+      roster: m.combatants.filter((x) => x !== np && !x.removed).map((x) => this._info(x)), phase: m.phase, time: m.time });
+  }
+  _info(c) { const def = c.isPlayer ? this.m.weapons.current.def : c.def; return { id: c.netId, team: c.team, name: c.name, kind: c.isBot ? 'bot' : 'human', w: NET_WI[def.id] ?? 0 }; }
+  _removeBot(b) {
+    const m = this.m; b.removed = true; b.alive = false; b.respawnT = Infinity; m.scene.remove(b.model.root); if (b.tag) m.scene.remove(b.tag); if (b.glint) m.scene.remove(b.glint);
+    m.bots.splice(m.bots.indexOf(b), 1); m.combatants.splice(m.combatants.indexOf(b), 1);
+    for (const [peer] of this.peers) this.t.send(peer, { k: 'roster', remove: b.netId });
+  }
+  _drop(peer, why) {
+    const np = this.peers.get(peer), m = this.m; if (!np) return;
+    this.peers.delete(peer); np.remove(); m.humans.splice(m.humans.indexOf(np), 1); m.combatants.splice(m.combatants.indexOf(np), 1);
+    for (const [p] of this.peers) this.t.send(p, { k: 'roster', remove: np.netId });
+    this.app.hud.toast(`${np.name} ${why}`);
+  }
+
+  // fixed step: remote humans run their next commands
+  step(h) { for (const np of this.m.humans) np.step(h); }
+  // per frame: snapshots at 30 Hz, silent peers dropped after 10 s
+  frame(dt) {
+    const m = this.m;
+    for (const [peer, np] of this.peers) if (m.time - np.heardT > 10) this._drop(peer, '連線中斷');
+    this.snapT -= dt; if (this.snapT > 0) return;
+    this.snapT = Math.max(0, this.snapT + 1 / NET_SNAP_HZ); this.tick++;
+    const ents = m.combatants.filter((c) => !c.removed).map((c) => netEntity(m, c)), shots = this.shots.splice(0);
+    const base = { tick: this.tick, time: m.time, scoreA: m.score.alpha, scoreB: m.score.bravo, timeLeft: m.timeLeft, phase: NET_PHASES.indexOf(m.phase), phaseT: m.phase === 'freeze' ? m.freezeT : m.roundEndT || 0,
+      winsA: m.roundWins.alpha, winsB: m.roundWins.bravo, round: m.round & 255 };
+    for (const [peer, np] of this.peers) {
+      const w = np.arsenal.current;
+      const s = Object.assign({}, base, { ack: np.ackSeq, vx: np.motor.vel.x, vy: np.motor.vel.y, vz: np.motor.vel.z, hp: np.alive ? Math.max(0, Math.round(np.hp)) : 0, ammo: w.ammo || 0, reserve: w.reserveAmmo || 0,
+        ents, shots: shots.filter((h) => h.id !== np.netId).slice(-60) }); // his own shots are already on his screen
+      this.t.send(peer, NetCodec.encodeSnap(s), false);
+    }
+  }
+  // hooks called by the match
+  onShot(c, from, to, def) { if (this.peers.size && this.shots.length < 120) this.shots.push({ id: c.netId, w: NET_WI[def.id] ?? 0, from: [from.x, from.y, from.z], to: [to.x, to.y, to.z] }); }
+  onHit(attacker, victim, kind, point) { if (attacker.isNet && attacker.peer) this.t.send(attacker.peer, { k: 'hit', kind, pt: point ? v3arr(point) : null }); }
+  onRemoteDamaged(np, amount, from) { this.t.send(np.peer, { k: 'dmg', amt: Math.round(amount), hp: Math.max(0, Math.round(np.hp)), from: v3arr(from) }); }
+  onFlash(np, s) { this.t.send(np.peer, { k: 'flash', s: +s.toFixed(3) }); }
+  onKill(victim, killer, def, head, dir, opts) {
+    const e = { k: 'kill', v: victim.netId, kr: killer ? killer.netId : 0, w: def.id, head: !!head, col: !!opts.collateral, dir: [+dir.x.toFixed(3), +dir.z.toFixed(3)] };
+    for (const [peer] of this.peers) this.t.send(peer, e);
+  }
+  onEnd(winner) { for (const [peer] of this.peers) this.t.send(peer, { k: 'end', winner: winner || null }); }
+  close() { for (const [peer] of this.peers) this.t.send(peer, { k: 'end', winner: null, closed: true }); this.t.close(); if (this.m.net === this) this.m.net = null; }
+}
+
+class NetClient {
+  constructor(app, transport, opts = {}) {
+    this.role = 'client'; this.app = app; this.t = transport; this.opts = opts; this.m = null; this.hostId = null; this.ready = false;
+    this.ghosts = new Map(); this.hist = new Array(256); this.sent = []; this.stepN = 0; this.lastTick = 0; this.hostClock = null; this.corr = { n: 0, snaps: 0, max: 0 };
+    transport.onMessage = (from, d) => this._msg(from, d);
+  }
+  start() {
+    const join = () => { if (this.hostId) return; this.t.send('*', { k: 'join', v: NET_VERSION, name: this.opts.name, team: this.opts.team, hipMode: Settings.data.hipMode, ...this._loadout() }); };
+    join(); this.joinTimer = setInterval(join, 1000);
+  }
+  _loadout() { const l = Settings.data.loadouts[Settings.data.lobby.loadout | 0] || Settings.data.loadouts[0]; return { loadout: { primary: l.primary, secondary: l.secondary } }; }
+  _msg(from, d) {
+    if (d instanceof ArrayBuffer) { if (this.ready && from === this.hostId && new DataView(d).getUint8(0) === NetCodec.SNAP) this._snap(NetCodec.decodeSnap(d)); return; }
+    if (!d || typeof d !== 'object') return;
+    if (d.k === 'welcome') { if (this.hostId) return; this.hostId = from; clearInterval(this.joinTimer); this.welcome = d; this.app.startNetMatch(this); return; }
+    if (d.k === 'reject') { clearInterval(this.joinTimer); this.app.netError(d.why); return; }
+    if (d.k === 'host' && !this.hostId) { this.t.send(from, { k: 'join', v: NET_VERSION, name: this.opts.name, team: this.opts.team, hipMode: Settings.data.hipMode, ...this._loadout() }); return; }
+    if (from !== this.hostId || !this.ready) return;
+    const m = this.m;
+    if (d.k === 'kill') this._kill(d);
+    else if (d.k === 'hit') {
+      const kind = d.kind; m.app.hud.hitmarker(kind); if (kind !== 'shield') m.stats.hits++;
+      if (kind !== 'body' || m.time - m.lastHitSnd > 0.04) { m.audio.hit(kind); m.lastHitSnd = m.time; }
+      if (d.pt && kind !== 'shield') m.effects.blood(new THREE.Vector3(...d.pt), m.camera.getWorldDirection(new THREE.Vector3()), kind === 'head' ? 18 : 10);
+    } else if (d.k === 'dmg') { const p = m.player; if (p.alive) { p.hp = d.hp; p.onDamaged(d.amt, null, new THREE.Vector3(...d.from)); } }
+    else if (d.k === 'flash') { m.app.post.flash(d.s, 0.6 + 4.2 * d.s); m.audio.deafen(d.s * 0.9, 1 + 3 * d.s); }
+    else if (d.k === 'roster') { if (d.add) this._ghost(d.add); if (d.remove) this._unghost(d.remove); }
+    else if (d.k === 'end') { if (d.closed) m.app.hud.toast('房主已關閉房間'); m.winner = d.winner; m.phase = 'live'; m.endMatch(d.winner); }
+  }
+
+  // the match is built: create every other soldier as a ghost and drop our soldier where the host spawned it
+  attach(m) {
+    this.m = m; const w = this.welcome;
+    for (const info of w.roster) this._ghost(info);
+    m.player.netId = w.you; m.player.life = w.life;
+    m.phase = w.phase === 'live' ? 'live' : 'freeze'; m.freezeT = 0;
+    m.player.respawn(new THREE.Vector3(...w.pos), w.yaw); m.player.life = w.life; m.player.spawnProtect = CFG.spawnProtect;
+    this.ready = true;
+    addEventListener('beforeunload', () => this.t.send(this.hostId, { k: 'leave' }));
+  }
+  _ghost(info) { if (this.ghosts.has(info.id) || !this.m) return; const g = new Ghost(this.m, info); this.ghosts.set(info.id, g); this.m.combatants.push(g); }
+  _unghost(id) { const g = this.ghosts.get(id); if (!g) return; this.ghosts.delete(id); g.alive = false; this.m.scene.remove(g.model.root); if (g.tag) this.m.scene.remove(g.tag); this.m.combatants.splice(this.m.combatants.indexOf(g), 1); }
+  byId(id) { return id === this.m.player.netId ? this.m.player : this.ghosts.get(id) || null; }
+
+  // after each local fixed step: remember where prediction put us for this command, send commands at 60 Hz
+  afterLocalStep(cmd) {
+    const p = this.m.player.motor.pos; this.hist[cmd.seq & 255] = { seq: cmd.seq, x: p.x, y: p.y, z: p.z };
+    this.sent.push(new UserCmd().copy(cmd)); if (this.sent.length > 4) this.sent.shift();
+    if (++this.stepN % NET_CMD_EVERY === 0) this.t.send(this.hostId, NetCodec.encodeCmds(this.sent), false);
+  }
+  queueLoadout(l) { if (this.ready) this.t.send(this.hostId, { k: 'loadout', primary: l.primary, secondary: l.secondary }); }
+
+  _snap(s) {
+    if (s.tick <= this.lastTick) return; this.lastTick = s.tick;
+    const m = this.m, p = m.player;
+    this.hostClock = this.hostClock === null || Math.abs(s.time - this.hostClock) > 0.3 ? s.time : this.hostClock + (s.time - this.hostClock) * 0.1;
+    m.score.alpha = s.scoreA; m.score.bravo = s.scoreB; m.timeLeft = s.timeLeft; m.roundWins.alpha = s.winsA; m.roundWins.bravo = s.winsB; m.round = s.round;
+    const ph = NET_PHASES[s.phase] || 'live';
+    if (ph !== m.phase && m.phase !== 'over') {
+      if (m.phase === 'freeze' && ph === 'live') { m.app.hud.freeze(false); m.app.hud.announce('FIGHT!', `${RULES[m.rule].name} · 連線對戰`); }
+      m.phase = ph;
+    }
+    if (ph === 'freeze') m.freezeT = s.phaseT;
+    for (const e of s.ents) {
+      if (e.id === p.netId) { this._self(s, e); continue; }
+      const g = this.ghosts.get(e.id); if (g) g.push(s.time, e);
+    }
+    for (const h of s.shots) { const c = this.ghosts.get(h.id), def = WEAPON_DEFS[NET_WEAPONS[h.w]]; if (c && def) m.thirdPersonShot(c, def, new THREE.Vector3(...h.from), new THREE.Vector3(...h.to)); }
+  }
+  // our own soldier: respawns and health come from the host; position is predicted here and only nudged back if it drifted
+  _self(s, e) {
+    const m = this.m, p = m.player;
+    if (e.alive && e.life !== ((p.life || 0) & 255)) { p.respawn(new THREE.Vector3(e.x, e.y, e.z), e.yaw); p.life = e.life; m.app.hud.showDeath(false); this.hist.fill(undefined); return; }
+    if (!p.alive || !e.alive) return;
+    p.hp = Math.min(p.hp, e.hp) || e.hp;
+    const h = this.hist[s.ack & 255]; if (!h || h.seq !== s.ack) return;
+    const dx = e.x - h.x, dy = e.y - h.y, dz = e.z - h.z, err = Math.hypot(dx, dy, dz); this.corr.snaps++;
+    if (err < 0.03) return;
+    this.corr.n++; this.corr.max = Math.max(this.corr.max, err);
+    const mo = p.motor, k = err > 2 ? 1 : 0.35; // far off (blocked by someone, or a teleport): snap; otherwise ease toward the host
+    mo.pos.x += dx * k; mo.pos.y += dy * k; mo.pos.z += dz * k; mo.prevPos.x += dx * k; mo.prevPos.y += dy * k; mo.prevPos.z += dz * k;
+    if (k === 1) mo.vel.set(s.vx, s.vy, s.vz);
+    for (const r of this.hist) if (r && r.seq > s.ack) { r.x += dx * k; r.y += dy * k; r.z += dz * k; } // later predictions carry the same correction
+  }
+  _kill(d) {
+    const m = this.m, victim = this.byId(d.v), killer = d.kr ? this.byId(d.kr) : null, def = WEAPON_DEFS[d.w] || WEAPON_DEFS.m4a1;
+    if (!victim) return;
+    const dir = new THREE.Vector3(d.dir[0], 0, d.dir[1]); if (dir.lengthSq() < 1e-4) dir.set(0, 0, 1);
+    m.remoteKill(victim, killer, def, d.head, dir.normalize(), { collateral: d.col });
+  }
+  // per frame: draw everyone at host time − 100 ms
+  frame(dt) {
+    if (!this.ready || this.hostClock === null) return;
+    this.hostClock += dt;
+    const rt = this.hostClock - NET_INTERP;
+    for (const g of this.ghosts.values()) g.update(dt, rt);
+  }
+  close() { if (this.hostId) this.t.send(this.hostId, { k: 'leave' }); clearInterval(this.joinTimer); this.t.close(); if (this.m && this.m.net === this) this.m.net = null; }
 }
 /* =====================================================================
    APP — renderer, shared resources, room/lobby, loading flow, pause,
@@ -9642,6 +10108,31 @@ class App {
     setTimeout(() => { try { this.makeIcons(); } catch (e) { console.warn('weapon icons', e); } }, 400);
     this.thumbStart = performance.now() + 1500; this._queueThumbs([...PRIMARY_IDS, ...SECONDARY_IDS]); // v20 armory card renders, built in the lobby's idle frames
     requestAnimationFrame((t) => this.loop(t));
+    this.netBoot();
+  }
+
+  /* ------------------------------ v25 network test entry ------------------------------ */
+  // ?host=ROOM — matches started from this tab accept friends · ?join=ROOM — join the match hosted in another tab of this
+  // browser · &lag=80&jitter=20&loss=0.05 simulate a real connection (ms / ms / fraction of lost packets) · &name=Wei
+  netBoot() {
+    const q = new URLSearchParams(location.search), o = { lag: q.get('lag'), jitter: q.get('jitter'), loss: q.get('loss'), name: q.get('name') };
+    this.netOpts = o;
+    if (q.get('host')) { this.netHostRoom = q.get('host'); this.$('lbStatus').textContent = `連線房間「${this.netHostRoom}」已開放`; }
+    if (q.get('join')) setTimeout(() => this.netJoin(q.get('join'), { ...o, name: q.get('name'), team: q.get('team') }), 300);
+  }
+  netJoin(room, o = {}) {
+    if (this.netClient) this.netClient.close();
+    const $ = this.$, c = this.netClient = new NetClient(this, new LoopbackTransport(room, o), { name: o.name || 'Player' + Math.floor(Math.random() * 900 + 100), team: o.team });
+    $('lobby').classList.remove('on'); const ld = $('loader'); ld.classList.add('on'); ld.classList.remove('shot');
+    $('ldTitle').firstChild.textContent = 'JOINING'; $('ldSub').textContent = `尋找房間「${room}」的房主…`; $('ldTip').textContent = '提示：房主需要用 ?host=' + room + ' 開啟遊戲並開始對戰'; $('ldSlogan').textContent = 'ONLINE';
+    this.loadShown = 0; this.loadTarget = 0.1; this.loadLabel = '等待房主回應';
+    c.start();
+    return c;
+  }
+  async startNetMatch(client) { await this.startMatch(client); }
+  netError(why) {
+    const $ = this.$; $('ldSub').textContent = '無法加入：' + why; this.loadLabel = '已取消';
+    setTimeout(() => { if (this.state === 'lobby' || this.state === 'loading') { $('loader').classList.remove('on'); $('lobby').classList.add('on'); this.state = 'lobby'; } }, 2500);
   }
 
   /* ------------------------------ lobby ------------------------------ */
@@ -9736,8 +10227,8 @@ class App {
   cancelCountdown() { if (this.state !== 'countdown') return; this.state = 'lobby'; this.$('lbCount').classList.remove('on'); this.$('lbStatus').textContent = '等待中'; this.audio.uiClick(); }
 
   /* ------------------------------ loading ------------------------------ */
-  async startMatch() {
-    const $ = this.$, L = Settings.data.lobby, def = MAPS[L.map];
+  async startMatch(net = null) {
+    const $ = this.$, L = net ? Object.assign({}, Settings.data.lobby, net.welcome.cfg) : Settings.data.lobby, def = MAPS[L.map];
     this.state = 'loading';
     this.cmds.reset();
     $('lbCount').classList.remove('on'); $('lobby').classList.remove('on');
@@ -9749,11 +10240,13 @@ class App {
     await nextFrame();
     const cfg = Object.assign({}, L, { ruleCfg: JSON.parse(JSON.stringify(L.ruleCfg)) });
     const m = this.match = new Match(this, cfg);
+    if (net) m.net = net; // client: built from the host's roster, no bots of its own
     try {
       await m.build((p, label) => { this.loadTarget = p * 0.85; this.loadLabel = label; });
     } catch (e) {
       console.error(e); $('ldStep').textContent = '載入失敗：' + e.message; return;
     }
+    if (!net && this.netHostRoom) new NetHost(this, m, new LoopbackTransport(this.netHostRoom, this.netOpts)); // v25: friends in the same browser can join this match
     this.audio.setAcoustics(ACOUSTICS[def.acoustics] || ACOUSTICS.outdoor); this.audio.setAmbience(def.ambience);
     // cinematic "screenshot" of the real map behind the loading text
     this.state = 'shot'; this.shotT = 0; ld.classList.add('shot'); this.loadTarget = 1; this.loadLabel = '即將部署';
@@ -9776,7 +10269,7 @@ class App {
     $('ldTitle').firstChild.textContent = 'RETURNING'; $('ldSub').textContent = '返回房間中…'; $('ldTip').textContent = '提示：' + pick(TIPS); $('ldSlogan').textContent = 'ROOM #0427';
     this.loadShown = 0; this.loadTarget = 1; this.loadLabel = '結算戰績';
     await sleep(900);
-    if (this.match) { this.match.dispose(); this.match = null; }
+    if (this.match) { if (this.match.net) this.match.net.close(); this.match.dispose(); this.match = null; }
     this.audio.setAmbience('none');
     await sleep(700);
     ld.classList.remove('on'); $('lobby').classList.add('on'); $('lbStatus').textContent = '等待中';
@@ -10183,6 +10676,7 @@ try {
   const app = new App();
   window.app = app;
   window.SF2 = { THREE, Settings, MAPS, WEAPON_DEFS, WEAPON_DATABASE, CFG, MODES, RULES, calcDamage, loadoutDefs, LOOK_DEFAULT, resolveLook, CAO }; // debug handle for the console
+  window.SF2net = { NetHost, NetClient, LoopbackTransport, NetCodec, host: (room, o = {}) => new NetHost(app, app.match, new LoopbackTransport(room, o)), join: (room, o = {}) => app.netJoin(room, o) }; // v25 tests
   window.__gameReady = true;
   document.getElementById('boot').classList.add('done');
 } catch (e) {

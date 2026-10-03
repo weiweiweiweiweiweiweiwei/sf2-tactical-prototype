@@ -13,12 +13,33 @@ const BOT_NAMES = {
   bravo: ['Viper', 'Ghost', 'Raven', 'Cobra', 'Wolf', 'Hawk', 'Jackal', 'Scorpion', 'Reaper', 'Mamba', 'Vulture', 'Kraken'],
 };
 const FOV_COS = Math.cos(THREE.MathUtils.degToRad(60)); // 120° vision cone
+
+// Soldier body animation shared by bots, remote humans on the host and ghosts on a client (v25): walk cycle blended into a
+// one-knee kneel (right thigh forward, left knee on the ground) when crouching, aim pitch, flinch springs, spawn-shield glow.
+function animateSoldier(c, dt, hs, crouching, aimPitch, armsDown) {
+  const M = c.model;
+  c.walkPhase = (c.walkPhase || 0) + dt * hs * 2.4;
+  const amp = clamp(hs / 4.5, 0, 1), sw = Math.sin(c.walkPhase) * amp * 0.7, ck = c.crouchK = damp(c.crouchK || 0, crouching ? 1 : 0, 14, dt);
+  M.legs[0].hip.rotation.x = lerp(sw, 0.12, ck); M.legs[1].hip.rotation.x = lerp(-sw, 1.45, ck);
+  M.legs[0].knee.rotation.x = lerp(Math.max(0, -Math.sin(c.walkPhase)) * amp * 0.9, -1.62, ck); M.legs[1].knee.rotation.x = lerp(Math.max(0, Math.sin(c.walkPhase)) * amp * 0.9, -1.45, ck);
+  const hipY = lerp(0.92, 0.52, ck); M.legs[0].hip.position.y = M.legs[1].hip.position.y = hipY;
+  M.torso.position.y = hipY + Math.abs(Math.cos(c.walkPhase)) * 0.025 * amp * (1 - ck);
+  M.arms.rotation.x = damp(M.arms.rotation.x, aimPitch, 12, dt); M.head.rotation.x = M.arms.rotation.x * 0.6;
+  const fl = c.fl;
+  if (fl) { // damped springs for the flinch
+    for (const [a, v] of [['x', 'vx'], ['z', 'vz'], ['h', 'vh']]) { fl[v] += (-fl[a] * 160 - fl[v] * 16) * dt; fl[a] += fl[v] * dt; }
+    M.torso.rotation.x = fl.x * 0.75; M.torso.rotation.z = fl.z * 0.6; M.head.rotation.x += fl.h * 0.55;
+  }
+  if (armsDown) M.arms.rotation.x = damp(M.arms.rotation.x, -0.5, 10, dt);
+  if (c.spawnProtect > 0) { const k = 0.35 + 0.25 * Math.sin(c.game.time * 14); M.mat.emissive.setRGB(0.06 * k, 0.18 * k, 0.34 * k); }
+  else if (M.mat.emissive.r > 0 || M.mat.emissive.b > 0) M.mat.emissive.setRGB(0, 0, 0);
+}
 const PREF_RANGE = { sniper: [30, 75], rifle: [10, 34], lmg: [12, 38], smg: [6, 22], shotgun: [2, 9], pistol: [5, 18], knife: [0, 2] };
 
 class Bot extends Combatant {
   constructor(game, team, idx, weaponId) {
     super(game, team, BOT_NAMES[team][idx % BOT_NAMES[team].length], false);
-    this.idx = idx; this.aimPitch = 0; this.walkPhase = Math.random() * 6; this.stepDist = 0; this.spottedT = -10; this.stepPitch = rand(0.9, 1.12);
+    this.idx = idx; this.isBot = true; this.aimPitch = 0; this.walkPhase = Math.random() * 6; this.stepDist = 0; this.spottedT = -10; this.stepPitch = rand(0.9, 1.12);
     this.model = game.app.soldiers.create(team, WEAPON_DEFS[weaponId].model || weaponId);
     game.scene.add(this.model.root);
     this.setWeapon(weaponId);
@@ -87,7 +108,7 @@ class Bot extends Combatant {
   }
 
   respawn(point, yaw) {
-    this.motor.teleport(point);
+    this.motor.teleport(point); this.life = (this.life || 0) + 1;
     this.yaw = yaw + rand(-0.3, 0.3); this.hp = 100; this.alive = true; this.spawnProtect = CFG.spawnProtect; this.carrying = false;
     this.ammo = this.def.mag || 0; this.reloadT = 0; this.damageLog.clear();
     this.nades = this.game.mode === 'general' ? { he: 1, flash: 1 } : { he: 0, flash: 0 };
@@ -123,22 +144,7 @@ class Bot extends Combatant {
     this.ai.update(dt);
     const m = this.motor, M = this.model;
     M.root.position.lerpVectors(m.prevPos, m.pos, alpha); M.root.rotation.y = this.yaw;
-    const hs = m.horizontalSpeed(); this.walkPhase += dt * hs * 2.4;
-    const amp = clamp(hs / 4.5, 0, 1), sw = Math.sin(this.walkPhase) * amp * 0.7, ck = this.crouchK = damp(this.crouchK || 0, m.crouching ? 1 : 0, 14, dt);
-    // walk cycle blended into a one-knee kneel (right thigh forward, left knee on the ground) when crouching
-    M.legs[0].hip.rotation.x = lerp(sw, 0.12, ck); M.legs[1].hip.rotation.x = lerp(-sw, 1.45, ck);
-    M.legs[0].knee.rotation.x = lerp(Math.max(0, -Math.sin(this.walkPhase)) * amp * 0.9, -1.62, ck); M.legs[1].knee.rotation.x = lerp(Math.max(0, Math.sin(this.walkPhase)) * amp * 0.9, -1.45, ck);
-    const hipY = lerp(0.92, 0.52, ck); M.legs[0].hip.position.y = M.legs[1].hip.position.y = hipY;
-    M.torso.position.y = hipY + Math.abs(Math.cos(this.walkPhase)) * 0.025 * amp * (1 - ck);
-    M.arms.rotation.x = damp(M.arms.rotation.x, this.aimPitch, 12, dt); M.head.rotation.x = M.arms.rotation.x * 0.6;
-    const fl = this.fl;
-    if (fl) { // damped springs for the flinch
-      for (const [a, v] of [['x', 'vx'], ['z', 'vz'], ['h', 'vh']]) { fl[v] += (-fl[a] * 160 - fl[v] * 16) * dt; fl[a] += fl[v] * dt; }
-      M.torso.rotation.x = fl.x * 0.75; M.torso.rotation.z = fl.z * 0.6; M.head.rotation.x += fl.h * 0.55;
-    }
-    if (this.reloadT > 0 || m.climbing) M.arms.rotation.x = damp(M.arms.rotation.x, -0.5, 10, dt);
-    if (this.spawnProtect > 0) { const k = 0.35 + 0.25 * Math.sin(this.game.time * 14); M.mat.emissive.setRGB(0.06 * k, 0.18 * k, 0.34 * k); }
-    else if (M.mat.emissive.r > 0 || M.mat.emissive.b > 0) M.mat.emissive.setRGB(0, 0, 0);
+    animateSoldier(this, dt, m.horizontalSpeed(), m.crouching, this.aimPitch, this.reloadT > 0 || m.climbing);
     if (this.def.kind === 'sniper') this._glint();
     if (this.tag) { this.tag.position.set(M.root.position.x, M.root.position.y + 2.1, M.root.position.z); this.tag.visible = !this.tag.userData.hide && this.tag.position.distanceTo(this.game.camera.position) < 70; }
   }

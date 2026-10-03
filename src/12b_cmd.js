@@ -8,9 +8,10 @@ const BTN = { JUMP: 1, CROUCH: 2, SPRINT: 4, FIRE: 8, ALT: 16, USE: 32, RELOAD: 
 const BTN_EDGES = BTN.JUMP | BTN.RELOAD | BTN.GRAB | BTN.INTERACT | BTN.QUICK;
 
 class UserCmd {
-  constructor() { this.seq = 0; this.f = 0; this.r = 0; this.yaw = 0; this.pitch = 0; this.btn = 0; this.sw = 0; this.zoom = 0; }
-  // f / r: −1, 0, 1 · yaw / pitch: aim angles in radians · sw: weapon index + 1 requested this tick (0 = none) · zoom: ADS level
-  copy(o) { this.seq = o.seq; this.f = o.f; this.r = o.r; this.yaw = o.yaw; this.pitch = o.pitch; this.btn = o.btn; this.sw = o.sw; this.zoom = o.zoom; return this; }
+  constructor() { this.seq = 0; this.f = 0; this.r = 0; this.yaw = 0; this.pitch = 0; this.ay = 0; this.ap = 0; this.btn = 0; this.sw = 0; this.zoom = 0; }
+  // f / r: −1, 0, 1 · yaw / pitch: view angles (movement heading) · ay / ap: recoil + punch on top of them = where the
+  // crosshair really points · sw: weapon index + 1 requested this tick (0 = none) · zoom: ADS level
+  copy(o) { this.seq = o.seq; this.f = o.f; this.r = o.r; this.yaw = o.yaw; this.pitch = o.pitch; this.ay = o.ay; this.ap = o.ap; this.btn = o.btn; this.sw = o.sw; this.zoom = o.zoom; return this; }
 }
 
 // Samples the keyboard / mouse into one UserCmd per fixed tick. Presses that start and end between two ticks (a quick
@@ -23,7 +24,7 @@ class CmdBuilder {
   build(player, ws, active) {
     const inp = this.input, c = this.cmd, k = (code) => inp.down(code);
     c.seq = ++this.seq; c.sw = 0; c.btn = 0; c.f = 0; c.r = 0;
-    c.yaw = player.yaw; c.pitch = player.pitch; c.zoom = ws ? ws.zoomLevel : 0;
+    c.yaw = player.yaw; c.pitch = player.pitch; c.ay = player.recoilYaw || 0; c.ap = (player.recoilPitch || 0) + (player.punch || 0); c.zoom = ws ? ws.zoomLevel : 0;
     if (active) {
       c.f = (k('KeyW') || k('ArrowUp') ? 1 : 0) - (k('KeyS') || k('ArrowDown') ? 1 : 0);
       c.r = (k('KeyD') || k('ArrowRight') ? 1 : 0) - (k('KeyA') || k('ArrowLeft') ? 1 : 0);

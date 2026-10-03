@@ -38,6 +38,31 @@ class App {
     setTimeout(() => { try { this.makeIcons(); } catch (e) { console.warn('weapon icons', e); } }, 400);
     this.thumbStart = performance.now() + 1500; this._queueThumbs([...PRIMARY_IDS, ...SECONDARY_IDS]); // v20 armory card renders, built in the lobby's idle frames
     requestAnimationFrame((t) => this.loop(t));
+    this.netBoot();
+  }
+
+  /* ------------------------------ v25 network test entry ------------------------------ */
+  // ?host=ROOM — matches started from this tab accept friends · ?join=ROOM — join the match hosted in another tab of this
+  // browser · &lag=80&jitter=20&loss=0.05 simulate a real connection (ms / ms / fraction of lost packets) · &name=Wei
+  netBoot() {
+    const q = new URLSearchParams(location.search), o = { lag: q.get('lag'), jitter: q.get('jitter'), loss: q.get('loss'), name: q.get('name') };
+    this.netOpts = o;
+    if (q.get('host')) { this.netHostRoom = q.get('host'); this.$('lbStatus').textContent = `連線房間「${this.netHostRoom}」已開放`; }
+    if (q.get('join')) setTimeout(() => this.netJoin(q.get('join'), { ...o, name: q.get('name'), team: q.get('team') }), 300);
+  }
+  netJoin(room, o = {}) {
+    if (this.netClient) this.netClient.close();
+    const $ = this.$, c = this.netClient = new NetClient(this, new LoopbackTransport(room, o), { name: o.name || 'Player' + Math.floor(Math.random() * 900 + 100), team: o.team });
+    $('lobby').classList.remove('on'); const ld = $('loader'); ld.classList.add('on'); ld.classList.remove('shot');
+    $('ldTitle').firstChild.textContent = 'JOINING'; $('ldSub').textContent = `尋找房間「${room}」的房主…`; $('ldTip').textContent = '提示：房主需要用 ?host=' + room + ' 開啟遊戲並開始對戰'; $('ldSlogan').textContent = 'ONLINE';
+    this.loadShown = 0; this.loadTarget = 0.1; this.loadLabel = '等待房主回應';
+    c.start();
+    return c;
+  }
+  async startNetMatch(client) { await this.startMatch(client); }
+  netError(why) {
+    const $ = this.$; $('ldSub').textContent = '無法加入：' + why; this.loadLabel = '已取消';
+    setTimeout(() => { if (this.state === 'lobby' || this.state === 'loading') { $('loader').classList.remove('on'); $('lobby').classList.add('on'); this.state = 'lobby'; } }, 2500);
   }
 
   /* ------------------------------ lobby ------------------------------ */
@@ -132,8 +157,8 @@ class App {
   cancelCountdown() { if (this.state !== 'countdown') return; this.state = 'lobby'; this.$('lbCount').classList.remove('on'); this.$('lbStatus').textContent = '等待中'; this.audio.uiClick(); }
 
   /* ------------------------------ loading ------------------------------ */
-  async startMatch() {
-    const $ = this.$, L = Settings.data.lobby, def = MAPS[L.map];
+  async startMatch(net = null) {
+    const $ = this.$, L = net ? Object.assign({}, Settings.data.lobby, net.welcome.cfg) : Settings.data.lobby, def = MAPS[L.map];
     this.state = 'loading';
     this.cmds.reset();
     $('lbCount').classList.remove('on'); $('lobby').classList.remove('on');
@@ -145,11 +170,13 @@ class App {
     await nextFrame();
     const cfg = Object.assign({}, L, { ruleCfg: JSON.parse(JSON.stringify(L.ruleCfg)) });
     const m = this.match = new Match(this, cfg);
+    if (net) m.net = net; // client: built from the host's roster, no bots of its own
     try {
       await m.build((p, label) => { this.loadTarget = p * 0.85; this.loadLabel = label; });
     } catch (e) {
       console.error(e); $('ldStep').textContent = '載入失敗：' + e.message; return;
     }
+    if (!net && this.netHostRoom) new NetHost(this, m, new LoopbackTransport(this.netHostRoom, this.netOpts)); // v25: friends in the same browser can join this match
     this.audio.setAcoustics(ACOUSTICS[def.acoustics] || ACOUSTICS.outdoor); this.audio.setAmbience(def.ambience);
     // cinematic "screenshot" of the real map behind the loading text
     this.state = 'shot'; this.shotT = 0; ld.classList.add('shot'); this.loadTarget = 1; this.loadLabel = '即將部署';
@@ -172,7 +199,7 @@ class App {
     $('ldTitle').firstChild.textContent = 'RETURNING'; $('ldSub').textContent = '返回房間中…'; $('ldTip').textContent = '提示：' + pick(TIPS); $('ldSlogan').textContent = 'ROOM #0427';
     this.loadShown = 0; this.loadTarget = 1; this.loadLabel = '結算戰績';
     await sleep(900);
-    if (this.match) { this.match.dispose(); this.match = null; }
+    if (this.match) { if (this.match.net) this.match.net.close(); this.match.dispose(); this.match = null; }
     this.audio.setAmbience('none');
     await sleep(700);
     ld.classList.remove('on'); $('lobby').classList.add('on'); $('lbStatus').textContent = '等待中';
@@ -579,6 +606,7 @@ try {
   const app = new App();
   window.app = app;
   window.SF2 = { THREE, Settings, MAPS, WEAPON_DEFS, WEAPON_DATABASE, CFG, MODES, RULES, calcDamage, loadoutDefs, LOOK_DEFAULT, resolveLook, CAO }; // debug handle for the console
+  window.SF2net = { NetHost, NetClient, LoopbackTransport, NetCodec, host: (room, o = {}) => new NetHost(app, app.match, new LoopbackTransport(room, o)), join: (room, o = {}) => app.netJoin(room, o) }; // v25 tests
   window.__gameReady = true;
   document.getElementById('boot').classList.add('done');
 } catch (e) {

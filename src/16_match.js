@@ -18,7 +18,9 @@ class Match {
     this.loadoutIndex = clamp(config.loadout | 0, 0, 4); this.nextSpawnLoadoutIndex = null; this.lastHitSnd = 0;
     this.intel = { alpha: new TeamIntel(this.def.bounds), bravo: new TeamIntel(this.def.bounds) };
     this.drops = []; this.dropSeq = 0; this.pickTarget = null;
+    this.net = null; this.humans = []; this.netSeq = 0; // v25: NetHost / NetClient session, remote humans (host)
   }
+  get isClient() { return !!this.net && this.net.role === 'client'; }
 
   // Game-time scheduler (pauses with the game, unlike setTimeout).
   schedule(delay, fn) { this.timers.push({ t: this.time + delay, fn }); }
@@ -50,12 +52,15 @@ class Match {
     progress(0.7, '部署部隊'); await nextFrame();
     this.effects = new Effects(this.scene, app.tex, this.audio);
     this.player = new Player(this);
+    if (this.isClient) this.player.team = this.net.welcome.team; // a client plays on the team the host gave it, with no bots of its own
     this.weapons = new WeaponSystem(this, loadoutDefs(this.mode, Settings.data.loadouts[this.loadoutIndex])); this.weapons.setEnvironment(this.vmEnv || this.scene.environment);
     this.combatants.push(this.player);
-    for (let i = 0; i < this.config.allies - 1; i++) this.bots.push(new Bot(this, 'alpha', i, this.botWeapon()));
-    for (let i = 0; i < this.config.enemies; i++) this.bots.push(new Bot(this, 'bravo', i, this.botWeapon()));
+    if (!this.isClient) {
+      for (let i = 0; i < this.config.allies - 1; i++) this.bots.push(new Bot(this, 'alpha', i, this.botWeapon()));
+      for (let i = 0; i < this.config.enemies; i++) this.bots.push(new Bot(this, 'bravo', i, this.botWeapon()));
+    }
     this.combatants.push(...this.bots);
-    this.combatants.forEach((c, i) => { c.netId = i + 1; }); // v25: stable ids (network snapshots, seeded spread)
+    this.combatants.forEach((c, i) => { c.netId = i + 1; }); this.netSeq = this.combatants.length; // v25: stable ids (network snapshots, seeded spread)
     this.spawns = { alpha: this.makeSpawns('alpha'), bravo: this.makeSpawns('bravo') };
     this.spawnLOS = this.checkSpawnLOS(); window.__debug = Object.assign(window.__debug || {}, { map: def.id, spawnLOS: this.spawnLOS.visible > 0, spawnLOSPairs: this.spawnLOS });
     this.playerModel = app.soldiers.create(this.player.team, 'm4'); this.playerModel.root.visible = false; this.scene.add(this.playerModel.root); // third-person you, for killcams
@@ -65,7 +70,7 @@ class Match {
     this.applyEnvIntensity();
     progress(0.84, '編譯著色器'); await nextFrame();
     app.post.configure(this, activeQuality());
-    this.startRound();
+    if (this.isClient) { this.round = 1; this.rules.startRound(); this.net.attach(this); } else this.startRound();
     this.player.updateCamera(1); this.weapons.update(0, app.input, { x: 0, y: 0 });
     if (app.renderer.compileAsync) { await app.renderer.compileAsync(this.scene, this.camera); await app.renderer.compileAsync(this.weapons.scene, this.weapons.camera); }
     else { app.renderer.compile(this.scene, this.camera); app.renderer.compile(this.weapons.scene, this.weapons.camera); }
@@ -306,10 +311,12 @@ class Match {
   }
 
   applyDamage(victim, dmg, part, attacker, def, dir, point, opts = {}) {
+    if (this.isClient) return false; // v25: the host decides every hit and reports back hit markers / damage
     if (!victim.alive || this.phase !== 'live') return false;
     if (attacker && attacker !== victim && attacker.team === victim.team) return false; // friendly fire off
-    if (victim.spawnProtect > 0) { if (point) this.effects.shield(point); if (attacker && attacker.isPlayer) { this.app.hud.hitmarker('shield'); this.audio.hit('shield'); } return false; }
+    if (victim.spawnProtect > 0) { if (point) this.effects.shield(point); if (attacker && attacker.isPlayer) { this.app.hud.hitmarker('shield'); this.audio.hit('shield'); } if (attacker && this.net) this.net.onHit(attacker, victim, 'shield', point); return false; }
     victim.hp -= dmg; victim.lastPart = part;
+    if (attacker && attacker !== victim && this.net) this.net.onHit(attacker, victim, victim.hp <= 0 ? 'kill' : part === 'head' ? 'head' : 'body', point);
     if (attacker && attacker !== victim) { const rec = victim.damageLog.get(attacker) || { amt: 0, t: 0 }; rec.amt += dmg; rec.t = this.time; victim.damageLog.set(attacker, rec); }
     if (point && dir) { this.effects.blood(point, dir, part === 'head' ? 18 : 10); if (part === 'head' && def.kind !== 'knife' && def.kind !== 'grab' && point.distanceTo(this.camera.position) < 90) this.effects.helmetSpark(point, dir); }
     if (victim.flinch && dir) victim.flinch(part, dir, dmg);
@@ -334,9 +341,9 @@ class Match {
     R.frames.push({ t: this.time, f }); while (R.frames.length && this.time - R.frames[0].t > 5.5) R.frames.shift();
     while (R.shots.length && this.time - R.shots[0].t > 5.5) R.shots.shift();
   }
-  recordShot(shooter, from, to, def) { if (!this.kc || this.kc.t === null) this.rec.shots.push({ t: this.time, i: this.combatants.indexOf(shooter), from: from.clone(), to: to.clone(), def }); }
+  recordShot(shooter, from, to, def) { if (this.net && this.net.role === 'host') this.net.onShot(shooter, from, to, def); if (!this.kc || this.kc.t === null) this.rec.shots.push({ t: this.time, i: this.combatants.indexOf(shooter), from: from.clone(), to: to.clone(), def }); }
   _startKillcam(killer, def) {
-    if (Settings.data.killcam === false || !killer || killer.isPlayer || !this.rules.respawns || this.rec.frames.length < 20) return;
+    if (Settings.data.killcam === false || this.isClient || !killer || killer.isPlayer || !this.rules.respawns || this.rec.frames.length < 20) return;
     const t0 = Math.max(this.rec.frames[0].t, this.time - 3.2), t1 = this.time + 0.35;
     this.kc = { killer, ki: this.combatants.indexOf(killer), def, t: null, t0, t1, delay: 0.9, shotIdx: 0, phase: [] };
     const pw = this.weapons.weapons.find((w) => w.def.slot === 'primary') || this.weapons.current;
@@ -388,32 +395,42 @@ class Match {
     if (!p.alive && K.t !== null) p.respawnT = Math.min(p.respawnT, Math.max(0.3, CFG.respawn - p.deathT));
   }
 
+  _killPoints(def, head) { return def.kind === 'knife' || def.kind === 'grab' ? POINTS.knife : def.kind === 'grenade' ? POINTS.grenade : head ? POINTS.head : POINTS.body; }
+  _die(victim, killer, def, dir) { if (victim.isPlayer) victim.die(killer); else victim.die(dir, def.kind === 'sniper' ? 5.5 : def.kind === 'grenade' ? 7 : def.kind === 'knife' ? 1.5 : def.kind === 'shotgun' ? 4 : 2.6); }
+  // your kill: points popup, multi-kill / streak / headshot announcer
+  _killAnnounce(def, head, pts, opts) {
+    const hud = this.app.hud, p = this.player;
+    p.streak++; p.multi = this.time - p.lastKillT < 4 ? p.multi + 1 : 1; p.lastKillT = this.time;
+    hud.points(`+${pts}  ${def.kind === 'knife' ? '刀殺' : def.kind === 'grab' ? '擒拿擊殺' : def.kind === 'grenade' ? '手榴彈擊殺' : head ? '爆頭' : '擊殺'}${opts.collateral ? ' · 穿透' : ''}`);
+    let main = '', sub = '';
+    if (p.multi >= 2) main = ['DOUBLE KILL', 'TRIPLE KILL', 'MULTI KILL', 'ULTRA KILL'][Math.min(p.multi - 2, 3)];
+    else if (this.firstBlood) main = 'FIRST BLOOD';
+    else if (def.kind === 'grenade') main = 'GRENADE KILL';
+    else if (head) main = 'HEADSHOT';
+    else if (def.kind === 'knife') main = 'KNIFE KILL';
+    else if (def.kind === 'grab') main = 'MELEE KILL';
+    const streaks = { 5: 'KILLING SPREE', 8: 'RAMPAGE', 12: 'UNSTOPPABLE', 16: 'GODLIKE' };
+    if (streaks[p.streak]) { if (main) sub = streaks[p.streak]; else main = streaks[p.streak]; }
+    if (head && main !== 'HEADSHOT') sub = sub ? sub + ' · HEADSHOT' : 'HEADSHOT';
+    if (main && !opts.collateral) { hud.announce(main, sub); this.app.speak(main); }
+  }
+  _killFeed(victim, killer, def, head, valid, opts) {
+    this.app.hud.killfeed(valid ? killer.name : killer === victim ? '' : null, killer ? killer.team : 'bravo', killer === victim ? '自爆' : def, victim.name, victim.team, head, (killer && killer.isPlayer) || victim.isPlayer, opts.collateral);
+  }
+
   onKill(victim, killer, def, part, dir, opts) {
     const head = part === 'head' && def.kind !== 'grenade', hud = this.app.hud, p = this.player;
+    if (this.net && this.net.role === 'host') this.net.onKill(victim, killer, def, head, dir, opts);
     victim.deaths++;
     this.rules.onDeath(victim);
     this.dropOnDeath(victim, dir);
-    if (victim.isPlayer) victim.die(killer); else victim.die(dir, def.kind === 'sniper' ? 5.5 : def.kind === 'grenade' ? 7 : def.kind === 'knife' ? 1.5 : def.kind === 'shotgun' ? 4 : 2.6);
+    this._die(victim, killer, def, dir);
     const valid = killer && killer !== victim && killer.team !== victim.team;
     if (valid) {
-      const pts = def.kind === 'knife' || def.kind === 'grab' ? POINTS.knife : def.kind === 'grenade' ? POINTS.grenade : head ? POINTS.head : POINTS.body;
+      const pts = this._killPoints(def, head);
       killer.kills++; if (head) killer.headshots++; killer.score += pts;
       this.addTeam(killer.team, this.rules.killTeamPoints(pts));
-      if (killer.isPlayer) {
-        p.streak++; p.multi = this.time - p.lastKillT < 4 ? p.multi + 1 : 1; p.lastKillT = this.time;
-        hud.points(`+${pts}  ${def.kind === 'knife' ? '刀殺' : def.kind === 'grab' ? '擒拿擊殺' : def.kind === 'grenade' ? '手榴彈擊殺' : head ? '爆頭' : '擊殺'}${opts.collateral ? ' · 穿透' : ''}`);
-        let main = '', sub = '';
-        if (p.multi >= 2) main = ['DOUBLE KILL', 'TRIPLE KILL', 'MULTI KILL', 'ULTRA KILL'][Math.min(p.multi - 2, 3)];
-        else if (this.firstBlood) main = 'FIRST BLOOD';
-        else if (def.kind === 'grenade') main = 'GRENADE KILL';
-        else if (head) main = 'HEADSHOT';
-        else if (def.kind === 'knife') main = 'KNIFE KILL';
-        else if (def.kind === 'grab') main = 'MELEE KILL';
-        const streaks = { 5: 'KILLING SPREE', 8: 'RAMPAGE', 12: 'UNSTOPPABLE', 16: 'GODLIKE' };
-        if (streaks[p.streak]) { if (main) sub = streaks[p.streak]; else main = streaks[p.streak]; }
-        if (head && main !== 'HEADSHOT') sub = sub ? sub + ' · HEADSHOT' : 'HEADSHOT';
-        if (main && !opts.collateral) { hud.announce(main, sub); this.app.speak(main); }
-      }
+      if (killer.isPlayer) this._killAnnounce(def, head, pts, opts);
       this.firstBlood = false;
     }
     for (const [c, rec] of victim.damageLog) {
@@ -423,12 +440,23 @@ class Match {
     }
     victim.damageLog.clear();
     if (victim.isPlayer) p.streak = 0;
-    hud.killfeed(valid ? killer.name : killer === victim ? '' : null, killer ? killer.team : 'bravo', killer === victim ? '自爆' : def, victim.name, victim.team, head, (killer && killer.isPlayer) || victim.isPlayer, opts.collateral);
+    this._killFeed(victim, killer, def, head, valid, opts);
     if (victim.isPlayer) {
       hud.showDeath(true, valid ? killer.name : '', def.name, head, this.rules.roundBased);
       if (this.rules.roundBased) this.nextSpectate(); else if (valid) this._startKillcam(killer, def);
     }
     this.checkEnd();
+  }
+
+  // v25 client: the host reported a kill — the same deaths, kill feed and announcements, none of the game logic (scores arrive in snapshots)
+  remoteKill(victim, killer, def, head, dir, opts) {
+    const p = this.player, valid = killer && killer !== victim && killer.team !== victim.team;
+    victim.deaths++;
+    if (victim.alive || victim.isPlayer) this._die(victim, killer, def, dir);
+    if (valid) { const pts = this._killPoints(def, head); killer.kills++; if (head) killer.headshots++; killer.score += pts; if (killer.isPlayer) this._killAnnounce(def, head, pts, opts); this.firstBlood = false; }
+    if (victim.isPlayer) p.streak = 0;
+    this._killFeed(victim, killer, def, head, valid, opts);
+    if (victim.isPlayer) this.app.hud.showDeath(true, valid ? killer.name : '', def.name, head, this.rules.roundBased);
   }
 
   nextSpectate() {
@@ -453,6 +481,7 @@ class Match {
   endMatch(winner) {
     if (this.kc) this._endKillcam(false);
     if (this.phase === 'over') return;
+    if (this.net && this.net.role === 'host') this.net.onEnd(winner);
     this.phase = 'over'; this.winner = winner;
     this.app.onMatchEnd(this);
   }
@@ -464,6 +493,7 @@ class Match {
     if (i < 0 || i > 4) return;
     this.nextSpawnLoadoutIndex = i === this.loadoutIndex ? null : i;
     const L = Settings.data.loadouts[i];
+    if (this.isClient) this.net.queueLoadout(L); // the host builds the same kit for our soldier at the next respawn
     this.audio.mech('queue');
     this.app.hud.toast(i === this.loadoutIndex ? `配裝 ${LOADOUT_KEYS[i]} 已在使用中` : `配裝 ${LOADOUT_KEYS[i]}（${WEAPON_DEFS[L.primary].name} + ${WEAPON_DEFS[L.secondary].name}）已排入，下次重生時套用`);
   }
@@ -587,7 +617,8 @@ class Match {
         const toF = pos.clone().sub(eye).normalize(), view = c.isPlayer ? this.camera.getWorldDirection(new THREE.Vector3()) : c.lookDir(new THREE.Vector3());
         const facing = 0.2 + 0.8 * clamp((view.dot(toF) + 0.25) / 1.25, 0, 1), s = clamp((1 - d / def.radius) * facing * 1.25, 0, 1);
         if (c.isPlayer) { this.app.post.flash(s, 0.6 + 4.2 * s); this.audio.deafen(s * 0.9, 1 + 3 * s); }
-        else c.ai.blind(0.4 + 4.2 * s);
+        else if (c.ai) c.ai.blind(0.4 + 4.2 * s);
+        else if (c.isNet && this.net && this.net.role === 'host') this.net.onFlash(c, s);
       }
     } else {
       this.effects.spawnSmoke(pos, def.duration); this.audio.smokeHiss(pos);
@@ -598,7 +629,9 @@ class Match {
   tick(dt, mouse) {
     const p = this.player, h = CFG.fixedStep, hud = this.app.hud, input = this.app.input, rb = this.rules.roundBased, PR = this.prof || (this.prof = new FrameProfiler()), t0 = performance.now();
     this.time += dt;
-    if (this.phase === 'freeze') {
+    const client = this.isClient;
+    if (client) { if (this.phase === 'freeze') hud.freeze(true, Math.max(1, Math.ceil(this.freezeT)), '準備開戰', input.locked); } // phase, clock and score come from the host
+    else if (this.phase === 'freeze') {
       this.freezeT -= dt;
       hud.freeze(true, Math.ceil(this.freezeT), rb ? `ROUND ${this.round}` : '準備開戰', input.locked);
       if (this.freezeT <= 0) { this.phase = 'live'; hud.freeze(false); hud.announce('FIGHT!', rb ? `ROUND ${this.round} · ${RULES[this.rule].name}` : `${RULES[this.rule].name} · ${MODES[this.mode].name}`); }
@@ -622,6 +655,7 @@ class Match {
       p.fixedUpdate(h, cmd);
       this.weapons.tick(h, cmd);
       if ((cmd.btn & BTN.INTERACT) && p.alive && this.canMove()) this.onInteract();
+      if (this.net) { if (client) this.net.afterLocalStep(cmd); else this.net.step(h); }
       for (const b of this.bots) b.fixedUpdate(h);
       const ms = []; for (const c of this.combatants) if (c.alive) ms.push(c.motor);
       for (let i = 0; i < ms.length; i++) for (let j = i + 1; j < ms.length; j++) CharacterMotor.separate(ms[i], ms[j]);
@@ -636,12 +670,17 @@ class Match {
       if (b.alive) b.update(dt, alpha);
       else if (respawns && this.phase === 'live') { b.respawnT -= dt; if (b.respawnT <= 0) { const sp = this.pickSpawn(b.team); b.respawn(sp, sp.spawnYaw ?? this.spawns[b.team].yaw); } }
     }
-    this.rules.tick(dt);
+    for (const np of this.humans) { // v25 host: friends' soldiers
+      if (np.alive) np.update(dt, alpha);
+      else if (respawns && this.phase === 'live') { np.respawnT -= dt; if (np.respawnT <= 0) { const sp = this.pickSpawn(np.team); np.respawn(sp, sp.spawnYaw ?? this.spawns[np.team].yaw); } }
+    }
+    if (!client) this.rules.tick(dt);
+    if (this.net) this.net.frame(dt);
     const t2 = performance.now();
     if (!p.alive) {
       if (respawns) {
         p.respawnT -= dt; hud.setDeathTimer(`RESPAWN IN ${Math.max(0, p.respawnT).toFixed(1)}s${this.nextSpawnLoadoutIndex !== null ? `  ·  下次配裝 ${LOADOUT_KEYS[this.nextSpawnLoadoutIndex]}` : ''}`);
-        if (p.respawnT <= 0 && this.phase === 'live') { const sp = this.pickSpawn(p.team); p.respawn(sp, sp.spawnYaw ?? this.spawns[p.team].yaw); hud.showDeath(false); }
+        if (!client && p.respawnT <= 0 && this.phase === 'live') { const sp = this.pickSpawn(p.team); p.respawn(sp, sp.spawnYaw ?? this.spawns[p.team].yaw); hud.showDeath(false); }
       } else {
         if (p.spectating && !p.spectating.alive) this.nextSpectate();
         if (p.deathT > 1.6) { hud.showDeath(false); hud.spectate(p.spectating ? `觀戰中：${p.spectating.name} · 左鍵切換隊友 · 等待下一回合` : '全隊陣亡 · 等待下一回合'); }
@@ -704,8 +743,8 @@ class Match {
 
   updateSpotting() {
     const cam = this.camera, f = cam.getWorldDirection(new THREE.Vector3());
-    for (const b of this.bots) {
-      if (!b.alive || b.team === this.player.team) continue;
+    for (const b of this.combatants) {
+      if (!b.model || !b.alive || b.team === this.player.team) continue;
       const tgt = b.chestPos(new THREE.Vector3()), to = tgt.clone().sub(cam.position), d = to.length();
       if (d > 80 || f.dot(to) / d < 0.55 || this.effects.smokeBlocks(cam.position, tgt)) continue;
       if (this.collision.segmentClear(cam.position, tgt)) b.spottedT = this.time;

@@ -245,7 +245,7 @@ class Player extends Human {
     }
     g.nextSpawnLoadoutIndex = null;
     this.setSpectate(null);
-    this.motor.teleport(point);
+    this.motor.teleport(point); this.life = (this.life || 0) + 1;
     this.yaw = yaw; this.pitch = 0; this.resetRecoil(); this.punch = 0; this.punchV = 0; this.shake = 0; this.slideT = 0; this.slideK = 0; this.mantleT = 0; this.mantleK = 0;
     this.hp = 100; this.alive = true; this.spawnProtect = CFG.spawnProtect; this.eyeH = CFG.player.eye; this.killer = null; this.carrying = false;
     this.damageLog.clear();
