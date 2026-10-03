@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SF2 Tactical Prototype v27</title>
+<title>SF2 Tactical Prototype v28</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Teko:wght@300;400;500;600&family=Rajdhani:wght@500;600;700&family=Noto+Sans+TC:wght@500;700&display=swap" rel="stylesheet">
@@ -213,6 +213,38 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
 .team-col li.human .nm em{font-style:normal;color:var(--gold);font-size:14px;margin-left:4px}
 .team-col li .st.loading,.team-col li .st.ended{color:var(--warn)}.team-col li .st.playing{color:var(--blue)}.team-col li .st.host{color:#ffd75a}
 .team-col li.bot .st{color:var(--faint)}
+
+/* ---- v28 friends panel + invite card ---- */
+.bdg{display:inline-block;min-width:20px;height:20px;line-height:20px;margin-left:7px;padding:0 6px;border-radius:10px;font-size:12px;letter-spacing:0;text-align:center;background:var(--accent);color:#06140b;vertical-align:1px}.bdg.red{background:var(--red);color:#fff}
+#friends{position:fixed;top:0;right:0;z-index:28;transform:translateX(105%);transition:transform .22s ease}
+#friends.on{transform:none}
+#friends .frz{zoom:var(--ui,1);width:450px;height:calc(100vh / var(--ui,1));display:flex;flex-direction:column;gap:12px;padding:20px 22px;background:#0b110e;border-left:1px solid rgba(125,255,166,.35);box-shadow:-20px 0 60px rgba(0,0,0,.6);overflow-y:auto}
+#friends header{display:flex;align-items:center}#friends h2{flex:1;font-size:28px;letter-spacing:6px}#friends h2 span{font-size:12px;color:var(--accent);letter-spacing:5px;margin-left:10px}
+.fr-me{display:grid;grid-template-columns:1fr auto;align-items:center;gap:2px 12px;padding:14px 16px;background:rgba(125,255,166,.07);border:1px solid var(--line);border-radius:6px}
+.fr-me small{grid-column:1/-1;font-size:12px;letter-spacing:3px;color:var(--dim)}
+#frMe{font:700 34px Consolas,monospace;letter-spacing:5px;color:var(--accent)}
+.fr-me p{grid-column:1/-1;font-size:13px;color:var(--dim);margin-top:4px;line-height:1.5}
+.fr-add{display:flex;gap:10px}
+#frCode{flex:1;min-width:0;height:44px;font:700 20px Consolas,monospace;letter-spacing:3px;color:var(--hud);background:#060908;border:1px solid rgba(255,255,255,.18);border-radius:4px;padding:0 12px;user-select:text;-webkit-user-select:text}
+#frCode::placeholder{font:14px var(--font);letter-spacing:1px;color:var(--faint)}#frCode:focus{outline:none;border-color:var(--accent)}
+#frAdd{font-size:16px;padding:0 18px;letter-spacing:2px}
+#frMsg{font-size:14px;color:var(--accent);min-height:18px}#frMsg.bad{color:var(--warn)}
+#frList{display:flex;flex-direction:column;gap:6px;flex:1}
+#frList h3{font-size:13px;letter-spacing:4px;color:var(--accent);margin:10px 0 2px}
+.fr{display:flex;align-items:center;gap:10px;min-height:54px;padding:6px 12px;background:rgba(255,255,255,.04);border-radius:5px}
+.fr .dot{width:10px;height:10px;border-radius:50%;background:rgba(255,255,255,.2);flex:none}.fr.on .dot{background:var(--accent);box-shadow:0 0 8px var(--accent)}
+.fr .who{flex:1;min-width:0}.fr .who b{display:block;font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.fr .who small{font-size:13px;color:var(--dim)}.fr.on .who small{color:var(--accent)}
+.fr .btn{padding:5px 12px;font-size:13px;letter-spacing:1px;flex:none}.fr .btn.x{padding:5px 9px;color:var(--faint)}
+.fr-empty{font-size:14px;color:var(--dim);line-height:1.6;padding:6px 2px}.fr-empty .btn{padding:3px 10px;font-size:13px}
+.fr-note{font-size:12px;color:var(--faint);line-height:1.6}
+#invCard{position:fixed;top:92px;right:24px;z-index:40;display:none;align-items:center;gap:14px;padding:14px 16px;max-width:600px;background:#0d1512;border:1px solid var(--accent);border-radius:8px;box-shadow:0 18px 50px rgba(0,0,0,.6),0 0 30px rgba(125,255,166,.2);zoom:var(--ui,1)}
+#invCard.on{display:flex;animation:popin .2s ease-out}
+.ic-ico{font-size:32px}.ic-tx{flex:1;min-width:0}#invCardTxt{font-size:17px}#invCardTxt code{font:700 18px Consolas,monospace;color:var(--accent);letter-spacing:2px}#invCardTxt b{color:#ffd75a}
+.ic-tx small{display:block;font-size:12px;color:var(--dim);margin-top:3px}
+#invCard .btn{padding:8px 16px;font-size:16px;flex:none}
+.inv-fr{padding:12px 0 6px;border-bottom:1px solid rgba(255,255,255,.07)}
+.inv-fr h4{font-size:16px;letter-spacing:2px;color:var(--hud)}.inv-fr h4 i{font-style:normal;color:var(--accent);margin-right:8px}
+.inv-fr .fr{min-height:42px;margin-top:6px}.inv-fr .fr-empty{font-size:13px;padding:6px 0 0}
 
 /* ---- v27 hub (大廳) ---- */
 #hub{background:
@@ -617,9 +649,10 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
 <!-- HUB (v27 大廳): create a room, or join one -->
 <div id="hub" class="screen on"><div class="hbz">
   <div class="lb-top">
-    <div class="lb-brand">SPECIAL FORCE <span>2</span><small>TACTICAL PROTOTYPE · v27</small></div>
+    <div class="lb-brand">SPECIAL FORCE <span>2</span><small>TACTICAL PROTOTYPE · v28</small></div>
     <div class="lb-room"><span class="rmk">LOBBY</span><b>大廳</b> · 配對伺服器 <span id="hubNet">連線中…</span></div>
     <label class="hub-nick">暱稱<input type="text" id="hubNick" maxlength="12" placeholder="你的名字" autocomplete="off" spellcheck="false"></label>
+    <button class="btn ghost" id="hubFriends" title="好友名單、加好友">👥 好友</button>
     <button class="btn ghost" id="hubWh" title="倉庫：編輯 5 組配裝">🗄 倉庫</button>
     <button class="btn ghost icon" id="hubFull" title="全螢幕">⛶</button>
     <button class="btn ghost icon gear" id="hubSettings" title="設定">⚙</button>
@@ -643,18 +676,31 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
 </div></div>
 <div id="roomToast"></div>
 
+<!-- v28 friends panel + room invite card -->
+<aside id="friends"><div class="frz">
+  <header><h2>好友<span>FRIENDS</span></h2><button class="btn ghost icon" id="frClose" title="關閉">✕</button></header>
+  <div class="fr-me"><small>我的好友代碼</small><b id="frMe">取得中…</b><button class="btn ghost" id="frCopy">複製</button><p>把這組代碼傳給朋友，對方在他的好友名單輸入，就會送出好友邀請。</p></div>
+  <div class="fr-add"><input type="text" id="frCode" inputmode="numeric" placeholder="輸入朋友的 8 位數好友代碼" autocomplete="off" spellcheck="false"><button class="btn" id="frAdd">加好友</button></div>
+  <div id="frMsg"></div>
+  <div id="frList"></div>
+  <p class="fr-note">好友身分存在這個瀏覽器裡：換電腦、換瀏覽器或清除瀏覽資料，會變成新的身分（要重新加好友）。和朋友都用同一個線上版網址玩。</p>
+</div></aside>
+<div id="invCard"><div class="ic-ico">📨</div><div class="ic-tx"><div id="invCardTxt"></div><small id="invCardSub"></small></div><button class="btn" id="invCardGo">加入</button><button class="btn ghost" id="invCardNo">忽略</button></div>
+
 <!-- ROOM (the room you created or joined) -->
 <div id="lobby" class="screen"><div class="lbz">
   <div class="lb-top">
-    <div class="lb-brand">SPECIAL FORCE <span>2</span><small>TACTICAL PROTOTYPE · v27</small></div>
+    <div class="lb-brand">SPECIAL FORCE <span>2</span><small>TACTICAL PROTOTYPE · v28</small></div>
     <div class="lb-room"><span class="rmk">ROOM</span><span id="lbCodeTxt">——— ———</span> · <b id="lbRoomName">單機練習房</b> · <span id="lbStatus">等待中</span></div>
     <div class="inv"><button class="btn" id="lbInvite" title="邀請朋友加入這個房間">＋ 邀請朋友</button>
       <div class="inv-pop" id="lbInvPop">
         <div class="inv-row"><div class="tx"><h4><i>🔗</i>邀請連結</h4><small>傳給朋友，對方點開就直接進入這個房間</small><input type="text" id="lbInvLinkTxt" readonly></div><button class="btn ghost" id="lbInvLink">複製連結</button></div>
         <div class="inv-row"><div class="tx"><h4><i>#</i>房間代碼</h4><small>朋友在大廳按「加入房間」，輸入這 6 個數字</small><code id="lbInvCode"></code></div><button class="btn ghost" id="lbInvCopy">複製代碼</button></div>
+        <div class="inv-fr" id="lbInvFriends"></div>
         <label class="inv-pub" id="lbPubRow"><input type="checkbox" id="lbPub">公開到大廳的房間列表 <small>（不認識的人也能加入）</small></label>
         <div id="lbInvMsg"></div>
       </div></div>
+    <button class="btn ghost" id="lbFriends" title="好友名單">👥 好友</button>
     <button class="btn ghost" id="lbWh" title="倉庫：編輯 5 組配裝">🗄 倉庫</button>
     <button class="btn ghost icon" id="lbFull" title="全螢幕">⛶</button>
     <button class="btn ghost icon gear" id="lbSettings" title="設定">⚙</button>

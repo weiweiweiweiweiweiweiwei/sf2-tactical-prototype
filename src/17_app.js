@@ -50,7 +50,7 @@ class App {
     const q = new URLSearchParams(location.search), o = { lag: q.get('lag'), jitter: q.get('jitter'), loss: q.get('loss'), name: q.get('name') };
     this.netOpts = o;
     this.dir = new RoomDirectory(); this.bgTick = new BackgroundTicker(() => this.hiddenTick());
-    this.buildHub();
+    this.buildHub(); this.buildFriends();
     addEventListener('pagehide', () => this.closeRoom()); // best effort: tell the room right away
     const code = parseCode(q.get('room'));
     if (code) {
@@ -252,6 +252,117 @@ class App {
     $('pCopy').onclick = () => { const link = inviteLink(r.code); this.copyText(link, (ok) => { $('pMsg').textContent = ok ? '已複製邀請連結：' + link : link; }); };
   }
 
+  /* ------------------------------ v28 friends: panel, invites, join a friend ------------------------------ */
+  buildFriends() {
+    const $ = this.$, F = this.friends = new Friends(this);
+    this.frInvited = new Map(); this.frArm = null;
+    F.onChange = () => this.renderFriends();
+    if (F.hasId) F.start().catch(() => {}); // only players who already have a friend code go online for friends
+    for (const id of ['hubFriends', 'lbFriends']) $(id).onclick = (e) => { e.stopPropagation(); this.audio.init(); this.audio.uiClick(); this.friendsPanel(); };
+    $('frClose').onclick = () => { this.audio.uiClick(); this.friendsPanel(false); };
+    $('friends').onclick = (e) => e.stopPropagation();
+    document.addEventListener('click', () => { if ($('friends').classList.contains('on')) this.friendsPanel(false); });
+    $('frCopy').onclick = () => { if (F.me) this.copyText(F.me.code, (ok) => this.frMsg(ok ? '✓ 好友代碼已複製，傳給朋友' : '無法自動複製：請直接把代碼告訴朋友')); };
+    const inp = $('frCode');
+    inp.oninput = () => { const d = inp.value.replace(/\D/g, '').slice(0, 8); inp.value = d.length > 4 ? d.slice(0, 4) + ' ' + d.slice(4) : d; $('frAdd').disabled = d.length !== 8; this.frMsg(''); };
+    inp.onkeydown = (e) => { e.stopPropagation(); if (e.key === 'Enter') this.friendAdd(); };
+    $('frAdd').onclick = () => this.friendAdd(); $('frAdd').disabled = true;
+    const act = (e) => { const b = e.target.closest('button[data-act]'); if (b) { e.stopPropagation(); this.friendAct(b.dataset.act, b.dataset.id, b.dataset.room, b); } };
+    $('frList').onclick = act; $('lbInvFriends').onclick = act;
+    $('invCardGo').onclick = () => { const c = this.invCard; this.hideInvite(); if (c) this.goJoin(c.room); };
+    $('invCardNo').onclick = () => this.hideInvite();
+    this.renderFriends();
+  }
+  friendsPanel(on) {
+    const el = this.$('friends'); on = on ?? !el.classList.contains('on'); el.classList.toggle('on', on);
+    if (on) { this.invite(false); this.friends.start().then(() => this.friends.pollSoon()).catch(() => {}); this.renderFriends(); }
+  }
+  frMsg(t, bad = false) { const m = this.$('frMsg'); m.textContent = t; m.className = bad ? 'bad' : ''; }
+  async friendAdd() {
+    const $ = this.$, code = $('frCode').value.replace(/\D/g, '');
+    if (code.length !== 8) return;
+    $('frAdd').disabled = true; this.frMsg('送出中…');
+    try {
+      await this.friends.start(); const r = await this.friends.add(code);
+      if (r.ok) { $('frCode').value = ''; this.frMsg(r.result === 'accepted' ? '✓ 你們成為好友了' : '✓ 已送出好友邀請，等對方接受'); } else { this.frMsg(r.why || '失敗', true); $('frAdd').disabled = false; }
+    } catch (e) { this.frMsg('連不上好友伺服器', true); $('frAdd').disabled = false; }
+  }
+  async friendAct(act, id, room, btn) {
+    const F = this.friends, f = F.list.find((x) => x.id === id), r = this.room;
+    try {
+      if (act === 'open') { this.friendsPanel(true); return; }
+      if (act === 'join') { this.goJoin(room); return; }
+      if (act === 'inv') {
+        if (!r || !r.online || !f) return;
+        btn.disabled = true; const res = await F.invite(id, r.code);
+        if (res.ok) { this.frInvited.set(id, performance.now()); this.roomToast(`已邀請 ${f.name} · 對方畫面會跳出邀請`); } else this.roomToast(res.why || '邀請失敗');
+        this.renderFriends(); return;
+      }
+      if (act === 'acc' || act === 'dec') { btn.disabled = true; await F.respond(id, act === 'acc'); if (act === 'acc' && f) this.roomToast(`你和 ${f.name} 成為好友了`); return; }
+      if (act === 'rm') { // two clicks: the first one asks
+        if (this.frArm !== id) { this.frArm = id; clearTimeout(this.frArmT); this.frArmT = setTimeout(() => { this.frArm = null; this.renderFriends(); }, 3000); this.renderFriends(); return; }
+        this.frArm = null; btn.disabled = true; await F.remove(id); return;
+      }
+    } catch (e) { this.frMsg('連不上好友伺服器', true); this.renderFriends(); }
+  }
+  // what a friend is doing, seen from here
+  _friendStatus(f, myRoom) {
+    if (!f.online) return '離線';
+    if (f.room && f.room === myRoom) return '在你的房間';
+    if (f.st === 'playing') return `對戰中${f.room ? ' · 房間 ' + fmtCode(f.room) : ''}`;
+    if (f.st === 'room') return f.room ? `在房間 ${fmtCode(f.room)}` : '在房間（單機）';
+    return '在大廳';
+  }
+  _friendRow(f, myRoom, compact) {
+    const now = performance.now(), invited = now - (this.frInvited.get(f.id) || -1e9) < 15000, b = [];
+    if (f.online && myRoom && f.room !== myRoom) b.push(invited ? '<button class="btn ghost" disabled>已邀請</button>' : `<button class="btn" data-act="inv" data-id="${esc(f.id)}">邀請</button>`);
+    if (!compact && f.online && f.room && f.room !== myRoom) b.push(`<button class="btn ghost" data-act="join" data-room="${f.room}">加入</button>`);
+    if (!compact) b.push(this.frArm === f.id ? `<button class="btn danger" data-act="rm" data-id="${esc(f.id)}">確定刪除？</button>` : `<button class="btn ghost x" data-act="rm" data-id="${esc(f.id)}" title="刪除好友">✕</button>`);
+    return `<div class="fr${f.online ? ' on' : ''}"><span class="dot"></span><div class="who"><b>${esc(f.name)}</b><small>${this._friendStatus(f, myRoom)}</small></div>${b.join('')}</div>`;
+  }
+  renderFriends() {
+    const $ = this.$, F = this.friends; if (!F) return;
+    const fr = F.friends, inc = F.incoming, out = F.outgoing, online = fr.filter((f) => f.online).length, r = this.room, myRoom = r && r.online ? r.code : null;
+    const badge = (inc.length ? `<span class="bdg red">${inc.length}</span>` : '') + (online ? `<span class="bdg">${online}</span>` : '');
+    for (const id of ['hubFriends', 'lbFriends']) $(id).innerHTML = `👥 好友${badge}`;
+    $('frMe').textContent = F.me ? fmtFriend(F.me.code) : F.err ? '— — —' : '取得中…'; $('frCopy').disabled = !F.me;
+    let h = '';
+    if (!F.me && F.err) h = `<div class="fr-empty">${esc(F.err)}</div>`;
+    if (inc.length) h += `<h3>好友邀請 · ${inc.length}</h3>` + inc.map((f) => `<div class="fr"><span class="dot"></span><div class="who"><b>${esc(f.name)}</b><small>想加你為好友 · ${fmtFriend(f.code)}</small></div><button class="btn" data-act="acc" data-id="${esc(f.id)}">接受</button><button class="btn ghost" data-act="dec" data-id="${esc(f.id)}">拒絕</button></div>`).join('');
+    h += `<h3>好友 · ${online} 人在線上 / 共 ${fr.length} 人</h3>`;
+    h += fr.length ? fr.map((f) => this._friendRow(f, myRoom, false)).join('') : '<div class="fr-empty">還沒有好友。把上面的好友代碼傳給朋友，或輸入朋友的代碼。</div>';
+    if (out.length) h += `<h3>等待對方接受</h3>` + out.map((f) => `<div class="fr"><span class="dot"></span><div class="who"><b>${esc(f.name)}</b><small>已送出邀請 · ${fmtFriend(f.code)}</small></div><button class="btn ghost" data-act="rm" data-id="${esc(f.id)}">取消</button></div>`).join('');
+    $('frList').innerHTML = h;
+    // the room's ＋ 邀請朋友 pop-up: online friends who are not here yet
+    const cand = fr.filter((f) => f.online && f.room !== myRoom);
+    $('lbInvFriends').innerHTML = `<h4><i>👥</i>邀請好友</h4>` + (!F.me ? '<div class="fr-empty">還沒有好友 · <button class="btn ghost" data-act="open">加好友</button></div>'
+      : cand.length ? cand.slice(0, 6).map((f) => this._friendRow(f, myRoom, true)).join('') : `<div class="fr-empty">${fr.length ? '沒有在線上的好友' : '還沒有好友'} · <button class="btn ghost" data-act="open">好友名單</button></div>`);
+  }
+  // a friend's invite pops up wherever you are (room, hub, even in a match — press ESC to click it)
+  onFriendInvite(inv) {
+    if (this.room && this.room.code === inv.room) return;
+    const $ = this.$, inMatch = !!this.match && ['playing', 'paused', 'ended'].includes(this.state);
+    this.invCard = inv;
+    $('invCardTxt').innerHTML = `<b>${esc(inv.name)}</b> 邀請你加入房間 <code>${fmtCode(inv.room)}</code>`;
+    $('invCardSub').textContent = inMatch ? '對戰中：按 ESC 再點「加入」（會離開目前的對戰）' : this.room ? '加入後會離開目前的房間' : '45 秒後自動關閉';
+    $('invCard').classList.add('on');
+    try { this.audio.init(); this.audio.uiClick(); setTimeout(() => this.audio.uiClick(), 150); } catch (e) { /* audio locked until a click */ }
+    clearTimeout(this.invT); this.invT = setTimeout(() => this.hideInvite(), 45000);
+    if (document.hidden) { this._title = this._title || document.title; document.title = `📨 ${inv.name} 邀請你 · ${this._title}`; }
+  }
+  hideInvite() { this.$('invCard').classList.remove('on'); this.invCard = null; clearTimeout(this.invT); if (this._title) { document.title = this._title; this._title = null; } }
+  // go to a friend's room from anywhere (accepting an invite, or 加入 in the friends list)
+  goJoin(code) {
+    code = parseCode(code); if (!code) return;
+    if (this.room && this.room.code === code && (this.room.role === 'host' || this.room.entered)) { this.roomToast('你已經在這個房間了'); return; }
+    if (['loading', 'shot', 'joining', 'returning'].includes(this.state)) { this.roomToast('載入中，請稍後再按一次'); return; }
+    if (this.state === 'countdown') { if (this.countGuest) this.guestCountdown(false); else this.cancelCountdown(); }
+    this.friendsPanel(false);
+    if (this.match) { this._teardownMatch(); this.audio.setAmbience('none'); }
+    this.closeRoom(); this.$('lobby').classList.remove('on'); this.state = 'hub';
+    this.joinRoom(code);
+  }
+
   /* ------------------------------ lobby ------------------------------ */
   buildLobby() {
     const L = Settings.data.lobby, $ = this.$;
@@ -373,6 +484,7 @@ class App {
     if (guest) { if (r.phase === 'playing' && r.mcfg) txt = '加入對戰 · JOIN'; else { txt = '等待房主出發'; off = true; msg = r.entered ? '地圖和模式由房主設定 · 你可以選擇隊伍和配裝' : ''; } }
     else if (r && r.members.length > 1 && L.rule !== 'tdm') { off = true; msg = '有朋友在房間時，目前只能選「團隊死鬥」（其他賽制還不支援連線）'; }
     sb.textContent = txt; sb.disabled = off; sb.classList.toggle('wait', off); $('lbMsg').textContent = msg;
+    this.renderFriends(); // invite buttons depend on our room
   }
 
   beginCountdown() {
@@ -536,6 +648,7 @@ class App {
       if ((this.state === 'lobby' || this.state === 'hub') && code === 'Escape') {
         if (this.$('warehouse').classList.contains('on')) { this.closeWarehouse(); return; }
         if (this.$('lbInvPop').classList.contains('on')) { this.invite(false); return; }
+        if (this.$('friends').classList.contains('on')) { this.friendsPanel(false); return; }
       }
       const fk = /^F([1-5])$/.exec(code);
       if (fk && m && (this.state === 'playing' || this.state === 'paused')) { m.queueLoadout(parseInt(fk[1], 10) - 1); return; } // works while dead too
@@ -877,7 +990,7 @@ try {
   const app = new App();
   window.app = app;
   window.SF2 = { THREE, Settings, MAPS, WEAPON_DEFS, WEAPON_DATABASE, CFG, MODES, RULES, calcDamage, loadoutDefs, LOOK_DEFAULT, resolveLook, CAO }; // debug handle for the console
-  window.SF2net = { NetHost, NetClient, LoopbackTransport, NetCodec, RoomDirectory, RtcHostTransport, RtcClientTransport, BackgroundTicker, RoomHost, RoomGuest, RoomLink, inviteLink, parseCode, fmtCode, roomCode, roomCfgSafe, ONLINE, host: (room, o = {}) => new NetHost(app, app.match, new LoopbackTransport(room, o)), join: (room, o = {}) => app.netJoin(room, o) }; // v25 tests
+  window.SF2net = { Friends, NetHost, NetClient, LoopbackTransport, NetCodec, RoomDirectory, RtcHostTransport, RtcClientTransport, BackgroundTicker, RoomHost, RoomGuest, RoomLink, inviteLink, parseCode, fmtCode, roomCode, roomCfgSafe, ONLINE, host: (room, o = {}) => new NetHost(app, app.match, new LoopbackTransport(room, o)), join: (room, o = {}) => app.netJoin(room, o) }; // v25 tests
   window.__gameReady = true;
   document.getElementById('boot').classList.add('done');
 } catch (e) {

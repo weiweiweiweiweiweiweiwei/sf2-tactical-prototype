@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SF2 Tactical Prototype v27</title>
+<title>SF2 Tactical Prototype v28</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Teko:wght@300;400;500;600&family=Rajdhani:wght@500;600;700&family=Noto+Sans+TC:wght@500;700&display=swap" rel="stylesheet">
@@ -213,6 +213,38 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
 .team-col li.human .nm em{font-style:normal;color:var(--gold);font-size:14px;margin-left:4px}
 .team-col li .st.loading,.team-col li .st.ended{color:var(--warn)}.team-col li .st.playing{color:var(--blue)}.team-col li .st.host{color:#ffd75a}
 .team-col li.bot .st{color:var(--faint)}
+
+/* ---- v28 friends panel + invite card ---- */
+.bdg{display:inline-block;min-width:20px;height:20px;line-height:20px;margin-left:7px;padding:0 6px;border-radius:10px;font-size:12px;letter-spacing:0;text-align:center;background:var(--accent);color:#06140b;vertical-align:1px}.bdg.red{background:var(--red);color:#fff}
+#friends{position:fixed;top:0;right:0;z-index:28;transform:translateX(105%);transition:transform .22s ease}
+#friends.on{transform:none}
+#friends .frz{zoom:var(--ui,1);width:450px;height:calc(100vh / var(--ui,1));display:flex;flex-direction:column;gap:12px;padding:20px 22px;background:#0b110e;border-left:1px solid rgba(125,255,166,.35);box-shadow:-20px 0 60px rgba(0,0,0,.6);overflow-y:auto}
+#friends header{display:flex;align-items:center}#friends h2{flex:1;font-size:28px;letter-spacing:6px}#friends h2 span{font-size:12px;color:var(--accent);letter-spacing:5px;margin-left:10px}
+.fr-me{display:grid;grid-template-columns:1fr auto;align-items:center;gap:2px 12px;padding:14px 16px;background:rgba(125,255,166,.07);border:1px solid var(--line);border-radius:6px}
+.fr-me small{grid-column:1/-1;font-size:12px;letter-spacing:3px;color:var(--dim)}
+#frMe{font:700 34px Consolas,monospace;letter-spacing:5px;color:var(--accent)}
+.fr-me p{grid-column:1/-1;font-size:13px;color:var(--dim);margin-top:4px;line-height:1.5}
+.fr-add{display:flex;gap:10px}
+#frCode{flex:1;min-width:0;height:44px;font:700 20px Consolas,monospace;letter-spacing:3px;color:var(--hud);background:#060908;border:1px solid rgba(255,255,255,.18);border-radius:4px;padding:0 12px;user-select:text;-webkit-user-select:text}
+#frCode::placeholder{font:14px var(--font);letter-spacing:1px;color:var(--faint)}#frCode:focus{outline:none;border-color:var(--accent)}
+#frAdd{font-size:16px;padding:0 18px;letter-spacing:2px}
+#frMsg{font-size:14px;color:var(--accent);min-height:18px}#frMsg.bad{color:var(--warn)}
+#frList{display:flex;flex-direction:column;gap:6px;flex:1}
+#frList h3{font-size:13px;letter-spacing:4px;color:var(--accent);margin:10px 0 2px}
+.fr{display:flex;align-items:center;gap:10px;min-height:54px;padding:6px 12px;background:rgba(255,255,255,.04);border-radius:5px}
+.fr .dot{width:10px;height:10px;border-radius:50%;background:rgba(255,255,255,.2);flex:none}.fr.on .dot{background:var(--accent);box-shadow:0 0 8px var(--accent)}
+.fr .who{flex:1;min-width:0}.fr .who b{display:block;font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.fr .who small{font-size:13px;color:var(--dim)}.fr.on .who small{color:var(--accent)}
+.fr .btn{padding:5px 12px;font-size:13px;letter-spacing:1px;flex:none}.fr .btn.x{padding:5px 9px;color:var(--faint)}
+.fr-empty{font-size:14px;color:var(--dim);line-height:1.6;padding:6px 2px}.fr-empty .btn{padding:3px 10px;font-size:13px}
+.fr-note{font-size:12px;color:var(--faint);line-height:1.6}
+#invCard{position:fixed;top:92px;right:24px;z-index:40;display:none;align-items:center;gap:14px;padding:14px 16px;max-width:600px;background:#0d1512;border:1px solid var(--accent);border-radius:8px;box-shadow:0 18px 50px rgba(0,0,0,.6),0 0 30px rgba(125,255,166,.2);zoom:var(--ui,1)}
+#invCard.on{display:flex;animation:popin .2s ease-out}
+.ic-ico{font-size:32px}.ic-tx{flex:1;min-width:0}#invCardTxt{font-size:17px}#invCardTxt code{font:700 18px Consolas,monospace;color:var(--accent);letter-spacing:2px}#invCardTxt b{color:#ffd75a}
+.ic-tx small{display:block;font-size:12px;color:var(--dim);margin-top:3px}
+#invCard .btn{padding:8px 16px;font-size:16px;flex:none}
+.inv-fr{padding:12px 0 6px;border-bottom:1px solid rgba(255,255,255,.07)}
+.inv-fr h4{font-size:16px;letter-spacing:2px;color:var(--hud)}.inv-fr h4 i{font-style:normal;color:var(--accent);margin-right:8px}
+.inv-fr .fr{min-height:42px;margin-top:6px}.inv-fr .fr-empty{font-size:13px;padding:6px 0 0}
 
 /* ---- v27 hub (大廳) ---- */
 #hub{background:
@@ -617,9 +649,10 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
 <!-- HUB (v27 大廳): create a room, or join one -->
 <div id="hub" class="screen on"><div class="hbz">
   <div class="lb-top">
-    <div class="lb-brand">SPECIAL FORCE <span>2</span><small>TACTICAL PROTOTYPE · v27</small></div>
+    <div class="lb-brand">SPECIAL FORCE <span>2</span><small>TACTICAL PROTOTYPE · v28</small></div>
     <div class="lb-room"><span class="rmk">LOBBY</span><b>大廳</b> · 配對伺服器 <span id="hubNet">連線中…</span></div>
     <label class="hub-nick">暱稱<input type="text" id="hubNick" maxlength="12" placeholder="你的名字" autocomplete="off" spellcheck="false"></label>
+    <button class="btn ghost" id="hubFriends" title="好友名單、加好友">👥 好友</button>
     <button class="btn ghost" id="hubWh" title="倉庫：編輯 5 組配裝">🗄 倉庫</button>
     <button class="btn ghost icon" id="hubFull" title="全螢幕">⛶</button>
     <button class="btn ghost icon gear" id="hubSettings" title="設定">⚙</button>
@@ -643,18 +676,31 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
 </div></div>
 <div id="roomToast"></div>
 
+<!-- v28 friends panel + room invite card -->
+<aside id="friends"><div class="frz">
+  <header><h2>好友<span>FRIENDS</span></h2><button class="btn ghost icon" id="frClose" title="關閉">✕</button></header>
+  <div class="fr-me"><small>我的好友代碼</small><b id="frMe">取得中…</b><button class="btn ghost" id="frCopy">複製</button><p>把這組代碼傳給朋友，對方在他的好友名單輸入，就會送出好友邀請。</p></div>
+  <div class="fr-add"><input type="text" id="frCode" inputmode="numeric" placeholder="輸入朋友的 8 位數好友代碼" autocomplete="off" spellcheck="false"><button class="btn" id="frAdd">加好友</button></div>
+  <div id="frMsg"></div>
+  <div id="frList"></div>
+  <p class="fr-note">好友身分存在這個瀏覽器裡：換電腦、換瀏覽器或清除瀏覽資料，會變成新的身分（要重新加好友）。和朋友都用同一個線上版網址玩。</p>
+</div></aside>
+<div id="invCard"><div class="ic-ico">📨</div><div class="ic-tx"><div id="invCardTxt"></div><small id="invCardSub"></small></div><button class="btn" id="invCardGo">加入</button><button class="btn ghost" id="invCardNo">忽略</button></div>
+
 <!-- ROOM (the room you created or joined) -->
 <div id="lobby" class="screen"><div class="lbz">
   <div class="lb-top">
-    <div class="lb-brand">SPECIAL FORCE <span>2</span><small>TACTICAL PROTOTYPE · v27</small></div>
+    <div class="lb-brand">SPECIAL FORCE <span>2</span><small>TACTICAL PROTOTYPE · v28</small></div>
     <div class="lb-room"><span class="rmk">ROOM</span><span id="lbCodeTxt">——— ———</span> · <b id="lbRoomName">單機練習房</b> · <span id="lbStatus">等待中</span></div>
     <div class="inv"><button class="btn" id="lbInvite" title="邀請朋友加入這個房間">＋ 邀請朋友</button>
       <div class="inv-pop" id="lbInvPop">
         <div class="inv-row"><div class="tx"><h4><i>🔗</i>邀請連結</h4><small>傳給朋友，對方點開就直接進入這個房間</small><input type="text" id="lbInvLinkTxt" readonly></div><button class="btn ghost" id="lbInvLink">複製連結</button></div>
         <div class="inv-row"><div class="tx"><h4><i>#</i>房間代碼</h4><small>朋友在大廳按「加入房間」，輸入這 6 個數字</small><code id="lbInvCode"></code></div><button class="btn ghost" id="lbInvCopy">複製代碼</button></div>
+        <div class="inv-fr" id="lbInvFriends"></div>
         <label class="inv-pub" id="lbPubRow"><input type="checkbox" id="lbPub">公開到大廳的房間列表 <small>（不認識的人也能加入）</small></label>
         <div id="lbInvMsg"></div>
       </div></div>
+    <button class="btn ghost" id="lbFriends" title="好友名單">👥 好友</button>
     <button class="btn ghost" id="lbWh" title="倉庫：編輯 5 組配裝">🗄 倉庫</button>
     <button class="btn ghost icon" id="lbFull" title="全螢幕">⛶</button>
     <button class="btn ghost icon gear" id="lbSettings" title="設定">⚙</button>
@@ -10596,6 +10642,98 @@ class RoomGuest extends RoomSession {
   successor() { return this.members.filter((m) => !m.host).sort((a, b) => a.order - b.order)[0] || null; }
 }
 /* =====================================================================
+   v28 FRIENDS — friend codes, online status, room invites. Free, no accounts.
+   · The first time the friends panel is opened the game registers an anonymous player (id + random secret, kept in
+     this browser's localStorage) and gets an 8-digit friend code. Tables live in Supabase (sf2-tactical) and are closed
+     to the public API; every call goes through functions that check the secret (supabase/v28_friends.sql).
+   · Every 5 s a heartbeat (sf2_poll) reports where we are (大廳 / 房間 / 對戰中, and our room code for friends to join)
+     and returns the friend list with their status plus any room invites waiting for us.
+   · An invite / friend request also "pokes" the friend's inbox channel (Realtime broadcast), so his game asks the
+     server right away instead of within 5 s. A poke carries nothing — the server decides what is real.
+   ===================================================================== */
+const FRIEND_ST = { hub: '在大廳', room: '在房間', playing: '對戰中' };
+const fmtFriend = (c) => (c ? c.slice(0, 4) + ' ' + c.slice(4) : '');
+const FRIEND_KEY = 'sf2.friendId';
+
+class Friends {
+  constructor(app) {
+    this.app = app; this.me = null; this.list = []; this.ok = false; this.err = ''; this.onChange = null;
+    this.pokes = new Map(); this.seenIncoming = null; this.started = null;
+  }
+  get hasId() { return !!this._load(); }
+  _load() { try { const m = JSON.parse(localStorage.getItem(FRIEND_KEY) || 'null'); if (m && m.id && m.secret && /^\d{8}$/.test(m.code)) return m; } catch (e) { /* storage off */ } return null; }
+  // register lazily: a player who never opens the friends panel never creates a server record
+  start() {
+    if (!this.started) this.started = this._init().catch((e) => { this.started = null; this.err = '連不上好友伺服器（需要網路）'; this._changed(); throw e; });
+    return this.started;
+  }
+  async _init() {
+    this.sb = await supa();
+    this.me = this._load() || await this._register();
+    const ch = this.sb.channel('sf2:inbox:' + this.me.id, { config: { broadcast: { self: false } } });
+    ch.on('broadcast', { event: 'poke' }, () => this.pollSoon());
+    subscribed(ch).catch(() => {}); this.inbox = ch;
+    await this.poll();
+    clearInterval(this.timer); this.timer = setInterval(() => this.poll(), 5000);
+    addEventListener('pagehide', () => this.bye());
+    return this;
+  }
+  async _register() {
+    const { data, error } = await this.sb.rpc('sf2_register', { p_name: Settings.data.nick || '玩家' });
+    if (error || !data || !data.id) throw new Error(error ? error.message : 'register');
+    try { localStorage.setItem(FRIEND_KEY, JSON.stringify(data)); } catch (e) { /* storage off: this session only */ }
+    return data;
+  }
+  async rpc(fn, args = {}) {
+    const { data, error } = await this.sb.rpc(fn, { p_id: this.me.id, p_secret: this.me.secret, ...args });
+    if (error) throw new Error(error.message); return data;
+  }
+  _changed() { if (this.onChange) this.onChange(); }
+  // where we are, as friends see it
+  _where() {
+    const a = this.app, r = a.room, inMatch = !!a.match && ['loading', 'shot', 'playing', 'paused', 'ended'].includes(a.state);
+    return { st: inMatch ? 'playing' : r ? 'room' : 'hub', room: r && r.online ? r.code : null };
+  }
+  async poll() {
+    if (!this.me || this.polling) return; this.polling = true;
+    try {
+      const w = this._where();
+      const d = await this.rpc('sf2_poll', { p_status: w.st, p_room: w.room, p_name: Settings.data.nick || null });
+      this.list = (Array.isArray(d.friends) ? d.friends : []).slice(0, 200).map((f) => ({
+        id: String(f.id), name: safeName(f.name, '玩家'), code: /^\d{8}$/.test(f.code) ? f.code : '', state: ['friend', 'incoming', 'outgoing'].includes(f.state) ? f.state : 'friend',
+        online: !!f.online, st: Object.prototype.hasOwnProperty.call(FRIEND_ST, f.st) ? f.st : null, room: parseCode(f.room) }));
+      this.ok = true; this.err = '';
+      const inc = this.list.filter((f) => f.state === 'incoming');
+      if (this.seenIncoming) for (const f of inc) if (!this.seenIncoming.has(f.id)) this.app.roomToast(`${f.name} 想加你為好友 · 打開「好友」接受`);
+      this.seenIncoming = new Set(inc.map((f) => f.id));
+      for (const inv of Array.isArray(d.invites) ? d.invites.slice(0, 5) : []) { const room = parseCode(inv.room); if (room) this.app.onFriendInvite({ from: String(inv.from), name: safeName(inv.name, '好友'), room }); }
+    } catch (e) {
+      if (/sf2 auth/.test(e.message) && !this.reReg) { this.reReg = true; try { localStorage.removeItem(FRIEND_KEY); } catch (x) { /* */ } this.me = await this._register().catch(() => this.me); } // the server forgot us: start over
+      else this.err = '連不上好友伺服器';
+    } finally { this.polling = false; this._changed(); }
+  }
+  pollSoon() { clearTimeout(this.soonT); this.soonT = setTimeout(() => this.poll(), 250); }
+  // nudge a friend's game to ask the server now (his inbox channel; joined once per friend and kept)
+  async poke(id) {
+    try {
+      let p = this.pokes.get(id); if (!p) { p = subscribed(this.sb.channel('sf2:inbox:' + id, { config: { broadcast: { self: false } } })); this.pokes.set(id, p); }
+      const ch = await p; await ch.send({ type: 'broadcast', event: 'poke', payload: {} });
+    } catch (e) { this.pokes.delete(id); }
+  }
+  async add(code) { const r = await this.rpc('sf2_add_friend', { p_code: code }); if (r && r.ok && r.other) this.poke(String(r.other)); await this.poll(); return r || { ok: false, why: '失敗' }; }
+  async respond(id, yes) { await this.rpc('sf2_respond', { p_other: id, p_accept: !!yes }); this.poke(id); await this.poll(); }
+  async remove(id) { await this.rpc('sf2_remove_friend', { p_other: id }); this.poke(id); await this.poll(); }
+  async invite(id, room) { const r = await this.rpc('sf2_invite', { p_to: id, p_room: room }); if (r && r.ok) this.poke(id); return r || { ok: false, why: '失敗' }; }
+  // leaving the page: show offline at once (keepalive request survives the unload)
+  bye() {
+    if (!this.me) return;
+    try { fetch(ONLINE.url + '/rest/v1/rpc/sf2_bye', { method: 'POST', keepalive: true, headers: { apikey: ONLINE.key, 'Content-Type': 'application/json' }, body: JSON.stringify({ p_id: this.me.id, p_secret: this.me.secret }) }); } catch (e) { /* best effort */ }
+  }
+  get friends() { return this.list.filter((f) => f.state === 'friend').sort((a, b) => (b.online - a.online) || a.name.localeCompare(b.name)); }
+  get incoming() { return this.list.filter((f) => f.state === 'incoming'); }
+  get outgoing() { return this.list.filter((f) => f.state === 'outgoing'); }
+}
+/* =====================================================================
    APP — renderer, shared resources, room/lobby, loading flow, pause,
    settings, end screen and the main loop.
    States: hub (大廳) → lobby (the room) → countdown → loading → shot → playing ⇄ paused → ended → returning → lobby
@@ -10647,7 +10785,7 @@ class App {
     const q = new URLSearchParams(location.search), o = { lag: q.get('lag'), jitter: q.get('jitter'), loss: q.get('loss'), name: q.get('name') };
     this.netOpts = o;
     this.dir = new RoomDirectory(); this.bgTick = new BackgroundTicker(() => this.hiddenTick());
-    this.buildHub();
+    this.buildHub(); this.buildFriends();
     addEventListener('pagehide', () => this.closeRoom()); // best effort: tell the room right away
     const code = parseCode(q.get('room'));
     if (code) {
@@ -10849,6 +10987,117 @@ class App {
     $('pCopy').onclick = () => { const link = inviteLink(r.code); this.copyText(link, (ok) => { $('pMsg').textContent = ok ? '已複製邀請連結：' + link : link; }); };
   }
 
+  /* ------------------------------ v28 friends: panel, invites, join a friend ------------------------------ */
+  buildFriends() {
+    const $ = this.$, F = this.friends = new Friends(this);
+    this.frInvited = new Map(); this.frArm = null;
+    F.onChange = () => this.renderFriends();
+    if (F.hasId) F.start().catch(() => {}); // only players who already have a friend code go online for friends
+    for (const id of ['hubFriends', 'lbFriends']) $(id).onclick = (e) => { e.stopPropagation(); this.audio.init(); this.audio.uiClick(); this.friendsPanel(); };
+    $('frClose').onclick = () => { this.audio.uiClick(); this.friendsPanel(false); };
+    $('friends').onclick = (e) => e.stopPropagation();
+    document.addEventListener('click', () => { if ($('friends').classList.contains('on')) this.friendsPanel(false); });
+    $('frCopy').onclick = () => { if (F.me) this.copyText(F.me.code, (ok) => this.frMsg(ok ? '✓ 好友代碼已複製，傳給朋友' : '無法自動複製：請直接把代碼告訴朋友')); };
+    const inp = $('frCode');
+    inp.oninput = () => { const d = inp.value.replace(/\D/g, '').slice(0, 8); inp.value = d.length > 4 ? d.slice(0, 4) + ' ' + d.slice(4) : d; $('frAdd').disabled = d.length !== 8; this.frMsg(''); };
+    inp.onkeydown = (e) => { e.stopPropagation(); if (e.key === 'Enter') this.friendAdd(); };
+    $('frAdd').onclick = () => this.friendAdd(); $('frAdd').disabled = true;
+    const act = (e) => { const b = e.target.closest('button[data-act]'); if (b) { e.stopPropagation(); this.friendAct(b.dataset.act, b.dataset.id, b.dataset.room, b); } };
+    $('frList').onclick = act; $('lbInvFriends').onclick = act;
+    $('invCardGo').onclick = () => { const c = this.invCard; this.hideInvite(); if (c) this.goJoin(c.room); };
+    $('invCardNo').onclick = () => this.hideInvite();
+    this.renderFriends();
+  }
+  friendsPanel(on) {
+    const el = this.$('friends'); on = on ?? !el.classList.contains('on'); el.classList.toggle('on', on);
+    if (on) { this.invite(false); this.friends.start().then(() => this.friends.pollSoon()).catch(() => {}); this.renderFriends(); }
+  }
+  frMsg(t, bad = false) { const m = this.$('frMsg'); m.textContent = t; m.className = bad ? 'bad' : ''; }
+  async friendAdd() {
+    const $ = this.$, code = $('frCode').value.replace(/\D/g, '');
+    if (code.length !== 8) return;
+    $('frAdd').disabled = true; this.frMsg('送出中…');
+    try {
+      await this.friends.start(); const r = await this.friends.add(code);
+      if (r.ok) { $('frCode').value = ''; this.frMsg(r.result === 'accepted' ? '✓ 你們成為好友了' : '✓ 已送出好友邀請，等對方接受'); } else { this.frMsg(r.why || '失敗', true); $('frAdd').disabled = false; }
+    } catch (e) { this.frMsg('連不上好友伺服器', true); $('frAdd').disabled = false; }
+  }
+  async friendAct(act, id, room, btn) {
+    const F = this.friends, f = F.list.find((x) => x.id === id), r = this.room;
+    try {
+      if (act === 'open') { this.friendsPanel(true); return; }
+      if (act === 'join') { this.goJoin(room); return; }
+      if (act === 'inv') {
+        if (!r || !r.online || !f) return;
+        btn.disabled = true; const res = await F.invite(id, r.code);
+        if (res.ok) { this.frInvited.set(id, performance.now()); this.roomToast(`已邀請 ${f.name} · 對方畫面會跳出邀請`); } else this.roomToast(res.why || '邀請失敗');
+        this.renderFriends(); return;
+      }
+      if (act === 'acc' || act === 'dec') { btn.disabled = true; await F.respond(id, act === 'acc'); if (act === 'acc' && f) this.roomToast(`你和 ${f.name} 成為好友了`); return; }
+      if (act === 'rm') { // two clicks: the first one asks
+        if (this.frArm !== id) { this.frArm = id; clearTimeout(this.frArmT); this.frArmT = setTimeout(() => { this.frArm = null; this.renderFriends(); }, 3000); this.renderFriends(); return; }
+        this.frArm = null; btn.disabled = true; await F.remove(id); return;
+      }
+    } catch (e) { this.frMsg('連不上好友伺服器', true); this.renderFriends(); }
+  }
+  // what a friend is doing, seen from here
+  _friendStatus(f, myRoom) {
+    if (!f.online) return '離線';
+    if (f.room && f.room === myRoom) return '在你的房間';
+    if (f.st === 'playing') return `對戰中${f.room ? ' · 房間 ' + fmtCode(f.room) : ''}`;
+    if (f.st === 'room') return f.room ? `在房間 ${fmtCode(f.room)}` : '在房間（單機）';
+    return '在大廳';
+  }
+  _friendRow(f, myRoom, compact) {
+    const now = performance.now(), invited = now - (this.frInvited.get(f.id) || -1e9) < 15000, b = [];
+    if (f.online && myRoom && f.room !== myRoom) b.push(invited ? '<button class="btn ghost" disabled>已邀請</button>' : `<button class="btn" data-act="inv" data-id="${esc(f.id)}">邀請</button>`);
+    if (!compact && f.online && f.room && f.room !== myRoom) b.push(`<button class="btn ghost" data-act="join" data-room="${f.room}">加入</button>`);
+    if (!compact) b.push(this.frArm === f.id ? `<button class="btn danger" data-act="rm" data-id="${esc(f.id)}">確定刪除？</button>` : `<button class="btn ghost x" data-act="rm" data-id="${esc(f.id)}" title="刪除好友">✕</button>`);
+    return `<div class="fr${f.online ? ' on' : ''}"><span class="dot"></span><div class="who"><b>${esc(f.name)}</b><small>${this._friendStatus(f, myRoom)}</small></div>${b.join('')}</div>`;
+  }
+  renderFriends() {
+    const $ = this.$, F = this.friends; if (!F) return;
+    const fr = F.friends, inc = F.incoming, out = F.outgoing, online = fr.filter((f) => f.online).length, r = this.room, myRoom = r && r.online ? r.code : null;
+    const badge = (inc.length ? `<span class="bdg red">${inc.length}</span>` : '') + (online ? `<span class="bdg">${online}</span>` : '');
+    for (const id of ['hubFriends', 'lbFriends']) $(id).innerHTML = `👥 好友${badge}`;
+    $('frMe').textContent = F.me ? fmtFriend(F.me.code) : F.err ? '— — —' : '取得中…'; $('frCopy').disabled = !F.me;
+    let h = '';
+    if (!F.me && F.err) h = `<div class="fr-empty">${esc(F.err)}</div>`;
+    if (inc.length) h += `<h3>好友邀請 · ${inc.length}</h3>` + inc.map((f) => `<div class="fr"><span class="dot"></span><div class="who"><b>${esc(f.name)}</b><small>想加你為好友 · ${fmtFriend(f.code)}</small></div><button class="btn" data-act="acc" data-id="${esc(f.id)}">接受</button><button class="btn ghost" data-act="dec" data-id="${esc(f.id)}">拒絕</button></div>`).join('');
+    h += `<h3>好友 · ${online} 人在線上 / 共 ${fr.length} 人</h3>`;
+    h += fr.length ? fr.map((f) => this._friendRow(f, myRoom, false)).join('') : '<div class="fr-empty">還沒有好友。把上面的好友代碼傳給朋友，或輸入朋友的代碼。</div>';
+    if (out.length) h += `<h3>等待對方接受</h3>` + out.map((f) => `<div class="fr"><span class="dot"></span><div class="who"><b>${esc(f.name)}</b><small>已送出邀請 · ${fmtFriend(f.code)}</small></div><button class="btn ghost" data-act="rm" data-id="${esc(f.id)}">取消</button></div>`).join('');
+    $('frList').innerHTML = h;
+    // the room's ＋ 邀請朋友 pop-up: online friends who are not here yet
+    const cand = fr.filter((f) => f.online && f.room !== myRoom);
+    $('lbInvFriends').innerHTML = `<h4><i>👥</i>邀請好友</h4>` + (!F.me ? '<div class="fr-empty">還沒有好友 · <button class="btn ghost" data-act="open">加好友</button></div>'
+      : cand.length ? cand.slice(0, 6).map((f) => this._friendRow(f, myRoom, true)).join('') : `<div class="fr-empty">${fr.length ? '沒有在線上的好友' : '還沒有好友'} · <button class="btn ghost" data-act="open">好友名單</button></div>`);
+  }
+  // a friend's invite pops up wherever you are (room, hub, even in a match — press ESC to click it)
+  onFriendInvite(inv) {
+    if (this.room && this.room.code === inv.room) return;
+    const $ = this.$, inMatch = !!this.match && ['playing', 'paused', 'ended'].includes(this.state);
+    this.invCard = inv;
+    $('invCardTxt').innerHTML = `<b>${esc(inv.name)}</b> 邀請你加入房間 <code>${fmtCode(inv.room)}</code>`;
+    $('invCardSub').textContent = inMatch ? '對戰中：按 ESC 再點「加入」（會離開目前的對戰）' : this.room ? '加入後會離開目前的房間' : '45 秒後自動關閉';
+    $('invCard').classList.add('on');
+    try { this.audio.init(); this.audio.uiClick(); setTimeout(() => this.audio.uiClick(), 150); } catch (e) { /* audio locked until a click */ }
+    clearTimeout(this.invT); this.invT = setTimeout(() => this.hideInvite(), 45000);
+    if (document.hidden) { this._title = this._title || document.title; document.title = `📨 ${inv.name} 邀請你 · ${this._title}`; }
+  }
+  hideInvite() { this.$('invCard').classList.remove('on'); this.invCard = null; clearTimeout(this.invT); if (this._title) { document.title = this._title; this._title = null; } }
+  // go to a friend's room from anywhere (accepting an invite, or 加入 in the friends list)
+  goJoin(code) {
+    code = parseCode(code); if (!code) return;
+    if (this.room && this.room.code === code && (this.room.role === 'host' || this.room.entered)) { this.roomToast('你已經在這個房間了'); return; }
+    if (['loading', 'shot', 'joining', 'returning'].includes(this.state)) { this.roomToast('載入中，請稍後再按一次'); return; }
+    if (this.state === 'countdown') { if (this.countGuest) this.guestCountdown(false); else this.cancelCountdown(); }
+    this.friendsPanel(false);
+    if (this.match) { this._teardownMatch(); this.audio.setAmbience('none'); }
+    this.closeRoom(); this.$('lobby').classList.remove('on'); this.state = 'hub';
+    this.joinRoom(code);
+  }
+
   /* ------------------------------ lobby ------------------------------ */
   buildLobby() {
     const L = Settings.data.lobby, $ = this.$;
@@ -10970,6 +11219,7 @@ class App {
     if (guest) { if (r.phase === 'playing' && r.mcfg) txt = '加入對戰 · JOIN'; else { txt = '等待房主出發'; off = true; msg = r.entered ? '地圖和模式由房主設定 · 你可以選擇隊伍和配裝' : ''; } }
     else if (r && r.members.length > 1 && L.rule !== 'tdm') { off = true; msg = '有朋友在房間時，目前只能選「團隊死鬥」（其他賽制還不支援連線）'; }
     sb.textContent = txt; sb.disabled = off; sb.classList.toggle('wait', off); $('lbMsg').textContent = msg;
+    this.renderFriends(); // invite buttons depend on our room
   }
 
   beginCountdown() {
@@ -11133,6 +11383,7 @@ class App {
       if ((this.state === 'lobby' || this.state === 'hub') && code === 'Escape') {
         if (this.$('warehouse').classList.contains('on')) { this.closeWarehouse(); return; }
         if (this.$('lbInvPop').classList.contains('on')) { this.invite(false); return; }
+        if (this.$('friends').classList.contains('on')) { this.friendsPanel(false); return; }
       }
       const fk = /^F([1-5])$/.exec(code);
       if (fk && m && (this.state === 'playing' || this.state === 'paused')) { m.queueLoadout(parseInt(fk[1], 10) - 1); return; } // works while dead too
@@ -11474,7 +11725,7 @@ try {
   const app = new App();
   window.app = app;
   window.SF2 = { THREE, Settings, MAPS, WEAPON_DEFS, WEAPON_DATABASE, CFG, MODES, RULES, calcDamage, loadoutDefs, LOOK_DEFAULT, resolveLook, CAO }; // debug handle for the console
-  window.SF2net = { NetHost, NetClient, LoopbackTransport, NetCodec, RoomDirectory, RtcHostTransport, RtcClientTransport, BackgroundTicker, RoomHost, RoomGuest, RoomLink, inviteLink, parseCode, fmtCode, roomCode, roomCfgSafe, ONLINE, host: (room, o = {}) => new NetHost(app, app.match, new LoopbackTransport(room, o)), join: (room, o = {}) => app.netJoin(room, o) }; // v25 tests
+  window.SF2net = { Friends, NetHost, NetClient, LoopbackTransport, NetCodec, RoomDirectory, RtcHostTransport, RtcClientTransport, BackgroundTicker, RoomHost, RoomGuest, RoomLink, inviteLink, parseCode, fmtCode, roomCode, roomCfgSafe, ONLINE, host: (room, o = {}) => new NetHost(app, app.match, new LoopbackTransport(room, o)), join: (room, o = {}) => app.netJoin(room, o) }; // v25 tests
   window.__gameReady = true;
   document.getElementById('boot').classList.add('done');
 } catch (e) {
