@@ -1,7 +1,9 @@
 /* =====================================================================
    GAME RULES — state machine per mode. The Match drives the phases
    (freeze → live → roundEnd → over) and delegates every mode-specific
-   decision to one Rule object:
+   decision to one Rule object. Online (v29) only the host runs a rule's
+   logic; it sends netState() ~10×/s and each client applies it (applyNet)
+   and only animates (netTick), announcing what changed from its own view:
      TDMRule        team deathmatch, 3 s respawn, first to N points
      RoundsRule     elimination rounds, no respawn inside a round
      RelicRule      Capture the Relic (Blue attacks / Red defends)
@@ -97,37 +99,56 @@ class RelicRule extends RoundsRule {
     for (const o of [g, this.beam, ex]) { o.traverse((c) => { c.userData.noAO = true; }); m.scene.add(o); }
   }
   startRound() {
+    this.returnedBy = 0;
     this.state = 'home'; this.carrier = null; this.pos = this.home.clone(); this.dropT = 0; this.ping = null; this.pingT = 0; this.pressed = new Set();
     for (const c of this.m.combatants) c.carrying = false;
   }
   interactPressed(c) { this.pressed.add(c); }
   _pickup(c) {
-    const m = this.m;
     this.state = 'carried'; this.carrier = c; c.carrying = true; this.pingT = 0;
-    m.audio.objective('pickup');
-    const mine = c.team === m.player.team;
-    m.app.hud.announce(c.isPlayer ? '你拿到聖物了！' : mine ? '我方奪得聖物' : '敵方奪走了聖物！', c.isPlayer ? '衝回藍色撤離點' : `${c.name} 正在撤離`);
+    this._sayPickup(c);
     c.score += POINTS.relic / 2;
-    if (c.isPlayer) m.app.hud.points(`+${POINTS.relic / 2}  奪取聖物`);
+    if (c.isPlayer) this.m.app.hud.points(`+${POINTS.relic / 2}  奪取聖物`);
+  }
+  _sayPickup(c) {
+    const m = this.m, mine = c.team === m.player.team; m.audio.objective('pickup');
+    m.app.hud.announce(c.isPlayer ? '你拿到聖物了！' : mine ? '我方奪得聖物' : '敵方奪走了聖物！', c.isPlayer ? '衝回藍色撤離點' : `${c.name} 正在撤離`);
   }
   _drop(at) {
     const m = this.m, g = m.collision.groundBelow(at.x, at.y + 1, at.z, 0.2, 30);
     if (this.carrier) this.carrier.carrying = false;
     this.state = 'dropped'; this.carrier = null; this.dropT = 25;
     this.pos.set(at.x, (g ? g.y : at.y) + 0.55, at.z);
-    m.audio.objective('drop'); m.app.hud.announce('聖物掉落！', '防守方觸碰即可歸位 · 25 秒後自動歸位');
+    this._sayDrop();
   }
+  _sayDrop() { this.m.audio.objective('drop'); this.m.app.hud.announce('聖物掉落！', '防守方觸碰即可歸位 · 25 秒後自動歸位'); }
   _return(by) {
-    const m = this.m;
     this.state = 'home'; this.pos.copy(this.home); this.carrier = null;
-    m.audio.objective(by && by.team === m.player.team ? 'capture' : 'lost');
-    m.app.hud.announce('聖物已歸位', by ? `${by.isPlayer ? '你' : by.name} 奪回了聖物` : '自動歸位');
-    if (by) { by.score += 100; if (by.isPlayer) m.app.hud.points('+100  奪回聖物'); }
+    this._sayReturn(by);
+    if (by) { by.score += 100; if (by.isPlayer) this.m.app.hud.points('+100  奪回聖物'); }
   }
+  _sayReturn(by) {
+    const m = this.m; m.audio.objective(by && by.team === m.player.team ? 'capture' : 'lost');
+    m.app.hud.announce('聖物已歸位', by ? `${by.isPlayer ? '你' : by.name} 奪回了聖物` : '自動歸位');
+  }
+  // v29 online: where the relic is and who has it (the last defender to touch a dropped relic = who returned it)
+  netState() { return { st: this.state, car: this.carrier ? this.carrier.netId : 0, p: v3arr(this.pos), dt: +this.dropT.toFixed(1), by: this.returnedBy || 0 }; }
+  applyNet(s) {
+    const m = this.m, prev = this.state, st = ['home', 'carried', 'dropped', 'extracted'].includes(s.st) ? s.st : 'home';
+    const car = st === 'carried' ? m.net.byId(s.car | 0) : null;
+    if (this.carrier && this.carrier !== car) this.carrier.carrying = false;
+    this.state = st; this.carrier = car; if (car) car.carrying = true;
+    if (st !== 'carried' && Array.isArray(s.p)) this.pos.set(+s.p[0] || 0, +s.p[1] || 0, +s.p[2] || 0);
+    this.dropT = Math.max(0, +s.dt || 0);
+    if (prev === st || m.phase !== 'live') return;
+    if (st === 'carried' && car) this._sayPickup(car);
+    else if (st === 'dropped') this._sayDrop();
+    else if (st === 'home' && prev !== 'extracted') this._sayReturn(s.by ? m.net.byId(s.by | 0) : null);
+  }
+  netTick(dt) { this._visuals(dt); }
   onDeath(c) { if (this.carrier === c) this._drop(c.motor.pos.clone()); }
-  tick(dt) {
+  _visuals(dt) {
     const m = this.m, t = m.time;
-    // visuals
     this.core.rotation.y += dt * 1.6; this.r1.rotation.z += dt * 1.1; this.r2.rotation.y += dt * 0.8;
     let vis = this.pos;
     if (this.state === 'carried' && this.carrier) {
@@ -137,6 +158,10 @@ class RelicRule extends RoundsRule {
     this.group.position.set(vis.x, vis.y + Math.sin(t * 2.2) * 0.07, vis.z);
     this.beam.visible = this.state !== 'carried'; this.beam.position.set(this.pos.x, this.pos.y + 30, this.pos.z);
     this.exGroup.visible = this.state === 'carried'; this.exRing.material.opacity = 0.6 + 0.3 * Math.sin(t * 5);
+  }
+  tick(dt) {
+    const m = this.m;
+    this._visuals(dt);
     if (m.phase !== 'live') { this.pressed.clear(); return; }
     // carrier reached the extraction zone
     if (this.state === 'carried') {
@@ -147,7 +172,7 @@ class RelicRule extends RoundsRule {
         m.score[c.team] += POINTS.relic; m.audio.objective('extract'); c.carrying = false;
         this.state = 'extracted'; m.endRound(this.attack, '聖物成功撤離'); return;
       }
-    } else if (this.state === 'dropped') { this.dropT -= dt; if (this.dropT <= 0) { this._return(null); } }
+    } else if (this.state === 'dropped') { this.dropT -= dt; if (this.dropT <= 0) { this.returnedBy = 0; this._return(null); } }
     // pickup / return
     if (this.state === 'home' || this.state === 'dropped') {
       for (const c of m.combatants) {
@@ -155,7 +180,7 @@ class RelicRule extends RoundsRule {
         const d = Math.hypot(c.motor.pos.x - this.pos.x, c.motor.pos.z - this.pos.z), dy = Math.abs(c.motor.pos.y + 0.9 - this.pos.y);
         if (d > 1.8 || dy > 2.2) continue;
         if (c.team === this.attack && (this.pressed.has(c) || c.holdE)) { this._pickup(c); break; }
-        if (c.team === this.defend && this.state === 'dropped') { this._return(c); break; }
+        if (c.team === this.defend && this.state === 'dropped') { this.returnedBy = c.netId; this._return(c); break; }
       }
     }
     this.pressed.clear();
@@ -255,16 +280,36 @@ class DomRule extends Rule {
   killTeamPoints() { return 5; }
   onDeath(c) { this.prog.delete(c); }
   _capture(z, c) {
-    const m = this.m, prev = z.owner; z.setOwner(c.team);
+    const m = this.m, prev = z.owner; z.setOwner(c.team); z.by = c.netId;
     for (const [k, v] of this.prog) if (v.zone === z) this.prog.delete(k);
     c.score += POINTS.capture; m.addTeam(c.team, 10);
-    const mine = c.team === m.player.team;
-    m.audio.objective(mine ? 'capture' : 'lost');
     if (c.isPlayer) m.app.hud.points(`+${POINTS.capture}  佔領 ${z.id} 點`);
-    const all = this.owned(c.team) === this.zones.length;
-    m.app.hud.announce(mine ? `${z.id} 點已被我方佔領` : `敵方佔領了 ${z.id} 點`, all ? (mine ? '三點全佔！敵方無法得分' : '敵方三點全佔！我方被封鎖得分') : prev ? '據點易手' : '');
-    m.app.hud.killfeed(c.name, c.team, `佔領 ${z.id}`, '', c.team, false, c.isPlayer);
+    this._sayCapture(z, c.team, prev, c);
   }
+  _sayCapture(z, team, prev, c) {
+    const m = this.m, mine = team === m.player.team, all = this.owned(team) === this.zones.length;
+    m.audio.objective(mine ? 'capture' : 'lost');
+    m.app.hud.announce(mine ? `${z.id} 點已被我方佔領` : `敵方佔領了 ${z.id} 點`, all ? (mine ? '三點全佔！敵方無法得分' : '敵方三點全佔！我方被封鎖得分') : prev ? '據點易手' : '');
+    if (c) m.app.hud.killfeed(c.name, team, `佔領 ${z.id}`, '', team, false, c.isPlayer);
+  }
+  // v29 online: every zone [owner, contested, capturing team, progress, captured by] + this friend's own capture progress
+  netState(np) {
+    const T = (t) => (t === 'alpha' ? 1 : t === 'bravo' ? 2 : 0), pr = np ? this.prog.get(np) : null;
+    return { z: this.zones.map((z) => [T(z.owner), z.contested ? 1 : 0, T(z.capTeam), +z.capK.toFixed(3), z.by || 0]), me: pr ? [this.zones.indexOf(pr.zone), +pr.t.toFixed(2)] : null };
+  }
+  applyNet(s) {
+    const m = this.m, T = [null, 'alpha', 'bravo'], p = m.player;
+    if (Array.isArray(s.z)) s.z.forEach((a, i) => {
+      const z = this.zones[i]; if (!z || !Array.isArray(a)) return;
+      const own = T[a[0]] || null;
+      if (own !== z.owner) { const prev = z.owner; z.setOwner(own); if (own && m.phase === 'live') this._sayCapture(z, own, prev, m.net.byId(a[4] | 0)); }
+      z.contested = !!a[1]; z.capTeam = T[a[2]] || null; z.capK = clamp(+a[3] || 0, 0, 1);
+    });
+    const me = Array.isArray(s.me) ? this.zones[s.me[0] | 0] : null;
+    if (me) { const t = clamp(+s.me[1] || 0, 0, CAPTURE_TIME), before = this.prog.get(p); if (before && Math.floor(t) > Math.floor(before.t) && t < CAPTURE_TIME) m.audio.objective('tick'); this.prog.set(p, { zone: me, t }); }
+    else this.prog.delete(p);
+  }
+  netTick() { for (const z of this.zones) z.animate(this.m.time); }
   tick(dt) {
     const m = this.m, t = m.time;
     for (const z of this.zones) z.animate(t);

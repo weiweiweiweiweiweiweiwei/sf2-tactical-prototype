@@ -224,7 +224,7 @@ class Match {
     for (const c of this.combatants) c.alive = false;
     for (const c of this.combatants) {
       const p = this.pickSpawn(c.team, taken, false); taken.push(p);
-      if (!c.isPlayer && rb) c.setWeapon(this.botWeapon());
+      if (c.isBot && rb) c.setWeapon(this.botWeapon()); // (friends keep their own loadout)
       c.respawn(p, this.spawns[c.team].yaw);
       c.spawnProtect = rb ? 0 : CFG.spawnProtect;
     }
@@ -232,7 +232,19 @@ class Match {
     this.phase = 'freeze'; this.freezeT = FREEZE_TIME;
     if (rb) this.timeLeft = this.roundTime;
     const hud = this.app.hud; hud.showDeath(false); hud.spectate(null); hud.roundBanner(null);
+    if (this.net && this.net.role === 'host') this.net.onRound('start', this.round);
   }
+  // v29 client: the host started round n (it already respawned everyone — our soldier comes back through the snapshot)
+  clientRoundStart(n) {
+    this.round = n;
+    for (const g of this.grenades) this.physics.remove(g.dyn);
+    this.grenades.length = 0;
+    for (const s of this.effects.smokes) s.dispose(); this.effects.smokes.length = 0;
+    while (this.drops.length) this.removeDrop(this.drops[0]);
+    this.player.setSpectate(null); this.rules.startRound();
+    const hud = this.app.hud; hud.showDeath(false); hud.spectate(null); hud.roundBanner(null);
+  }
+  clientRoundEnd(winner, reason) { this._roundBanner(winner, reason); }
 
   /* ------------------------------ combat ------------------------------ */
   // Hitscan through the whole intersection list: penetrable cover (wood, glass) weakens the round,
@@ -241,6 +253,7 @@ class Match {
     const range = def.range || 150, pellet = opts.pellet !== undefined;
     const hits = this.collision.raycastAll(origin, dir, range);
     for (const h of hits) h.type = 'world';
+    const rew = shooter.isNet && this.net && this.net.rewind ? this.net.rewind(shooter) : null; // v29: a friend's shot sees what he saw
     for (const c of this.combatants) {
       if (!c.alive || c === shooter || c.team === shooter.team) continue;
       const to = TMP_V1.subVectors(c.motor.pos, origin), t = to.dot(dir);
@@ -252,6 +265,7 @@ class Match {
       for (const hb of c.hitboxes) { const r = CollisionWorld.rayBox(origin, dir, hb, range); if (r && (!best || r.t < best.t)) best = { type: 'target', t: r.t, part: hb.part, target: c }; }
       if (best) hits.push(best);
     }
+    if (rew) this.net.restore(rew);
     hits.sort((a, b) => a.t - b.t);
     if (shooter.isPlayer && (!pellet || opts.pellet === 0)) this.stats.shots++;
     let power = Math.max(1, def.penetration || 0), bodies = def.kind === 'sniper' ? 2 : def.kind === 'lmg' ? 1 : 0, mult = 1, endT = range, hitPlayer = false, kills = 0;
@@ -301,12 +315,14 @@ class Match {
   meleeTrace(shooter, origin, dir, range) {
     const w = this.collision.raycast(origin, dir, range);
     let best = w ? Object.assign(w, { world: true }) : null;
+    const rew = shooter.isNet && this.net && this.net.rewind ? this.net.rewind(shooter) : null;
     for (const c of this.combatants) {
       if (!c.alive || c === shooter || c.team === shooter.team) continue;
       if (c.motor.pos.distanceTo(origin) > range + 1.5) continue;
       c.updateHitboxes();
       for (const hb of c.hitboxes) { const h = CollisionWorld.rayBox(origin, dir, hb, range); if (h && (!best || h.t < best.t)) best = { t: h.t, target: c, part: hb.part, point: origin.clone().addScaledVector(dir, h.t) }; }
     }
+    if (rew) this.net.restore(rew);
     return best;
   }
 
@@ -456,11 +472,11 @@ class Match {
     if (valid) { const pts = this._killPoints(def, head); killer.kills++; if (head) killer.headshots++; killer.score += pts; if (killer.isPlayer) this._killAnnounce(def, head, pts, opts); this.firstBlood = false; }
     if (victim.isPlayer) p.streak = 0;
     this._killFeed(victim, killer, def, head, valid, opts);
-    if (victim.isPlayer) this.app.hud.showDeath(true, valid ? killer.name : '', def.name, head, this.rules.roundBased);
+    if (victim.isPlayer) { this.app.hud.showDeath(true, valid ? killer.name : '', def.name, head, this.rules.roundBased); if (this.rules.roundBased) this.nextSpectate(); } // v29: round modes — watch a teammate
   }
 
   nextSpectate() {
-    const mates = this.bots.filter((b) => b.team === this.player.team && b.alive);
+    const mates = this.combatants.filter((b) => b !== this.player && b.model && b.team === this.player.team && b.alive); // v29: friends (and on a client, ghosts) too
     if (!mates.length) { this.player.setSpectate(null); return; }
     const i = mates.indexOf(this.player.spectating);
     this.player.setSpectate(mates[(i + 1) % mates.length]);
@@ -473,6 +489,10 @@ class Match {
     if (this.phase !== 'live') return;
     if (winner) this.roundWins[winner]++;
     this.phase = 'roundEnd'; this.roundEndT = 4.2;
+    if (this.net && this.net.role === 'host') this.net.onRound('end', winner, reason);
+    this._roundBanner(winner, reason);
+  }
+  _roundBanner(winner, reason) {
     const mine = winner === this.player.team;
     this.app.hud.roundBanner({ title: winner ? (mine ? '我方贏得本回合' : '敵方贏得本回合') : '本回合平手', color: winner ? (winner === 'alpha' ? '#63b3ff' : '#ff5d52') : '#fff', a: this.roundWins.alpha, b: this.roundWins.bravo, sub: `ROUND ${this.round} · ${reason}` });
     this.app.speak(winner ? (mine ? 'round won' : 'round lost') : 'draw');
@@ -553,6 +573,7 @@ class Match {
   }
   // E key: relic first (Capture the Relic), then a gun under your nose, otherwise the mode's interaction.
   onInteract() {
+    if (this.isClient) return; // v29: the host decides pickups (relic: held E reaches it in the commands; weapon drops are not synced yet)
     const st = this.rules.hudState ? this.rules.hudState() : null;
     if (st && st.kind === 'relic' && st.prompt) { this.rules.interactPressed(this.player); return; }
     if (this.pickTarget) { this.pickup(this.pickTarget); return; }
@@ -674,7 +695,7 @@ class Match {
       if (np.alive) np.update(dt, alpha);
       else if (respawns && this.phase === 'live') { np.respawnT -= dt; if (np.respawnT <= 0) { const sp = this.pickSpawn(np.team); np.respawn(sp, sp.spawnYaw ?? this.spawns[np.team].yaw); } }
     }
-    if (!client) this.rules.tick(dt);
+    if (!client) this.rules.tick(dt); else if (this.rules.netTick) this.rules.netTick(dt); // v29: a client only animates the mode; its state comes from the host
     if (this.net) this.net.frame(dt);
     const t2 = performance.now();
     if (!p.alive) {

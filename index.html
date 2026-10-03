@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SF2 Tactical Prototype v28</title>
+<title>SF2 Tactical Prototype v29</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Teko:wght@300;400;500;600&family=Rajdhani:wght@500;600;700&family=Noto+Sans+TC:wght@500;700&display=swap" rel="stylesheet">
@@ -649,7 +649,7 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
 <!-- HUB (v27 大廳): create a room, or join one -->
 <div id="hub" class="screen on"><div class="hbz">
   <div class="lb-top">
-    <div class="lb-brand">SPECIAL FORCE <span>2</span><small>TACTICAL PROTOTYPE · v28</small></div>
+    <div class="lb-brand">SPECIAL FORCE <span>2</span><small>TACTICAL PROTOTYPE · v29</small></div>
     <div class="lb-room"><span class="rmk">LOBBY</span><b>大廳</b> · 配對伺服器 <span id="hubNet">連線中…</span></div>
     <label class="hub-nick">暱稱<input type="text" id="hubNick" maxlength="12" placeholder="你的名字" autocomplete="off" spellcheck="false"></label>
     <button class="btn ghost" id="hubFriends" title="好友名單、加好友">👥 好友</button>
@@ -690,7 +690,7 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
 <!-- ROOM (the room you created or joined) -->
 <div id="lobby" class="screen"><div class="lbz">
   <div class="lb-top">
-    <div class="lb-brand">SPECIAL FORCE <span>2</span><small>TACTICAL PROTOTYPE · v28</small></div>
+    <div class="lb-brand">SPECIAL FORCE <span>2</span><small>TACTICAL PROTOTYPE · v29</small></div>
     <div class="lb-room"><span class="rmk">ROOM</span><span id="lbCodeTxt">——— ———</span> · <b id="lbRoomName">單機練習房</b> · <span id="lbStatus">等待中</span></div>
     <div class="inv"><button class="btn" id="lbInvite" title="邀請朋友加入這個房間">＋ 邀請朋友</button>
       <div class="inv-pop" id="lbInvPop">
@@ -7404,10 +7404,12 @@ const BTN = { JUMP: 1, CROUCH: 2, SPRINT: 4, FIRE: 8, ALT: 16, USE: 32, RELOAD: 
 const BTN_EDGES = BTN.JUMP | BTN.RELOAD | BTN.GRAB | BTN.INTERACT | BTN.QUICK;
 
 class UserCmd {
-  constructor() { this.seq = 0; this.f = 0; this.r = 0; this.yaw = 0; this.pitch = 0; this.ay = 0; this.ap = 0; this.btn = 0; this.sw = 0; this.zoom = 0; }
+  constructor() { this.seq = 0; this.f = 0; this.r = 0; this.yaw = 0; this.pitch = 0; this.ay = 0; this.ap = 0; this.btn = 0; this.sw = 0; this.zoom = 0; this.vt = 0; }
   // f / r: −1, 0, 1 · yaw / pitch: view angles (movement heading) · ay / ap: recoil + punch on top of them = where the
   // crosshair really points · sw: weapon index + 1 requested this tick (0 = none) · zoom: ADS level
-  copy(o) { this.seq = o.seq; this.f = o.f; this.r = o.r; this.yaw = o.yaw; this.pitch = o.pitch; this.ay = o.ay; this.ap = o.ap; this.btn = o.btn; this.sw = o.sw; this.zoom = o.zoom; return this; }
+  // vt (v29, online): the host time this client was looking at (its other soldiers are drawn in the past) — the host
+  // checks this command's shots against everyone where they were at vt (lag compensation)
+  copy(o) { this.seq = o.seq; this.f = o.f; this.r = o.r; this.yaw = o.yaw; this.pitch = o.pitch; this.ay = o.ay; this.ap = o.ap; this.btn = o.btn; this.sw = o.sw; this.zoom = o.zoom; this.vt = o.vt || 0; return this; }
 }
 
 // Samples the keyboard / mouse into one UserCmd per fixed tick. Presses that start and end between two ticks (a quick
@@ -8158,7 +8160,7 @@ class NetPlayer extends Human {
       }
       this.holeT = 0; this.pending.delete(cmd.seq); ran++;
       if (this.alive) { this.yaw = cmd.yaw; this.pitch = cmd.pitch; this.aimPitch = cmd.pitch; this.aimDY = cmd.ay; this.aimDP = cmd.ap; }
-      this.curSeq = cmd.seq; // the command being simulated (tests compare it with the client's)
+      this.curSeq = cmd.seq; this.viewT = cmd.vt; // the command being simulated (tests compare it with the client's) · v29: its view time
       this.fixedUpdate(h, cmd);
       this.arsenal.tick(h, cmd);
       this.ackSeq = cmd.seq;
@@ -8845,7 +8847,9 @@ class PostFX {
 /* =====================================================================
    GAME RULES — state machine per mode. The Match drives the phases
    (freeze → live → roundEnd → over) and delegates every mode-specific
-   decision to one Rule object:
+   decision to one Rule object. Online (v29) only the host runs a rule's
+   logic; it sends netState() ~10×/s and each client applies it (applyNet)
+   and only animates (netTick), announcing what changed from its own view:
      TDMRule        team deathmatch, 3 s respawn, first to N points
      RoundsRule     elimination rounds, no respawn inside a round
      RelicRule      Capture the Relic (Blue attacks / Red defends)
@@ -8941,37 +8945,56 @@ class RelicRule extends RoundsRule {
     for (const o of [g, this.beam, ex]) { o.traverse((c) => { c.userData.noAO = true; }); m.scene.add(o); }
   }
   startRound() {
+    this.returnedBy = 0;
     this.state = 'home'; this.carrier = null; this.pos = this.home.clone(); this.dropT = 0; this.ping = null; this.pingT = 0; this.pressed = new Set();
     for (const c of this.m.combatants) c.carrying = false;
   }
   interactPressed(c) { this.pressed.add(c); }
   _pickup(c) {
-    const m = this.m;
     this.state = 'carried'; this.carrier = c; c.carrying = true; this.pingT = 0;
-    m.audio.objective('pickup');
-    const mine = c.team === m.player.team;
-    m.app.hud.announce(c.isPlayer ? '你拿到聖物了！' : mine ? '我方奪得聖物' : '敵方奪走了聖物！', c.isPlayer ? '衝回藍色撤離點' : `${c.name} 正在撤離`);
+    this._sayPickup(c);
     c.score += POINTS.relic / 2;
-    if (c.isPlayer) m.app.hud.points(`+${POINTS.relic / 2}  奪取聖物`);
+    if (c.isPlayer) this.m.app.hud.points(`+${POINTS.relic / 2}  奪取聖物`);
+  }
+  _sayPickup(c) {
+    const m = this.m, mine = c.team === m.player.team; m.audio.objective('pickup');
+    m.app.hud.announce(c.isPlayer ? '你拿到聖物了！' : mine ? '我方奪得聖物' : '敵方奪走了聖物！', c.isPlayer ? '衝回藍色撤離點' : `${c.name} 正在撤離`);
   }
   _drop(at) {
     const m = this.m, g = m.collision.groundBelow(at.x, at.y + 1, at.z, 0.2, 30);
     if (this.carrier) this.carrier.carrying = false;
     this.state = 'dropped'; this.carrier = null; this.dropT = 25;
     this.pos.set(at.x, (g ? g.y : at.y) + 0.55, at.z);
-    m.audio.objective('drop'); m.app.hud.announce('聖物掉落！', '防守方觸碰即可歸位 · 25 秒後自動歸位');
+    this._sayDrop();
   }
+  _sayDrop() { this.m.audio.objective('drop'); this.m.app.hud.announce('聖物掉落！', '防守方觸碰即可歸位 · 25 秒後自動歸位'); }
   _return(by) {
-    const m = this.m;
     this.state = 'home'; this.pos.copy(this.home); this.carrier = null;
-    m.audio.objective(by && by.team === m.player.team ? 'capture' : 'lost');
-    m.app.hud.announce('聖物已歸位', by ? `${by.isPlayer ? '你' : by.name} 奪回了聖物` : '自動歸位');
-    if (by) { by.score += 100; if (by.isPlayer) m.app.hud.points('+100  奪回聖物'); }
+    this._sayReturn(by);
+    if (by) { by.score += 100; if (by.isPlayer) this.m.app.hud.points('+100  奪回聖物'); }
   }
+  _sayReturn(by) {
+    const m = this.m; m.audio.objective(by && by.team === m.player.team ? 'capture' : 'lost');
+    m.app.hud.announce('聖物已歸位', by ? `${by.isPlayer ? '你' : by.name} 奪回了聖物` : '自動歸位');
+  }
+  // v29 online: where the relic is and who has it (the last defender to touch a dropped relic = who returned it)
+  netState() { return { st: this.state, car: this.carrier ? this.carrier.netId : 0, p: v3arr(this.pos), dt: +this.dropT.toFixed(1), by: this.returnedBy || 0 }; }
+  applyNet(s) {
+    const m = this.m, prev = this.state, st = ['home', 'carried', 'dropped', 'extracted'].includes(s.st) ? s.st : 'home';
+    const car = st === 'carried' ? m.net.byId(s.car | 0) : null;
+    if (this.carrier && this.carrier !== car) this.carrier.carrying = false;
+    this.state = st; this.carrier = car; if (car) car.carrying = true;
+    if (st !== 'carried' && Array.isArray(s.p)) this.pos.set(+s.p[0] || 0, +s.p[1] || 0, +s.p[2] || 0);
+    this.dropT = Math.max(0, +s.dt || 0);
+    if (prev === st || m.phase !== 'live') return;
+    if (st === 'carried' && car) this._sayPickup(car);
+    else if (st === 'dropped') this._sayDrop();
+    else if (st === 'home' && prev !== 'extracted') this._sayReturn(s.by ? m.net.byId(s.by | 0) : null);
+  }
+  netTick(dt) { this._visuals(dt); }
   onDeath(c) { if (this.carrier === c) this._drop(c.motor.pos.clone()); }
-  tick(dt) {
+  _visuals(dt) {
     const m = this.m, t = m.time;
-    // visuals
     this.core.rotation.y += dt * 1.6; this.r1.rotation.z += dt * 1.1; this.r2.rotation.y += dt * 0.8;
     let vis = this.pos;
     if (this.state === 'carried' && this.carrier) {
@@ -8981,6 +9004,10 @@ class RelicRule extends RoundsRule {
     this.group.position.set(vis.x, vis.y + Math.sin(t * 2.2) * 0.07, vis.z);
     this.beam.visible = this.state !== 'carried'; this.beam.position.set(this.pos.x, this.pos.y + 30, this.pos.z);
     this.exGroup.visible = this.state === 'carried'; this.exRing.material.opacity = 0.6 + 0.3 * Math.sin(t * 5);
+  }
+  tick(dt) {
+    const m = this.m;
+    this._visuals(dt);
     if (m.phase !== 'live') { this.pressed.clear(); return; }
     // carrier reached the extraction zone
     if (this.state === 'carried') {
@@ -8991,7 +9018,7 @@ class RelicRule extends RoundsRule {
         m.score[c.team] += POINTS.relic; m.audio.objective('extract'); c.carrying = false;
         this.state = 'extracted'; m.endRound(this.attack, '聖物成功撤離'); return;
       }
-    } else if (this.state === 'dropped') { this.dropT -= dt; if (this.dropT <= 0) { this._return(null); } }
+    } else if (this.state === 'dropped') { this.dropT -= dt; if (this.dropT <= 0) { this.returnedBy = 0; this._return(null); } }
     // pickup / return
     if (this.state === 'home' || this.state === 'dropped') {
       for (const c of m.combatants) {
@@ -8999,7 +9026,7 @@ class RelicRule extends RoundsRule {
         const d = Math.hypot(c.motor.pos.x - this.pos.x, c.motor.pos.z - this.pos.z), dy = Math.abs(c.motor.pos.y + 0.9 - this.pos.y);
         if (d > 1.8 || dy > 2.2) continue;
         if (c.team === this.attack && (this.pressed.has(c) || c.holdE)) { this._pickup(c); break; }
-        if (c.team === this.defend && this.state === 'dropped') { this._return(c); break; }
+        if (c.team === this.defend && this.state === 'dropped') { this.returnedBy = c.netId; this._return(c); break; }
       }
     }
     this.pressed.clear();
@@ -9099,16 +9126,36 @@ class DomRule extends Rule {
   killTeamPoints() { return 5; }
   onDeath(c) { this.prog.delete(c); }
   _capture(z, c) {
-    const m = this.m, prev = z.owner; z.setOwner(c.team);
+    const m = this.m, prev = z.owner; z.setOwner(c.team); z.by = c.netId;
     for (const [k, v] of this.prog) if (v.zone === z) this.prog.delete(k);
     c.score += POINTS.capture; m.addTeam(c.team, 10);
-    const mine = c.team === m.player.team;
-    m.audio.objective(mine ? 'capture' : 'lost');
     if (c.isPlayer) m.app.hud.points(`+${POINTS.capture}  佔領 ${z.id} 點`);
-    const all = this.owned(c.team) === this.zones.length;
-    m.app.hud.announce(mine ? `${z.id} 點已被我方佔領` : `敵方佔領了 ${z.id} 點`, all ? (mine ? '三點全佔！敵方無法得分' : '敵方三點全佔！我方被封鎖得分') : prev ? '據點易手' : '');
-    m.app.hud.killfeed(c.name, c.team, `佔領 ${z.id}`, '', c.team, false, c.isPlayer);
+    this._sayCapture(z, c.team, prev, c);
   }
+  _sayCapture(z, team, prev, c) {
+    const m = this.m, mine = team === m.player.team, all = this.owned(team) === this.zones.length;
+    m.audio.objective(mine ? 'capture' : 'lost');
+    m.app.hud.announce(mine ? `${z.id} 點已被我方佔領` : `敵方佔領了 ${z.id} 點`, all ? (mine ? '三點全佔！敵方無法得分' : '敵方三點全佔！我方被封鎖得分') : prev ? '據點易手' : '');
+    if (c) m.app.hud.killfeed(c.name, team, `佔領 ${z.id}`, '', team, false, c.isPlayer);
+  }
+  // v29 online: every zone [owner, contested, capturing team, progress, captured by] + this friend's own capture progress
+  netState(np) {
+    const T = (t) => (t === 'alpha' ? 1 : t === 'bravo' ? 2 : 0), pr = np ? this.prog.get(np) : null;
+    return { z: this.zones.map((z) => [T(z.owner), z.contested ? 1 : 0, T(z.capTeam), +z.capK.toFixed(3), z.by || 0]), me: pr ? [this.zones.indexOf(pr.zone), +pr.t.toFixed(2)] : null };
+  }
+  applyNet(s) {
+    const m = this.m, T = [null, 'alpha', 'bravo'], p = m.player;
+    if (Array.isArray(s.z)) s.z.forEach((a, i) => {
+      const z = this.zones[i]; if (!z || !Array.isArray(a)) return;
+      const own = T[a[0]] || null;
+      if (own !== z.owner) { const prev = z.owner; z.setOwner(own); if (own && m.phase === 'live') this._sayCapture(z, own, prev, m.net.byId(a[4] | 0)); }
+      z.contested = !!a[1]; z.capTeam = T[a[2]] || null; z.capK = clamp(+a[3] || 0, 0, 1);
+    });
+    const me = Array.isArray(s.me) ? this.zones[s.me[0] | 0] : null;
+    if (me) { const t = clamp(+s.me[1] || 0, 0, CAPTURE_TIME), before = this.prog.get(p); if (before && Math.floor(t) > Math.floor(before.t) && t < CAPTURE_TIME) m.audio.objective('tick'); this.prog.set(p, { zone: me, t }); }
+    else this.prog.delete(p);
+  }
+  netTick() { for (const z of this.zones) z.animate(this.m.time); }
   tick(dt) {
     const m = this.m, t = m.time;
     for (const z of this.zones) z.animate(t);
@@ -9413,7 +9460,7 @@ class Match {
     for (const c of this.combatants) c.alive = false;
     for (const c of this.combatants) {
       const p = this.pickSpawn(c.team, taken, false); taken.push(p);
-      if (!c.isPlayer && rb) c.setWeapon(this.botWeapon());
+      if (c.isBot && rb) c.setWeapon(this.botWeapon()); // (friends keep their own loadout)
       c.respawn(p, this.spawns[c.team].yaw);
       c.spawnProtect = rb ? 0 : CFG.spawnProtect;
     }
@@ -9421,7 +9468,19 @@ class Match {
     this.phase = 'freeze'; this.freezeT = FREEZE_TIME;
     if (rb) this.timeLeft = this.roundTime;
     const hud = this.app.hud; hud.showDeath(false); hud.spectate(null); hud.roundBanner(null);
+    if (this.net && this.net.role === 'host') this.net.onRound('start', this.round);
   }
+  // v29 client: the host started round n (it already respawned everyone — our soldier comes back through the snapshot)
+  clientRoundStart(n) {
+    this.round = n;
+    for (const g of this.grenades) this.physics.remove(g.dyn);
+    this.grenades.length = 0;
+    for (const s of this.effects.smokes) s.dispose(); this.effects.smokes.length = 0;
+    while (this.drops.length) this.removeDrop(this.drops[0]);
+    this.player.setSpectate(null); this.rules.startRound();
+    const hud = this.app.hud; hud.showDeath(false); hud.spectate(null); hud.roundBanner(null);
+  }
+  clientRoundEnd(winner, reason) { this._roundBanner(winner, reason); }
 
   /* ------------------------------ combat ------------------------------ */
   // Hitscan through the whole intersection list: penetrable cover (wood, glass) weakens the round,
@@ -9430,6 +9489,7 @@ class Match {
     const range = def.range || 150, pellet = opts.pellet !== undefined;
     const hits = this.collision.raycastAll(origin, dir, range);
     for (const h of hits) h.type = 'world';
+    const rew = shooter.isNet && this.net && this.net.rewind ? this.net.rewind(shooter) : null; // v29: a friend's shot sees what he saw
     for (const c of this.combatants) {
       if (!c.alive || c === shooter || c.team === shooter.team) continue;
       const to = TMP_V1.subVectors(c.motor.pos, origin), t = to.dot(dir);
@@ -9441,6 +9501,7 @@ class Match {
       for (const hb of c.hitboxes) { const r = CollisionWorld.rayBox(origin, dir, hb, range); if (r && (!best || r.t < best.t)) best = { type: 'target', t: r.t, part: hb.part, target: c }; }
       if (best) hits.push(best);
     }
+    if (rew) this.net.restore(rew);
     hits.sort((a, b) => a.t - b.t);
     if (shooter.isPlayer && (!pellet || opts.pellet === 0)) this.stats.shots++;
     let power = Math.max(1, def.penetration || 0), bodies = def.kind === 'sniper' ? 2 : def.kind === 'lmg' ? 1 : 0, mult = 1, endT = range, hitPlayer = false, kills = 0;
@@ -9490,12 +9551,14 @@ class Match {
   meleeTrace(shooter, origin, dir, range) {
     const w = this.collision.raycast(origin, dir, range);
     let best = w ? Object.assign(w, { world: true }) : null;
+    const rew = shooter.isNet && this.net && this.net.rewind ? this.net.rewind(shooter) : null;
     for (const c of this.combatants) {
       if (!c.alive || c === shooter || c.team === shooter.team) continue;
       if (c.motor.pos.distanceTo(origin) > range + 1.5) continue;
       c.updateHitboxes();
       for (const hb of c.hitboxes) { const h = CollisionWorld.rayBox(origin, dir, hb, range); if (h && (!best || h.t < best.t)) best = { t: h.t, target: c, part: hb.part, point: origin.clone().addScaledVector(dir, h.t) }; }
     }
+    if (rew) this.net.restore(rew);
     return best;
   }
 
@@ -9645,11 +9708,11 @@ class Match {
     if (valid) { const pts = this._killPoints(def, head); killer.kills++; if (head) killer.headshots++; killer.score += pts; if (killer.isPlayer) this._killAnnounce(def, head, pts, opts); this.firstBlood = false; }
     if (victim.isPlayer) p.streak = 0;
     this._killFeed(victim, killer, def, head, valid, opts);
-    if (victim.isPlayer) this.app.hud.showDeath(true, valid ? killer.name : '', def.name, head, this.rules.roundBased);
+    if (victim.isPlayer) { this.app.hud.showDeath(true, valid ? killer.name : '', def.name, head, this.rules.roundBased); if (this.rules.roundBased) this.nextSpectate(); } // v29: round modes — watch a teammate
   }
 
   nextSpectate() {
-    const mates = this.bots.filter((b) => b.team === this.player.team && b.alive);
+    const mates = this.combatants.filter((b) => b !== this.player && b.model && b.team === this.player.team && b.alive); // v29: friends (and on a client, ghosts) too
     if (!mates.length) { this.player.setSpectate(null); return; }
     const i = mates.indexOf(this.player.spectating);
     this.player.setSpectate(mates[(i + 1) % mates.length]);
@@ -9662,6 +9725,10 @@ class Match {
     if (this.phase !== 'live') return;
     if (winner) this.roundWins[winner]++;
     this.phase = 'roundEnd'; this.roundEndT = 4.2;
+    if (this.net && this.net.role === 'host') this.net.onRound('end', winner, reason);
+    this._roundBanner(winner, reason);
+  }
+  _roundBanner(winner, reason) {
     const mine = winner === this.player.team;
     this.app.hud.roundBanner({ title: winner ? (mine ? '我方贏得本回合' : '敵方贏得本回合') : '本回合平手', color: winner ? (winner === 'alpha' ? '#63b3ff' : '#ff5d52') : '#fff', a: this.roundWins.alpha, b: this.roundWins.bravo, sub: `ROUND ${this.round} · ${reason}` });
     this.app.speak(winner ? (mine ? 'round won' : 'round lost') : 'draw');
@@ -9742,6 +9809,7 @@ class Match {
   }
   // E key: relic first (Capture the Relic), then a gun under your nose, otherwise the mode's interaction.
   onInteract() {
+    if (this.isClient) return; // v29: the host decides pickups (relic: held E reaches it in the commands; weapon drops are not synced yet)
     const st = this.rules.hudState ? this.rules.hudState() : null;
     if (st && st.kind === 'relic' && st.prompt) { this.rules.interactPressed(this.player); return; }
     if (this.pickTarget) { this.pickup(this.pickTarget); return; }
@@ -9863,7 +9931,7 @@ class Match {
       if (np.alive) np.update(dt, alpha);
       else if (respawns && this.phase === 'live') { np.respawnT -= dt; if (np.respawnT <= 0) { const sp = this.pickSpawn(np.team); np.respawn(sp, sp.spawnYaw ?? this.spawns[np.team].yaw); } }
     }
-    if (!client) this.rules.tick(dt);
+    if (!client) this.rules.tick(dt); else if (this.rules.netTick) this.rules.netTick(dt); // v29: a client only animates the mode; its state comes from the host
     if (this.net) this.net.frame(dt);
     const t2 = performance.now();
     if (!p.alive) {
@@ -9965,10 +10033,11 @@ class Match {
      testing; WebRTC + a signalling service take its place in v26 with the same send / onMessage interface; from v27 a
      match talks through its room's RoomLink (18c_room.js), so the connection outlives the match.
    ===================================================================== */
-const NET_VERSION = 27;
+const NET_VERSION = 29;
 const NET_WEAPONS = Object.keys(WEAPON_DEFS), NET_WI = Object.fromEntries(NET_WEAPONS.map((k, i) => [k, i]));
 const NET_PHASES = ['loading', 'freeze', 'live', 'roundEnd', 'over'];
 const NET_SNAP_HZ = 30, NET_CMD_EVERY = 2, NET_INTERP = 0.1; // snapshots / s · send a cmd packet every 2nd tick (60 Hz) · ghosts drawn 100 ms behind
+const NET_REWIND_MAX = 0.4; // v29 lag compensation: at most 400 ms back (≈ 150 ms ping each way + 100 ms interpolation; slower links are not trusted)
 
 class LoopbackTransport {
   constructor(room, opts = {}) {
@@ -9997,18 +10066,19 @@ class LoopbackTransport {
 
 // Binary packets for the two high-rate streams. Everything else is small JSON (reliable events).
 const NetCodec = {
-  CMD: 1, SNAP: 2, CMD_SIZE: 22, ENT_SIZE: 22, SHOT_SIZE: 27,
+  CMD: 1, SNAP: 2, CMD_SIZE: 26, ENT_SIZE: 22, SHOT_SIZE: 27,
   encodeCmds(list) {
-    const v = new DataView(new ArrayBuffer(2 + list.length * 22)); v.setUint8(0, 1); v.setUint8(1, list.length);
+    const v = new DataView(new ArrayBuffer(2 + list.length * 26)); v.setUint8(0, 1); v.setUint8(1, list.length);
     let o = 2;
-    for (const c of list) { v.setUint32(o, c.seq); v.setInt8(o + 4, c.f); v.setInt8(o + 5, c.r); v.setUint16(o + 6, c.btn); v.setUint8(o + 8, c.sw); v.setUint8(o + 9, c.zoom); v.setFloat32(o + 10, c.yaw); v.setFloat32(o + 14, c.pitch); v.setInt16(o + 18, clamp(Math.round(c.ay * 10000), -32000, 32000)); v.setInt16(o + 20, clamp(Math.round(c.ap * 10000), -32000, 32000)); o += 22; }
+    for (const c of list) { v.setUint32(o, c.seq); v.setInt8(o + 4, c.f); v.setInt8(o + 5, c.r); v.setUint16(o + 6, c.btn); v.setUint8(o + 8, c.sw); v.setUint8(o + 9, c.zoom); v.setFloat32(o + 10, c.yaw); v.setFloat32(o + 14, c.pitch); v.setInt16(o + 18, clamp(Math.round(c.ay * 10000), -32000, 32000)); v.setInt16(o + 20, clamp(Math.round(c.ap * 10000), -32000, 32000)); v.setFloat32(o + 22, c.vt || 0); o += 26; }
     return v.buffer;
   },
   decodeCmds(buf) {
-    const v = new DataView(buf), n = v.getUint8(1), out = []; let o = 2;
-    for (let i = 0; i < n; i++, o += 22) {
+    const v = new DataView(buf), n = Math.min(v.getUint8(1), Math.floor((buf.byteLength - 2) / 26)), out = []; let o = 2;
+    for (let i = 0; i < n; i++, o += 26) {
       const c = new UserCmd(); c.seq = v.getUint32(o); c.f = clamp(v.getInt8(o + 4), -1, 1); c.r = clamp(v.getInt8(o + 5), -1, 1); c.btn = v.getUint16(o + 6); c.sw = v.getUint8(o + 8); c.zoom = Math.min(3, v.getUint8(o + 9));
       c.yaw = v.getFloat32(o + 10); c.pitch = clamp(v.getFloat32(o + 14), -1.6, 1.6); if (!Number.isFinite(c.yaw)) c.yaw = 0; if (!Number.isFinite(c.pitch)) c.pitch = 0; c.ay = v.getInt16(o + 18) / 10000; c.ap = v.getInt16(o + 20) / 10000;
+      c.vt = v.getFloat32(o + 22); if (!Number.isFinite(c.vt)) c.vt = 0;
       out.push(c);
     }
     return out;
@@ -10086,7 +10156,7 @@ class NetHost {
     if (d.v !== NET_VERSION) { this.t.send(from, { k: 'reject', why: '版本不同，請重新整理頁面' }); return; }
     const m = this.m;
     if (!this.peers.has(from)) {
-      if (m.phase === 'over' || m.rules.roundBased) { this.t.send(from, { k: 'reject', why: m.phase === 'over' ? '這場對戰已經結束' : '這個賽制還不支援連線：請房主改成「團隊死鬥」' }); return; }
+      if (m.phase === 'over') { this.t.send(from, { k: 'reject', why: '這場對戰已經結束' }); return; } // v29: every mode works online
       const team = d.team === 'alpha' || d.team === 'bravo' ? d.team : this._balance();
       const bot = m.bots.filter((b) => b.team === team).pop(); if (bot) this._removeBot(bot); // a friend takes a bot's place
       const np = new NetPlayer(m, team, safeName(d.name, 'Friend'), from, d);
@@ -10123,6 +10193,10 @@ class NetHost {
     const m = this.m;
     for (const [peer, np] of this.peers) if (m.time - np.heardT > 10) this._drop(peer, '連線中斷');
     if (!this.peers.size) { this.shots.length = 0; return; } // v27: every room match has a NetHost — alone, it sends nothing
+    this._record();
+    // v29: the mode's state (relic, zones …) 10× a second; each friend gets his own view (his capture progress)
+    this.ruleT = (this.ruleT || 0) - dt;
+    if (this.ruleT <= 0 && m.rules.netState) { this.ruleT = 0.1; for (const [peer, np] of this.peers) this.t.send(peer, { k: 'rs', s: m.rules.netState(np) }, false); }
     this.snapT -= dt; if (this.snapT > 0) return;
     this.snapT = Math.max(0, this.snapT + 1 / NET_SNAP_HZ); this.tick++;
     const ents = m.combatants.filter((c) => !c.removed).map((c) => netEntity(m, c)), shots = this.shots.splice(0);
@@ -10135,7 +10209,37 @@ class NetHost {
       this.t.send(peer, NetCodec.encodeSnap(s), false);
     }
   }
+  // v29 lag compensation. Every soldier's pose is remembered (~60 per second, last second); a friend's shot is checked
+  // against everyone where HE saw them — his command says which host time his screen showed (cmd.vt), at most 250 ms ago.
+  _record() {
+    const t = this.m.time;
+    for (const c of this.m.combatants) {
+      const H = c.lagH || (c.lagH = []), last = H[H.length - 1];
+      if (last && t - last.t < 0.015) continue;
+      H.push({ t, x: c.motor.pos.x, y: c.motor.pos.y, z: c.motor.pos.z, cr: c.motor.crouching, yaw: c.yaw, alive: c.alive }); if (H.length > 70) H.shift();
+    }
+  }
+  // move everyone (but the shooter) back to time vt; returns what restore() needs. Soldiers who were dead then — or
+  // respawned since — are left where they are.
+  rewind(shooter) {
+    const m = this.m, vt = shooter.viewT; if (!vt || window.__noRewind) return null; // (__noRewind: tools/_lagcomp.mjs compares)
+    const T = clamp(vt, m.time - NET_REWIND_MAX, m.time), moved = [];
+    for (const c of m.combatants) {
+      if (c === shooter || !c.alive || !c.lagH || c.lagH.length < 2) continue;
+      const H = c.lagH; if (T >= H[H.length - 1].t) continue;
+      let i = H.length - 1; while (i > 0 && H[i - 1].t > T) i--;
+      const a = H[Math.max(0, i - 1)], b = H[i], k = b.t > a.t ? clamp((T - a.t) / (b.t - a.t), 0, 1) : 1;
+      if (!a.alive || !b.alive || Math.hypot(b.x - a.x, b.z - a.z) > 2) continue; // dead, or a teleport (respawn) in between
+      const p = c.motor.pos; moved.push({ c, x: p.x, y: p.y, z: p.z, cr: c.motor.crouching, yaw: c.yaw });
+      p.set(lerp(a.x, b.x, k), lerp(a.y, b.y, k), lerp(a.z, b.z, k)); c.motor.crouching = k < 0.5 ? a.cr : b.cr; c.yaw = a.yaw + wrapAngle(b.yaw - a.yaw) * k;
+    }
+    this.rewound = (this.rewound || 0) + moved.length;
+    return moved;
+  }
+  restore(moved) { if (moved) for (const s of moved) { s.c.motor.pos.set(s.x, s.y, s.z); s.c.motor.crouching = s.cr; s.c.yaw = s.yaw; } }
+
   // hooks called by the match
+  onRound(ev, a, b) { for (const [peer] of this.peers) this.t.send(peer, ev === 'start' ? { k: 'round', ev, n: a } : { k: 'round', ev, w: a || null, why: String(b || '').slice(0, 30) }); }
   onShot(c, from, to, def) { if (this.peers.size && this.shots.length < 120) this.shots.push({ id: c.netId, w: NET_WI[def.id] ?? 0, from: [from.x, from.y, from.z], to: [to.x, to.y, to.z] }); }
   onHit(attacker, victim, kind, point) { if (attacker.isNet && attacker.peer) this.t.send(attacker.peer, { k: 'hit', kind, pt: point ? v3arr(point) : null }); }
   onRemoteDamaged(np, amount, from) { this.t.send(np.peer, { k: 'dmg', amt: Math.round(amount), hp: Math.max(0, Math.round(np.hp)), from: v3arr(from) }); }
@@ -10193,6 +10297,8 @@ class NetClient {
     } else if (d.k === 'dmg') { const p = m.player; if (p.alive) { p.hp = d.hp; p.onDamaged(d.amt, null, new THREE.Vector3(...d.from)); } }
     else if (d.k === 'flash') { m.app.post.flash(d.s, 0.6 + 4.2 * d.s); m.audio.deafen(d.s * 0.9, 1 + 3 * d.s); }
     else if (d.k === 'roster') { if (d.add) this._ghost(d.add); if (d.remove) this._unghost(d.remove); }
+    else if (d.k === 'round') { if (d.ev === 'start') m.clientRoundStart(d.n | 0); else if (d.ev === 'end') m.clientRoundEnd(d.w === 'alpha' || d.w === 'bravo' ? d.w : null, String(d.why || '').slice(0, 30)); }
+    else if (d.k === 'rs') { if (m.rules.applyNet && d.s && typeof d.s === 'object') { try { m.rules.applyNet(d.s); } catch (e) { console.warn('[net] rule state', e); } } }
     else if (d.k === 'end') { if (d.why) m.app.hud.toast(String(d.why).slice(0, 30)); m.winner = d.winner === 'alpha' || d.winner === 'bravo' ? d.winner : null; m.phase = 'live'; m.endMatch(m.winner); }
   }
 
@@ -10212,6 +10318,7 @@ class NetClient {
 
   // after each local fixed step: remember where prediction put us for this command, send commands at 60 Hz
   afterLocalStep(cmd) {
+    cmd.vt = this.hostClock === null ? 0 : this.hostClock - NET_INTERP; // v29: what our screen shows right now, in host time
     const p = this.m.player.motor.pos; this.hist[cmd.seq & 255] = { seq: cmd.seq, x: p.x, y: p.y, z: p.z };
     this.sent.push(new UserCmd().copy(cmd)); if (this.sent.length > 4) this.sent.shift();
     if (++this.stepN % NET_CMD_EVERY === 0) this.t.send(this.hostId, NetCodec.encodeCmds(this.sent), false);
@@ -11217,7 +11324,6 @@ class App {
     $('lbPub').checked = !!(r && r.pub); $('lbPubRow').style.display = r && r.role === 'host' ? '' : 'none';
     const sb = $('lbStart'); let txt = '出 發 · GO', off = false, msg = '';
     if (guest) { if (r.phase === 'playing' && r.mcfg) txt = '加入對戰 · JOIN'; else { txt = '等待房主出發'; off = true; msg = r.entered ? '地圖和模式由房主設定 · 你可以選擇隊伍和配裝' : ''; } }
-    else if (r && r.members.length > 1 && L.rule !== 'tdm') { off = true; msg = '有朋友在房間時，目前只能選「團隊死鬥」（其他賽制還不支援連線）'; }
     sb.textContent = txt; sb.disabled = off; sb.classList.toggle('wait', off); $('lbMsg').textContent = msg;
     this.renderFriends(); // invite buttons depend on our room
   }

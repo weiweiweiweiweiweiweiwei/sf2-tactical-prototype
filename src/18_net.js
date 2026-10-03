@@ -7,10 +7,11 @@
      testing; WebRTC + a signalling service take its place in v26 with the same send / onMessage interface; from v27 a
      match talks through its room's RoomLink (18c_room.js), so the connection outlives the match.
    ===================================================================== */
-const NET_VERSION = 27;
+const NET_VERSION = 29;
 const NET_WEAPONS = Object.keys(WEAPON_DEFS), NET_WI = Object.fromEntries(NET_WEAPONS.map((k, i) => [k, i]));
 const NET_PHASES = ['loading', 'freeze', 'live', 'roundEnd', 'over'];
 const NET_SNAP_HZ = 30, NET_CMD_EVERY = 2, NET_INTERP = 0.1; // snapshots / s · send a cmd packet every 2nd tick (60 Hz) · ghosts drawn 100 ms behind
+const NET_REWIND_MAX = 0.4; // v29 lag compensation: at most 400 ms back (≈ 150 ms ping each way + 100 ms interpolation; slower links are not trusted)
 
 class LoopbackTransport {
   constructor(room, opts = {}) {
@@ -39,18 +40,19 @@ class LoopbackTransport {
 
 // Binary packets for the two high-rate streams. Everything else is small JSON (reliable events).
 const NetCodec = {
-  CMD: 1, SNAP: 2, CMD_SIZE: 22, ENT_SIZE: 22, SHOT_SIZE: 27,
+  CMD: 1, SNAP: 2, CMD_SIZE: 26, ENT_SIZE: 22, SHOT_SIZE: 27,
   encodeCmds(list) {
-    const v = new DataView(new ArrayBuffer(2 + list.length * 22)); v.setUint8(0, 1); v.setUint8(1, list.length);
+    const v = new DataView(new ArrayBuffer(2 + list.length * 26)); v.setUint8(0, 1); v.setUint8(1, list.length);
     let o = 2;
-    for (const c of list) { v.setUint32(o, c.seq); v.setInt8(o + 4, c.f); v.setInt8(o + 5, c.r); v.setUint16(o + 6, c.btn); v.setUint8(o + 8, c.sw); v.setUint8(o + 9, c.zoom); v.setFloat32(o + 10, c.yaw); v.setFloat32(o + 14, c.pitch); v.setInt16(o + 18, clamp(Math.round(c.ay * 10000), -32000, 32000)); v.setInt16(o + 20, clamp(Math.round(c.ap * 10000), -32000, 32000)); o += 22; }
+    for (const c of list) { v.setUint32(o, c.seq); v.setInt8(o + 4, c.f); v.setInt8(o + 5, c.r); v.setUint16(o + 6, c.btn); v.setUint8(o + 8, c.sw); v.setUint8(o + 9, c.zoom); v.setFloat32(o + 10, c.yaw); v.setFloat32(o + 14, c.pitch); v.setInt16(o + 18, clamp(Math.round(c.ay * 10000), -32000, 32000)); v.setInt16(o + 20, clamp(Math.round(c.ap * 10000), -32000, 32000)); v.setFloat32(o + 22, c.vt || 0); o += 26; }
     return v.buffer;
   },
   decodeCmds(buf) {
-    const v = new DataView(buf), n = v.getUint8(1), out = []; let o = 2;
-    for (let i = 0; i < n; i++, o += 22) {
+    const v = new DataView(buf), n = Math.min(v.getUint8(1), Math.floor((buf.byteLength - 2) / 26)), out = []; let o = 2;
+    for (let i = 0; i < n; i++, o += 26) {
       const c = new UserCmd(); c.seq = v.getUint32(o); c.f = clamp(v.getInt8(o + 4), -1, 1); c.r = clamp(v.getInt8(o + 5), -1, 1); c.btn = v.getUint16(o + 6); c.sw = v.getUint8(o + 8); c.zoom = Math.min(3, v.getUint8(o + 9));
       c.yaw = v.getFloat32(o + 10); c.pitch = clamp(v.getFloat32(o + 14), -1.6, 1.6); if (!Number.isFinite(c.yaw)) c.yaw = 0; if (!Number.isFinite(c.pitch)) c.pitch = 0; c.ay = v.getInt16(o + 18) / 10000; c.ap = v.getInt16(o + 20) / 10000;
+      c.vt = v.getFloat32(o + 22); if (!Number.isFinite(c.vt)) c.vt = 0;
       out.push(c);
     }
     return out;
@@ -128,7 +130,7 @@ class NetHost {
     if (d.v !== NET_VERSION) { this.t.send(from, { k: 'reject', why: '版本不同，請重新整理頁面' }); return; }
     const m = this.m;
     if (!this.peers.has(from)) {
-      if (m.phase === 'over' || m.rules.roundBased) { this.t.send(from, { k: 'reject', why: m.phase === 'over' ? '這場對戰已經結束' : '這個賽制還不支援連線：請房主改成「團隊死鬥」' }); return; }
+      if (m.phase === 'over') { this.t.send(from, { k: 'reject', why: '這場對戰已經結束' }); return; } // v29: every mode works online
       const team = d.team === 'alpha' || d.team === 'bravo' ? d.team : this._balance();
       const bot = m.bots.filter((b) => b.team === team).pop(); if (bot) this._removeBot(bot); // a friend takes a bot's place
       const np = new NetPlayer(m, team, safeName(d.name, 'Friend'), from, d);
@@ -165,6 +167,10 @@ class NetHost {
     const m = this.m;
     for (const [peer, np] of this.peers) if (m.time - np.heardT > 10) this._drop(peer, '連線中斷');
     if (!this.peers.size) { this.shots.length = 0; return; } // v27: every room match has a NetHost — alone, it sends nothing
+    this._record();
+    // v29: the mode's state (relic, zones …) 10× a second; each friend gets his own view (his capture progress)
+    this.ruleT = (this.ruleT || 0) - dt;
+    if (this.ruleT <= 0 && m.rules.netState) { this.ruleT = 0.1; for (const [peer, np] of this.peers) this.t.send(peer, { k: 'rs', s: m.rules.netState(np) }, false); }
     this.snapT -= dt; if (this.snapT > 0) return;
     this.snapT = Math.max(0, this.snapT + 1 / NET_SNAP_HZ); this.tick++;
     const ents = m.combatants.filter((c) => !c.removed).map((c) => netEntity(m, c)), shots = this.shots.splice(0);
@@ -177,7 +183,37 @@ class NetHost {
       this.t.send(peer, NetCodec.encodeSnap(s), false);
     }
   }
+  // v29 lag compensation. Every soldier's pose is remembered (~60 per second, last second); a friend's shot is checked
+  // against everyone where HE saw them — his command says which host time his screen showed (cmd.vt), at most 250 ms ago.
+  _record() {
+    const t = this.m.time;
+    for (const c of this.m.combatants) {
+      const H = c.lagH || (c.lagH = []), last = H[H.length - 1];
+      if (last && t - last.t < 0.015) continue;
+      H.push({ t, x: c.motor.pos.x, y: c.motor.pos.y, z: c.motor.pos.z, cr: c.motor.crouching, yaw: c.yaw, alive: c.alive }); if (H.length > 70) H.shift();
+    }
+  }
+  // move everyone (but the shooter) back to time vt; returns what restore() needs. Soldiers who were dead then — or
+  // respawned since — are left where they are.
+  rewind(shooter) {
+    const m = this.m, vt = shooter.viewT; if (!vt || window.__noRewind) return null; // (__noRewind: tools/_lagcomp.mjs compares)
+    const T = clamp(vt, m.time - NET_REWIND_MAX, m.time), moved = [];
+    for (const c of m.combatants) {
+      if (c === shooter || !c.alive || !c.lagH || c.lagH.length < 2) continue;
+      const H = c.lagH; if (T >= H[H.length - 1].t) continue;
+      let i = H.length - 1; while (i > 0 && H[i - 1].t > T) i--;
+      const a = H[Math.max(0, i - 1)], b = H[i], k = b.t > a.t ? clamp((T - a.t) / (b.t - a.t), 0, 1) : 1;
+      if (!a.alive || !b.alive || Math.hypot(b.x - a.x, b.z - a.z) > 2) continue; // dead, or a teleport (respawn) in between
+      const p = c.motor.pos; moved.push({ c, x: p.x, y: p.y, z: p.z, cr: c.motor.crouching, yaw: c.yaw });
+      p.set(lerp(a.x, b.x, k), lerp(a.y, b.y, k), lerp(a.z, b.z, k)); c.motor.crouching = k < 0.5 ? a.cr : b.cr; c.yaw = a.yaw + wrapAngle(b.yaw - a.yaw) * k;
+    }
+    this.rewound = (this.rewound || 0) + moved.length;
+    return moved;
+  }
+  restore(moved) { if (moved) for (const s of moved) { s.c.motor.pos.set(s.x, s.y, s.z); s.c.motor.crouching = s.cr; s.c.yaw = s.yaw; } }
+
   // hooks called by the match
+  onRound(ev, a, b) { for (const [peer] of this.peers) this.t.send(peer, ev === 'start' ? { k: 'round', ev, n: a } : { k: 'round', ev, w: a || null, why: String(b || '').slice(0, 30) }); }
   onShot(c, from, to, def) { if (this.peers.size && this.shots.length < 120) this.shots.push({ id: c.netId, w: NET_WI[def.id] ?? 0, from: [from.x, from.y, from.z], to: [to.x, to.y, to.z] }); }
   onHit(attacker, victim, kind, point) { if (attacker.isNet && attacker.peer) this.t.send(attacker.peer, { k: 'hit', kind, pt: point ? v3arr(point) : null }); }
   onRemoteDamaged(np, amount, from) { this.t.send(np.peer, { k: 'dmg', amt: Math.round(amount), hp: Math.max(0, Math.round(np.hp)), from: v3arr(from) }); }
@@ -235,6 +271,8 @@ class NetClient {
     } else if (d.k === 'dmg') { const p = m.player; if (p.alive) { p.hp = d.hp; p.onDamaged(d.amt, null, new THREE.Vector3(...d.from)); } }
     else if (d.k === 'flash') { m.app.post.flash(d.s, 0.6 + 4.2 * d.s); m.audio.deafen(d.s * 0.9, 1 + 3 * d.s); }
     else if (d.k === 'roster') { if (d.add) this._ghost(d.add); if (d.remove) this._unghost(d.remove); }
+    else if (d.k === 'round') { if (d.ev === 'start') m.clientRoundStart(d.n | 0); else if (d.ev === 'end') m.clientRoundEnd(d.w === 'alpha' || d.w === 'bravo' ? d.w : null, String(d.why || '').slice(0, 30)); }
+    else if (d.k === 'rs') { if (m.rules.applyNet && d.s && typeof d.s === 'object') { try { m.rules.applyNet(d.s); } catch (e) { console.warn('[net] rule state', e); } } }
     else if (d.k === 'end') { if (d.why) m.app.hud.toast(String(d.why).slice(0, 30)); m.winner = d.winner === 'alpha' || d.winner === 'bravo' ? d.winner : null; m.phase = 'live'; m.endMatch(m.winner); }
   }
 
@@ -254,6 +292,7 @@ class NetClient {
 
   // after each local fixed step: remember where prediction put us for this command, send commands at 60 Hz
   afterLocalStep(cmd) {
+    cmd.vt = this.hostClock === null ? 0 : this.hostClock - NET_INTERP; // v29: what our screen shows right now, in host time
     const p = this.m.player.motor.pos; this.hist[cmd.seq & 255] = { seq: cmd.seq, x: p.x, y: p.y, z: p.z };
     this.sent.push(new UserCmd().copy(cmd)); if (this.sent.length > 4) this.sent.shift();
     if (++this.stepN % NET_CMD_EVERY === 0) this.t.send(this.hostId, NetCodec.encodeCmds(this.sent), false);

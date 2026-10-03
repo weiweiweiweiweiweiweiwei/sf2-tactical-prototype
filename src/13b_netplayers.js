@@ -54,7 +54,7 @@ class NetPlayer extends Human {
       }
       this.holeT = 0; this.pending.delete(cmd.seq); ran++;
       if (this.alive) { this.yaw = cmd.yaw; this.pitch = cmd.pitch; this.aimPitch = cmd.pitch; this.aimDY = cmd.ay; this.aimDP = cmd.ap; }
-      this.curSeq = cmd.seq; // the command being simulated (tests compare it with the client's)
+      this.curSeq = cmd.seq; this.viewT = cmd.vt; // the command being simulated (tests compare it with the client's) · v29: its view time
       this.fixedUpdate(h, cmd);
       this.arsenal.tick(h, cmd);
       this.ackSeq = cmd.seq;

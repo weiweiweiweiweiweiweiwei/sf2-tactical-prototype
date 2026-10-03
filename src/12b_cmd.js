@@ -8,10 +8,12 @@ const BTN = { JUMP: 1, CROUCH: 2, SPRINT: 4, FIRE: 8, ALT: 16, USE: 32, RELOAD: 
 const BTN_EDGES = BTN.JUMP | BTN.RELOAD | BTN.GRAB | BTN.INTERACT | BTN.QUICK;
 
 class UserCmd {
-  constructor() { this.seq = 0; this.f = 0; this.r = 0; this.yaw = 0; this.pitch = 0; this.ay = 0; this.ap = 0; this.btn = 0; this.sw = 0; this.zoom = 0; }
+  constructor() { this.seq = 0; this.f = 0; this.r = 0; this.yaw = 0; this.pitch = 0; this.ay = 0; this.ap = 0; this.btn = 0; this.sw = 0; this.zoom = 0; this.vt = 0; }
   // f / r: −1, 0, 1 · yaw / pitch: view angles (movement heading) · ay / ap: recoil + punch on top of them = where the
   // crosshair really points · sw: weapon index + 1 requested this tick (0 = none) · zoom: ADS level
-  copy(o) { this.seq = o.seq; this.f = o.f; this.r = o.r; this.yaw = o.yaw; this.pitch = o.pitch; this.ay = o.ay; this.ap = o.ap; this.btn = o.btn; this.sw = o.sw; this.zoom = o.zoom; return this; }
+  // vt (v29, online): the host time this client was looking at (its other soldiers are drawn in the past) — the host
+  // checks this command's shots against everyone where they were at vt (lag compensation)
+  copy(o) { this.seq = o.seq; this.f = o.f; this.r = o.r; this.yaw = o.yaw; this.pitch = o.pitch; this.ay = o.ay; this.ap = o.ap; this.btn = o.btn; this.sw = o.sw; this.zoom = o.zoom; this.vt = o.vt || 0; return this; }
 }
 
 // Samples the keyboard / mouse into one UserCmd per fixed tick. Presses that start and end between two ticks (a quick
