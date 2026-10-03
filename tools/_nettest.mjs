@@ -16,23 +16,22 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // 1. host starts a 3v3 warehouse TDM in a tab opened with ?host=
 await H.goto(RTC ? `${base}?x=1` : `${base}?host=t1${net}`); await H.waitForFunction(() => window.app && window.SF2);
-await H.evaluate(async (rtc) => {
-  const S = SF2.Settings.data; S.onlineHost = rtc; S.nick = rtc ? 'HostWei' : ''; S.quality = 'low'; Object.assign(S.lobby, { map: 0, rule: 'tdm', mode: 'general', allies: 3, enemies: 3, loadout: 0 });
-  S.loadouts[0] = { name: 'A', primary: 'm4a1', secondary: 'p226' };
-  await app.startMatch(); app.state = 'playing'; app.input.locked = true; app.match.player.spawnProtect = 0;
-}, RTC);
+const setup = (nick) => { const S = SF2.Settings.data; S.nick = nick; S.quality = 'low'; Object.assign(S.lobby, { map: 0, rule: 'tdm', mode: 'general', allies: 3, enemies: 3, loadout: 0 }); S.loadouts[0] = { name: 'A', primary: 'm4a1', secondary: 'p226' }; };
+await H.evaluate(setup, 'HostWei');
 let code = null;
-if (RTC) { await H.waitForFunction(() => app.match && app.match.onlineCode, null, { timeout: 30000 }).catch(() => {}); code = await H.evaluate(() => app.match.onlineCode); log('room code', code); }
+if (RTC) { // v27: the host opens a room, the friend joins the room (team bravo), then the host starts the match for both
+  await H.evaluate(() => app.createRoom()); await H.waitForFunction(() => app.room && app.room.online, null, { timeout: 30000 }).catch(() => {});
+  code = await H.evaluate(() => app.room.code); log('room code', code);
+  await C.goto(`${base}?x=2`); await C.waitForFunction(() => window.app && window.SF2 && app.dir); await C.evaluate(setup, 'Tester');
+  const t0 = Date.now(); await C.evaluate((code) => app.joinRoom(code), code);
+  await C.waitForFunction(() => app.room && app.room.entered, null, { timeout: 30000 }).catch(() => {}); log('in the room after', Date.now() - t0, 'ms');
+  await C.evaluate(() => app.room.setTeam('bravo')); await sleep(600);
+}
+await H.evaluate(async () => { await app.startMatch(); app.state = 'playing'; app.input.locked = true; app.match.player.spawnProtect = 0; });
 log('host match running:', await H.evaluate(() => ({ combatants: app.match.combatants.length, net: app.match.net && app.match.net.role })));
 
 // 2. client joins from a second tab
-if (RTC) {
-  await C.goto(`${base}?x=2`); await C.waitForFunction(() => window.app && window.SF2);
-  await C.waitForFunction((code) => app.dir && app.dir.rooms.some((r) => r.code === code), code, { timeout: 20000 }).catch(() => {});
-  log('room list on the client', JSON.stringify(await C.evaluate(() => app.dir.rooms.map((r) => ({ code: r.code, host: r.host, map: r.map, players: r.players })))));
-  const t0 = Date.now(); await C.evaluate((code) => { SF2.Settings.data.nick = 'Tester'; app.netJoinOnline(code); }, code);
-  await C.waitForFunction(() => app.netClient && app.netClient.t.isOpen, null, { timeout: 30000 }).catch(() => {}); log('WebRTC open after', Date.now() - t0, 'ms');
-} else await C.goto(`${base}?join=t1&name=Tester&team=bravo${net}`);
+if (!RTC) await C.goto(`${base}?join=t1&name=Tester&team=bravo${net}`);
 await C.waitForFunction(() => window.app && app.state === 'playing' && app.match && app.match.net && app.match.net.ready, null, { timeout: 60000 }).catch(() => {});
 await C.evaluate(() => { app.state = 'playing'; app.input.locked = true; });
 await sleep(1500);

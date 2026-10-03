@@ -4,9 +4,10 @@
    · A CLIENT simulates only its own soldier (prediction, same code as the host), draws everyone else as Ghosts from
      30 Hz snapshots, and shows hits / kills when the host reports them.
    · Transport: LoopbackTransport links tabs of one browser (BroadcastChannel) with artificial lag / jitter / loss for
-     testing; WebRTC + a signalling service take its place in v26 with the same send / onMessage interface.
+     testing; WebRTC + a signalling service take its place in v26 with the same send / onMessage interface; from v27 a
+     match talks through its room's RoomLink (18c_room.js), so the connection outlives the match.
    ===================================================================== */
-const NET_VERSION = 26;
+const NET_VERSION = 27;
 const NET_WEAPONS = Object.keys(WEAPON_DEFS), NET_WI = Object.fromEntries(NET_WEAPONS.map((k, i) => [k, i]));
 const NET_PHASES = ['loading', 'freeze', 'live', 'roundEnd', 'over'];
 const NET_SNAP_HZ = 30, NET_CMD_EVERY = 2, NET_INTERP = 0.1; // snapshots / s · send a cmd packet every 2nd tick (60 Hz) · ghosts drawn 100 ms behind
@@ -127,7 +128,7 @@ class NetHost {
     if (d.v !== NET_VERSION) { this.t.send(from, { k: 'reject', why: '版本不同，請重新整理頁面' }); return; }
     const m = this.m;
     if (!this.peers.has(from)) {
-      if (m.phase === 'over' || m.rules.roundBased) { this.t.send(from, { k: 'reject', why: m.phase === 'over' ? '對戰已結束' : 'v25 只支援團隊死鬥' }); return; }
+      if (m.phase === 'over' || m.rules.roundBased) { this.t.send(from, { k: 'reject', why: m.phase === 'over' ? '這場對戰已經結束' : '這個賽制還不支援連線：請房主改成「團隊死鬥」' }); return; }
       const team = d.team === 'alpha' || d.team === 'bravo' ? d.team : this._balance();
       const bot = m.bots.filter((b) => b.team === team).pop(); if (bot) this._removeBot(bot); // a friend takes a bot's place
       const np = new NetPlayer(m, team, safeName(d.name, 'Friend'), from, d);
@@ -153,7 +154,7 @@ class NetHost {
     const np = this.peers.get(peer), m = this.m; if (!np) return;
     this.peers.delete(peer); np.remove(); m.humans.splice(m.humans.indexOf(np), 1); m.combatants.splice(m.combatants.indexOf(np), 1);
     for (const [p] of this.peers) this.t.send(p, { k: 'roster', remove: np.netId });
-    this.app.hud.toast(`${np.name} ${why}`);
+    if (m.phase !== 'over') this.app.hud.toast(`${np.name} ${why}`);
     if (this.onRoster) this.onRoster();
   }
 
@@ -163,6 +164,7 @@ class NetHost {
   frame(dt) {
     const m = this.m;
     for (const [peer, np] of this.peers) if (m.time - np.heardT > 10) this._drop(peer, '連線中斷');
+    if (!this.peers.size) { this.shots.length = 0; return; } // v27: every room match has a NetHost — alone, it sends nothing
     this.snapT -= dt; if (this.snapT > 0) return;
     this.snapT = Math.max(0, this.snapT + 1 / NET_SNAP_HZ); this.tick++;
     const ents = m.combatants.filter((c) => !c.removed).map((c) => netEntity(m, c)), shots = this.shots.splice(0);
@@ -185,7 +187,8 @@ class NetHost {
     for (const [peer] of this.peers) this.t.send(peer, e);
   }
   onEnd(winner) { for (const [peer] of this.peers) this.t.send(peer, { k: 'end', winner: winner || null }); }
-  close() { for (const [peer] of this.peers) this.t.send(peer, { k: 'end', winner: null, closed: true }); this.t.close(); if (this.m.net === this) this.m.net = null; }
+  // v27: the host leaving a match ends it for everyone (nobody else has its state); with a room the link closes, the room stays
+  close(why = '房主結束了這場對戰') { if (this.m.phase !== 'over') for (const [peer] of this.peers) this.t.send(peer, { k: 'end', winner: null, why }); this.t.close(); if (this.m.net === this) this.m.net = null; }
 }
 
 class NetClient {
@@ -193,23 +196,33 @@ class NetClient {
     this.role = 'client'; this.app = app; this.t = transport; this.opts = opts; this.m = null; this.hostId = null; this.ready = false;
     this.ghosts = new Map(); this.hist = new Array(256); this.sent = []; this.stepN = 0; this.lastTick = 0; this.hostClock = null; this.corr = { n: 0, snaps: 0, max: 0 };
     this.rtt = 0; this.pingT = 0;
+    // v27: a room member knows the match settings (cfg) and his team before the host is ready, and builds the map meanwhile;
+    // `welcomed` settles when the host's match takes him in ({ reject } if it will not)
+    this.cfg = opts.cfg || null; this.team = opts.team || null;
+    this.welcomed = new Promise((res) => { this._welcomed = res; });
     transport.onMessage = (from, d) => this._msg(from, d);
     transport.onLeave = () => this._hostLost();
   }
   _hostLost() {
-    if (this.m && this.m.phase !== 'over') { this.m.app.hud.toast('與房主的連線中斷'); this.m.winner = null; this.m.phase = 'live'; this.m.endMatch(null); }
-    else if (!this.m) this.app.netError('與房主的連線中斷');
+    if (this.m && this.ready && this.m.phase !== 'over') { this.m.app.hud.toast('與房主的連線中斷'); this.m.winner = null; this.m.phase = 'live'; this.m.endMatch(null); }
+    else { this._welcomed({ reject: '與房主的連線中斷' }); if (!this.m && !this.opts.room) this.app.netError('與房主的連線中斷'); }
   }
   start() {
     const join = () => { if (this.hostId) return; this.t.send('*', { k: 'join', v: NET_VERSION, name: this.opts.name, team: this.opts.team, hipMode: Settings.data.hipMode, ...this._loadout() }); };
     join(); this.joinTimer = setInterval(join, 1000);
+    // v27: while this side still builds its map the host already has our soldier — keep him from timing us out (10 s)
+    this.keepTimer = setInterval(() => { if (this.hostId && !this.ready) this.t.send(this.hostId, { k: 'ping', t: performance.now() }); }, 2000);
   }
   _loadout() { const l = Settings.data.loadouts[Settings.data.lobby.loadout | 0] || Settings.data.loadouts[0]; return { loadout: { primary: l.primary, secondary: l.secondary } }; }
   _msg(from, d) {
     if (d instanceof ArrayBuffer) { if (this.ready && from === this.hostId && new DataView(d).getUint8(0) === NetCodec.SNAP) this._snap(NetCodec.decodeSnap(d)); return; }
     if (!d || typeof d !== 'object') return;
-    if (d.k === 'welcome') { if (this.hostId) return; this.hostId = from; clearInterval(this.joinTimer); this.welcome = d; this.app.startNetMatch(this); return; }
-    if (d.k === 'reject') { clearInterval(this.joinTimer); this.app.netError(d.why); return; }
+    if (d.k === 'welcome') {
+      if (this.hostId) return; this.hostId = from; clearInterval(this.joinTimer); this.welcome = d; this.team = d.team;
+      if (!this.cfg) { this.cfg = d.cfg; this.app.startNetMatch(this); } // v25 loopback join: the map is built only now, from the host's settings
+      this._welcomed(d); return;
+    }
+    if (d.k === 'reject') { clearInterval(this.joinTimer); this._welcomed({ reject: d.why }); if (!this.opts.room) this.app.netError(d.why); return; }
     if (d.k === 'host' && !this.hostId) { this.t.send(from, { k: 'join', v: NET_VERSION, name: this.opts.name, team: this.opts.team, hipMode: Settings.data.hipMode, ...this._loadout() }); return; }
     if (from !== this.hostId || !this.ready) return;
     const m = this.m;
@@ -222,18 +235,18 @@ class NetClient {
     } else if (d.k === 'dmg') { const p = m.player; if (p.alive) { p.hp = d.hp; p.onDamaged(d.amt, null, new THREE.Vector3(...d.from)); } }
     else if (d.k === 'flash') { m.app.post.flash(d.s, 0.6 + 4.2 * d.s); m.audio.deafen(d.s * 0.9, 1 + 3 * d.s); }
     else if (d.k === 'roster') { if (d.add) this._ghost(d.add); if (d.remove) this._unghost(d.remove); }
-    else if (d.k === 'end') { if (d.closed) m.app.hud.toast('房主已關閉房間'); m.winner = d.winner; m.phase = 'live'; m.endMatch(d.winner); }
+    else if (d.k === 'end') { if (d.why) m.app.hud.toast(String(d.why).slice(0, 30)); m.winner = d.winner === 'alpha' || d.winner === 'bravo' ? d.winner : null; m.phase = 'live'; m.endMatch(m.winner); }
   }
 
   // the match is built: create every other soldier as a ghost and drop our soldier where the host spawned it
   attach(m) {
     this.m = m; const w = this.welcome;
     for (const info of w.roster) this._ghost(info);
-    m.player.netId = w.you; m.player.life = w.life;
+    m.player.team = w.team === 'bravo' ? 'bravo' : 'alpha'; m.player.netId = w.you; m.player.life = w.life;
     m.phase = w.phase === 'live' ? 'live' : 'freeze'; m.freezeT = 0;
     m.player.respawn(new THREE.Vector3(...w.pos), w.yaw); m.player.life = w.life; m.player.spawnProtect = CFG.spawnProtect;
-    this.ready = true;
-    addEventListener('beforeunload', () => this.t.send(this.hostId, { k: 'leave' }));
+    this.ready = true; clearInterval(this.keepTimer);
+    this._unload = () => this.t.send(this.hostId, { k: 'leave' }); addEventListener('beforeunload', this._unload);
   }
   _ghost(info) { if (this.ghosts.has(info.id) || !this.m) return; const g = new Ghost(this.m, info); this.ghosts.set(info.id, g); this.m.combatants.push(g); }
   _unghost(id) { const g = this.ghosts.get(id); if (!g) return; this.ghosts.delete(id); g.alive = false; this.m.scene.remove(g.model.root); if (g.tag) this.m.scene.remove(g.tag); this.m.combatants.splice(this.m.combatants.indexOf(g), 1); }
@@ -294,5 +307,8 @@ class NetClient {
     const rt = this.hostClock - NET_INTERP;
     for (const g of this.ghosts.values()) g.update(dt, rt);
   }
-  close() { if (this.hostId) this.t.send(this.hostId, { k: 'leave' }); clearInterval(this.joinTimer); this.t.close(); if (this.m && this.m.net === this) this.m.net = null; }
+  close() {
+    if (this.hostId) this.t.send(this.hostId, { k: 'leave' }); clearInterval(this.joinTimer); clearInterval(this.keepTimer); this.t.close(); if (this.m && this.m.net === this) this.m.net = null;
+    if (this._unload) removeEventListener('beforeunload', this._unload); this._welcomed({ reject: '已離開' });
+  }
 }

@@ -1,7 +1,8 @@
 /* =====================================================================
    APP — renderer, shared resources, room/lobby, loading flow, pause,
    settings, end screen and the main loop.
-   States: lobby → countdown → loading → shot → playing ⇄ paused → ended → returning → lobby
+   States: hub (大廳) → lobby (the room) → countdown → loading → shot → playing ⇄ paused → ended → returning → lobby
+           hub → joining → lobby (a friend's room) · v27
    ===================================================================== */
 class App {
   constructor() {
@@ -26,7 +27,7 @@ class App {
     this.models = new WeaponModels(this.tex);
     this.soldiers = new SoldierFactory(this.tex, this.models);
     this.audio = new AudioEngine(); this.input = new InputManager(this.canvas); this.cmds = new CmdBuilder(this.input); this.hud = new HUD(this); this.post = new PostFX(r);
-    this.hdrCache = new Map(); this.match = null; this.state = 'lobby';
+    this.hdrCache = new Map(); this.match = null; this.room = null; this.state = 'hub';
     this.last = performance.now(); this._mouse = { x: 0, y: 0 };
     this.fpsAcc = 0; this.fpsFrames = 0; this.fpsText = '';
     this.$ = (id) => document.getElementById(id);
@@ -44,90 +45,211 @@ class App {
   /* ------------------------------ v25 network test entry ------------------------------ */
   // ?host=ROOM — matches started from this tab accept friends · ?join=ROOM — join the match hosted in another tab of this
   // browser · &lag=80&jitter=20&loss=0.05 simulate a real connection (ms / ms / fraction of lost packets) · &name=Wei
+  // v27: ?room=482913 — an invite link: join that room straight away
   netBoot() {
     const q = new URLSearchParams(location.search), o = { lag: q.get('lag'), jitter: q.get('jitter'), loss: q.get('loss'), name: q.get('name') };
     this.netOpts = o;
-    this.onlineInit();
-    if (q.get('room')) setTimeout(() => this.netJoinOnline(q.get('room')), 400);
-    if (q.get('host')) { this.netHostRoom = q.get('host'); this.$('lbStatus').textContent = `連線房間「${this.netHostRoom}」已開放`; }
+    this.dir = new RoomDirectory(); this.bgTick = new BackgroundTicker(() => this.hiddenTick());
+    this.buildHub();
+    addEventListener('pagehide', () => this.closeRoom()); // best effort: tell the room right away
+    const code = parseCode(q.get('room'));
+    if (code) {
+      try { const u = new URL(location.href); u.searchParams.delete('room'); history.replaceState(null, '', u.href); } catch (e) { /* file:// may refuse */ }
+      setTimeout(() => this.joinRoom(code), 300);
+    }
+    if (q.get('host')) this.netHostRoom = q.get('host');
     if (q.get('join')) setTimeout(() => this.netJoin(q.get('join'), { ...o, name: q.get('name'), team: q.get('team') }), 300);
   }
   netJoin(room, o = {}) {
     if (this.netClient) this.netClient.close();
     const $ = this.$, c = this.netClient = new NetClient(this, new LoopbackTransport(room, o), { name: o.name || 'Player' + Math.floor(Math.random() * 900 + 100), team: o.team });
-    $('lobby').classList.remove('on'); const ld = $('loader'); ld.classList.add('on'); ld.classList.remove('shot');
+    $('hub').classList.remove('on'); $('lobby').classList.remove('on'); const ld = $('loader'); ld.classList.add('on'); ld.classList.remove('shot');
     $('ldTitle').firstChild.textContent = 'JOINING'; $('ldSub').textContent = `尋找房間「${room}」的房主…`; $('ldTip').textContent = '提示：房主需要用 ?host=' + room + ' 開啟遊戲並開始對戰'; $('ldSlogan').textContent = 'ONLINE';
     this.loadShown = 0; this.loadTarget = 0.1; this.loadLabel = '等待房主回應';
     c.start();
     return c;
   }
   async startNetMatch(client) { await this.startMatch(client); }
+  netError(why) {
+    const $ = this.$; $('ldSub').textContent = '無法加入：' + why; this.loadLabel = '已取消';
+    setTimeout(() => { if (this.state === 'hub' || this.state === 'loading' || this.state === 'joining') this.showHub('無法加入：' + why); }, 2500);
+  }
 
-  /* ------------------------------ v26 online: room list, host a room, join by code / link ------------------------------ */
-  onlineInit() {
+  /* ------------------------------ v27 hub (大廳): create a room, or join one ------------------------------ */
+  buildHub() {
     const $ = this.$, S = Settings.data;
-    this.dir = new RoomDirectory(); this.bgTick = new BackgroundTicker(() => this.hiddenTick());
-    const nick = $('lbNick'); nick.value = S.nick || ''; nick.oninput = () => { S.nick = safeName(nick.value, ''); Settings.save(); };
-    const hostOn = $('lbHostOn'); hostOn.checked = !!S.onlineHost; hostOn.onchange = () => { S.onlineHost = hostOn.checked; Settings.save(); this.refreshOnline(); };
-    const code = $('lbCode'), join = () => { if (code.value.length === 5) this.netJoinOnline(code.value); else $('lbNetMsg').textContent = '房間代碼是 5 個英文字母或數字'; };
-    code.oninput = () => { code.value = code.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 5); };
-    code.onkeydown = (e) => { e.stopPropagation(); if (e.key === 'Enter') join(); };
+    if (!S.nick) { S.nick = '玩家' + Math.floor(Math.random() * 900 + 100); Settings.save(); }
+    const nick = $('hubNick'); nick.value = S.nick;
+    nick.oninput = () => { S.nick = safeName(nick.value, ''); Settings.save(); };
+    nick.onblur = () => { if (!S.nick) { S.nick = '玩家' + Math.floor(Math.random() * 900 + 100); Settings.save(); } nick.value = S.nick; };
     nick.onkeydown = (e) => e.stopPropagation();
-    $('lbJoinCode').onclick = join;
+    $('hubCreate').onclick = () => this.createRoom();
+    $('hubJoinOpen').onclick = () => {
+      this.audio.init(); this.audio.uiClick();
+      const card = $('hubJoinCard'), on = !card.classList.contains('open'); card.classList.toggle('open', on);
+      if (on) setTimeout(() => $('hubCode').focus(), 60);
+    };
+    const code = $('hubCode');
+    code.oninput = () => { // digits only, shown "482 913"; a pasted invite link becomes its code
+      const d = parseCode(code.value) || code.value.replace(/\D/g, '').slice(0, 6);
+      code.value = d.length > 3 ? d.slice(0, 3) + ' ' + d.slice(3) : d; $('hubJoinGo').disabled = d.length !== 6; $('hubMsg').textContent = '';
+    };
+    code.onkeydown = (e) => { e.stopPropagation(); if (e.key === 'Enter') this.joinRoom(code.value); };
+    $('hubJoinGo').onclick = () => this.joinRoom(code.value); $('hubJoinGo').disabled = true;
+    $('hubWh').onclick = () => this.openWarehouse(); $('hubSettings').onclick = () => this.openSettings(); $('hubFull').onclick = () => this.toggleFullscreen();
     this.dir.onChange = (rooms) => this.renderRooms(rooms);
-    this.dir.open().then(() => this.renderRooms(this.dir.rooms))
-      .catch(() => { $('lbRooms').innerHTML = '<div class="empty">連不上配對伺服器（需要網路）。單機遊戲不受影響。</div>'; });
-    this.refreshOnline();
+    this.dir.open().then(() => { $('hubNet').textContent = '已連線'; $('hubNet').className = 'ok'; this.renderRooms(this.dir.rooms); })
+      .catch(() => { $('hubNet').textContent = '離線'; $('hubNet').className = 'off'; this.dirOffline = true; this.renderRooms([]); });
   }
-  refreshOnline() { const S = Settings.data; this.$('lbNetMsg').textContent = S.onlineHost && S.lobby.rule !== 'tdm' ? '線上房間目前只支援「團隊死鬥」：換成其他賽制時不會開放房間' : ''; }
   renderRooms(rooms) {
-    const el = this.$('lbRooms');
-    if (!rooms.length) { el.innerHTML = '<div class="empty">目前沒有開放的房間。勾選上方「開放線上房間」再按出發，就能把邀請連結傳給朋友。</div>'; return; }
-    el.innerHTML = rooms.map((r) => `<div class="room"><b>${esc(r.code)}</b><span>${esc(safeName(r.host, '房主'))} 的房間 · ${esc(String(r.map).slice(0, 12))} · ${esc(String(r.mode).slice(0, 8))} · ${r.players | 0}/${r.max | 0} 人</span><button class="btn ghost" data-code="${esc(r.code)}">加入</button></div>`).join('');
-    el.querySelectorAll('button[data-code]').forEach((b) => { b.onclick = () => this.netJoinOnline(b.dataset.code); });
+    const el = this.$('hubRooms'); this.$('hubRoomsN').textContent = rooms.length ? `${rooms.length} 間開放中` : '';
+    const list = rooms.map((r) => [parseCode(r.code), r]).filter(([c]) => c);
+    if (this.dirOffline) { el.innerHTML = '<div class="empty"><b>連不上配對伺服器</b>需要網路才能和朋友連線。建立房間後仍然可以單機遊玩。</div>'; return; }
+    if (!list.length) { el.innerHTML = '<div class="empty"><b>目前沒有公開的房間</b>朋友的房間預設不公開：請他按房間裡的「＋ 邀請朋友」，把連結或 6 位數代碼傳給你。</div>'; return; }
+    el.innerHTML = '<div class="rhead"><span>房間代碼</span><span>房主</span><span>地圖 · 賽制</span><span>人數</span><span>狀態</span><span></span></div>'
+      + list.map(([code, r]) => `<div class="room"><b>${fmtCode(code)}</b><span>${esc(safeName(r.host, '房主'))} 的房間</span><span>${esc(String(r.map).slice(0, 12))} · ${esc(String(r.mode).slice(0, 8))}</span><span>${r.players | 0} / ${r.max | 0}</span><span class="ph${r.phase === 'playing' ? ' on' : ''}">${r.phase === 'playing' ? '對戰中' : '等待中'}</span><button class="btn ghost" data-code="${code}">加入</button></div>`).join('');
+    el.querySelectorAll('button[data-code]').forEach((b) => { b.onclick = () => this.joinRoom(b.dataset.code); });
   }
-  // host: after the match is built, open a room for it (drop-in: friends join the running match)
-  async openRoom(m) {
-    const code = roomCode(), t = new RtcHostTransport(code);
-    try { await t.ready; } catch (e) { this.hud.toast('線上房間開啟失敗（需要網路）'); t.close(); return; }
-    if (this.match !== m) { t.close(); return; }
-    const h = new NetHost(this, m, t); m.onlineCode = code;
-    h.onRoster = () => this.dir.update({ players: h.players }).catch(() => {});
-    this.dir.announce({ code, host: m.player.name, map: m.def.name, mode: RULES[m.rule].name, players: h.players, max: ONLINE.maxPlayers }).catch(() => {});
-    this.hud.toast(`線上房間 ${code} 已開放 · 按 ESC 複製邀請連結`);
+  showHub(msg = '') {
+    const $ = this.$;
+    for (const id of ['lobby', 'loader', 'warehouse']) $(id).classList.remove('on');
+    $('lbCount').classList.remove('on'); $('hub').classList.add('on'); this.state = 'hub'; this.countGuest = false;
+    $('hubMsg').textContent = msg; if (msg) { $('hubJoinCard').classList.add('open'); this.roomToast(msg); }
+    this.renderRooms(this.dir.rooms);
+  }
+  roomToast(msg) {
+    if (this.match && (this.state === 'playing' || this.state === 'paused')) { this.hud.toast(msg); return; }
+    const t = this.$('roomToast'); t.textContent = msg; t.classList.remove('show'); void t.offsetWidth; t.classList.add('show');
+  }
+  copyText(text, done) {
+    const fallback = () => { const ta = document.createElement('textarea'); ta.value = text; ta.style.cssText = 'position:fixed;left:-9999px'; document.body.appendChild(ta); ta.select(); let ok = false; try { ok = document.execCommand('copy'); } catch (e) { /* blocked */ } ta.remove(); return ok; };
+    try { navigator.clipboard.writeText(text).then(() => done(true), () => done(fallback())); } catch (e) { done(fallback()); }
+  }
+
+  /* ------------------------------ v27 rooms ------------------------------ */
+  createRoom() {
+    if (this.state !== 'hub') return;
+    this.audio.init(); this.audio.uiClick();
+    this.closeRoom();
+    const r = this.room = new RoomHost(this);
+    r.ready.then(() => { if (this.room === r) { this.onRoomChange(r); this.attachHost(); } })
+      .catch(() => { if (this.room === r) { r.failed = true; this.onRoomChange(r); } });
     this.bgTick.set(true);
+    this.enterRoomScreen();
   }
-  netJoinOnline(code) {
-    code = String(code || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 5);
-    if (code.length !== 5 || (this.state !== 'lobby' && this.state !== 'loading')) return;
-    if (this.netClient) this.netClient.close();
-    const $ = this.$, t = new RtcClientTransport(code), c = this.netClient = new NetClient(this, t, { name: Settings.data.nick || 'Player' + Math.floor(Math.random() * 900 + 100) });
-    $('lobby').classList.remove('on'); $('warehouse').classList.remove('on'); const ld = $('loader'); ld.classList.add('on'); ld.classList.remove('shot');
-    $('ldTitle').firstChild.textContent = 'JOINING'; $('ldSub').textContent = `加入房間 ${code}`; $('ldTip').textContent = '提示：遊戲資料是你和房主的電腦直接連線傳送，房主離開時對戰就會結束'; $('ldSlogan').textContent = 'ONLINE';
-    this.loadShown = 0; this.loadTarget = 0.08; this.loadLabel = '連線中';
-    t.onStatus = (s) => { if (!c.m) { $('ldSub').textContent = s; this.loadLabel = s; this.loadTarget = Math.min(0.3, this.loadTarget + 0.07); } };
-    t.onOpen = () => c.start();
-    t.onError = (why) => this.netError(why);
-    t.start().catch((e) => this.netError('連不上配對伺服器：' + e.message));
-    this.bgTick.set(true);
-    return c;
+  joinRoom(raw) {
+    const $ = this.$, code = parseCode(raw);
+    if (!code) { $('hubMsg').textContent = '房間代碼是 6 位數字'; return; }
+    if (this.state !== 'hub' && this.state !== 'lobby') return;
+    this.audio.init(); this.audio.uiClick();
+    this.closeRoom();
+    const r = this.room = new RoomGuest(this, code);
+    for (const id of ['hub', 'lobby', 'warehouse']) $(id).classList.remove('on');
+    const ld = $('loader'); ld.classList.add('on'); ld.classList.remove('shot');
+    $('ldTitle').firstChild.textContent = 'JOINING'; $('ldSub').textContent = `加入房間 ${fmtCode(code)}`; $('ldSlogan').textContent = 'ROOM ' + fmtCode(code);
+    $('ldTip').textContent = '提示：遊戲資料是你和房主的電腦直接連線傳送，不經過伺服器';
+    this.loadShown = 0; this.loadTarget = 0.1; this.loadLabel = '連線中'; this.state = 'joining';
+    r.onStatus = (s) => { if (this.state === 'joining' && this.room === r) { $('ldSub').textContent = s; this.loadLabel = s; this.loadTarget = Math.min(0.8, this.loadTarget + 0.2); } };
+    r.start(); this.bgTick.set(true);
   }
+  enterRoomScreen() {
+    const $ = this.$;
+    for (const id of ['hub', 'loader', 'warehouse']) $(id).classList.remove('on');
+    $('lobby').classList.add('on'); this.state = 'lobby'; this.invite(false); this.refreshLobby(); this.warm(this.roomCfg().map);
+  }
+  closeRoom() { const r = this.room; if (!r) return; this.room = null; if (r.role === 'host') r.close(); else r.leave(); }
+  leaveRoom() {
+    if (this.state === 'countdown') this.cancelCountdown();
+    if (this.state !== 'lobby') return;
+    this.audio.uiClick(); this.closeRoom(); this.bgTick.set(false); this.showHub();
+  }
+  // a guest got into the room (first join, or reconnected to a new host)
+  onRoomEnter(r) {
+    if (this.room !== r) return;
+    if (this.state === 'joining') { this.loadTarget = 1; this.enterRoomScreen(); const h = r.members.find((m) => m.host); this.roomToast(`已進入${h ? ' ' + h.name + ' 的' : ''}房間`); }
+    else this.onRoomChange(r);
+    if (r.phase === 'playing' && r.mcfg && !r.rejoin) this.startGuestMatch(); // the match is already on: drop straight in
+  }
+  onRoomChange(r) {
+    if (r && this.room !== r) return;
+    if (this.state === 'lobby' || this.state === 'countdown') this.refreshLobby();
+  }
+  onRoomFail(r, why) {
+    if (this.room !== r) return;
+    this.room = null; this.bgTick.set(false);
+    if (['joining', 'lobby', 'countdown', 'hub'].includes(this.state)) { this.showHub(why); this.$('hubCode').value = fmtCode(r.code); this.$('hubJoinGo').disabled = false; }
+    else this.pendingMsg = why; // in a match: shown when it ends
+  }
+  // the host left: the member who joined first becomes the host of the same code, the others reconnect to him
+  onRoomHostLost(old) {
+    if (this.room !== old) return;
+    const next = old.successor();
+    if (next && next.id === old.myId) {
+      const c = old.cfg, L = Settings.data.lobby;
+      if (c) { Object.assign(L, { map: c.map, mode: c.mode, rule: c.rule, difficulty: c.difficulty, allies: c.allies, enemies: c.enemies }); L.ruleCfg[c.rule] = Object.assign({}, c.ruleCfg[c.rule]); Settings.save(); }
+      const r = this.room = new RoomHost(this, { code: old.code, migrate: true, pub: old.pub });
+      this.roomToast('房主離開了 · 你成為新的房主');
+      r.ready.then(() => { if (this.room === r) this.onRoomChange(r); })
+        .catch((e) => { if (this.room !== r) return; if (e.message === 'TAKEN') this._rejoinRoom(old, '連線中斷 · 正在重新連回房間…'); else { r.failed = true; this.onRoomChange(r); } });
+    } else this._rejoinRoom(old, '房主離開了 · 正在連到新房主…');
+    this.onRoomChange(this.room);
+  }
+  _rejoinRoom(old, msg) {
+    const r = this.room = new RoomGuest(this, old.code, { team: old.team, rejoin: true });
+    r.members = old.members.filter((m) => !m.host); r.myId = old.myId; r.cfg = old.cfg; // shown while reconnecting
+    this.roomToast(msg); r.start();
+  }
+  // room settings as this player sees them: his own (host / no room) or the host's (guest; his loadout stays his)
+  roomCfg() {
+    const r = this.room, S = Settings.data.lobby;
+    if (!r || r.role !== 'guest' || !r.cfg) return S;
+    return Object.assign({}, S, r.cfg, { ruleCfg: Object.assign({}, S.ruleCfg, r.cfg.ruleCfg), loadout: S.loadout });
+  }
+  isGuest() { return !!this.room && this.room.role === 'guest'; }
+  invite(on) { const pop = this.$('lbInvPop'); pop.classList.toggle('on', on ?? !pop.classList.contains('on')); this.$('lbInvMsg').textContent = ''; }
+  guestCountdown(on) {
+    const $ = this.$;
+    if (on) {
+      if (this.state !== 'lobby') return;
+      $('warehouse').classList.remove('on'); $('settings').classList.remove('on'); $('lobby').classList.add('on'); this.invite(false);
+      const L = this.roomCfg(); this.state = 'countdown'; this.countGuest = true; this.countT = 3;
+      $('lbCountMap').textContent = `${MAPS[L.map].name} · ${MODES[L.mode].name} · ${RULES[L.rule].name}`; $('lbCount').classList.add('on'); this._showCount(3); this.renderRoomBar();
+    } else if (this.state === 'countdown' && this.countGuest) { this.state = 'lobby'; this.countGuest = false; $('lbCount').classList.remove('on'); this.refreshLobby(); }
+  }
+  // a guest goes into the room's match: builds the map while the host does, then the host's match takes him in
+  startGuestMatch() {
+    const r = this.room; if (!r || r.role !== 'guest' || !r.mcfg) return;
+    if (this.state === 'returning') { this.goPending = true; return; } // finish going back to the room first
+    if (['loading', 'shot', 'joining'].includes(this.state)) return;
+    if (this.match && (this.state === 'playing' || this.state === 'paused') && this.match.phase !== 'over') return;
+    this.countGuest = false; this._teardownMatch();
+    const c = this.netClient = new NetClient(this, r.newLink(), { name: Settings.data.nick, team: r.team || 'alpha', cfg: r.mcfg, room: true });
+    c.start(); r.status('loading');
+    this.startMatch(c);
+  }
+  // host: the room's connection serves the running match (also when the room came online after the match started)
+  attachHost() {
+    const m = this.match, r = this.room;
+    if (m && m.running && !m.net && r && r.role === 'host' && r.online && m.phase !== 'over' && this.state !== 'returning') new NetHost(this, m, r.newLink());
+  }
+  abortNetMatch(why) {
+    this._teardownMatch();
+    if (this.room) { this.room.status('room'); this.enterRoomScreen(); this.roomToast(why); } else this.netError(why);
+  }
+  // shared = someone else is in this match with you (then it never pauses, and a hidden tab keeps simulating it)
+  netShared(m) { return !!(m && m.net && (m.net.role === 'client' || m.net.peers.size > 0)); }
   // hidden tab during an online match: keep simulating (no rendering) so nobody else freezes
   hiddenTick() {
-    const m = this.match; if (!m || !m.running || !m.net || !document.hidden) return;
+    const m = this.match; if (!m || !m.running || !this.netShared(m) || !document.hidden) return;
     const now = performance.now(), dt = clamp((now - this.last) / 1000, 0, 0.1); this.last = now;
     if (this.state === 'playing' || this.state === 'paused') { m.tick(dt, { x: 0, y: 0 }); this.input.endFrame(); }
   }
   updatePauseOnline() {
-    const el = this.$('pOnline'), m = this.match, n = m && m.net;
-    if (!n || !(n.t instanceof RtcHostTransport || n.t instanceof RtcClientTransport)) { el.innerHTML = ''; return; }
-    const code = n.t.room, host = n.role === 'host';
-    el.innerHTML = `<b>${host ? '你是房主' : '已連線'}</b><span>房間 <code>${esc(code)}</code></span><span>${host ? n.players + ' 人在線' : 'Ping ' + Math.round(n.rtt) + ' ms'}</span><span style="color:var(--dim)">連線對戰不會暫停</span><button class="btn ghost" id="pCopy">複製邀請連結</button>`;
-    this.$('pCopy').onclick = () => { const link = inviteLink(code); navigator.clipboard.writeText(link).then(() => { this.$('pMsg').textContent = '已複製：' + link; }).catch(() => { this.$('pMsg').textContent = link; }); };
-  }
-  netError(why) {
-    const $ = this.$; $('ldSub').textContent = '無法加入：' + why; this.loadLabel = '已取消';
-    setTimeout(() => { if (this.state === 'lobby' || this.state === 'loading') { $('loader').classList.remove('on'); $('lobby').classList.add('on'); this.state = 'lobby'; } }, 2500);
+    const $ = this.$, el = $('pOnline'), m = this.match, r = this.room, shared = this.netShared(m), host = !!(m && m.net && m.net.role === 'host');
+    $('pLeave').textContent = host && shared ? '結束對戰 → 所有人回到房間' : r ? '離開對戰 → 回到房間' : '離開對戰 → 回到大廳';
+    if (!r || !r.online) { el.innerHTML = ''; return; }
+    el.innerHTML = `<b>${r.role === 'host' ? '你是房主' : '連線中'}</b><span>房間 <code>${fmtCode(r.code)}</code></span><span>${host ? m.net.players + ' 人在對戰中' : m && m.net && m.net.rtt ? 'Ping ' + Math.round(m.net.rtt) + ' ms' : ''}</span>${shared ? '<span style="color:var(--dim)">連線對戰不會暫停</span>' : ''}<button class="btn ghost" id="pCopy">複製邀請連結</button>`;
+    $('pCopy').onclick = () => { const link = inviteLink(r.code); this.copyText(link, (ok) => { $('pMsg').textContent = ok ? '已複製邀請連結：' + link : link; }); };
   }
 
   /* ------------------------------ lobby ------------------------------ */
@@ -138,12 +260,12 @@ class App {
     MAPS.forEach((def, i) => {
       const bt = document.createElement('button'); const cv = document.createElement('canvas'); cv.width = 176; cv.height = 88;
       drawMapPreview(cv, def, this.dry[i], { labels: false }); bt.append(cv, document.createTextNode(`${i + 1}. ${def.name}`));
-      bt.onclick = () => { L.map = i; this.audio.init(); this.audio.uiClick(); this.refreshLobby(); this.warm(i); };
+      bt.onclick = () => { if (this.isGuest()) return; L.map = i; this.audio.init(); this.audio.uiClick(); this.refreshLobby(); this.warm(i); };
       maps.appendChild(bt);
     });
     const pills = (id, items, key, after) => {
       const el = $(id); el.innerHTML = '';
-      for (const [val, label] of items) { const b = document.createElement('button'); b.textContent = label; b.dataset.v = val; b.onclick = () => { L[key] = typeof L[key] === 'number' ? Number(val) : val; if (after) after(); this.audio.init(); this.audio.uiClick(); this.refreshLobby(); }; el.appendChild(b); }
+      for (const [val, label] of items) { const b = document.createElement('button'); b.textContent = label; b.dataset.v = val; b.onclick = () => { if (key !== 'loadout' && this.isGuest()) return; L[key] = typeof L[key] === 'number' ? Number(val) : val; if (after) after(); this.audio.init(); this.audio.uiClick(); this.refreshLobby(); }; el.appendChild(b); }
     };
     pills('lbModes', Object.entries(MODES).map(([k, m]) => [k, m.name]), 'mode');
     pills('lbRule', Object.entries(RULES).map(([k, r]) => [k, r.name]), 'rule', () => { if (!L.ruleCfg[L.rule]) L.ruleCfg[L.rule] = Object.assign({}, RULES[L.rule].def); });
@@ -152,8 +274,21 @@ class App {
     $('lbWarehouse').onclick = () => this.openWarehouse(); $('lbWh').onclick = () => this.openWarehouse();
     $('whClose').onclick = () => this.closeWarehouse();
     document.querySelectorAll('.stepper button').forEach((b) => b.onclick = () => {
+      if (this.isGuest()) return;
       const k = b.dataset.step; L[k] = clamp(L[k] + Number(b.dataset.d), 1, 12); this.audio.init(); this.audio.uiClick(); this.refreshLobby();
     });
+    // v27 room bar: ＋ 邀請朋友 opens the invite pop-up (link / code / public), 離開房間 goes back to the hub
+    $('lbInvite').onclick = (e) => { e.stopPropagation(); this.audio.init(); this.audio.uiClick(); this.invite(); };
+    $('lbInvPop').onclick = (e) => e.stopPropagation();
+    document.addEventListener('click', () => { if ($('lbInvPop').classList.contains('on')) this.invite(false); });
+    const msg = (t) => { $('lbInvMsg').textContent = t; };
+    $('lbInvLink').onclick = () => { if (this.room) this.copyText(inviteLink(this.room.code), (ok) => msg(ok ? '✓ 邀請連結已複製，貼給朋友，對方點開就會進到這個房間' : '無法自動複製：請手動選取上面的連結')); };
+    $('lbInvCopy').onclick = () => { if (this.room) this.copyText(this.room.code, (ok) => msg(ok ? '✓ 房間代碼已複製：朋友在大廳按「加入房間」輸入這 6 個數字' : '無法自動複製：請直接把這 6 個數字告訴朋友')); };
+    $('lbInvLinkTxt').onfocus = () => $('lbInvLinkTxt').select();
+    $('lbPub').onchange = () => { if (this.room && this.room.role === 'host') this.room.setPublic($('lbPub').checked); };
+    $('lbLeave').onclick = () => this.leaveRoom();
+    $('lbJoinA').onclick = () => { if (this.isGuest()) { this.audio.uiClick(); this.room.setTeam('alpha'); } };
+    $('lbJoinB').onclick = () => { if (this.isGuest()) { this.audio.uiClick(); this.room.setTeam('bravo'); } };
     $('lbStart').onclick = () => this.beginCountdown();
     $('lbCancel').onclick = () => this.cancelCountdown();
     $('lbSettings').onclick = () => this.openSettings();
@@ -173,9 +308,11 @@ class App {
   }
 
   refreshLobby() {
-    const L = Settings.data.lobby, $ = this.$, R = RULES[L.rule];
+    const $ = this.$, r = this.room, guest = this.isGuest(), L = this.roomCfg(), R = RULES[L.rule];
     const def = MAPS[L.map];
+    $('lobby').classList.toggle('guest', guest);
     drawMapPreview($('lbMapBig'), def, this.dry[L.map]);
+    if (guest && this.warmMap !== L.map) { this.warmMap = L.map; this.warm(L.map); } // the host picked another map: prefetch it
     $('lbMapName').textContent = `${def.name} · ${def.en}`; $('lbMapDesc').textContent = def.desc;
     [...$('lbMaps').children].forEach((b, i) => b.classList.toggle('on', i === L.map));
     const mark = (id, val) => [...$(id).children].forEach((b) => b.classList.toggle('on', String(b.dataset.v) === String(val)));
@@ -185,34 +322,66 @@ class App {
     $('lbTargetLbl').textContent = roundsLike ? '勝利回合數' : '勝利分數';
     $('lbTimeLbl').textContent = roundsLike ? '每回合時間' : '時間限制';
     const tg = $('lbTarget'); tg.innerHTML = '';
-    for (const v of R.targets) { const b = document.createElement('button'); b.textContent = roundsLike ? `搶 ${v} 勝` : `${v}`; b.classList.toggle('on', rc.target === v); b.onclick = () => { rc.target = v; this.audio.uiClick(); this.refreshLobby(); }; tg.appendChild(b); }
+    for (const v of R.targets) { const b = document.createElement('button'); b.textContent = roundsLike ? `搶 ${v} 勝` : `${v}`; b.classList.toggle('on', rc.target === v); b.onclick = () => { if (this.isGuest()) return; rc.target = v; this.audio.uiClick(); this.refreshLobby(); }; tg.appendChild(b); }
     const tm = $('lbTime'); tm.innerHTML = '';
-    for (const v of R.times) { const b = document.createElement('button'); b.textContent = roundsLike ? `${Math.floor(v / 60)}:${String(v % 60).padStart(2, '0')}` : `${v} 分`; b.classList.toggle('on', rc.time === v); b.onclick = () => { rc.time = v; this.audio.uiClick(); this.refreshLobby(); }; tm.appendChild(b); }
+    for (const v of R.times) { const b = document.createElement('button'); b.textContent = roundsLike ? `${Math.floor(v / 60)}:${String(v % 60).padStart(2, '0')}` : `${v} 分`; b.classList.toggle('on', rc.time === v); b.onclick = () => { if (this.isGuest()) return; rc.time = v; this.audio.uiClick(); this.refreshLobby(); }; tm.appendChild(b); }
     const lo = Settings.data.loadouts[L.loadout];
     $('lbLoadoutInfo').textContent = `配裝 ${LOADOUT_KEYS[L.loadout]}：${WEAPON_DEFS[lo.primary].name} + ${WEAPON_DEFS[lo.secondary].name}`;
     [...$('lbLoadout').children].forEach((b, i) => { b.title = `配裝 ${LOADOUT_KEYS[i]} · 對戰中按 F${i + 1}`; });
     $('lbAllies').textContent = L.allies; $('lbEnemies').textContent = L.enemies;
-    $('lbAllyLbl').textContent = L.allies === 1 ? '只有你 · 單人奮戰' : `我方（含你）`;
-    const list = (id, team, n, youFirst) => {
-      const ol = $(id); ol.innerHTML = '';
+    this.renderTeams(L); this.renderRoomBar(L);
+    if (!guest) Settings.save();
+    if (r && r.role === 'host') r.broadcast();
+  }
+  // v27: real players first (their room status on the right), bots fill each team up to its size, then empty slots
+  renderTeams(L) {
+    const $ = this.$, r = this.room, myId = r ? r.myId : 'me';
+    const members = r ? r.members : [{ id: 'me', name: Settings.data.nick || 'YOU', team: 'alpha', host: true, st: 'room', order: 0 }];
+    const canSwitch = !!r && r.role === 'guest' && r.entered && r.phase === 'room';
+    for (const [team, list, size, lbl, sw] of [['alpha', 'lbListA', L.allies, 'lbAllyLbl', 'lbJoinA'], ['bravo', 'lbListB', L.enemies, 'lbEnemyLbl', 'lbJoinB']]) {
+      const hs = members.filter((m) => m.team === team).sort((a, b) => a.order - b.order), n = Math.max(size, hs.length), ol = $(list), names = BOT_NAMES[team];
+      ol.innerHTML = '';
       for (let i = 0; i < 12; i++) {
-        const li = document.createElement('li');
-        if (i < n) {
-          const isYou = youFirst && i === 0, name = isYou ? 'YOU（你）' : BOT_NAMES[team][(youFirst ? i - 1 : i) % BOT_NAMES[team].length];
-          li.className = isYou ? 'you' : '';
-          li.innerHTML = `<span class="n">${i + 1}</span><span class="rank">${isYou ? '★' : 'AI'}</span><span class="nm">${name}</span><span class="st">${isYou ? 'HOST' : 'READY'}</span>`;
-        } else { li.className = 'empty'; li.innerHTML = `<span class="n">${i + 1}</span><span class="nm">— 空位 —</span>`; }
+        const li = document.createElement('li'), h = hs[i];
+        if (h) {
+          const me = h.id === myId; li.className = 'human' + (me ? ' you' : '');
+          li.innerHTML = `<span class="n">${i + 1}</span><span class="rank">${h.host ? '★' : 'P'}</span><span class="nm">${esc(h.name)}${me ? '<em>（你）</em>' : ''}</span><span class="st ${h.host ? 'host' : h.st}">${h.host ? 'HOST' : ROOM_ST[h.st] || 'READY'}</span>`;
+        } else if (i < n) { li.className = 'bot'; li.innerHTML = `<span class="n">${i + 1}</span><span class="rank">AI</span><span class="nm">${names[(i - hs.length) % names.length]}</span><span class="st">BOT</span>`; }
+        else { li.className = 'empty'; li.innerHTML = `<span class="n">${i + 1}</span><span class="nm">— 空位 —</span>`; }
         ol.appendChild(li);
       }
-    };
-    list('lbListA', 'alpha', L.allies, true); list('lbListB', 'bravo', L.enemies, false);
-    Settings.save();
-    if (this.dir) this.refreshOnline();
+      $(lbl).textContent = `${hs.length} 位玩家 · ${n - hs.length} 個 Bot`;
+      $(sw).style.display = canSwitch && r.team !== team ? '' : 'none';
+    }
+  }
+  renderRoomBar(L = this.roomCfg()) {
+    const $ = this.$, r = this.room, guest = this.isGuest();
+    let code = '', name = '單機練習房', st = '等待中';
+    if (r) {
+      const h = r.members.find((m) => m.host); name = `${h ? h.name : '房主'} 的房間`;
+      if (r.online || guest) code = fmtCode(r.code);
+      if (r.role === 'host' && !r.online) st = r.failed ? '離線房間 · 連不上配對伺服器，只能單機' : '房間建立中…';
+      else if (guest && !r.entered) st = '重新連線中…';
+      else st = r.phase === 'playing' ? '對戰進行中' : r.members.length > 1 ? `${r.members.length} 人在房間` : '等待朋友加入';
+    }
+    if (this.state === 'countdown') st = '準備出發';
+    $('lbCodeTxt').textContent = code || '——— ———'; $('lbRoomName').textContent = name; $('lbStatus').textContent = st;
+    $('lbInvite').disabled = !(r && r.online && code);
+    $('lbInvCode').textContent = code; $('lbInvLinkTxt').value = r ? inviteLink(r.code) : '';
+    $('lbPub').checked = !!(r && r.pub); $('lbPubRow').style.display = r && r.role === 'host' ? '' : 'none';
+    const sb = $('lbStart'); let txt = '出 發 · GO', off = false, msg = '';
+    if (guest) { if (r.phase === 'playing' && r.mcfg) txt = '加入對戰 · JOIN'; else { txt = '等待房主出發'; off = true; msg = r.entered ? '地圖和模式由房主設定 · 你可以選擇隊伍和配裝' : ''; } }
+    else if (r && r.members.length > 1 && L.rule !== 'tdm') { off = true; msg = '有朋友在房間時，目前只能選「團隊死鬥」（其他賽制還不支援連線）'; }
+    sb.textContent = txt; sb.disabled = off; sb.classList.toggle('wait', off); $('lbMsg').textContent = msg;
   }
 
   beginCountdown() {
     if (this.state !== 'lobby') return;
-    this.audio.init(); this.audio.uiClick();
+    const r = this.room;
+    if (r && r.role === 'guest') { if (r.phase === 'playing' && r.mcfg) { this.audio.init(); this.audio.uiClick(); this.startGuestMatch(); } return; } // drop into the running match
+    if (this.$('lbStart').disabled) return;
+    this.audio.init(); this.audio.uiClick(); this.invite(false);
+    if (r && r.role === 'host') r.countdown(); // everyone in the room sees the same 3-2-1
     this.state = 'countdown'; this.countT = 3;
     const def = MAPS[Settings.data.lobby.map];
     this.$('lbCountMap').textContent = `${def.name} · ${MODES[Settings.data.lobby.mode].name} · ${RULES[Settings.data.lobby.rule].name}`;
@@ -220,14 +389,20 @@ class App {
     this._showCount(3);
   }
   _showCount(n) { const el = this.$('lbCountNum'); el.textContent = n; el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop'); this.audio.uiClick(); }
-  cancelCountdown() { if (this.state !== 'countdown') return; this.state = 'lobby'; this.$('lbCount').classList.remove('on'); this.$('lbStatus').textContent = '等待中'; this.audio.uiClick(); }
+  cancelCountdown() {
+    if (this.state !== 'countdown' || this.countGuest) return;
+    this.state = 'lobby'; this.$('lbCount').classList.remove('on'); this.audio.uiClick();
+    if (this.room && this.room.role === 'host') this.room.cancel();
+    this.renderRoomBar();
+  }
 
   /* ------------------------------ loading ------------------------------ */
   async startMatch(net = null) {
-    const $ = this.$, L = net ? Object.assign({}, Settings.data.lobby, net.welcome.cfg) : Settings.data.lobby, def = MAPS[L.map];
-    this.state = 'loading';
+    const $ = this.$, L = net ? Object.assign({}, Settings.data.lobby, net.cfg) : Settings.data.lobby, def = MAPS[L.map];
+    if (!net && this.room && this.room.role === 'host') this.room.go(roomCfgOut()); // v27: everyone in the room starts loading this match now
+    this.state = 'loading'; this.countGuest = false;
     this.cmds.reset();
-    $('lbCount').classList.remove('on'); $('lobby').classList.remove('on');
+    $('lbCount').classList.remove('on'); $('lobby').classList.remove('on'); $('hub').classList.remove('on'); $('warehouse').classList.remove('on'); $('settings').classList.remove('on');
     const ld = $('loader'); ld.classList.add('on'); ld.classList.remove('shot');
     $('ldTitle').firstChild.textContent = def.en; $('ldSub').textContent = `${def.name} · ${MODES[L.mode].name} · ${RULES[L.rule].name} · ${L.allies} vs ${L.enemies}${L.rule === 'relic' ? ' · 藍隊進攻 / 紅隊防守' : ''}`;
     $('ldTip').textContent = '提示：' + pick(TIPS); $('ldSlogan').textContent = def.slogan;
@@ -242,8 +417,14 @@ class App {
     } catch (e) {
       console.error(e); $('ldStep').textContent = '載入失敗：' + e.message; return;
     }
-    if (!net && this.netHostRoom) new NetHost(this, m, new LoopbackTransport(this.netHostRoom, this.netOpts)); // v25: friends in the same browser can join this match
-    else if (!net && Settings.data.onlineHost && cfg.rule === 'tdm') this.openRoom(m); // v26: friends on other computers
+    if (net) { // v27: wait until the host's match takes us in (it may still be building its map)
+      this.loadTarget = Math.max(this.loadTarget, 0.88); this.loadLabel = '等待房主進入戰場';
+      const w = await Promise.race([net.welcomed, sleep(45000).then(() => ({ reject: '房主沒有回應' }))]);
+      if (this.match !== m) return;
+      if (w.reject) { this.abortNetMatch(w.reject); return; }
+      net.attach(m);
+    } else if (this.netHostRoom) new NetHost(this, m, new LoopbackTransport(this.netHostRoom, this.netOpts)); // v25: friends in the same browser can join this match
+    else this.attachHost(); // v27: the room's friends join this match
     this.audio.setAcoustics(ACOUSTICS[def.acoustics] || ACOUSTICS.outdoor); this.audio.setAmbience(def.ambience);
     // cinematic "screenshot" of the real map behind the loading text
     this.state = 'shot'; this.shotT = 0; ld.classList.add('shot'); this.loadTarget = 1; this.loadLabel = '即將部署';
@@ -252,26 +433,36 @@ class App {
     ld.classList.remove('on', 'shot');
     this.hud.reset(); this.hud.show(true); this.hud.setWeapon(m.weapons);
     this.state = 'playing'; this.last = performance.now();
+    if (this.room) this.room.status('playing');
     this.input.lock();
   }
 
+  // after a match: back to the room (v27: the room and its friends are still there), or to the hub without one
   async returnToLobby() {
-    const $ = this.$;
+    const $ = this.$, r = this.room;
     if (this.state === 'returning') return;
     this.state = 'returning';
     clearInterval(this.endTimer);
     $('endscreen').classList.remove('on'); $('pause').classList.remove('on'); $('settings').classList.remove('on');
     this.input.unlock(); this.hud.show(false);
     const ld = $('loader'); ld.classList.add('on'); ld.classList.remove('shot');
-    $('ldTitle').firstChild.textContent = 'RETURNING'; $('ldSub').textContent = '返回房間中…'; $('ldTip').textContent = '提示：' + pick(TIPS); $('ldSlogan').textContent = 'ROOM #0427';
+    $('ldTitle').firstChild.textContent = 'RETURNING'; $('ldSub').textContent = r ? '返回房間中…' : '返回大廳中…'; $('ldTip').textContent = '提示：' + pick(TIPS); $('ldSlogan').textContent = r ? 'ROOM ' + fmtCode(r.code) : 'LOBBY';
     this.loadShown = 0; this.loadTarget = 1; this.loadLabel = '結算戰績';
     await sleep(900);
-    if (this.match) { if (this.match.net) this.match.net.close(); this.match.dispose(); this.match = null; }
-    this.netClient = null; this.bgTick.set(false); this.dir.withdraw().catch(() => {});
+    this._teardownMatch();
+    if (this.room) { if (this.room.role === 'host') this.room.matchOver(); this.room.status('room'); } else this.bgTick.set(false);
     this.audio.setAmbience('none');
     await sleep(700);
-    ld.classList.remove('on'); $('lobby').classList.add('on'); $('lbStatus').textContent = '等待中';
-    this.state = 'lobby'; this.refreshLobby();
+    ld.classList.remove('on');
+    if (this.room) { this.enterRoomScreen(); if (this.goPending) { this.goPending = false; this.startGuestMatch(); } }
+    else { this.showHub(this.pendingMsg || ''); this.pendingMsg = ''; }
+  }
+  _teardownMatch() {
+    const $ = this.$; clearInterval(this.endTimer);
+    for (const id of ['endscreen', 'pause', 'settings', 'lbCount']) $(id).classList.remove('on');
+    this.input.unlock(); this.hud.show(false);
+    if (this.match) { if (this.match.net) this.match.net.close(); this.match.dispose(); this.match = null; }
+    this.netClient = null; if (this.room) this.room.dropLink();
   }
 
   async loadHDR(name) {
@@ -342,7 +533,10 @@ class App {
     inp.onKey = (code) => {
       const m = this.match;
       if (this.state === 'countdown' && code === 'Escape') { this.cancelCountdown(); return; }
-      if (this.state === 'lobby' && code === 'Escape' && this.$('warehouse').classList.contains('on')) { this.closeWarehouse(); return; }
+      if ((this.state === 'lobby' || this.state === 'hub') && code === 'Escape') {
+        if (this.$('warehouse').classList.contains('on')) { this.closeWarehouse(); return; }
+        if (this.$('lbInvPop').classList.contains('on')) { this.invite(false); return; }
+      }
       const fk = /^F([1-5])$/.exec(code);
       if (fk && m && (this.state === 'playing' || this.state === 'paused')) { m.queueLoadout(parseInt(fk[1], 10) - 1); return; } // works while dead too
       if (this.state !== 'playing' || !m || !m.player.alive) return;
@@ -401,6 +595,7 @@ class App {
     const $ = this.$;
     this.state = 'ended'; this.input.unlock(); m.weapons.trigger = false;
     this.hud.scoreboard(null); this.hud.freeze(false); this.hud.showDeath(false); this.hud.spectate(null); this.hud.roundBanner(null);
+    if (this.room) { if (this.room.role === 'host') { this.room.phase = 'room'; this.room.mcfg = null; } this.room.status('ended'); } // nobody can join an ended match
     const mine = m.winner === m.player.team, draw = !m.winner, t = $('endTitle');
     t.textContent = draw ? 'DRAW' : mine ? 'VICTORY' : 'DEFEAT'; t.style.color = draw ? '#fff' : mine ? '#7dffa6' : '#ff5d52';
     $('endSub').textContent = `${m.def.name} · ${MODES[m.mode].name} · ${RULES[m.rule].name} · ${DIFFICULTY[m.config.difficulty].name}`;
@@ -470,11 +665,16 @@ class App {
     this.audio.init(); this.audio.uiClick();
     this.wh = this.wh || { slot: L.loadout, cat: 'primary', sel: null, filter: 'all', q: '', page: -1 };
     this.wh.slot = L.loadout; this.wh.sel = Settings.data.loadouts[this.wh.slot][this.wh.cat]; this.wh.page = -1; // -1 = the page showing the equipped gun
-    $('lobby').classList.remove('on'); $('warehouse').classList.add('on');
+    this.whFrom = this.state === 'hub' ? 'hub' : 'lobby'; this.invite(false);
+    $('lobby').classList.remove('on'); $('hub').classList.remove('on'); $('warehouse').classList.add('on');
     if (!this.whR) this._initPreview();
     this.renderWarehouse();
   }
-  closeWarehouse() { this.$('warehouse').classList.remove('on'); this.$('lobby').classList.add('on'); Settings.save(); this.audio.uiClick(); this.refreshLobby(); }
+  closeWarehouse() {
+    const back = this.whFrom === 'hub' && this.state === 'hub' ? 'hub' : 'lobby';
+    this.$('warehouse').classList.remove('on'); this.$(back).classList.add('on'); Settings.save(); this.audio.uiClick();
+    if (back === 'lobby') this.refreshLobby();
+  }
   _initPreview() {
     const cv = this.$('whCanvas');
     try {
@@ -609,14 +809,15 @@ class App {
     this.pacer.skips = 0;
     let dt = clamp((now - this.last) / 1000, 0, 0.1); this.last = now;
     this.input.gameActive = this.state === 'playing' || this.state === 'paused';
-    if (this.state === 'lobby') { this._renderPreview(dt); if (this.thumbQ && this.thumbQ.length && performance.now() > this.thumbStart) this._pumpThumb(); }
+    if (this.state === 'lobby' || this.state === 'hub') { this._renderPreview(dt); if (this.thumbQ && this.thumbQ.length && performance.now() > this.thumbStart) this._pumpThumb(); }
     this.fpsAcc += dt; this.fpsFrames++;
     if (this.fpsAcc >= 0.5) { this.fpsText = `${Math.round(this.fpsFrames / this.fpsAcc)} FPS`; this.fpsAcc = 0; this.fpsFrames = 0; }
     const mouse = this.input.consumeMouse(this._mouse);
     if (this.state === 'countdown') {
       const prev = Math.ceil(this.countT); this.countT -= dt; const cur = Math.ceil(this.countT);
       if (cur !== prev && cur > 0) this._showCount(cur);
-      if (this.countT <= 0) this.startMatch();
+      if (this.countGuest) { if (this.countT < -6) this.guestCountdown(false); } // a guest waits for the host's start (rgo)
+      else if (this.countT <= 0) this.startMatch();
     }
     if (this.loadShown !== undefined) {
       this.loadShown = damp(this.loadShown, this.loadTarget, 5, dt);
@@ -625,7 +826,7 @@ class App {
     }
     const m = this.match;
     if (m && m.running) {
-      const netLive = !!m.net && this.state === 'paused' && m.phase !== 'over'; // v26: an online match never pauses — your soldier just stands still
+      const netLive = this.netShared(m) && this.state === 'paused' && m.phase !== 'over'; // v26: an online match never pauses — your soldier just stands still
       if (this.state === 'playing' || netLive) {
         const tt0 = performance.now(); m.tick(dt, mouse); const tt1 = performance.now(); m.prof.add('tick', tt1 - tt0);
         // dynamic resolution: keep the GPU out of overload (prevents hangs / TDR on weaker cards)
@@ -645,7 +846,7 @@ class App {
             else if (this.autoFast >= 20 && i < Q_ORDER.indexOf(this.autoCeil)) { AUTO_Q = Q_ORDER[i + 1]; this.autoFast = 0; this.post.configure(m, AUTO_Q); }
           }
         }
-        const nt = m.net && (m.net.t instanceof RtcHostTransport || m.net.t instanceof RtcClientTransport) ? (m.net.role === 'host' ? ` · 房間 ${m.net.t.room} · ${m.net.players} 人` : ` · 房間 ${m.net.t.room} · ${Math.round(m.net.rtt)} ms`) : '';
+        const rm = this.room, nt = rm && rm.online && this.netShared(m) ? ` · 房間 ${fmtCode(rm.code)} · ${m.net.role === 'host' ? m.net.players + ' 人' : m.net.rttWin && m.net.rttWin.length >= 3 ? Math.round(m.net.rtt) + ' ms' : '測量延遲中'}` : '';
         this.hud.setFps(`${this.fpsText} · ${this.gpuShort}${this.gpuIntegrated ? '（內顯）' : ''}${nt}`, Settings.data.showFps || !!nt);
         const st = window.__stats || (window.__stats = { frames: 0, seconds: 0 }); st.frames++; st.seconds += dt; st.avgFps = Math.round(st.frames / Math.max(1e-3, st.seconds)); st.frameMs = +this.frameMs.toFixed(2); st.fps = this.fpsText; st.gpuBusy = this.gpuBusy; st.inflight = this.pacer.hist; st.scale = this.post.scale; st.q = activeQuality(); // tools/check.mjs
         const ring = st.dts || (st.dts = []); ring.push(dt * 1000); if (ring.length > 900) ring.shift(); // frame-time distribution (stutter shows in p99 / max, not in the average)
@@ -676,7 +877,7 @@ try {
   const app = new App();
   window.app = app;
   window.SF2 = { THREE, Settings, MAPS, WEAPON_DEFS, WEAPON_DATABASE, CFG, MODES, RULES, calcDamage, loadoutDefs, LOOK_DEFAULT, resolveLook, CAO }; // debug handle for the console
-  window.SF2net = { NetHost, NetClient, LoopbackTransport, NetCodec, RoomDirectory, RtcHostTransport, RtcClientTransport, BackgroundTicker, inviteLink, ONLINE, host: (room, o = {}) => new NetHost(app, app.match, new LoopbackTransport(room, o)), join: (room, o = {}) => app.netJoin(room, o) }; // v25 tests
+  window.SF2net = { NetHost, NetClient, LoopbackTransport, NetCodec, RoomDirectory, RtcHostTransport, RtcClientTransport, BackgroundTicker, RoomHost, RoomGuest, RoomLink, inviteLink, parseCode, fmtCode, roomCode, roomCfgSafe, ONLINE, host: (room, o = {}) => new NetHost(app, app.match, new LoopbackTransport(room, o)), join: (room, o = {}) => app.netJoin(room, o) }; // v25 tests
   window.__gameReady = true;
   document.getElementById('boot').classList.add('done');
 } catch (e) {

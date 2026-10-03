@@ -52,7 +52,7 @@ class Match {
     progress(0.7, '部署部隊'); await nextFrame();
     this.effects = new Effects(this.scene, app.tex, this.audio);
     this.player = new Player(this);
-    if (this.isClient) this.player.team = this.net.welcome.team; // a client plays on the team the host gave it, with no bots of its own
+    if (this.isClient) this.player.team = this.net.team === 'bravo' ? 'bravo' : 'alpha'; // a client plays on his room team, with no bots of its own
     this.weapons = new WeaponSystem(this, loadoutDefs(this.mode, Settings.data.loadouts[this.loadoutIndex])); this.weapons.setEnvironment(this.vmEnv || this.scene.environment);
     this.combatants.push(this.player);
     if (!this.isClient) {
@@ -70,7 +70,7 @@ class Match {
     this.applyEnvIntensity();
     progress(0.84, '編譯著色器'); await nextFrame();
     app.post.configure(this, activeQuality());
-    if (this.isClient) { this.round = 1; this.rules.startRound(); this.net.attach(this); } else this.startRound();
+    if (this.isClient) { this.round = 1; this.rules.startRound(); } else this.startRound(); // v27: a client attaches once the host's match takes him in (App.startMatch)
     this.player.updateCamera(1); this.weapons.update(0, app.input, { x: 0, y: 0 });
     if (app.renderer.compileAsync) { await app.renderer.compileAsync(this.scene, this.camera); await app.renderer.compileAsync(this.weapons.scene, this.weapons.camera); }
     else { app.renderer.compile(this.scene, this.camera); app.renderer.compile(this.weapons.scene, this.weapons.camera); }

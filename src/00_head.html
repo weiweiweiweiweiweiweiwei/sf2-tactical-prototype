@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SF2 Tactical Prototype v26</title>
+<title>SF2 Tactical Prototype v27</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Teko:wght@300;400;500;600&family=Rajdhani:wght@500;600;700&family=Noto+Sans+TC:wght@500;700&display=swap" rel="stylesheet">
@@ -182,18 +182,88 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
 .lb-room{flex:1;font-size:16px;color:var(--dim);letter-spacing:2px}
 .lb-room b{color:var(--hud)}
 .lb-main{display:grid;grid-template-columns:1fr 470px;gap:18px;height:760px;padding-top:16px;align-items:start} /* v26: 860-high design (right column ~750) */
-/* v26 online panel: under the team lists */
-.lb-left{display:grid;grid-template-rows:minmax(0,1fr) auto;gap:12px;height:744px}.lb-left .lb-teams{min-height:0}
-#lbOnline{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:10px 14px;display:flex;flex-direction:column;gap:7px;height:222px}
-#lbOnline header{display:flex;align-items:center;gap:12px}#lbOnline h3{font-size:13px;letter-spacing:4px;color:var(--accent);flex:1}
-#lbOnline input[type=text]{height:28px;font-family:inherit;font-size:14px;color:var(--hud);background:#0c100e;border:1px solid rgba(255,255,255,.16);border-radius:3px;padding:0 8px}
-#lbNick{width:150px}#lbCode{width:96px;text-transform:uppercase;letter-spacing:3px;font-family:Consolas,monospace}
-.ol-row{display:flex;align-items:center;gap:10px;font-size:14px}.ol-row label{flex:1;display:flex;align-items:center;gap:7px;cursor:pointer;color:var(--hud)}
-.ol-row .btn,.room .btn{padding:3px 12px;font-size:13px}
-#lbRooms{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:4px}
-.room{display:flex;align-items:center;gap:10px;padding:4px 10px;background:rgba(255,255,255,.04);border-radius:3px;font-size:14px}
-.room b{font-family:Consolas,monospace;color:var(--accent);letter-spacing:2px}.room span{flex:1;color:var(--hud);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#lbRooms .empty{color:var(--faint);font-size:13px;padding:6px 2px;line-height:1.5}#lbNetMsg{font-size:12px;color:var(--warn);min-height:14px}
+/* v27 room bar: code, room name, ＋ 邀請朋友 pop-up, 離開房間 */
+.lb-left{height:744px}
+.lb-room #lbCodeTxt{font-family:Consolas,monospace;font-weight:700;color:var(--accent);letter-spacing:3px;margin-right:4px}
+.lb-room .rmk{font-size:12px;letter-spacing:3px;color:var(--faint);margin-right:6px}
+.inv{position:relative}
+#lbInvite{font-size:17px;padding:9px 18px;letter-spacing:2px}
+#lbInvite:disabled,.btn:disabled{opacity:.4;cursor:default;filter:none;transform:none}
+.inv-pop{position:absolute;right:-120px;top:calc(100% + 12px);width:470px;z-index:6;background:#0d1310;border:1px solid rgba(125,255,166,.4);border-radius:8px;padding:6px 20px 14px;box-shadow:0 22px 60px rgba(0,0,0,.65);display:none;cursor:default}
+.inv-pop.on{display:block;animation:popin .14s ease-out}
+.inv-pop::before{content:'';position:absolute;right:186px;top:-7px;width:12px;height:12px;background:#0d1310;border-left:1px solid rgba(125,255,166,.4);border-top:1px solid rgba(125,255,166,.4);transform:rotate(45deg)}
+@keyframes popin{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+.inv-row{display:flex;align-items:center;gap:16px;padding:14px 0;border-bottom:1px solid rgba(255,255,255,.07)}
+.inv-row .tx{flex:1;min-width:0}.inv-row h4{font-size:16px;letter-spacing:2px;color:var(--hud)}.inv-row h4 i{font-style:normal;color:var(--accent);margin-right:8px}
+.inv-row small{display:block;font-size:13px;color:var(--dim);margin-top:3px}
+.inv-row .btn{flex:none;padding:8px 14px;font-size:14px}
+#lbInvLinkTxt{display:block;width:100%;margin-top:8px;height:30px;font:13px Consolas,monospace;color:var(--hud);background:#060908;border:1px solid rgba(255,255,255,.14);border-radius:3px;padding:0 8px;user-select:text;-webkit-user-select:text}
+#lbInvCode{display:block;font:700 44px/1.1 Consolas,monospace;letter-spacing:8px;color:var(--accent);margin-top:4px;text-shadow:0 0 18px rgba(125,255,166,.35)}
+.inv-pub{display:flex;align-items:center;gap:9px;padding:13px 0 2px;font-size:14px;color:var(--hud);cursor:pointer}.inv-pub input{accent-color:var(--accent);width:16px;height:16px}
+.inv-pub small{color:var(--dim)}
+#lbInvMsg{font-size:13px;color:var(--accent);min-height:17px;margin-top:8px}
+#roomToast{position:fixed;left:50%;top:86px;transform:translateX(-50%);z-index:30;padding:10px 24px;background:rgba(6,10,8,.94);border:1px solid rgba(125,255,166,.5);border-radius:4px;font-size:17px;font-weight:700;letter-spacing:1px;color:var(--accent);opacity:0;pointer-events:none;white-space:nowrap;zoom:var(--ui,1)}
+#roomToast.show{animation:toast 3.4s ease-out forwards}
+/* guests: the host sets map / mode / bots — a guest picks his team and loadout */
+#lobby.guest .hostonly{pointer-events:none;opacity:.55}
+#lobby.guest .stepper,#lobby.guest #lbCancel{display:none}
+.tsw{padding:4px 10px!important;font-size:13px!important;letter-spacing:1px!important}
+.btn.start.wait{background:rgba(255,255,255,.08);color:var(--dim);font-size:24px;letter-spacing:6px;opacity:1}
+.team-col li.human .rank{background:rgba(255,210,90,.22)!important;color:#ffd75a!important}
+.team-col li.human .nm em{font-style:normal;color:var(--gold);font-size:14px;margin-left:4px}
+.team-col li .st.loading,.team-col li .st.ended{color:var(--warn)}.team-col li .st.playing{color:var(--blue)}.team-col li .st.host{color:#ffd75a}
+.team-col li.bot .st{color:var(--faint)}
+
+/* ---- v27 hub (大廳) ---- */
+#hub{background:
+  radial-gradient(ellipse at 15% 10%,rgba(60,130,95,.30),transparent 55%),
+  radial-gradient(ellipse at 95% 95%,rgba(40,80,140,.20),transparent 55%),
+  repeating-linear-gradient(135deg,rgba(255,255,255,.018) 0 2px,transparent 2px 9px),
+  linear-gradient(180deg,#0b100d,#060807)}
+#hub .hbz{position:absolute;left:50%;top:50%;width:1440px;height:860px;transform:translate(-50%,-50%) scale(var(--lz,1));transform-origin:center}
+.hub-nick{display:flex;align-items:center;gap:10px;font-size:14px;letter-spacing:3px;color:var(--dim)}
+.hub-nick input{width:180px;height:36px;font:600 17px var(--font);color:var(--hud);background:#0c100e;border:1px solid rgba(255,255,255,.18);border-radius:3px;padding:0 12px;letter-spacing:1px;user-select:text;-webkit-user-select:text}
+.hub-nick input:focus,#hubCode:focus{outline:none;border-color:var(--accent)}
+#hubNet{font-size:13px;letter-spacing:2px}#hubNet.ok{color:var(--accent)}#hubNet.off{color:var(--warn)}
+.hub-main{display:grid;grid-template-columns:600px 1fr;gap:24px;height:744px;padding-top:24px}
+.hub-actions{display:flex;flex-direction:column;gap:16px;min-height:0}
+.hub-card{position:relative;display:block;width:100%;text-align:left;cursor:pointer;color:var(--hud);font-family:var(--font);background:linear-gradient(120deg,rgba(125,255,166,.13),rgba(9,13,11,.72) 62%);border:1px solid var(--line);border-radius:8px;padding:30px 30px 28px 132px;transition:border-color .15s,transform .12s,box-shadow .15s}
+.hub-card:hover{border-color:rgba(125,255,166,.65);transform:translateY(-2px);box-shadow:0 10px 30px rgba(0,0,0,.35)}
+.hub-card i{position:absolute;left:32px;top:50%;transform:translateY(-50%);width:74px;height:74px;border-radius:50%;display:flex;align-items:center;justify-content:center;font:700 44px/1 var(--font);color:#06140b;background:var(--accent);box-shadow:0 0 34px rgba(125,255,166,.35)}
+.hub-card b{display:block;font-size:36px;letter-spacing:8px;line-height:1.1}
+.hub-card em{display:block;font-style:normal;font-size:13px;letter-spacing:6px;color:var(--accent);margin-top:4px}
+.hub-card span{display:block;font-size:15px;color:var(--dim);margin-top:10px;line-height:1.55}
+#hubJoinCard .hub-card{background:linear-gradient(120deg,rgba(99,179,255,.14),rgba(9,13,11,.72) 62%)}
+#hubJoinCard .hub-card i{background:var(--blue);box-shadow:0 0 34px rgba(99,179,255,.35);font-size:38px}
+#hubJoinCard .hub-card em{color:var(--blue)}
+#hubJoinCard.open .hub-card{border-radius:8px 8px 0 0;border-color:rgba(99,179,255,.55);transform:none}
+#hubJoinCard .hub-card::after{content:'▾';position:absolute;right:26px;top:50%;transform:translateY(-50%);font-size:22px;color:var(--dim);transition:transform .2s}
+#hubJoinCard.open .hub-card::after{transform:translateY(-50%) rotate(180deg)}
+.hub-join{max-height:0;overflow:hidden;transition:max-height .25s ease;background:rgba(9,13,11,.82);border:0 solid rgba(99,179,255,.55);border-radius:0 0 8px 8px}
+#hubJoinCard.open .hub-join{max-height:220px;border-width:0 1px 1px}
+.hub-join .in{display:flex;gap:14px;align-items:center;padding:22px 26px 10px}
+#hubCode{flex:1;min-width:0;height:78px;font:700 50px/1 Consolas,monospace;letter-spacing:10px;text-align:center;color:var(--hud);background:#060908;border:1px solid rgba(99,179,255,.4);border-radius:6px;user-select:text;-webkit-user-select:text}
+#hubCode::placeholder{color:rgba(232,239,233,.13)}
+#hubJoinGo{height:78px;font-size:26px;padding:0 34px;letter-spacing:6px}
+.hub-join .hint{padding:0 26px 18px;font-size:13px;color:var(--dim)}#hubMsg{color:var(--warn);font-size:14px;min-height:18px;margin-bottom:4px}
+.hub-help{margin-top:auto;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:16px 22px}
+.hub-help h3,.hub-rooms h3{font-size:14px;letter-spacing:5px;color:var(--accent)}
+.hub-help ol{list-style:none;counter-reset:s;display:grid;grid-template-columns:1fr 1fr;gap:10px 20px;margin-top:12px}
+.hub-help li{counter-increment:s;position:relative;padding-left:34px;font-size:14px;color:var(--hud);line-height:1.45}
+.hub-help li::before{content:counter(s);position:absolute;left:0;top:1px;width:24px;height:24px;border-radius:50%;border:1px solid rgba(125,255,166,.5);color:var(--accent);font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.hub-rooms{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:18px 22px;display:flex;flex-direction:column;min-height:0}
+.hub-rooms header{display:flex;align-items:baseline;gap:14px;margin-bottom:12px}#hubRoomsN{font-size:14px;color:var(--dim)}
+#hubRooms{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:6px}
+#hubRooms .rhead,#hubRooms .room{display:grid;grid-template-columns:130px 1fr 190px 70px 70px 80px;align-items:center;gap:12px;padding:0 14px}
+#hubRooms .rhead{font-size:12px;letter-spacing:2px;color:var(--faint);padding-bottom:4px}
+#hubRooms .room{height:52px;background:rgba(255,255,255,.04);border:1px solid transparent;border-radius:4px;font-size:16px}
+#hubRooms .room:hover{border-color:rgba(125,255,166,.35);background:rgba(125,255,166,.05)}
+#hubRooms .room b{font:700 19px Consolas,monospace;color:var(--accent);letter-spacing:2px}
+#hubRooms .room span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#hubRooms .room .ph{font-size:13px;color:var(--accent)}#hubRooms .room .ph.on{color:var(--blue)}
+#hubRooms .room .btn{padding:6px 0;font-size:14px}
+#hubRooms .empty{margin:auto;max-width:430px;text-align:center;color:var(--dim);font-size:15px;line-height:1.7}
+#hubRooms .empty b{display:block;font-size:20px;color:var(--hud);letter-spacing:3px;margin-bottom:8px}
 #pOnline{margin:8px 0 2px;font-size:14px;color:var(--hud);display:flex;align-items:center;gap:10px;flex-wrap:wrap}#pOnline code{color:var(--accent);font-size:16px;letter-spacing:3px}#pOnline .btn{padding:3px 12px;font-size:13px}
 .lb-teams{display:grid;grid-template-columns:1fr 56px 1fr;gap:0;align-items:start}
 .team-col{background:var(--panel);border:1px solid var(--line);border-radius:6px;overflow:hidden}
@@ -202,12 +272,12 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
 .team-col.b header{background:linear-gradient(90deg,rgba(210,60,50,.4),rgba(210,60,50,.06))}
 .team-col header b{font-size:24px;letter-spacing:4px}
 .team-col.a header b{color:var(--blue)}.team-col.b header b{color:var(--red)}
-.team-col header span{color:var(--dim);font-size:14px;flex:1}
+.team-col header span{color:var(--dim);font-size:14px;flex:1;white-space:nowrap}
 .stepper{display:flex;align-items:center;gap:6px}
 .stepper button{width:30px;height:30px;border-radius:3px;border:1px solid rgba(255,255,255,.25);background:rgba(0,0,0,.35);color:#fff;font-size:18px;cursor:pointer}
 .stepper button:hover{border-color:var(--accent);color:var(--accent)}
 .stepper b{min-width:28px;text-align:center;font-size:20px!important;color:#fff!important;letter-spacing:0!important}
-.team-col ol{list-style:none;padding:6px;max-height:440px;overflow-y:auto}
+.team-col ol{list-style:none;padding:6px;max-height:630px;overflow-y:auto}
 .team-col li{display:flex;align-items:center;gap:10px;height:44px;padding:0 10px;margin:3px 0;border-radius:3px;background:rgba(255,255,255,.035);font-size:17px;font-weight:600}
 .team-col li .n{width:22px;color:var(--faint);font-size:14px}
 .team-col li .rank{width:24px;height:24px;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700}
@@ -237,6 +307,7 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
 #lbMsg{font-size:13px;color:var(--warn);min-height:16px}
 
 .lb-foot{position:absolute;left:0;right:0;bottom:4px;text-align:center;font-size:13px;color:var(--faint);letter-spacing:1px}
+#lobby .lb-foot{display:none} /* v27: the room's right column reaches the bottom; the keys are in the hub and the pause menu */
 
 /* ---- loader ---- */
 #loader{background:#040605;z-index:20}
@@ -543,40 +614,70 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
   </div></div>
 </div>
 
-<!-- ROOM / LOBBY -->
-<div id="lobby" class="screen on"><div class="lbz">
+<!-- HUB (v27 大廳): create a room, or join one -->
+<div id="hub" class="screen on"><div class="hbz">
   <div class="lb-top">
-    <div class="lb-brand">SPECIAL FORCE <span>2</span><small>TACTICAL PROTOTYPE · v26</small></div>
-    <div class="lb-room">ROOM #0427 · <b>單機練習房</b> · <span id="lbStatus">等待中</span></div>
-    <button class="btn ghost" id="lbWh" title="倉庫：編輯 5 組配裝">🗄 倉庫 WAREHOUSE</button>
+    <div class="lb-brand">SPECIAL FORCE <span>2</span><small>TACTICAL PROTOTYPE · v27</small></div>
+    <div class="lb-room"><span class="rmk">LOBBY</span><b>大廳</b> · 配對伺服器 <span id="hubNet">連線中…</span></div>
+    <label class="hub-nick">暱稱<input type="text" id="hubNick" maxlength="12" placeholder="你的名字" autocomplete="off" spellcheck="false"></label>
+    <button class="btn ghost" id="hubWh" title="倉庫：編輯 5 組配裝">🗄 倉庫</button>
+    <button class="btn ghost icon" id="hubFull" title="全螢幕">⛶</button>
+    <button class="btn ghost icon gear" id="hubSettings" title="設定">⚙</button>
+  </div>
+  <div class="hub-main">
+    <section class="hub-actions">
+      <button class="hub-card" id="hubCreate"><i>＋</i><b>建立房間</b><em>CREATE ROOM</em><span>選地圖、模式和 Bot 人數。房間一建立就有 6 位數代碼，<br>在出發前就能邀請朋友進來。</span></button>
+      <div id="hubJoinCard">
+        <button class="hub-card" id="hubJoinOpen"><i>⇥</i><b>加入房間</b><em>JOIN ROOM</em><span>輸入朋友給你的 6 位數房間代碼。<br>朋友傳的是邀請連結的話，直接點連結就好。</span></button>
+        <div class="hub-join"><div class="in"><input type="text" id="hubCode" inputmode="numeric" placeholder="000 000" autocomplete="off" spellcheck="false"><button class="btn" id="hubJoinGo">加入</button></div>
+          <div class="hint"><div id="hubMsg"></div>也可以直接貼上整段邀請連結</div></div>
+      </div>
+      <div class="hub-help"><h3>和朋友一起玩</h3><ol>
+        <li>按「建立房間」</li><li>在房間按「＋ 邀請朋友」，複製連結或 6 位數代碼傳給朋友</li>
+        <li>朋友點連結，或在這裡按「加入房間」輸入代碼</li><li>大家都在房間裡了，房主按「出發」</li></ol></div>
+    </section>
+    <section class="hub-rooms"><header><h3>公開房間 PUBLIC ROOMS</h3><span id="hubRoomsN"></span></header>
+      <div id="hubRooms"><div class="empty">正在讀取房間列表…</div></div></section>
+  </div>
+  <div class="lb-foot">WASD 移動 · SHIFT 衝刺(不會掉下邊緣) · C 蹲(無腳步聲，衝刺中按 = 滑鏟) · SPACE 跳(對矮牆 = 攀爬翻越) · 右鍵 開鏡 · 1-6 武器 · F 擒拿 · E 互動/佔領 · F1–F5 預約配裝 · 梯子 W/S · Q 快速切換 · R 換彈 · TAB 計分板</div>
+</div></div>
+<div id="roomToast"></div>
+
+<!-- ROOM (the room you created or joined) -->
+<div id="lobby" class="screen"><div class="lbz">
+  <div class="lb-top">
+    <div class="lb-brand">SPECIAL FORCE <span>2</span><small>TACTICAL PROTOTYPE · v27</small></div>
+    <div class="lb-room"><span class="rmk">ROOM</span><span id="lbCodeTxt">——— ———</span> · <b id="lbRoomName">單機練習房</b> · <span id="lbStatus">等待中</span></div>
+    <div class="inv"><button class="btn" id="lbInvite" title="邀請朋友加入這個房間">＋ 邀請朋友</button>
+      <div class="inv-pop" id="lbInvPop">
+        <div class="inv-row"><div class="tx"><h4><i>🔗</i>邀請連結</h4><small>傳給朋友，對方點開就直接進入這個房間</small><input type="text" id="lbInvLinkTxt" readonly></div><button class="btn ghost" id="lbInvLink">複製連結</button></div>
+        <div class="inv-row"><div class="tx"><h4><i>#</i>房間代碼</h4><small>朋友在大廳按「加入房間」，輸入這 6 個數字</small><code id="lbInvCode"></code></div><button class="btn ghost" id="lbInvCopy">複製代碼</button></div>
+        <label class="inv-pub" id="lbPubRow"><input type="checkbox" id="lbPub">公開到大廳的房間列表 <small>（不認識的人也能加入）</small></label>
+        <div id="lbInvMsg"></div>
+      </div></div>
+    <button class="btn ghost" id="lbWh" title="倉庫：編輯 5 組配裝">🗄 倉庫</button>
     <button class="btn ghost icon" id="lbFull" title="全螢幕">⛶</button>
     <button class="btn ghost icon gear" id="lbSettings" title="設定">⚙</button>
+    <button class="btn ghost" id="lbLeave" title="回到大廳">離開房間</button>
   </div>
   <div class="lb-main">
     <div class="lb-left"><section class="lb-teams">
-      <div class="team-col a"><header><b>藍隊 ALPHA</b><span id="lbAllyLbl">我方（含你）</span>
+      <div class="team-col a"><header><b>藍隊 ALPHA</b><span id="lbAllyLbl"></span><button class="btn ghost tsw" id="lbJoinA" style="display:none">換到藍隊</button>
         <div class="stepper"><button data-step="allies" data-d="-1">−</button><b id="lbAllies">6</b><button data-step="allies" data-d="1">+</button></div></header>
         <ol id="lbListA"></ol></div>
       <div class="vs">VS</div>
-      <div class="team-col b"><header><b>紅隊 BRAVO</b><span>敵方</span>
+      <div class="team-col b"><header><b>紅隊 BRAVO</b><span id="lbEnemyLbl"></span><button class="btn ghost tsw" id="lbJoinB" style="display:none">換到紅隊</button>
         <div class="stepper"><button data-step="enemies" data-d="-1">−</button><b id="lbEnemies">6</b><button data-step="enemies" data-d="1">+</button></div></header>
         <ol id="lbListB"></ol></div>
-    </section>
-    <section id="lbOnline">
-      <header><h3>線上對戰 ONLINE</h3><span style="font-size:13px;color:var(--dim)">暱稱</span><input type="text" id="lbNick" maxlength="12" placeholder="你的名字" autocomplete="off"></header>
-      <div class="ol-row"><label><input type="checkbox" id="lbHostOn">出發時開放線上房間（朋友可以中途加入 · 只限團隊死鬥）</label>
-        <input type="text" id="lbCode" maxlength="5" placeholder="代碼" autocomplete="off"><button class="btn ghost" id="lbJoinCode">加入</button></div>
-      <div id="lbRooms"><div class="empty">正在讀取房間列表…</div></div>
-      <div id="lbNetMsg"></div>
     </section></div>
     <aside class="lb-side">
-      <div><h3>地圖 MAP</h3>
+      <div class="hostonly"><h3>地圖 MAP</h3>
         <div class="mapPrev"><canvas id="lbMapBig" width="880" height="330"></canvas><div class="info"><b id="lbMapName"></b><span id="lbMapDesc"></span></div></div>
         <div class="maps" id="lbMaps"></div></div>
-      <div><h3>賽制 MODE</h3><div class="pills" id="lbRule"></div></div>
-      <div><h3>武器模式</h3><div class="pills" id="lbModes"></div><div class="modeDesc" id="lbModeDesc"></div></div>
-      <div class="row2"><div><h3 id="lbTargetLbl">勝利分數</h3><div class="pills" id="lbTarget"></div></div><div><h3 id="lbTimeLbl">時間限制</h3><div class="pills" id="lbTime"></div></div></div>
-      <div class="row2"><div><h3>難度</h3><div class="pills" id="lbDiff"></div></div>
+      <div class="hostonly"><h3>賽制 MODE</h3><div class="pills" id="lbRule"></div></div>
+      <div class="hostonly"><h3>武器模式</h3><div class="pills" id="lbModes"></div><div class="modeDesc" id="lbModeDesc"></div></div>
+      <div class="row2 hostonly"><div><h3 id="lbTargetLbl">勝利分數</h3><div class="pills" id="lbTarget"></div></div><div><h3 id="lbTimeLbl">時間限制</h3><div class="pills" id="lbTime"></div></div></div>
+      <div class="row2"><div class="hostonly"><h3>難度</h3><div class="pills" id="lbDiff"></div></div>
         <div><h3>出場配裝</h3><div class="pills" id="lbLoadout"></div><button class="btn ghost" id="lbWarehouse" style="margin-top:6px;font-size:13px;padding:5px 10px">編輯配裝 · 倉庫</button><div id="lbLoadoutInfo"></div></div></div>
       <div id="lbMsg"></div>
       <button class="btn start" id="lbStart">出 發 · GO</button>

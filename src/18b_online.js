@@ -1,5 +1,5 @@
 /* =====================================================================
-   v26 ONLINE — play with friends on other computers, free.
+   v26 ONLINE — play with friends on other computers, free. (v27: rooms on top of this — see 18c_room.js)
    · Supabase Realtime (project sf2-tactical, free plan) only helps two browsers FIND each other: the lobby channel lists
      open rooms (presence), a room channel carries the WebRTC handshake (offer / answer / ICE candidates).
    · The game itself flows peer-to-peer over two WebRTC DataChannels per friend: 'r' reliable + ordered (events),
@@ -19,8 +19,11 @@ function supa() {
   if (!_supa) _supa = import(ONLINE.lib).then(({ createClient }) => createClient(ONLINE.url, ONLINE.key, { auth: { persistSession: false, autoRefreshToken: false }, realtime: { params: { eventsPerSecond: 40 } } }));
   return _supa;
 }
-const ROOM_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; // no 0/O, 1/I/L
-const roomCode = () => Array.from({ length: 5 }, () => ROOM_ALPHABET[Math.floor(Math.random() * ROOM_ALPHABET.length)]).join('');
+// v27: 6 digits like a Kahoot PIN (easier to type than letters) · never starts with 0 · shown as "482 913"
+const roomCode = () => String(Math.floor(100000 + Math.random() * 900000));
+const fmtCode = (c) => (c ? c.slice(0, 3) + ' ' + c.slice(3) : '——— ———');
+// anything a friend may paste — "482913", "482 913", or the whole invite link — gives the code, or null
+function parseCode(s) { s = String(s || ''); const m = /room=(\d{6})/.exec(s), d = m ? m[1] : s.replace(/\D/g, ''); return d.length === 6 ? d : null; }
 const netRid = () => Math.random().toString(36).slice(2, 10);
 const subscribed = (ch) => new Promise((res, rej) => { const to = setTimeout(() => rej(new Error('TIMED_OUT')), 15000); ch.subscribe((s) => { if (s === 'SUBSCRIBED') { clearTimeout(to); res(ch); } else if (s === 'CHANNEL_ERROR' || s === 'TIMED_OUT') { clearTimeout(to); rej(new Error(s)); } }); });
 const PUBLIC_URL = 'https://weiweiweiweiweiweiweiwei.github.io/sf2-tactical-prototype/'; // friends open the online copy, never your local file
@@ -58,20 +61,32 @@ function rtcSend(dc, data, reliable, stats) {
 function rtcParse(data) { if (typeof data !== 'string') return data; try { return JSON.parse(data); } catch (e) { return null; } }
 
 class RtcHostTransport {
-  constructor(code) {
+  // opts.probe (v27): before answering anyone, ask the room channel whether a host already owns this code → ready rejects
+  // with TAKEN (a new room picks another code; a member taking over a room learns the old host is still there)
+  constructor(code, opts = {}) {
     this.id = 'host'; this.room = code; this.peers = new Map(); this.onMessage = null; this.onLeave = null;
     this.stats = { sent: 0, recv: 0, bytesOut: 0, dropped: 0, lost: 0 };
-    this.ready = this._open();
+    this.probing = !!opts.probe; this.ready = this._open();
   }
   async _open() {
-    const sb = await supa(), ch = sb.channel('sf2:room:' + this.room, { config: { broadcast: { self: false } } });
-    ch.on('broadcast', { event: 'sig' }, ({ payload }) => this._sig(payload).catch((e) => console.warn('[net] signalling', e)));
+    const sb = await supa(), ch = sb.channel('sf2:room:' + this.room, { config: { broadcast: { self: false } } }), nonce = netRid();
+    let taken = null;
+    ch.on('broadcast', { event: 'sig' }, ({ payload }) => {
+      if (payload && payload.t === 'taken' && payload.to === nonce) { if (taken) taken(); return; }
+      if (!this.probing) this._sig(payload).catch((e) => console.warn('[net] signalling', e));
+    });
     this.ch = await subscribed(ch);
+    if (this.probing) {
+      const busy = await new Promise((res) => { taken = () => res(true); this.ch.send({ type: 'broadcast', event: 'sig', payload: { t: 'probe', from: nonce, to: 'host' } }); setTimeout(() => res(false), 900); });
+      this.probing = false;
+      if (busy) throw new Error('TAKEN');
+    }
     return this;
   }
   _signal(to, msg) { if (this.ch) this.ch.send({ type: 'broadcast', event: 'sig', payload: Object.assign(msg, { from: 'host', to }) }); }
   async _sig(m) {
     if (!m || m.to !== 'host' || !m.from) return;
+    if (m.t === 'probe') { this._signal(m.from, { t: 'taken' }); return; } // someone wants this code: it is ours
     const p = this.peers.get(m.from);
     if (m.t === 'hello') {
       if (p) return;
@@ -113,8 +128,8 @@ class RtcHostTransport {
 }
 
 class RtcClientTransport {
-  constructor(code) {
-    this.id = netRid(); this.room = code; this.pc = null; this.ice = []; this.isOpen = false; this.closed = false;
+  constructor(code, opts = {}) {
+    this.id = netRid(); this.room = code; this.pc = null; this.ice = []; this.isOpen = false; this.closed = false; this.wait = opts.wait || 15000;
     this.onMessage = null; this.onLeave = null; this.onOpen = null; this.onStatus = null; this.onError = null;
     this.stats = { sent: 0, recv: 0, bytesOut: 0, dropped: 0, lost: 0 };
   }
@@ -123,10 +138,10 @@ class RtcClientTransport {
     const sb = await supa(), ch = sb.channel('sf2:room:' + this.room, { config: { broadcast: { self: false } } });
     ch.on('broadcast', { event: 'sig' }, ({ payload }) => this._sig(payload).catch((e) => this._fail('連線交握失敗：' + e.message)));
     this.ch = await subscribed(ch);
-    this._status(`尋找房間 ${this.room} 的房主…`);
+    this._status(`尋找房間 ${fmtCode(this.room)} 的房主…`);
     const hello = () => { if (!this.pc && !this.closed) this._signal({ t: 'hello' }); };
     hello(); this.helloTimer = setInterval(hello, 1500);
-    this.giveUp = setTimeout(() => { if (!this.isOpen) this._fail(this.pc ? '無法和房主建立直接連線（雙方的網路環境阻擋點對點連線）' : `找不到房間 ${this.room}，或房主已經離開`); }, 15000);
+    this.giveUp = setTimeout(() => { if (!this.isOpen) this._fail(this.pc ? '無法和房主建立直接連線（雙方的網路環境阻擋點對點連線）' : `找不到房間 ${fmtCode(this.room)}：代碼打錯了，或房主已經離開`); }, this.wait);
   }
   _status(s) { if (this.onStatus) this.onStatus(s); }
   _signal(msg) { if (this.ch) this.ch.send({ type: 'broadcast', event: 'sig', payload: Object.assign(msg, { from: this.id, to: 'host' }) }); }
@@ -139,7 +154,7 @@ class RtcClientTransport {
       pc.ondatachannel = (e) => {
         const dc = e.channel; dc.binaryType = 'arraybuffer'; this[dc.label] = dc;
         dc.onmessage = (ev) => { this.stats.recv++; const d = rtcParse(ev.data); if (d && this.onMessage) this.onMessage('host', d); };
-        dc.onopen = () => { if (this.r && this.u && this.r.readyState === 'open' && this.u.readyState === 'open' && !this.isOpen) { this.isOpen = true; clearTimeout(this.giveUp); this._status('已連線，等待房主回應…'); if (this.onOpen) this.onOpen(); } };
+        dc.onopen = () => { if (this.r && this.u && this.r.readyState === 'open' && this.u.readyState === 'open' && !this.isOpen) { this.isOpen = true; clearTimeout(this.giveUp); this._status('已連線，進入房間…'); if (this.onOpen) this.onOpen(); } };
         dc.onclose = () => this._lost();
       };
       pc.onconnectionstatechange = () => { if (pc.connectionState === 'failed') this._lost(); };
