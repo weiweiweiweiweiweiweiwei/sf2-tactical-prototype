@@ -2,19 +2,23 @@
    PLAYER WEAPONS — per-class behaviour, all numbers come from the
    compiled WEAPON_DATABASE entry. Spread values are cone radii in
    radians; the HUD crosshair gap is derived from the real spread.
+   v25: a weapon belongs to an OWNER (the local player, or a remote human simulated on the host). Gameplay runs in
+   tick() once per fixed step; animate() only moves the local viewmodel. The spread cone is drawn from a seeded stream
+   (owner network id + shot number) so the host and the shooter's own client fire the very same bullet.
    ===================================================================== */
 class Weapon {
-  constructor(game, def, vm) {
-    this.game = game; this.def = def; this.vm = vm; Object.assign(this, def);
-    this.ammo = def.mag || 0; this.reserveAmmo = def.reserve || 0;
+  constructor(game, def, vm, owner) {
+    this.game = game; this.def = def; this.vm = vm; this.owner = owner || game.player; Object.assign(this, def);
+    this.ammo = def.mag || 0; this.reserveAmmo = def.reserve || 0; this.shotN = 0;
     this.cooldown = 0; this.bloom = 0; this.shots = 0; this.lastShot = -10; this.sprayPhase = 0;
     this.reloading = false; this.reloadT = 0; this.reloadFired = new Set();
     this.queued = 0; this.autoReloadT = 0; this.flashT = 0; this.slideKick = 0; this.cur = 0;
     this.magBase = vm.mag ? vm.mag.position.clone() : null;
     this.chargeBase = vm.charge ? vm.charge.position.clone() : null;
   }
+  get local() { return this.owner === this.game.player; }
   get scoped() { return this.adsType === '2d_scope_overlay'; }
-  resetAmmo() { this.ammo = this.def.mag || 0; this.reserveAmmo = this.def.reserve || 0; }
+  resetAmmo() { this.ammo = this.def.mag || 0; this.reserveAmmo = this.def.reserve || 0; this.shotN = 0; }
   equip() {
     this.cooldown = 0; this.reloading = false; this.reloadT = 0; this.bloom = 0; this.cur = 0; this.shots = 0; this.queued = 0; this.autoReloadT = 0; this.flashT = 0;
     if (this.vm.mag) { this.vm.mag.position.copy(this.magBase); this.vm.mag.rotation.set(0, 0, 0); }
@@ -23,6 +27,8 @@ class Weapon {
   }
   holster() { this.reloading = false; this.queued = 0; this.autoReloadT = 0; if (this.vm.flash) this.vm.flash.visible = false; }
   get reloadPhase() { return this.reloading ? clamp(this.reloadT / this.reloadTime, 0, 1) : 0; }
+  // mechanical sounds: in your head for your own gun, positional for anyone else's
+  _mech(name) { this.game.audio.mech(name, this.local ? null : this.owner.motor.pos); }
 
   tryReload() {
     if (!this.mag || this.reloading || this.ammo >= this.mag || this.reserveAmmo <= 0) return false;
@@ -30,14 +36,14 @@ class Weapon {
     return true;
   }
 
-  moveFactor() { const hs = this.game.player.motor.horizontalSpeed(); return clamp((hs - 0.5) / Math.max(0.5, this.def.moveSpeed - 0.5), 0, 1.4); }
+  moveFactor() { const hs = this.owner.motor.horizontalSpeed(); return clamp((hs - 0.5) / Math.max(0.5, this.def.moveSpeed - 0.5), 0, 1.4); }
 
   // DYNAMIC ACCURACY (default): currentSpread starts at exactly 0 — a tapped shot goes perfectly straight down the
   // camera ray. Holding the trigger blooms it per shot up to bloomMax (a 10 m target stays hittable) and it snaps
   // back to 0 as soon as you stop. ADS keeps 45 % of the bloom; jumping / sprinting still throw the shot.
   spread(ws) {
-    if (Settings.data.hipMode === 'shotgun') return this.spreadLegacy(ws);
-    const p = this.game.player, m = p.motor;
+    if ((this.owner.hipMode || Settings.data.hipMode) === 'shotgun') return this.spreadLegacy(ws);
+    const p = this.owner, m = p.motor;
     let s = this.cur * (ws.ads ? 0.45 : 1);
     if (!m.grounded) s += this.spreadAir;
     if (p.sprinting) s += this.spreadSprint * 0.5;
@@ -46,7 +52,7 @@ class Weapon {
   }
   // v2/v3 model (Settings → 腰射散布：散彈式): hip fire = wide cone, only close range; movement widens both.
   spreadLegacy(ws) {
-    const p = this.game.player, m = p.motor, mv = this.moveFactor(), ads = ws.ads;
+    const p = this.owner, m = p.motor, mv = this.moveFactor(), ads = ws.ads;
     let s = ads ? this.adsBase + this.adsMoveSpread * mv * mv + this.bloom * this.adsBloomMult
       : this.hipBase + this.spreadMove * mv * mv + this.bloom;
     if (p.sprinting) s += this.spreadSprint;
@@ -65,47 +71,54 @@ class Weapon {
     return [pitch * rand(0.9, 1.1), yaw];
   }
 
+  // v25: the aim ray comes from the owner's eye and AIM angles, not from the camera. The local player's aim = view +
+  // recoil + punch (what the crosshair shows); a remote human's aim angles arrive in its UserCmd and already include them.
   static _o = new THREE.Vector3(); static _d = new THREE.Vector3(); static _r = new THREE.Vector3(); static _u = new THREE.Vector3();
   aimRay() {
-    const cam = this.game.camera; cam.updateMatrixWorld();
-    return { o: Weapon._o.setFromMatrixPosition(cam.matrixWorld), d: Weapon._d.set(0, 0, -1).transformDirection(cam.matrixWorld),
-      r: Weapon._r.setFromMatrixColumn(cam.matrixWorld, 0).normalize(), u: Weapon._u.setFromMatrixColumn(cam.matrixWorld, 1).normalize() };
+    const p = this.owner, local = this.local, yaw = local ? p.yaw + p.recoilYaw : p.yaw, pitch = local ? p.pitch + p.recoilPitch + p.punch : p.pitch;
+    const cp = Math.cos(pitch), sp = Math.sin(pitch), sy = Math.sin(yaw), cy = Math.cos(yaw), m = p.motor;
+    if (local) Weapon._o.set(m.pos.x, m.pos.y + p.eyeH + m.stepOffset, m.pos.z); else p.eyePos(Weapon._o);
+    return { o: Weapon._o, d: Weapon._d.set(-sy * cp, sp, -cy * cp), r: Weapon._r.set(cy, 0, -sy), u: Weapon._u.set(sy * sp, cp, cy * sp) };
   }
   muzzleWorld(ray, ws) {
+    if (!this.local) return this.owner.muzzlePos || ray.o.clone();
     if (this.vm.muzzle && !(ws.scopedIn && this.scoped)) { this.vm.group.updateMatrixWorld(); return this.vm.muzzle.getWorldPosition(new THREE.Vector3()); }
     return ray.o.clone().addScaledVector(ray.u, -0.08).addScaledVector(ray.d, 0.5);
   }
-  _cone(ray, s, out) {
+  _cone(ray, s, out, R) {
     out.copy(ray.d);
-    if (s > 0) { const rr = s * Math.sqrt(Math.random()), a = Math.random() * Math.PI * 2; out.addScaledVector(ray.r, Math.cos(a) * rr).addScaledVector(ray.u, Math.sin(a) * rr).normalize(); }
+    if (s > 0) { const rr = s * Math.sqrt(R()), a = R() * Math.PI * 2; out.addScaledVector(ray.r, Math.cos(a) * rr).addScaledVector(ray.u, Math.sin(a) * rr).normalize(); }
     return out;
   }
-  _shoot(ray, ws) { const s = this.spread(ws); return this.game.fireBullet(this.game.player, ray.o.clone(), this._cone(ray, s, new THREE.Vector3()), this.def); }
+  _shoot(ray, ws, R) { const s = this.spread(ws); return this.game.fireBullet(this.owner, ray.o.clone(), this._cone(ray, s, new THREE.Vector3(), R), this.def); }
 
   fire(ws) {
-    const g = this.game, p = g.player;
+    const g = this.game, p = this.owner;
     if (this.reloading) return false;
-    if (this.ammo <= 0) { g.audio.mech('dry'); this.cooldown = 0.22; if (this.tryReload()) ws.setAds(false, true); return false; }
+    if (this.ammo <= 0) { this._mech('dry'); this.cooldown = 0.22; if (this.tryReload()) ws.setAds(false, true); return false; }
     this.ammo--;
     this.cooldown = Math.max(Math.min(this.cooldown, 0), -this.interval) + this.interval;
     if (g.time - this.lastShot > this.interval * 2.2) this.sprayPhase = rand(0, Math.PI * 2);
     const ray = this.aimRay();
-    const res = this._shoot(ray, ws);
+    const res = this._shoot(ray, ws, shotRng(p.netId | 0, ++this.shotN));
     this.shots = g.time - this.lastShot < this.interval * 2.2 ? this.shots + 1 : 1;
     this.lastShot = g.time;
     this.bloom = Math.min(this.bloom + (this.spreadPerShot || 0), this.spreadMax || 0);
     this.cur = Math.min(this.cur + (this.bloomPerShot || 0), this.bloomMax || 0); // applies from the NEXT shot
-    const [rp, ry] = this.recoilKick(), am = ws.ads ? (this.def.adsRecoilMult ?? 0.8) : 1;
-    p.addRecoil(rp * am, ry * am);
-    p.punchV += (this.kick ? this.kick.rx : 0.05) * (ws.ads ? 0.9 : 0.7); // small per-shot camera shudder on top of the recoil
-    ws.kick(this.kick);
-    this.flashT = 0.045;
-    const mz = this.muzzleWorld(ray, ws), big = this.kind === 'sniper' || this.kind === 'shotgun';
-    g.effects.playerMuzzleLight(mz, this.suppressed ? 0.25 : big ? 1.4 : 1);
-    ws.muzzleLight(this.suppressed ? 0.25 : 1);
-    if (this.tracerEvery && this.shots % this.tracerEvery === 0 && !(ws.scopedIn && this.scoped)) g.effects.tracer(mz, res.end, this.kind === 'sniper' ? 520 : 400, this.kind === 'sniper' ? 6 : 3.5);
-    if (this.kind !== 'sniper' && this.kind !== 'shotgun') this.ejectCasing(ray, false);
-    g.audio.gunshot(this.sound, null, this.soundRate);
+    const mz = this.muzzleWorld(ray, ws);
+    if (this.local) {
+      const [rp, ry] = this.recoilKick(), am = ws.ads ? (this.def.adsRecoilMult ?? 0.8) : 1;
+      p.addRecoil(rp * am, ry * am);
+      p.punchV += (this.kick ? this.kick.rx : 0.05) * (ws.ads ? 0.9 : 0.7); // small per-shot camera shudder on top of the recoil
+      ws.kick(this.kick);
+      this.flashT = 0.045;
+      const big = this.kind === 'sniper' || this.kind === 'shotgun';
+      g.effects.playerMuzzleLight(mz, this.suppressed ? 0.25 : big ? 1.4 : 1);
+      ws.muzzleLight(this.suppressed ? 0.25 : 1);
+      if (this.tracerEvery && this.shots % this.tracerEvery === 0 && !(ws.scopedIn && this.scoped)) g.effects.tracer(mz, res.end, this.kind === 'sniper' ? 520 : 400, this.kind === 'sniper' ? 6 : 3.5);
+      if (this.kind !== 'sniper' && this.kind !== 'shotgun') this.ejectCasing(ray, false);
+      g.audio.gunshot(this.sound, null, this.soundRate);
+    } else g.thirdPersonShot(p, this.def, mz, res.end, this.shots);
     g.recordShot(p, mz, res.end, this.def);
     g.emitNoise(p.motor.pos, this.noise, p.team);
     p.onAttack();
@@ -114,22 +127,27 @@ class Weapon {
   }
 
   ejectCasing(ray, big) {
-    const g = this.game, v = g.player.motor.vel;
+    if (!this.local) return;
+    const g = this.game, v = this.owner.motor.vel;
     const pos = ray.o.clone().addScaledVector(ray.r, 0.16).addScaledVector(ray.u, -0.12).addScaledVector(ray.d, 0.32);
     const vel = new THREE.Vector3().addScaledVector(ray.r, rand(1.6, 2.5)).addScaledVector(ray.u, rand(1.1, 1.8)).addScaledVector(ray.d, rand(-0.4, 0.3)).add(v);
     g.physics.ejectCasing(pos, vel, big);
   }
 
-  update(dt, ws) {
-    this.cooldown -= dt;
+  // gameplay, once per fixed step
+  tick(h, ws) {
+    this.cooldown -= h;
     if (!ws.trigger && this.cooldown < 0) this.cooldown = 0;
     const spraying = this.game.time - this.lastShot < (this.interval || 0.1) * 1.6; // bloom only recovers once you stop spraying
-    this.bloom = damp(this.bloom, 0, spraying ? 1 : (this.spreadRecover || 5), dt);
-    if (!spraying) { this.cur = damp(this.cur, 0, 11, dt); if (this.cur < 2e-4) this.cur = 0; } // quick recenter to a perfect first shot
+    this.bloom = damp(this.bloom, 0, spraying ? 1 : (this.spreadRecover || 5), h);
+    if (!spraying) { this.cur = damp(this.cur, 0, 11, h); if (this.cur < 2e-4) this.cur = 0; } // quick recenter to a perfect first shot
+    if (this.autoReloadT > 0) { this.autoReloadT -= h; if (this.autoReloadT <= 0 && this.tryReload()) ws.setAds(false, true); }
+    this._reload(h);
+  }
+  // local viewmodel, once per rendered frame
+  animate(dt, ws) {
     if (this.flashT > 0) this.flashT -= dt;
     this.slideKick = damp(this.slideKick, 0, 18, dt);
-    if (this.autoReloadT > 0) { this.autoReloadT -= dt; if (this.autoReloadT <= 0 && this.tryReload()) ws.setAds(false, true); }
-    this._reload(dt);
     const vm = this.vm, p = this.reloadPhase;
     if (vm.mag && this.magBase) {
       let off = 0;
@@ -143,10 +161,10 @@ class Weapon {
       vm.charge.position.z = this.chargeBase.z + k * 0.05;
     }
   }
-  _reload(dt) {
+  _reload(h) {
     if (!this.reloading) return;
-    this.reloadT += dt;
-    for (const [t, snd] of this.reloadSounds) if (this.reloadT >= t * this.reloadTime && !this.reloadFired.has(snd)) { this.reloadFired.add(snd); this.game.audio.mech(snd); }
+    this.reloadT += h;
+    for (const [t, snd] of this.reloadSounds) if (this.reloadT >= t * this.reloadTime && !this.reloadFired.has(snd)) { this.reloadFired.add(snd); this._mech(snd); }
     if (this.reloadT >= this.reloadTime) { const take = Math.min(this.mag - this.ammo, this.reserveAmmo); this.ammo += take; this.reserveAmmo -= take; this.reloading = false; }
   }
 }
@@ -154,10 +172,10 @@ class Weapon {
 class AutoGun extends Weapon {}
 
 class SniperRifle extends Weapon {
-  constructor(game, def, vm) { super(game, def, vm); this.boltT = -1; this.boltBase = vm.bolt ? vm.bolt.position.clone() : null; }
+  constructor(game, def, vm, owner) { super(game, def, vm, owner); this.boltT = -1; this.boltBase = vm.bolt ? vm.bolt.position.clone() : null; }
   // CS-style: scoped + standing still = perfect from the first frame the scope is up (firing during the raise = hip accuracy).
   spread(ws) {
-    const p = this.game.player, m = p.motor, hs = m.horizontalSpeed();
+    const p = this.owner, m = p.motor, hs = m.horizontalSpeed();
     if (ws.ads && ws.scopedIn) {
       if (!m.grounded) return this.spreadAir * 0.85;
       let s = this.adsBase;
@@ -176,8 +194,8 @@ class SniperRifle extends Weapon {
   // bolt actions cycle (and drop out of the scope) after every shot; semi-autos (Barrett / SVD) stay scoped
   fire(ws) { const ok = super.fire(ws); if (ok) { if (this.def.bolt) { this.boltT = 0; this.boltFired = { back: false, fwd: false }; ws.unscopeT = 0.06; } else this.ejectCasing(this.aimRay(), true); } return ok; }
   equip() { super.equip(); this.boltT = -1; if (this.vm.bolt) { this.vm.bolt.position.copy(this.boltBase); this.vm.bolt.rotation.set(0, 0, 0); } }
-  update(dt, ws) {
-    super.update(dt, ws);
+  animate(dt, ws) {
+    super.animate(dt, ws);
     const b = this.vm.bolt;
     if (this.boltT >= 0 && b) {
       this.boltT += dt; const t = this.boltT;
@@ -194,7 +212,7 @@ class SniperRifle extends Weapon {
 
 // Pump shotgun: N pellets per shell, pump cycle after every shot, shell-by-shell reload that firing can interrupt.
 class Shotgun extends Weapon {
-  constructor(game, def, vm) { super(game, def, vm); this.pumpT = -1; this.pumpBase = vm.pump ? vm.pump.position.clone() : null; this.shellT = 0; this.needPump = false; }
+  constructor(game, def, vm, owner) { super(game, def, vm, owner); this.pumpT = -1; this.pumpBase = vm.pump ? vm.pump.position.clone() : null; this.shellT = 0; this.needPump = false; }
   equip() { super.equip(); this.pumpT = -1; this.shellT = 0; if (this.vm.pump) this.vm.pump.position.copy(this.pumpBase); }
   get reloadPhase() { return this.reloading ? (this.shellReload ? clamp(this.ammo / this.mag, 0, 1) : clamp(this.reloadT / this.reloadTime, 0, 1)) : 0; }
   spread(ws) { return this.spreadLegacy(ws); } // the pellet pattern IS the spread
@@ -204,11 +222,11 @@ class Shotgun extends Weapon {
     this.reloading = true; this.shellT = this.shellReload * 0.6; this.needPump = this.ammo === 0; this.queued = 0;
     return true;
   }
-  _shoot(ray, ws) {
+  _shoot(ray, ws, R) {
     const g = this.game, s = this.spread(ws), dir = new THREE.Vector3();
     let res = null;
     for (let i = 0; i < this.pellets; i++) {
-      const r = g.fireBullet(g.player, ray.o.clone(), this._cone(ray, s, dir), this.def, { pellet: i });
+      const r = g.fireBullet(this.owner, ray.o.clone(), this._cone(ray, s, dir, R), this.def, { pellet: i });
       if (!res || r.dist < res.dist) res = r;
     }
     return res;
@@ -216,20 +234,20 @@ class Shotgun extends Weapon {
   fire(ws) {
     if (this.shellReload && this.reloading && this.ammo > 0) { this.reloading = false; this.cooldown = Math.max(this.cooldown, 0.12); return false; } // fire cancels a shell reload
     const ok = super.fire(ws);
-    if (ok) { if (this.def.pump) { this.pumpT = 0; this.pumpSnd = false; } else this.ejectCasing(this.aimRay(), true); this.game.player.punchV += 0.25; }
+    if (ok) { if (this.def.pump) { this.pumpT = 0; this.pumpSnd = false; } else this.ejectCasing(this.aimRay(), true); if (this.local) this.owner.punchV += 0.25; }
     return ok;
   }
-  _reload(dt) {
-    if (!this.shellReload) return super._reload(dt);
+  _reload(h) {
+    if (!this.shellReload) return super._reload(h);
     if (!this.reloading) return;
-    this.shellT -= dt;
+    this.shellT -= h;
     if (this.shellT <= 0) {
-      if (this.ammo < this.mag && this.reserveAmmo > 0) { this.ammo++; this.reserveAmmo--; this.game.audio.mech('shell'); this.shellT = this.shellReload; this.shellBob = 1; }
-      else { this.reloading = false; if (this.needPump && this.def.pump) { this.pumpT = 0; this.pumpSnd = false; } else if (this.needPump) this.game.audio.mech('charge'); }
+      if (this.ammo < this.mag && this.reserveAmmo > 0) { this.ammo++; this.reserveAmmo--; this._mech('shell'); this.shellT = this.shellReload; this.shellBob = 1; }
+      else { this.reloading = false; if (this.needPump && this.def.pump) { this.pumpT = 0; this.pumpSnd = false; } else if (this.needPump) this._mech('charge'); }
     }
   }
-  update(dt, ws) {
-    super.update(dt, ws);
+  animate(dt, ws) {
+    super.animate(dt, ws);
     this.shellBob = damp(this.shellBob || 0, 0, 9, dt);
     if (this.pumpT >= 0) {
       this.pumpT += dt; const t = this.pumpT;
@@ -245,11 +263,11 @@ class Shotgun extends Weapon {
 class Pistol extends Weapon {
   recoilKick() { return [this.def.recoil.climb * rand(0.9, 1.1), rand(-1, 1) * this.def.recoil.h]; }
   fire(ws) { const ok = super.fire(ws); if (ok) this.slideKick = 1; return ok; }
-  update(dt, ws) { super.update(dt, ws); if (this.vm.slide) this.vm.slide.position.z = this.slideKick * 0.028 + (this.ammo === 0 && !this.reloading ? 0.028 : 0); }
+  animate(dt, ws) { super.animate(dt, ws); if (this.vm.slide) this.vm.slide.position.z = this.slideKick * 0.028 + (this.ammo === 0 && !this.reloading ? 0.028 : 0); }
 }
 
 class Knife extends Weapon {
-  constructor(game, def, vm) { super(game, def, vm); this.pending = null; this.swing = null; this.side = 1; this.queuedHeavy = false; }
+  constructor(game, def, vm, owner) { super(game, def, vm, owner); this.pending = null; this.swing = null; this.side = 1; this.queuedHeavy = false; }
   spread() { return 0.002; }
   equip() { super.equip(); this.pending = null; this.swing = null; }
   holster() { super.holster(); this.pending = null; this.swing = null; }
@@ -259,16 +277,17 @@ class Knife extends Weapon {
     this.cooldown = d.interval; this.side = -this.side;
     this.swing = { heavy, t: 0, dur: heavy ? 0.5 : 0.3, side: this.side };
     this.pending = { t: d.delay, d, heavy };
-    this.game.audio.knifeSwing(); this.game.player.onAttack();
+    this.game.audio.knifeSwing(this.local ? null : this.owner.motor.pos); this.owner.onAttack();
   }
-  update(dt) {
-    this.cooldown = Math.max(0, this.cooldown - dt);
-    if (this.queued > 0) { this.queued -= dt; if (this.cooldown <= 0) { this.queued = 0; this.attack(this.queuedHeavy); } }
-    if (this.swing) { this.swing.t += dt; if (this.swing.t >= this.swing.dur) this.swing = null; }
-    if (this.pending) { this.pending.t -= dt; if (this.pending.t <= 0) { const p = this.pending; this.pending = null; this._hit(p.d, p.heavy); } }
+  tick(h) {
+    this.cooldown = Math.max(0, this.cooldown - h);
+    if (this.queued > 0) { this.queued -= h; if (this.cooldown <= 0) { this.queued = 0; this.attack(this.queuedHeavy); } }
+    if (this.swing) { this.swing.t += h; if (this.swing.t >= this.swing.dur) this.swing = null; }
+    if (this.pending) { this.pending.t -= h; if (this.pending.t <= 0) { const p = this.pending; this.pending = null; this._hit(p.d, p.heavy); } }
   }
+  animate() {}
   _hit(d, heavy) {
-    const g = this.game, p = g.player, ray = this.aimRay();
+    const g = this.game, p = this.owner, ray = this.aimRay(), at = this.local ? null : p.motor.pos;
     let best = null;
     for (const [yaw, pitch] of [[0, 0], [0.13, 0], [-0.13, 0], [0, 0.09], [0, -0.09]]) {
       const dir = ray.d.clone().addScaledVector(ray.r, yaw).addScaledVector(ray.u, pitch).normalize();
@@ -282,8 +301,8 @@ class Knife extends Weapon {
       let dmg = d.dmg * (best.part === 'head' ? this.def.headMult : 1);
       if (backstab) dmg = heavy ? 999 : dmg * 2;
       g.applyDamage(v, dmg, best.part, p, this.def, ray.d.clone(), best.point, { melee: true });
-      g.audio.knifeHit(true);
-    } else { g.effects.impact(best, false); g.audio.knifeHit(false); }
+      g.audio.knifeHit(true, at);
+    } else { g.effects.impact(best, false); g.audio.knifeHit(false, at); }
   }
 }
 
@@ -291,8 +310,8 @@ class Knife extends Weapon {
 // so a charged throw off a running jump flies much further than a quick flick.
 const THROW = { base: 7.2, lobBase: 4.6, chargeTime: 0.7, pinTime: 0.25, maxPower: 3.0, loft: 0.16 }; // full charge ≈ 1.0 s (pin 0.25 + draw 0.7)
 class GrenadeWeapon extends Weapon {
-  constructor(game, def, vm) { super(game, def, vm); this.count = def.count; this.state = 'idle'; this.t = 0; this.lob = false; this.releaseQueued = false; this.chargeT = 0; }
-  resetAmmo() { this.count = this.def.count; }
+  constructor(game, def, vm, owner) { super(game, def, vm, owner); this.count = def.count; this.state = 'idle'; this.t = 0; this.lob = false; this.releaseQueued = false; this.chargeT = 0; }
+  resetAmmo() { this.count = this.def.count; this.shotN = 0; }
   equip() { super.equip(); this.state = 'idle'; this.t = 0; this.releaseQueued = false; this.chargeT = 0; if (this.vm.pin) this.vm.pin.visible = true; }
   holster() { super.holster(); this.state = 'idle'; this.chargeT = 0; }
   spread() { return 0.01; }
@@ -301,35 +320,36 @@ class GrenadeWeapon extends Weapon {
   press(btn) {
     if (this.count <= 0 || this.state !== 'idle' || !this.game.canAct()) return;
     this.state = 'pulling'; this.t = 0; this.chargeT = 0; this.lob = btn === 2; this.releaseQueued = false;
-    this.game.audio.mech('pin');
+    this._mech('pin');
   }
   release() { if (this.state === 'pulling') this.releaseQueued = true; else if (this.state === 'ready') this._throw(); }
   _throw() {
-    const g = this.game, p = g.player, ray = this.aimRay(), power = this.power;
+    const g = this.game, p = this.owner, ray = this.aimRay(), power = this.power;
     this.count--; this.state = 'throwing'; this.t = 0;
     const origin = ray.o.clone().addScaledVector(ray.r, 0.18).addScaledVector(ray.u, -0.08).addScaledVector(ray.d, 0.45);
     const dir = ray.d.clone().addScaledVector(TMP_V1.set(0, 1, 0), THROW.loft).normalize();
     const vel = dir.multiplyScalar((this.lob ? THROW.lobBase : THROW.base) * power).add(p.motor.vel); // momentum: player velocity + aim × power × base
     g.throwGrenade(p, this.def, origin, vel);
-    g.audio.mech('throw'); p.onAttack(); this.chargeT = 0;
+    this._mech('throw'); p.onAttack(); this.chargeT = 0;
     if (this.vm.pin) this.vm.pin.visible = false;
   }
-  update(dt, ws) {
-    this.t += dt;
-    if (this.state === 'ready') this.chargeT += dt; // the bow is drawn only once the pin is out: a quick click = weak lob
+  tick(h, ws) {
+    this.t += h;
+    if (this.state === 'ready') this.chargeT += h; // the bow is drawn only once the pin is out: a quick click = weak lob
     if (this.state === 'pulling' && this.t > THROW.pinTime) { this.state = 'ready'; if (this.vm.pin) this.vm.pin.visible = false; if (this.releaseQueued) this._throw(); }
     if (this.state === 'throwing' && this.t > 0.38) {
       this.state = 'idle';
       if (this.count > 0) { if (this.vm.pin) this.vm.pin.visible = true; ws.drawT = 1; } else ws.switchBack();
     }
   }
+  animate() {}
 }
 
-function makePlayerWeapon(game, def, vm) {
-  if (def.kind === 'sniper') return new SniperRifle(game, def, vm);
-  if (def.kind === 'shotgun') return new Shotgun(game, def, vm);
-  if (def.kind === 'pistol') return new Pistol(game, def, vm);
-  if (def.kind === 'knife') return new Knife(game, def, vm);
-  if (def.kind === 'grenade') return new GrenadeWeapon(game, def, vm);
-  return new AutoGun(game, def, vm);
+function makePlayerWeapon(game, def, vm, owner) {
+  if (def.kind === 'sniper') return new SniperRifle(game, def, vm, owner);
+  if (def.kind === 'shotgun') return new Shotgun(game, def, vm, owner);
+  if (def.kind === 'pistol') return new Pistol(game, def, vm, owner);
+  if (def.kind === 'knife') return new Knife(game, def, vm, owner);
+  if (def.kind === 'grenade') return new GrenadeWeapon(game, def, vm, owner);
+  return new AutoGun(game, def, vm, owner);
 }

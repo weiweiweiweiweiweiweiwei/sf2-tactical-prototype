@@ -38,17 +38,113 @@ class Combatant {
 }
 
 /* =====================================================================
-   PLAYER — input → motor, sprint / edge-guard, view punch & recoil,
-   death camera, round-mode spectating.
+   v25 HUMAN — a soldier steered by UserCmds: sprint / edge-guard, crouch, tactical slide, mantle, ladders, footsteps.
+   The local Player and a remote NetPlayer (simulated on the host) both run this exact code.
    ===================================================================== */
-class Player extends Combatant {
-  constructor(game) {
-    super(game, 'alpha', 'YOU', true);
-    this.pitch = 0; this.recoilPitch = 0; this.recoilYaw = 0; this.recoilHold = 0; this.recoilTP = 0; this.recoilTY = 0;
+class Human extends Combatant {
+  constructor(game, team, name, isPlayer) {
+    super(game, team, name, isPlayer);
+    this.pitch = 0;
     this.slideT = 0; this.slideCd = 0; this.slideK = 0; this.slideV0 = 0; this.slideDir = new THREE.Vector3(); this.crouchHeld = false; // v14 tactical slide
     this.mantleT = 0; this.mantleK = 0; this.mFrom = new THREE.Vector3(); this.mTo = new THREE.Vector3(); // v15 mantle
-    this.punch = 0; this.punchV = 0; this.fovPunch = 0; this.shake = 0;
-    this.eyeH = CFG.player.eye; this.stepDist = 0; this.sprinting = false; this.sprintBlock = 0;
+    this.punch = 0; this.punchV = 0; this.fovPunch = 0;
+    this.stepDist = 0; this.sprinting = false; this.sprintBlock = 0;
+  }
+  gear() { return this.game.weapons; } // the arsenal whose current weapon sets the move speed (NetPlayer: its own)
+  _sfx(kind, surface, loud) { const a = this.game.audio; if (kind === 'step') a.footstep(null, surface, loud); else a.land(null, surface, loud); }
+
+  // v15 MANTLE: is there a ledge right in front whose top is `lo..hi` above the feet, with room to stand on it?
+  _ledge(lo, hi) {
+    const m = this.motor, w = this.game.collision, fx = -Math.sin(this.yaw), fz = -Math.cos(this.yaw), r = m.radius;
+    if (w.fits(m.pos.x + fx * 0.45, m.pos.y + lo * 0.6, m.pos.z + fz * 0.45, r * 0.8, 0.3)) return null; // nothing in front at knee/hip height
+    for (const d of [0.62, 0.85]) {
+      const x = m.pos.x + fx * d, z = m.pos.z + fz * d, g = w.groundBelow(x, m.pos.y + hi + 0.05, z, r * 0.7, hi - lo + 0.1, 0.02);
+      if (!g || g.steep) continue;
+      const rise = g.y - m.pos.y;
+      if (rise < lo || rise > hi) continue;
+      if (!w.fits(x, g.y + 0.03, z, r, m.standHeight) || !w.fits(m.pos.x, g.y + 0.03, m.pos.z, r * 0.9, 0.9)) continue; // stand on top + head room over the lip
+      return new THREE.Vector3(x, g.y + 0.02, z);
+    }
+    return null;
+  }
+  _startMantle(to) {
+    this.mantleT = 0.32; this.mFrom.copy(this.motor.pos); this.mTo.copy(to); this.sprinting = false; this.slideT = 0;
+    this.motor.vel.set(0, 0, 0); this.motor.jumpBufferT = 0; this.punchV -= 0.35;
+    this._sfx('land', 'concrete', 0.45); this.game.emitNoise(this.motor.pos, 10, this.team);
+  }
+
+  fixedUpdate(h, cmd) {
+    const m = this.motor, P = CFG.player, g = this.game;
+    if (!this.alive) { m.step(h, 0, 0, 0); this.holdE = false; return; }
+    const frozen = !g.canMove(), btn = frozen ? 0 : cmd.btn;
+    this.holdE = g.canAct() && !!(btn & BTN.USE);
+    if (btn & BTN.JUMP) m.requestJump();
+    if (this.mantleT > 0) { // up first, then over the lip
+      m.prevPos.copy(m.pos); this.mantleT -= h;
+      const k = 1 - Math.max(0, this.mantleT) / 0.32, ky = 1 - Math.pow(1 - Math.min(1, k * 1.7), 2), kx = Math.max(0, (k - 0.3) / 0.7);
+      m.pos.set(lerp(this.mFrom.x, this.mTo.x, kx * kx * (3 - 2 * kx)), lerp(this.mFrom.y, this.mTo.y + 0.04, ky), lerp(this.mFrom.z, this.mTo.z, kx * kx * (3 - 2 * kx)));
+      m.grounded = false; m.vel.set(0, 0, 0);
+      if (this.mantleT <= 0) { m.pos.copy(this.mTo); m.grounded = true; m.vel.set(-Math.sin(this.yaw) * 1.6, 0, -Math.cos(this.yaw) * 1.6); }
+      return;
+    }
+    const fwdHeld = !frozen && cmd.f > 0;
+    if (!frozen && fwdHeld && !m.climbing && !m.crouching) {
+      if (m.grounded && m.jumpBufferT > 0) { const t = this._ledge(0.5, 1.45); if (t) { this._startMantle(t); return; } } // vault / mantle instead of jumping
+      else if (!m.grounded && m.vel.y < 3.5) { const t = this._ledge(0.25, 1.15); if (t) { this._startMantle(t); return; } } // jump-grab a higher ledge
+    }
+    const f = frozen ? 0 : cmd.f, r = frozen ? 0 : cmd.r;
+    const s = Math.sin(this.yaw), c = Math.cos(this.yaw);
+    let wx = -s * f + c * r, wz = -c * f - s * r; const len = Math.hypot(wx, wz);
+    if (len > 0) { wx /= len; wz /= len; }
+    // ladders: W/S drive the vertical axis (facing away from the ladder inverts W, so walking off the top climbs down)
+    const lad = g.collision.ladders.length ? g.collision.ladderAt(m.pos.x, m.pos.y, m.pos.z, m.radius) : null;
+    if (lad) { const facing = -s * -lad.nx + -c * -lad.nz; m.climbInput = f * (facing < -0.3 ? -1 : 1); } else m.climbInput = 0;
+    const crouchKey = !!(btn & BTN.CROUCH);
+    // v14 TACTICAL SLIDE (COD): crouch while sprinting → 0.72 s slide with a speed burst, low camera + roll, A/D steer; jump cancels it keeping momentum
+    if (this.slideCd > 0) this.slideCd -= h;
+    if (crouchKey && !this.crouchHeld && this.sprinting && m.grounded && !lad && m.horizontalSpeed() > 5.5 && this.slideCd <= 0 && this.slideT <= 0) {
+      const hs0 = m.horizontalSpeed(); this.slideT = 0.72; this.slideDir.set(m.vel.x / hs0, 0, m.vel.z / hs0); this.slideV0 = Math.max(hs0 * 1.18, 8.4);
+      m.setCrouch(true); m.vel.x = this.slideDir.x * this.slideV0; m.vel.z = this.slideDir.z * this.slideV0; this.sprinting = false; this.fovPunch = 4;
+      this._sfx('land', m.surface, 0.75); g.emitNoise(m.pos, 13, this.team);
+    }
+    this.crouchHeld = crouchKey;
+    if (this.slideT > 0) {
+      this.slideT -= h;
+      const k = 1 - Math.max(0, this.slideT) / 0.72, ang = r * 1.1 * h, cs = Math.cos(ang), sn = Math.sin(ang), dx = this.slideDir.x, dz = this.slideDir.z;
+      this.slideDir.set(dx * cs - dz * sn, 0, dx * sn + dz * cs);
+      m.setCrouch(true); this.sprinting = false; m.edgeGuard = false;
+      m.step(h, this.slideDir.x, this.slideDir.z, lerp(this.slideV0, 2.6, k * k));
+      if (m.jumped || !m.grounded || this.slideT <= 0) { this.slideT = 0; this.slideCd = 0.75; }
+      return;
+    }
+    m.setCrouch(crouchKey);
+    const shift = !!(btn & BTN.SPRINT);
+    const ws = this.gear(), w = ws.current;
+    if (this.sprintBlock > 0) this.sprintBlock -= h;
+    this.sprinting = shift && f > 0 && !m.crouching && !ws.ads && this.sprintBlock <= 0 && !(w.kind === 'grenade' && w.state !== 'idle');
+    m.edgeGuard = shift && m.grounded;
+    let speed = w.moveSpeed * (this.carrying ? 0.88 : 1);
+    if (m.crouching) speed *= P.crouchMult; else if (this.sprinting) speed *= P.sprintMult;
+    if (ws.ads) speed *= w.adsMove ?? 1;
+    m.step(h, wx, wz, len > 0 ? speed : 0);
+    if (m.climbing) { if (m.climbDist > 0.6) { m.climbDist = 0; this._sfx('step', 'ladder', 0.6); g.emitNoise(m.pos, 9, this.team); } return; }
+    const hs = m.horizontalSpeed();
+    if (m.grounded && hs > 3.0 && !m.crouching) {
+      this.stepDist += hs * h;
+      if (this.stepDist > (this.sprinting ? 2.5 : 2.1)) { this.stepDist = 0; this._sfx('step', m.surface, this.sprinting ? 0.7 : 0.55); g.emitNoise(m.pos, this.sprinting ? 17 : 11, this.team); }
+    } else if (!m.grounded) this.stepDist = 1.4;
+    if (m.landSpeed > 3.5) { this._sfx('land', m.surface, m.landSpeed / 9); this.punchV += Math.min(m.landSpeed, 14) * -0.012; g.emitNoise(m.pos, 14, this.team); }
+  }
+}
+
+/* =====================================================================
+   PLAYER — the local human: mouse look, view punch & camera recoil, death camera, round-mode spectating.
+   ===================================================================== */
+class Player extends Human {
+  constructor(game) {
+    super(game, 'alpha', 'YOU', true);
+    this.recoilPitch = 0; this.recoilYaw = 0; this.recoilHold = 0; this.recoilTP = 0; this.recoilTY = 0; this.shake = 0;
+    this.eyeH = CFG.player.eye;
     this.streak = 0; this.multi = 0; this.lastKillT = -10; this.killer = null; this.spectating = null; this.deathT = 0;
     this.renderPos = new THREE.Vector3();
     this._euler = new THREE.Euler(0, 0, 0, 'YXZ');
@@ -73,93 +169,6 @@ class Player extends Combatant {
     const sh = this.shake > 0 ? this.shake : 0;
     this._euler.set(this.pitch + this.recoilPitch + this.punch + (sh ? rand(-sh, sh) * 0.02 : 0), this.yaw + this.recoilYaw + (sh ? rand(-sh, sh) * 0.02 : 0), this.slideK * 0.075, 'YXZ');
     cam.quaternion.setFromEuler(this._euler); cam.updateMatrixWorld();
-  }
-
-  // v15 MANTLE: is there a ledge right in front whose top is `lo..hi` above the feet, with room to stand on it?
-  _ledge(lo, hi) {
-    const m = this.motor, w = this.game.collision, fx = -Math.sin(this.yaw), fz = -Math.cos(this.yaw), r = m.radius;
-    if (w.fits(m.pos.x + fx * 0.45, m.pos.y + lo * 0.6, m.pos.z + fz * 0.45, r * 0.8, 0.3)) return null; // nothing in front at knee/hip height
-    for (const d of [0.62, 0.85]) {
-      const x = m.pos.x + fx * d, z = m.pos.z + fz * d, g = w.groundBelow(x, m.pos.y + hi + 0.05, z, r * 0.7, hi - lo + 0.1, 0.02);
-      if (!g || g.steep) continue;
-      const rise = g.y - m.pos.y;
-      if (rise < lo || rise > hi) continue;
-      if (!w.fits(x, g.y + 0.03, z, r, m.standHeight) || !w.fits(m.pos.x, g.y + 0.03, m.pos.z, r * 0.9, 0.9)) continue; // stand on top + head room over the lip
-      return new THREE.Vector3(x, g.y + 0.02, z);
-    }
-    return null;
-  }
-  _startMantle(to) {
-    this.mantleT = 0.32; this.mFrom.copy(this.motor.pos); this.mTo.copy(to); this.sprinting = false; this.slideT = 0;
-    this.motor.vel.set(0, 0, 0); this.motor.jumpBufferT = 0; this.punchV -= 0.35;
-    this.game.audio.land(null, 'concrete', 0.45); this.game.emitNoise(this.motor.pos, 10, this.team);
-  }
-
-  fixedUpdate(h, input) {
-    const m = this.motor, P = CFG.player, g = this.game;
-    if (!this.alive) { m.step(h, 0, 0, 0); return; }
-    const frozen = !g.canMove();
-    if (this.mantleT > 0) { // up first, then over the lip
-      m.prevPos.copy(m.pos); this.mantleT -= h;
-      const k = 1 - Math.max(0, this.mantleT) / 0.32, ky = 1 - Math.pow(1 - Math.min(1, k * 1.7), 2), kx = Math.max(0, (k - 0.3) / 0.7);
-      m.pos.set(lerp(this.mFrom.x, this.mTo.x, kx * kx * (3 - 2 * kx)), lerp(this.mFrom.y, this.mTo.y + 0.04, ky), lerp(this.mFrom.z, this.mTo.z, kx * kx * (3 - 2 * kx)));
-      m.grounded = false; m.vel.set(0, 0, 0);
-      if (this.mantleT <= 0) { m.pos.copy(this.mTo); m.grounded = true; m.vel.set(-Math.sin(this.yaw) * 1.6, 0, -Math.cos(this.yaw) * 1.6); }
-      return;
-    }
-    const fwdHeld = !frozen && (input.down('KeyW') || input.down('ArrowUp'));
-    if (!frozen && fwdHeld && !m.climbing && !m.crouching) {
-      if (m.grounded && m.jumpBufferT > 0) { const t = this._ledge(0.5, 1.45); if (t) { this._startMantle(t); return; } } // vault / mantle instead of jumping
-      else if (!m.grounded && m.vel.y < 3.5) { const t = this._ledge(0.25, 1.15); if (t) { this._startMantle(t); return; } } // jump-grab a higher ledge
-    }
-    let f = 0, r = 0;
-    if (!frozen) {
-      if (input.down('KeyW') || input.down('ArrowUp')) f += 1;
-      if (input.down('KeyS') || input.down('ArrowDown')) f -= 1;
-      if (input.down('KeyD') || input.down('ArrowRight')) r += 1;
-      if (input.down('KeyA') || input.down('ArrowLeft')) r -= 1;
-    }
-    const s = Math.sin(this.yaw), c = Math.cos(this.yaw);
-    let wx = -s * f + c * r, wz = -c * f - s * r; const len = Math.hypot(wx, wz);
-    if (len > 0) { wx /= len; wz /= len; }
-    // ladders: W/S drive the vertical axis (facing away from the ladder inverts W, so walking off the top climbs down)
-    const lad = g.collision.ladders.length ? g.collision.ladderAt(m.pos.x, m.pos.y, m.pos.z, m.radius) : null;
-    if (lad) { const facing = -s * -lad.nx + -c * -lad.nz; m.climbInput = f * (facing < -0.3 ? -1 : 1); } else m.climbInput = 0;
-    const crouchKey = !frozen && (input.down('KeyC') || input.down('ControlLeft') || input.down('ControlRight'));
-    // v14 TACTICAL SLIDE (COD): crouch while sprinting → 0.72 s slide with a speed burst, low camera + roll, A/D steer; jump cancels it keeping momentum
-    if (this.slideCd > 0) this.slideCd -= h;
-    if (crouchKey && !this.crouchHeld && this.sprinting && m.grounded && !lad && m.horizontalSpeed() > 5.5 && this.slideCd <= 0 && this.slideT <= 0) {
-      const hs0 = m.horizontalSpeed(); this.slideT = 0.72; this.slideDir.set(m.vel.x / hs0, 0, m.vel.z / hs0); this.slideV0 = Math.max(hs0 * 1.18, 8.4);
-      m.setCrouch(true); m.vel.x = this.slideDir.x * this.slideV0; m.vel.z = this.slideDir.z * this.slideV0; this.sprinting = false; this.fovPunch = 4;
-      g.audio.land(null, m.surface, 0.75); g.emitNoise(m.pos, 13, this.team);
-    }
-    this.crouchHeld = crouchKey;
-    if (this.slideT > 0) {
-      this.slideT -= h;
-      const k = 1 - Math.max(0, this.slideT) / 0.72, ang = r * 1.1 * h, cs = Math.cos(ang), sn = Math.sin(ang), dx = this.slideDir.x, dz = this.slideDir.z;
-      this.slideDir.set(dx * cs - dz * sn, 0, dx * sn + dz * cs);
-      m.setCrouch(true); this.sprinting = false; m.edgeGuard = false;
-      m.step(h, this.slideDir.x, this.slideDir.z, lerp(this.slideV0, 2.6, k * k));
-      if (m.jumped || !m.grounded || this.slideT <= 0) { this.slideT = 0; this.slideCd = 0.75; }
-      return;
-    }
-    m.setCrouch(crouchKey);
-    const shift = !frozen && (input.down('ShiftLeft') || input.down('ShiftRight'));
-    const ws = g.weapons, w = ws.current;
-    if (this.sprintBlock > 0) this.sprintBlock -= h;
-    this.sprinting = shift && f > 0 && !m.crouching && !ws.ads && this.sprintBlock <= 0 && !(w.kind === 'grenade' && w.state !== 'idle');
-    m.edgeGuard = shift && m.grounded;
-    let speed = w.moveSpeed * (this.carrying ? 0.88 : 1);
-    if (m.crouching) speed *= P.crouchMult; else if (this.sprinting) speed *= P.sprintMult;
-    if (ws.ads) speed *= w.adsMove ?? 1;
-    m.step(h, wx, wz, len > 0 ? speed : 0);
-    if (m.climbing) { if (m.climbDist > 0.6) { m.climbDist = 0; g.audio.footstep(null, 'ladder', 0.6); g.emitNoise(m.pos, 9, this.team); } return; }
-    const hs = m.horizontalSpeed();
-    if (m.grounded && hs > 3.0 && !m.crouching) {
-      this.stepDist += hs * h;
-      if (this.stepDist > (this.sprinting ? 2.5 : 2.1)) { this.stepDist = 0; g.audio.footstep(null, m.surface, this.sprinting ? 0.7 : 0.55); g.emitNoise(m.pos, this.sprinting ? 17 : 11, this.team); }
-    } else if (!m.grounded) this.stepDist = 1.4;
-    if (m.landSpeed > 3.5) { g.audio.land(null, m.surface, m.landSpeed / 9); this.punchV += Math.min(m.landSpeed, 14) * -0.012; g.emitNoise(m.pos, 14, this.team); }
   }
 
   // TRUE CAMERA RECOIL: every shot rotates the CAMERA (pitch/yaw offset) — the crosshair never leaves the screen

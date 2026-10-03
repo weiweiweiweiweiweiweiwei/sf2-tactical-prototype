@@ -485,9 +485,9 @@ class AudioEngine {
     this._nb(t, out, 'lowpass', 400, 0.8, 0.5, 0.002, 0.1);
   }
 
-  knifeSwing() {
+  knifeSwing(pos = null) {
     if (!this.ctx) return;
-    const t = this.ctx.currentTime, out = this._bus(null, 0.08);
+    const t = this.ctx.currentTime, out = this._bus(pos, 0.08);
     const f = this._nb(t, out, 'bandpass', 500, 1.5, 0.45, 0.03, 0.16);
     f.frequency.setValueAtTime(400, t); f.frequency.exponentialRampToValueAtTime(3000, t + 0.16);
   }

@@ -25,9 +25,9 @@ class App {
     this.mats = new MaterialLib(this.tex);
     this.models = new WeaponModels(this.tex);
     this.soldiers = new SoldierFactory(this.tex, this.models);
-    this.audio = new AudioEngine(); this.input = new InputManager(this.canvas); this.hud = new HUD(this); this.post = new PostFX(r);
+    this.audio = new AudioEngine(); this.input = new InputManager(this.canvas); this.cmds = new CmdBuilder(this.input); this.hud = new HUD(this); this.post = new PostFX(r);
     this.hdrCache = new Map(); this.match = null; this.state = 'lobby';
-    this.last = performance.now(); this._mouse = { x: 0, y: 0 }; this._extra = { x: 0, y: 0 };
+    this.last = performance.now(); this._mouse = { x: 0, y: 0 };
     this.fpsAcc = 0; this.fpsFrames = 0; this.fpsText = '';
     this.$ = (id) => document.getElementById(id);
     this.buildLobby(); this.bindInput(); this.bindMenus(); this.onResize();
@@ -135,6 +135,7 @@ class App {
   async startMatch() {
     const $ = this.$, L = Settings.data.lobby, def = MAPS[L.map];
     this.state = 'loading';
+    this.cmds.reset();
     $('lbCount').classList.remove('on'); $('lobby').classList.remove('on');
     const ld = $('loader'); ld.classList.add('on'); ld.classList.remove('shot');
     $('ldTitle').firstChild.textContent = def.en; $('ldSub').textContent = `${def.name} · ${MODES[L.mode].name} · ${RULES[L.rule].name} · ${L.allies} vs ${L.enemies}${L.rule === 'relic' ? ' · 藍隊進攻 / 紅隊防守' : ''}`;
@@ -240,8 +241,8 @@ class App {
       if (this.state !== 'playing' || !m) return;
       this.audio.init();
       if (!m.player.alive) { if (down && btn === 0 && m.rules.roundBased) m.nextSpectate(); return; }
-      const mm = inp.consumeMouse(TMP_V1); m.player.look(mm.x, mm.y); this._extra.x += mm.x; this._extra.y += mm.y; m.player.applyView();
-      m.weapons.onButton(btn, down);
+      if (down) this.cmds.press(btn === 0 ? BTN.FIRE : btn === 2 ? BTN.ALT : 0); // v25: fired in the next fixed step (a sub-tick click is never lost)
+      m.weapons.onButton(btn, down); // ADS toggle / hold stays an instant local decision
     };
     inp.onKey = (code) => {
       const m = this.match;
@@ -250,15 +251,18 @@ class App {
       const fk = /^F([1-5])$/.exec(code);
       if (fk && m && (this.state === 'playing' || this.state === 'paused')) { m.queueLoadout(parseInt(fk[1], 10) - 1); return; } // works while dead too
       if (this.state !== 'playing' || !m || !m.player.alive) return;
-      if (code === 'Space') { if (m.canMove()) m.player.motor.requestJump(); }
-      else if (code === 'KeyF') m.weapons.grab();
-      else if (code === 'KeyE') { if (m.canMove()) m.onInteract(); }
-      else m.weapons.onKey(code);
+      const C = this.cmds, dg = /^Digit([1-9])$/.exec(code);
+      if (code === 'Space') C.press(BTN.JUMP);
+      else if (code === 'KeyF') C.press(BTN.GRAB);
+      else if (code === 'KeyE') C.press(BTN.INTERACT);
+      else if (code === 'KeyQ') C.press(BTN.QUICK);
+      else if (code === 'KeyR') C.press(BTN.RELOAD);
+      else if (dg) { const i = parseInt(dg[1], 10) - 1; if (i < m.weapons.weapons.length) C.switchTo(i); }
     };
     inp.onLockChange = (locked, error) => {
       if (error) return; // failed lock request (no user gesture) — the freeze overlay asks for a click instead
       if (locked) { if (this.state === 'paused') { this.$('pause').classList.remove('on'); this.state = 'playing'; this.last = performance.now(); } }
-      else if (this.state === 'playing' && this.match && this.match.phase !== 'over') { this.state = 'paused'; this.$('pause').classList.add('on'); if (this.match) this.match.weapons.trigger = false; }
+      else if (this.state === 'playing' && this.match && this.match.phase !== 'over') { this.state = 'paused'; this.$('pause').classList.add('on'); if (this.match) this.match.weapons.trigger = false; this.cmds.reset(); }
     };
     this.canvas.addEventListener('click', () => { if (this.state === 'playing' && !inp.locked) inp.lock(); });
     document.getElementById('hud').addEventListener('click', () => { if (this.state === 'playing' && !inp.locked) inp.lock(); });
@@ -527,9 +531,7 @@ class App {
     const m = this.match;
     if (m && m.running) {
       if (this.state === 'playing') {
-        mouse.x += this._extra.x; mouse.y += this._extra.y;
         const tt0 = performance.now(); m.tick(dt, mouse); const tt1 = performance.now(); m.prof.add('tick', tt1 - tt0);
-        this._extra.x = this._extra.y = 0;
         // dynamic resolution: keep the GPU out of overload (prevents hangs / TDR on weaker cards)
         this.frameMs = lerp(this.frameMs, dt * 1000, 0.08); this.dynT += dt; this.busyF++; if (inFlight >= 2) this.busyN++;
         // v24 dynamic resolution: react within ~1 s (was 2 s / >24 ms), down to the preset's minScale. `busy` = share of frames

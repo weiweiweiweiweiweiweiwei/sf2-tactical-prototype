@@ -55,6 +55,7 @@ class Match {
     for (let i = 0; i < this.config.allies - 1; i++) this.bots.push(new Bot(this, 'alpha', i, this.botWeapon()));
     for (let i = 0; i < this.config.enemies; i++) this.bots.push(new Bot(this, 'bravo', i, this.botWeapon()));
     this.combatants.push(...this.bots);
+    this.combatants.forEach((c, i) => { c.netId = i + 1; }); // v25: stable ids (network snapshots, seeded spread)
     this.spawns = { alpha: this.makeSpawns('alpha'), bravo: this.makeSpawns('bravo') };
     this.spawnLOS = this.checkSpawnLOS(); window.__debug = Object.assign(window.__debug || {}, { map: def.id, spawnLOS: this.spawnLOS.visible > 0, spawnLOSPairs: this.spawnLOS });
     this.playerModel = app.soldiers.create(this.player.team, 'm4'); this.playerModel.root.visible = false; this.scene.add(this.playerModel.root); // third-person you, for killcams
@@ -281,6 +282,15 @@ class Match {
       if (d2 < 1.96) c.ai.onSuppressed(origin);
     }
     return { end: origin.clone().addScaledVector(dir, endT), dist: endT, hitPlayer };
+  }
+
+  // v25: muzzle flash, tracer and positional gunshot for a shot fired by anyone but the local player (remote humans)
+  thirdPersonShot(shooter, def, from, to, n = 1) {
+    if (from.distanceTo(this.camera.position) < 110) {
+      if (!def.suppressed) this.effects.worldFlash(from, def.kind === 'sniper' || def.kind === 'shotgun' ? 0.8 : 0.5);
+      if (def.kind === 'sniper' || (def.tracerEvery && n % def.tracerEvery === 0)) this.effects.tracer(from, to, 330, 3, 0xffc070);
+    }
+    this.audio.gunshot(def.sound, from, def.soundRate);
   }
 
   meleeTrace(shooter, origin, dir, range) {
@@ -604,10 +614,14 @@ class Match {
     if (this.phase === 'over') return;
     this.runTimers();
     p.look(mouse.x, mouse.y);
-    p.holdE = p.alive && this.canAct() && input.down('KeyE');
+    if (input.wheel && p.alive) this.app.cmds.switchTo(this.weapons.wheelTarget(input.wheel));
     this.acc += dt; let steps = 0;
     while (this.acc >= h && steps < 14) {
-      p.fixedUpdate(h, input);
+      // v25: one UserCmd per fixed step drives the local player's movement AND weapons (the host steps remote humans the same way)
+      const cmd = this.app.cmds.build(p, this.weapons, true);
+      p.fixedUpdate(h, cmd);
+      this.weapons.tick(h, cmd);
+      if ((cmd.btn & BTN.INTERACT) && p.alive && this.canMove()) this.onInteract();
       for (const b of this.bots) b.fixedUpdate(h);
       const ms = []; for (const c of this.combatants) if (c.alive) ms.push(c.motor);
       for (let i = 0; i < ms.length; i++) for (let j = i + 1; j < ms.length; j++) CharacterMotor.separate(ms[i], ms[j]);

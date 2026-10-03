@@ -1048,6 +1048,10 @@ const wrapAngle = (a) => { while (a > Math.PI) a -= Math.PI * 2; while (a < -Mat
 const nextFrame = () => new Promise((r) => { let done = false; const f = () => { if (!done) { done = true; r(); } }; requestAnimationFrame(f); setTimeout(f, 50); });
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const TMP_V1 = new THREE.Vector3(), TMP_V2 = new THREE.Vector3(), TMP_V3 = new THREE.Vector3(), TMP_V4 = new THREE.Vector3();
+// v25: a reproducible random stream per shot — the shooter's network id + shot number seed the spread cone, so the host
+// and the shooter's own client draw exactly the same bullet direction.
+function hash2(a, b) { let h = Math.imul((a | 0) ^ 0x9e3779b9, 0x85ebca6b) ^ Math.imul((b | 0) + 0x7f4a7c15, 0xc2b2ae35); h ^= h >>> 15; h = Math.imul(h, 0x2c1b3c6d); h ^= h >>> 12; h = Math.imul(h, 0x297a2d39); return (h ^ (h >>> 15)) >>> 0; }
+const shotRng = (id, n) => mulberry32(hash2(id, n));
 function mulberry32(seed) { let a = seed >>> 0; return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 
 // v21 (CLAUDE.md §4.2): linear falloff damageNear → damageFar between falloffStart and falloffEnd; sniper headshots always kill.
@@ -1609,9 +1613,9 @@ class AudioEngine {
     this._nb(t, out, 'lowpass', 400, 0.8, 0.5, 0.002, 0.1);
   }
 
-  knifeSwing() {
+  knifeSwing(pos = null) {
     if (!this.ctx) return;
-    const t = this.ctx.currentTime, out = this._bus(null, 0.08);
+    const t = this.ctx.currentTime, out = this._bus(pos, 0.08);
     const f = this._nb(t, out, 'bandpass', 500, 1.5, 0.45, 0.03, 0.16);
     f.frequency.setValueAtTime(400, t); f.frequency.exponentialRampToValueAtTime(3000, t + 0.16);
   }
@@ -6236,19 +6240,23 @@ WeaponModels.prototype.tpGeneric = function (spec) {
    PLAYER WEAPONS — per-class behaviour, all numbers come from the
    compiled WEAPON_DATABASE entry. Spread values are cone radii in
    radians; the HUD crosshair gap is derived from the real spread.
+   v25: a weapon belongs to an OWNER (the local player, or a remote human simulated on the host). Gameplay runs in
+   tick() once per fixed step; animate() only moves the local viewmodel. The spread cone is drawn from a seeded stream
+   (owner network id + shot number) so the host and the shooter's own client fire the very same bullet.
    ===================================================================== */
 class Weapon {
-  constructor(game, def, vm) {
-    this.game = game; this.def = def; this.vm = vm; Object.assign(this, def);
-    this.ammo = def.mag || 0; this.reserveAmmo = def.reserve || 0;
+  constructor(game, def, vm, owner) {
+    this.game = game; this.def = def; this.vm = vm; this.owner = owner || game.player; Object.assign(this, def);
+    this.ammo = def.mag || 0; this.reserveAmmo = def.reserve || 0; this.shotN = 0;
     this.cooldown = 0; this.bloom = 0; this.shots = 0; this.lastShot = -10; this.sprayPhase = 0;
     this.reloading = false; this.reloadT = 0; this.reloadFired = new Set();
     this.queued = 0; this.autoReloadT = 0; this.flashT = 0; this.slideKick = 0; this.cur = 0;
     this.magBase = vm.mag ? vm.mag.position.clone() : null;
     this.chargeBase = vm.charge ? vm.charge.position.clone() : null;
   }
+  get local() { return this.owner === this.game.player; }
   get scoped() { return this.adsType === '2d_scope_overlay'; }
-  resetAmmo() { this.ammo = this.def.mag || 0; this.reserveAmmo = this.def.reserve || 0; }
+  resetAmmo() { this.ammo = this.def.mag || 0; this.reserveAmmo = this.def.reserve || 0; this.shotN = 0; }
   equip() {
     this.cooldown = 0; this.reloading = false; this.reloadT = 0; this.bloom = 0; this.cur = 0; this.shots = 0; this.queued = 0; this.autoReloadT = 0; this.flashT = 0;
     if (this.vm.mag) { this.vm.mag.position.copy(this.magBase); this.vm.mag.rotation.set(0, 0, 0); }
@@ -6257,6 +6265,8 @@ class Weapon {
   }
   holster() { this.reloading = false; this.queued = 0; this.autoReloadT = 0; if (this.vm.flash) this.vm.flash.visible = false; }
   get reloadPhase() { return this.reloading ? clamp(this.reloadT / this.reloadTime, 0, 1) : 0; }
+  // mechanical sounds: in your head for your own gun, positional for anyone else's
+  _mech(name) { this.game.audio.mech(name, this.local ? null : this.owner.motor.pos); }
 
   tryReload() {
     if (!this.mag || this.reloading || this.ammo >= this.mag || this.reserveAmmo <= 0) return false;
@@ -6264,14 +6274,14 @@ class Weapon {
     return true;
   }
 
-  moveFactor() { const hs = this.game.player.motor.horizontalSpeed(); return clamp((hs - 0.5) / Math.max(0.5, this.def.moveSpeed - 0.5), 0, 1.4); }
+  moveFactor() { const hs = this.owner.motor.horizontalSpeed(); return clamp((hs - 0.5) / Math.max(0.5, this.def.moveSpeed - 0.5), 0, 1.4); }
 
   // DYNAMIC ACCURACY (default): currentSpread starts at exactly 0 — a tapped shot goes perfectly straight down the
   // camera ray. Holding the trigger blooms it per shot up to bloomMax (a 10 m target stays hittable) and it snaps
   // back to 0 as soon as you stop. ADS keeps 45 % of the bloom; jumping / sprinting still throw the shot.
   spread(ws) {
-    if (Settings.data.hipMode === 'shotgun') return this.spreadLegacy(ws);
-    const p = this.game.player, m = p.motor;
+    if ((this.owner.hipMode || Settings.data.hipMode) === 'shotgun') return this.spreadLegacy(ws);
+    const p = this.owner, m = p.motor;
     let s = this.cur * (ws.ads ? 0.45 : 1);
     if (!m.grounded) s += this.spreadAir;
     if (p.sprinting) s += this.spreadSprint * 0.5;
@@ -6280,7 +6290,7 @@ class Weapon {
   }
   // v2/v3 model (Settings → 腰射散布：散彈式): hip fire = wide cone, only close range; movement widens both.
   spreadLegacy(ws) {
-    const p = this.game.player, m = p.motor, mv = this.moveFactor(), ads = ws.ads;
+    const p = this.owner, m = p.motor, mv = this.moveFactor(), ads = ws.ads;
     let s = ads ? this.adsBase + this.adsMoveSpread * mv * mv + this.bloom * this.adsBloomMult
       : this.hipBase + this.spreadMove * mv * mv + this.bloom;
     if (p.sprinting) s += this.spreadSprint;
@@ -6299,47 +6309,54 @@ class Weapon {
     return [pitch * rand(0.9, 1.1), yaw];
   }
 
+  // v25: the aim ray comes from the owner's eye and AIM angles, not from the camera. The local player's aim = view +
+  // recoil + punch (what the crosshair shows); a remote human's aim angles arrive in its UserCmd and already include them.
   static _o = new THREE.Vector3(); static _d = new THREE.Vector3(); static _r = new THREE.Vector3(); static _u = new THREE.Vector3();
   aimRay() {
-    const cam = this.game.camera; cam.updateMatrixWorld();
-    return { o: Weapon._o.setFromMatrixPosition(cam.matrixWorld), d: Weapon._d.set(0, 0, -1).transformDirection(cam.matrixWorld),
-      r: Weapon._r.setFromMatrixColumn(cam.matrixWorld, 0).normalize(), u: Weapon._u.setFromMatrixColumn(cam.matrixWorld, 1).normalize() };
+    const p = this.owner, local = this.local, yaw = local ? p.yaw + p.recoilYaw : p.yaw, pitch = local ? p.pitch + p.recoilPitch + p.punch : p.pitch;
+    const cp = Math.cos(pitch), sp = Math.sin(pitch), sy = Math.sin(yaw), cy = Math.cos(yaw), m = p.motor;
+    if (local) Weapon._o.set(m.pos.x, m.pos.y + p.eyeH + m.stepOffset, m.pos.z); else p.eyePos(Weapon._o);
+    return { o: Weapon._o, d: Weapon._d.set(-sy * cp, sp, -cy * cp), r: Weapon._r.set(cy, 0, -sy), u: Weapon._u.set(sy * sp, cp, cy * sp) };
   }
   muzzleWorld(ray, ws) {
+    if (!this.local) return this.owner.muzzlePos || ray.o.clone();
     if (this.vm.muzzle && !(ws.scopedIn && this.scoped)) { this.vm.group.updateMatrixWorld(); return this.vm.muzzle.getWorldPosition(new THREE.Vector3()); }
     return ray.o.clone().addScaledVector(ray.u, -0.08).addScaledVector(ray.d, 0.5);
   }
-  _cone(ray, s, out) {
+  _cone(ray, s, out, R) {
     out.copy(ray.d);
-    if (s > 0) { const rr = s * Math.sqrt(Math.random()), a = Math.random() * Math.PI * 2; out.addScaledVector(ray.r, Math.cos(a) * rr).addScaledVector(ray.u, Math.sin(a) * rr).normalize(); }
+    if (s > 0) { const rr = s * Math.sqrt(R()), a = R() * Math.PI * 2; out.addScaledVector(ray.r, Math.cos(a) * rr).addScaledVector(ray.u, Math.sin(a) * rr).normalize(); }
     return out;
   }
-  _shoot(ray, ws) { const s = this.spread(ws); return this.game.fireBullet(this.game.player, ray.o.clone(), this._cone(ray, s, new THREE.Vector3()), this.def); }
+  _shoot(ray, ws, R) { const s = this.spread(ws); return this.game.fireBullet(this.owner, ray.o.clone(), this._cone(ray, s, new THREE.Vector3(), R), this.def); }
 
   fire(ws) {
-    const g = this.game, p = g.player;
+    const g = this.game, p = this.owner;
     if (this.reloading) return false;
-    if (this.ammo <= 0) { g.audio.mech('dry'); this.cooldown = 0.22; if (this.tryReload()) ws.setAds(false, true); return false; }
+    if (this.ammo <= 0) { this._mech('dry'); this.cooldown = 0.22; if (this.tryReload()) ws.setAds(false, true); return false; }
     this.ammo--;
     this.cooldown = Math.max(Math.min(this.cooldown, 0), -this.interval) + this.interval;
     if (g.time - this.lastShot > this.interval * 2.2) this.sprayPhase = rand(0, Math.PI * 2);
     const ray = this.aimRay();
-    const res = this._shoot(ray, ws);
+    const res = this._shoot(ray, ws, shotRng(p.netId | 0, ++this.shotN));
     this.shots = g.time - this.lastShot < this.interval * 2.2 ? this.shots + 1 : 1;
     this.lastShot = g.time;
     this.bloom = Math.min(this.bloom + (this.spreadPerShot || 0), this.spreadMax || 0);
     this.cur = Math.min(this.cur + (this.bloomPerShot || 0), this.bloomMax || 0); // applies from the NEXT shot
-    const [rp, ry] = this.recoilKick(), am = ws.ads ? (this.def.adsRecoilMult ?? 0.8) : 1;
-    p.addRecoil(rp * am, ry * am);
-    p.punchV += (this.kick ? this.kick.rx : 0.05) * (ws.ads ? 0.9 : 0.7); // small per-shot camera shudder on top of the recoil
-    ws.kick(this.kick);
-    this.flashT = 0.045;
-    const mz = this.muzzleWorld(ray, ws), big = this.kind === 'sniper' || this.kind === 'shotgun';
-    g.effects.playerMuzzleLight(mz, this.suppressed ? 0.25 : big ? 1.4 : 1);
-    ws.muzzleLight(this.suppressed ? 0.25 : 1);
-    if (this.tracerEvery && this.shots % this.tracerEvery === 0 && !(ws.scopedIn && this.scoped)) g.effects.tracer(mz, res.end, this.kind === 'sniper' ? 520 : 400, this.kind === 'sniper' ? 6 : 3.5);
-    if (this.kind !== 'sniper' && this.kind !== 'shotgun') this.ejectCasing(ray, false);
-    g.audio.gunshot(this.sound, null, this.soundRate);
+    const mz = this.muzzleWorld(ray, ws);
+    if (this.local) {
+      const [rp, ry] = this.recoilKick(), am = ws.ads ? (this.def.adsRecoilMult ?? 0.8) : 1;
+      p.addRecoil(rp * am, ry * am);
+      p.punchV += (this.kick ? this.kick.rx : 0.05) * (ws.ads ? 0.9 : 0.7); // small per-shot camera shudder on top of the recoil
+      ws.kick(this.kick);
+      this.flashT = 0.045;
+      const big = this.kind === 'sniper' || this.kind === 'shotgun';
+      g.effects.playerMuzzleLight(mz, this.suppressed ? 0.25 : big ? 1.4 : 1);
+      ws.muzzleLight(this.suppressed ? 0.25 : 1);
+      if (this.tracerEvery && this.shots % this.tracerEvery === 0 && !(ws.scopedIn && this.scoped)) g.effects.tracer(mz, res.end, this.kind === 'sniper' ? 520 : 400, this.kind === 'sniper' ? 6 : 3.5);
+      if (this.kind !== 'sniper' && this.kind !== 'shotgun') this.ejectCasing(ray, false);
+      g.audio.gunshot(this.sound, null, this.soundRate);
+    } else g.thirdPersonShot(p, this.def, mz, res.end, this.shots);
     g.recordShot(p, mz, res.end, this.def);
     g.emitNoise(p.motor.pos, this.noise, p.team);
     p.onAttack();
@@ -6348,22 +6365,27 @@ class Weapon {
   }
 
   ejectCasing(ray, big) {
-    const g = this.game, v = g.player.motor.vel;
+    if (!this.local) return;
+    const g = this.game, v = this.owner.motor.vel;
     const pos = ray.o.clone().addScaledVector(ray.r, 0.16).addScaledVector(ray.u, -0.12).addScaledVector(ray.d, 0.32);
     const vel = new THREE.Vector3().addScaledVector(ray.r, rand(1.6, 2.5)).addScaledVector(ray.u, rand(1.1, 1.8)).addScaledVector(ray.d, rand(-0.4, 0.3)).add(v);
     g.physics.ejectCasing(pos, vel, big);
   }
 
-  update(dt, ws) {
-    this.cooldown -= dt;
+  // gameplay, once per fixed step
+  tick(h, ws) {
+    this.cooldown -= h;
     if (!ws.trigger && this.cooldown < 0) this.cooldown = 0;
     const spraying = this.game.time - this.lastShot < (this.interval || 0.1) * 1.6; // bloom only recovers once you stop spraying
-    this.bloom = damp(this.bloom, 0, spraying ? 1 : (this.spreadRecover || 5), dt);
-    if (!spraying) { this.cur = damp(this.cur, 0, 11, dt); if (this.cur < 2e-4) this.cur = 0; } // quick recenter to a perfect first shot
+    this.bloom = damp(this.bloom, 0, spraying ? 1 : (this.spreadRecover || 5), h);
+    if (!spraying) { this.cur = damp(this.cur, 0, 11, h); if (this.cur < 2e-4) this.cur = 0; } // quick recenter to a perfect first shot
+    if (this.autoReloadT > 0) { this.autoReloadT -= h; if (this.autoReloadT <= 0 && this.tryReload()) ws.setAds(false, true); }
+    this._reload(h);
+  }
+  // local viewmodel, once per rendered frame
+  animate(dt, ws) {
     if (this.flashT > 0) this.flashT -= dt;
     this.slideKick = damp(this.slideKick, 0, 18, dt);
-    if (this.autoReloadT > 0) { this.autoReloadT -= dt; if (this.autoReloadT <= 0 && this.tryReload()) ws.setAds(false, true); }
-    this._reload(dt);
     const vm = this.vm, p = this.reloadPhase;
     if (vm.mag && this.magBase) {
       let off = 0;
@@ -6377,10 +6399,10 @@ class Weapon {
       vm.charge.position.z = this.chargeBase.z + k * 0.05;
     }
   }
-  _reload(dt) {
+  _reload(h) {
     if (!this.reloading) return;
-    this.reloadT += dt;
-    for (const [t, snd] of this.reloadSounds) if (this.reloadT >= t * this.reloadTime && !this.reloadFired.has(snd)) { this.reloadFired.add(snd); this.game.audio.mech(snd); }
+    this.reloadT += h;
+    for (const [t, snd] of this.reloadSounds) if (this.reloadT >= t * this.reloadTime && !this.reloadFired.has(snd)) { this.reloadFired.add(snd); this._mech(snd); }
     if (this.reloadT >= this.reloadTime) { const take = Math.min(this.mag - this.ammo, this.reserveAmmo); this.ammo += take; this.reserveAmmo -= take; this.reloading = false; }
   }
 }
@@ -6388,10 +6410,10 @@ class Weapon {
 class AutoGun extends Weapon {}
 
 class SniperRifle extends Weapon {
-  constructor(game, def, vm) { super(game, def, vm); this.boltT = -1; this.boltBase = vm.bolt ? vm.bolt.position.clone() : null; }
+  constructor(game, def, vm, owner) { super(game, def, vm, owner); this.boltT = -1; this.boltBase = vm.bolt ? vm.bolt.position.clone() : null; }
   // CS-style: scoped + standing still = perfect from the first frame the scope is up (firing during the raise = hip accuracy).
   spread(ws) {
-    const p = this.game.player, m = p.motor, hs = m.horizontalSpeed();
+    const p = this.owner, m = p.motor, hs = m.horizontalSpeed();
     if (ws.ads && ws.scopedIn) {
       if (!m.grounded) return this.spreadAir * 0.85;
       let s = this.adsBase;
@@ -6410,8 +6432,8 @@ class SniperRifle extends Weapon {
   // bolt actions cycle (and drop out of the scope) after every shot; semi-autos (Barrett / SVD) stay scoped
   fire(ws) { const ok = super.fire(ws); if (ok) { if (this.def.bolt) { this.boltT = 0; this.boltFired = { back: false, fwd: false }; ws.unscopeT = 0.06; } else this.ejectCasing(this.aimRay(), true); } return ok; }
   equip() { super.equip(); this.boltT = -1; if (this.vm.bolt) { this.vm.bolt.position.copy(this.boltBase); this.vm.bolt.rotation.set(0, 0, 0); } }
-  update(dt, ws) {
-    super.update(dt, ws);
+  animate(dt, ws) {
+    super.animate(dt, ws);
     const b = this.vm.bolt;
     if (this.boltT >= 0 && b) {
       this.boltT += dt; const t = this.boltT;
@@ -6428,7 +6450,7 @@ class SniperRifle extends Weapon {
 
 // Pump shotgun: N pellets per shell, pump cycle after every shot, shell-by-shell reload that firing can interrupt.
 class Shotgun extends Weapon {
-  constructor(game, def, vm) { super(game, def, vm); this.pumpT = -1; this.pumpBase = vm.pump ? vm.pump.position.clone() : null; this.shellT = 0; this.needPump = false; }
+  constructor(game, def, vm, owner) { super(game, def, vm, owner); this.pumpT = -1; this.pumpBase = vm.pump ? vm.pump.position.clone() : null; this.shellT = 0; this.needPump = false; }
   equip() { super.equip(); this.pumpT = -1; this.shellT = 0; if (this.vm.pump) this.vm.pump.position.copy(this.pumpBase); }
   get reloadPhase() { return this.reloading ? (this.shellReload ? clamp(this.ammo / this.mag, 0, 1) : clamp(this.reloadT / this.reloadTime, 0, 1)) : 0; }
   spread(ws) { return this.spreadLegacy(ws); } // the pellet pattern IS the spread
@@ -6438,11 +6460,11 @@ class Shotgun extends Weapon {
     this.reloading = true; this.shellT = this.shellReload * 0.6; this.needPump = this.ammo === 0; this.queued = 0;
     return true;
   }
-  _shoot(ray, ws) {
+  _shoot(ray, ws, R) {
     const g = this.game, s = this.spread(ws), dir = new THREE.Vector3();
     let res = null;
     for (let i = 0; i < this.pellets; i++) {
-      const r = g.fireBullet(g.player, ray.o.clone(), this._cone(ray, s, dir), this.def, { pellet: i });
+      const r = g.fireBullet(this.owner, ray.o.clone(), this._cone(ray, s, dir, R), this.def, { pellet: i });
       if (!res || r.dist < res.dist) res = r;
     }
     return res;
@@ -6450,20 +6472,20 @@ class Shotgun extends Weapon {
   fire(ws) {
     if (this.shellReload && this.reloading && this.ammo > 0) { this.reloading = false; this.cooldown = Math.max(this.cooldown, 0.12); return false; } // fire cancels a shell reload
     const ok = super.fire(ws);
-    if (ok) { if (this.def.pump) { this.pumpT = 0; this.pumpSnd = false; } else this.ejectCasing(this.aimRay(), true); this.game.player.punchV += 0.25; }
+    if (ok) { if (this.def.pump) { this.pumpT = 0; this.pumpSnd = false; } else this.ejectCasing(this.aimRay(), true); if (this.local) this.owner.punchV += 0.25; }
     return ok;
   }
-  _reload(dt) {
-    if (!this.shellReload) return super._reload(dt);
+  _reload(h) {
+    if (!this.shellReload) return super._reload(h);
     if (!this.reloading) return;
-    this.shellT -= dt;
+    this.shellT -= h;
     if (this.shellT <= 0) {
-      if (this.ammo < this.mag && this.reserveAmmo > 0) { this.ammo++; this.reserveAmmo--; this.game.audio.mech('shell'); this.shellT = this.shellReload; this.shellBob = 1; }
-      else { this.reloading = false; if (this.needPump && this.def.pump) { this.pumpT = 0; this.pumpSnd = false; } else if (this.needPump) this.game.audio.mech('charge'); }
+      if (this.ammo < this.mag && this.reserveAmmo > 0) { this.ammo++; this.reserveAmmo--; this._mech('shell'); this.shellT = this.shellReload; this.shellBob = 1; }
+      else { this.reloading = false; if (this.needPump && this.def.pump) { this.pumpT = 0; this.pumpSnd = false; } else if (this.needPump) this._mech('charge'); }
     }
   }
-  update(dt, ws) {
-    super.update(dt, ws);
+  animate(dt, ws) {
+    super.animate(dt, ws);
     this.shellBob = damp(this.shellBob || 0, 0, 9, dt);
     if (this.pumpT >= 0) {
       this.pumpT += dt; const t = this.pumpT;
@@ -6479,11 +6501,11 @@ class Shotgun extends Weapon {
 class Pistol extends Weapon {
   recoilKick() { return [this.def.recoil.climb * rand(0.9, 1.1), rand(-1, 1) * this.def.recoil.h]; }
   fire(ws) { const ok = super.fire(ws); if (ok) this.slideKick = 1; return ok; }
-  update(dt, ws) { super.update(dt, ws); if (this.vm.slide) this.vm.slide.position.z = this.slideKick * 0.028 + (this.ammo === 0 && !this.reloading ? 0.028 : 0); }
+  animate(dt, ws) { super.animate(dt, ws); if (this.vm.slide) this.vm.slide.position.z = this.slideKick * 0.028 + (this.ammo === 0 && !this.reloading ? 0.028 : 0); }
 }
 
 class Knife extends Weapon {
-  constructor(game, def, vm) { super(game, def, vm); this.pending = null; this.swing = null; this.side = 1; this.queuedHeavy = false; }
+  constructor(game, def, vm, owner) { super(game, def, vm, owner); this.pending = null; this.swing = null; this.side = 1; this.queuedHeavy = false; }
   spread() { return 0.002; }
   equip() { super.equip(); this.pending = null; this.swing = null; }
   holster() { super.holster(); this.pending = null; this.swing = null; }
@@ -6493,16 +6515,17 @@ class Knife extends Weapon {
     this.cooldown = d.interval; this.side = -this.side;
     this.swing = { heavy, t: 0, dur: heavy ? 0.5 : 0.3, side: this.side };
     this.pending = { t: d.delay, d, heavy };
-    this.game.audio.knifeSwing(); this.game.player.onAttack();
+    this.game.audio.knifeSwing(this.local ? null : this.owner.motor.pos); this.owner.onAttack();
   }
-  update(dt) {
-    this.cooldown = Math.max(0, this.cooldown - dt);
-    if (this.queued > 0) { this.queued -= dt; if (this.cooldown <= 0) { this.queued = 0; this.attack(this.queuedHeavy); } }
-    if (this.swing) { this.swing.t += dt; if (this.swing.t >= this.swing.dur) this.swing = null; }
-    if (this.pending) { this.pending.t -= dt; if (this.pending.t <= 0) { const p = this.pending; this.pending = null; this._hit(p.d, p.heavy); } }
+  tick(h) {
+    this.cooldown = Math.max(0, this.cooldown - h);
+    if (this.queued > 0) { this.queued -= h; if (this.cooldown <= 0) { this.queued = 0; this.attack(this.queuedHeavy); } }
+    if (this.swing) { this.swing.t += h; if (this.swing.t >= this.swing.dur) this.swing = null; }
+    if (this.pending) { this.pending.t -= h; if (this.pending.t <= 0) { const p = this.pending; this.pending = null; this._hit(p.d, p.heavy); } }
   }
+  animate() {}
   _hit(d, heavy) {
-    const g = this.game, p = g.player, ray = this.aimRay();
+    const g = this.game, p = this.owner, ray = this.aimRay(), at = this.local ? null : p.motor.pos;
     let best = null;
     for (const [yaw, pitch] of [[0, 0], [0.13, 0], [-0.13, 0], [0, 0.09], [0, -0.09]]) {
       const dir = ray.d.clone().addScaledVector(ray.r, yaw).addScaledVector(ray.u, pitch).normalize();
@@ -6516,8 +6539,8 @@ class Knife extends Weapon {
       let dmg = d.dmg * (best.part === 'head' ? this.def.headMult : 1);
       if (backstab) dmg = heavy ? 999 : dmg * 2;
       g.applyDamage(v, dmg, best.part, p, this.def, ray.d.clone(), best.point, { melee: true });
-      g.audio.knifeHit(true);
-    } else { g.effects.impact(best, false); g.audio.knifeHit(false); }
+      g.audio.knifeHit(true, at);
+    } else { g.effects.impact(best, false); g.audio.knifeHit(false, at); }
   }
 }
 
@@ -6525,8 +6548,8 @@ class Knife extends Weapon {
 // so a charged throw off a running jump flies much further than a quick flick.
 const THROW = { base: 7.2, lobBase: 4.6, chargeTime: 0.7, pinTime: 0.25, maxPower: 3.0, loft: 0.16 }; // full charge ≈ 1.0 s (pin 0.25 + draw 0.7)
 class GrenadeWeapon extends Weapon {
-  constructor(game, def, vm) { super(game, def, vm); this.count = def.count; this.state = 'idle'; this.t = 0; this.lob = false; this.releaseQueued = false; this.chargeT = 0; }
-  resetAmmo() { this.count = this.def.count; }
+  constructor(game, def, vm, owner) { super(game, def, vm, owner); this.count = def.count; this.state = 'idle'; this.t = 0; this.lob = false; this.releaseQueued = false; this.chargeT = 0; }
+  resetAmmo() { this.count = this.def.count; this.shotN = 0; }
   equip() { super.equip(); this.state = 'idle'; this.t = 0; this.releaseQueued = false; this.chargeT = 0; if (this.vm.pin) this.vm.pin.visible = true; }
   holster() { super.holster(); this.state = 'idle'; this.chargeT = 0; }
   spread() { return 0.01; }
@@ -6535,48 +6558,205 @@ class GrenadeWeapon extends Weapon {
   press(btn) {
     if (this.count <= 0 || this.state !== 'idle' || !this.game.canAct()) return;
     this.state = 'pulling'; this.t = 0; this.chargeT = 0; this.lob = btn === 2; this.releaseQueued = false;
-    this.game.audio.mech('pin');
+    this._mech('pin');
   }
   release() { if (this.state === 'pulling') this.releaseQueued = true; else if (this.state === 'ready') this._throw(); }
   _throw() {
-    const g = this.game, p = g.player, ray = this.aimRay(), power = this.power;
+    const g = this.game, p = this.owner, ray = this.aimRay(), power = this.power;
     this.count--; this.state = 'throwing'; this.t = 0;
     const origin = ray.o.clone().addScaledVector(ray.r, 0.18).addScaledVector(ray.u, -0.08).addScaledVector(ray.d, 0.45);
     const dir = ray.d.clone().addScaledVector(TMP_V1.set(0, 1, 0), THROW.loft).normalize();
     const vel = dir.multiplyScalar((this.lob ? THROW.lobBase : THROW.base) * power).add(p.motor.vel); // momentum: player velocity + aim × power × base
     g.throwGrenade(p, this.def, origin, vel);
-    g.audio.mech('throw'); p.onAttack(); this.chargeT = 0;
+    this._mech('throw'); p.onAttack(); this.chargeT = 0;
     if (this.vm.pin) this.vm.pin.visible = false;
   }
-  update(dt, ws) {
-    this.t += dt;
-    if (this.state === 'ready') this.chargeT += dt; // the bow is drawn only once the pin is out: a quick click = weak lob
+  tick(h, ws) {
+    this.t += h;
+    if (this.state === 'ready') this.chargeT += h; // the bow is drawn only once the pin is out: a quick click = weak lob
     if (this.state === 'pulling' && this.t > THROW.pinTime) { this.state = 'ready'; if (this.vm.pin) this.vm.pin.visible = false; if (this.releaseQueued) this._throw(); }
     if (this.state === 'throwing' && this.t > 0.38) {
       this.state = 'idle';
       if (this.count > 0) { if (this.vm.pin) this.vm.pin.visible = true; ws.drawT = 1; } else ws.switchBack();
     }
   }
+  animate() {}
 }
 
-function makePlayerWeapon(game, def, vm) {
-  if (def.kind === 'sniper') return new SniperRifle(game, def, vm);
-  if (def.kind === 'shotgun') return new Shotgun(game, def, vm);
-  if (def.kind === 'pistol') return new Pistol(game, def, vm);
-  if (def.kind === 'knife') return new Knife(game, def, vm);
-  if (def.kind === 'grenade') return new GrenadeWeapon(game, def, vm);
-  return new AutoGun(game, def, vm);
+function makePlayerWeapon(game, def, vm, owner) {
+  if (def.kind === 'sniper') return new SniperRifle(game, def, vm, owner);
+  if (def.kind === 'shotgun') return new Shotgun(game, def, vm, owner);
+  if (def.kind === 'pistol') return new Pistol(game, def, vm, owner);
+  if (def.kind === 'knife') return new Knife(game, def, vm, owner);
+  if (def.kind === 'grenade') return new GrenadeWeapon(game, def, vm, owner);
+  return new AutoGun(game, def, vm, owner);
 }
 /* =====================================================================
-   WEAPON SYSTEM — inventory, Quick-Change, ADS / quick-scope, sprint
-   pose, spring-damper kick, bob/sway, reload/bolt/knife/grenade anims.
-   The viewmodel is rendered in its own pass (never clips into walls)
-   but lives at the camera's WORLD transform and shares the world sun's
-   shadow map, so it receives real environment shadows.
+   v25 ARSENAL — the gameplay half of a soldier's weapons: inventory, Quick-Change, ADS state, trigger / cooldown /
+   reload, knife, grenades, left-hand grab. Stepped once per fixed tick from a UserCmd, so the local player and a remote
+   human simulated on the host follow exactly the same rules and timing. A remote arsenal runs headless (no viewmodel).
    ===================================================================== */
-class WeaponSystem {
+const HEADLESS_VM = () => ({ group: new THREE.Object3D() });
+
+class Arsenal {
+  constructor(game, owner) {
+    this.game = game; this.owner = owner; this.weapons = []; this.index = 0; this.lastIndex = 0; this.remote = false;
+    this.ads = false; this.zoomLevel = 0; this.adsT = 0; this.trigger = false; this.unscopeT = 0; this.scopedIn = false; this.scopeLevel = 0;
+    this.grabT = 0; this.grabCd = 0; this.grabHit = false; this.prevBtn = 0; this.drawT = 0; this.heat = 0; this.lastShotT = -9;
+  }
+  init(defs) {
+    this.weapons = this._make(defs);
+    this.index = 0; this.lastIndex = Math.min(1, this.weapons.length - 1);
+    this.current.equip(); this.current.vm.group.visible = true;
+  }
+  _vm() { return HEADLESS_VM(); }
+  _make(defs) { return defs.map((d) => { const vm = this._vm(d); vm.group.visible = false; return makePlayerWeapon(this.game, d, vm, this.owner); }); }
+  // presentation hooks (the local WeaponSystem overrides them; a headless arsenal ignores them)
+  kick() {} muzzleLight() {} onSwitch() {} onInventory() {} onZoomSound() {} onFired() {}
+
+  get current() { return this.weapons[this.index]; }
+  slotIndex(slot) { return this.weapons.findIndex((w) => w.def.slot === slot); }
+  selectable(i) { const w = this.weapons[i]; return !!w && !(w.kind === 'grenade' && w.count <= 0); }
+
+  // Swap the whole inventory (loadout applied on respawn).
+  rebuild(defs) {
+    this.exitADS();
+    for (const w of this.weapons) { w.holster(); w.vm.group.visible = false; }
+    this.weapons = this._make(defs);
+    this.index = 0; this.lastIndex = Math.min(1, this.weapons.length - 1); this.trigger = false;
+    this.current.equip(); this.current.vm.group.visible = true; this.drawT = 1;
+    this.onInventory();
+  }
+  // Weapon pickup: swap the gun in slot i (keeps the picked-up gun's remaining ammo).
+  replaceSlot(i, def, ammo, reserve) {
+    const cur = i === this.index;
+    if (cur) this.exitADS();
+    const old = this.weapons[i]; old.holster(); old.vm.group.visible = false;
+    const [w] = this._make([def]); w.ammo = ammo; w.reserveAmmo = reserve; this.weapons[i] = w;
+    if (cur) { w.equip(); w.vm.group.visible = true; this.drawT = 1; this.trigger = false; }
+    this.onInventory();
+  }
+  resetLoadout() {
+    this.exitADS();
+    for (const w of this.weapons) { w.resetAmmo(); w.equip(); w.vm.group.visible = false; if (w.holster) w.holster(); }
+    this.index = 0; this.lastIndex = Math.min(1, this.weapons.length - 1); this.trigger = false;
+    this.current.equip(); this.current.vm.group.visible = true; this.drawT = 1;
+  }
+
+  // Force-leave ADS on the CURRENT weapon.
+  exitADS() { this.zoomLevel = 0; this.ads = false; this.adsT = 0; this.unscopeT = 0; this.scopedIn = false; this.scopeLevel = 0; }
+
+  // QUICK CHANGE: instant swap, cancels cooldown/bolt/reload, resets recoil.
+  switchTo(i) {
+    if (i === this.index || !this.selectable(i) || !this.owner.alive) return;
+    this.exitADS(); // scope bug fix: leave ADS BEFORE the index changes (wheel / number keys / Q)
+    const old = this.current; old.holster(); old.vm.group.visible = false;
+    this.lastIndex = this.index; this.index = i;
+    if (this.owner.resetRecoil) this.owner.resetRecoil();
+    const w = this.current; w.equip(); w.vm.group.visible = true; this.drawT = 1; this.trigger = false;
+    this.onSwitch();
+  }
+  quickSwitch() { this.switchTo(this.lastIndex); }
+  switchBack() {
+    if (this.selectable(this.lastIndex) && this.lastIndex !== this.index) { this.switchTo(this.lastIndex); return; }
+    for (let i = 0; i < this.weapons.length; i++) if (i !== this.index && this.selectable(i) && this.weapons[i].kind !== 'grenade') { this.switchTo(i); return; }
+  }
+  // the wheel steps through selectable slots
+  wheelTarget(dir) {
+    const n = this.weapons.length; let i = this.index;
+    for (let k = 0; k < n; k++) { i = (i + (dir > 0 ? 1 : -1) + n) % n; if (this.selectable(i)) break; }
+    return i;
+  }
+
+  setAds(on, silent = false, level = 1) {
+    const w = this.current;
+    if (on && (w.kind === 'knife' || w.kind === 'grenade' || w.reloading)) on = false;
+    const newLevel = on ? level : 0;
+    if (newLevel === this.zoomLevel) return;
+    const was = this.ads;
+    this.zoomLevel = newLevel; this.ads = newLevel > 0;
+    if (w.scoped) { // the rifle is raised to the eye first (adsT); the 2D scope only counts once it is there — see tick()
+      if (!this.ads && this.scopedIn) { this.scopedIn = false; this.scopeLevel = 0; }
+      if (!silent) this.onZoomSound();
+    }
+    if (this.ads && !was) this.owner.sprinting = false;
+  }
+
+  // F — left-hand grab (SF2 style): usable any time, even while aiming. Within killRange = instant kill, otherwise heavy damage.
+  grab() {
+    const g = this.game, p = this.owner, w = this.current;
+    if (!g.canAct() || !p.alive || this.grabT > 0 || this.grabCd > 0 || (w.kind === 'grenade' && w.state !== 'idle')) return;
+    this.grabT = 1e-4; this.grabHit = false; this.grabCd = 1.0; this.setAds(false, true); this.trigger = false;
+    p.sprinting = false; p.sprintBlock = 0.5; g.audio.knifeSwing(p.isPlayer ? null : p.motor.pos); p.onAttack();
+  }
+  _grabHit() {
+    const g = this.game, p = this.owner, def = WEAPON_DEFS.grab, ray = this.current.aimRay();
+    let best = null;
+    for (const [yaw, pitch] of [[0, 0], [0.16, 0], [-0.16, 0], [0, 0.1], [0, -0.14]]) {
+      const dir = ray.d.clone().addScaledVector(ray.r, yaw).addScaledVector(ray.u, pitch).normalize();
+      const h = g.meleeTrace(p, ray.o, dir, def.range);
+      if (h && h.target && (!best || h.t < best.t)) best = h;
+    }
+    if (!best) return;
+    const d = Math.hypot(best.target.motor.pos.x - p.motor.pos.x, best.target.motor.pos.z - p.motor.pos.z);
+    g.applyDamage(best.target, d <= def.killRange ? 999 : def.damage, 'chest', p, def, ray.d.clone(), best.point, { melee: true });
+    g.audio.knifeHit(true, p.isPlayer ? null : p.motor.pos); p.punchV += 0.5;
+  }
+
+  _fire() {
+    if (!this.game.canAct()) return;
+    const w = this.current;
+    this.owner.sprinting = false; this.owner.sprintBlock = 0.35;
+    if (w.fire(this)) { this.heat = Math.min(14, this.heat + (w.kind === 'shotgun' || w.kind === 'sniper' ? 3 : 1)); this.lastShotT = this.game.time; this.onFired(); }
+  }
+
+  // One fixed step. Edges (press / release) come from comparing with the previous command's buttons.
+  tick(h, cmd) {
+    const g = this.game, p = this.owner, btn = cmd.btn, pressed = btn & ~this.prevBtn, released = this.prevBtn & ~btn;
+    this.prevBtn = btn;
+    if (p.alive) {
+      if (cmd.sw) this.switchTo(cmd.sw - 1);
+      if (pressed & BTN.QUICK) this.quickSwitch();
+      if (pressed & BTN.RELOAD) { const w = this.current; if (w.tryReload && w.tryReload()) this.setAds(false, true); }
+      if (pressed & BTN.GRAB) this.grab();
+      if (this.remote) this.setAds(cmd.zoom > 0, true, cmd.zoom); // the client already resolved toggle / hold; mirror its ADS level
+      const w = this.current, act = g.canAct();
+      if (w.kind === 'grenade') {
+        if (pressed & BTN.FIRE) w.press(0); else if (released & BTN.FIRE) w.release();
+        if (pressed & BTN.ALT) w.press(2); else if (released & BTN.ALT) w.release();
+      } else {
+        this.trigger = !!(btn & BTN.FIRE);
+        if (w.kind === 'knife') { if (act && (pressed & BTN.FIRE)) w.attack(false); if (act && (pressed & BTN.ALT)) w.attack(true); }
+        else if (act && (pressed & BTN.FIRE)) { if (w.cooldown <= 0) this._fire(); else if (!w.auto) w.queued = 0.1; }
+      }
+    } else this.trigger = false;
+    const w = this.current;
+    w.tick(h, this);
+    if (this.grabCd > 0) this.grabCd -= h;
+    if (this.grabT > 0) { this.grabT += h; if (!this.grabHit && this.grabT >= 0.12) { this.grabHit = true; this._grabHit(); } if (this.grabT >= 0.45) this.grabT = 0; }
+    if (w.kind !== 'knife' && w.kind !== 'grenade' && this.grabT <= 0) {
+      if (this.trigger && w.auto && !w.reloading && g.canAct()) {
+        let n = 0;
+        while (w.cooldown <= 0 && n < 3) { if (w.ammo <= 0) { this._fire(); this.trigger = false; break; } this._fire(); n++; }
+      } else if (w.queued > 0) { w.queued -= h; if (w.cooldown <= 0) { w.queued = 0; this._fire(); } }
+    }
+    if (this.unscopeT > 0) { this.unscopeT -= h; if (this.unscopeT <= 0) this.setAds(false, true); }
+    if (w.reloading && this.ads) this.setAds(false, true);
+    if (p.sprinting && this.ads) this.setAds(false, true);
+    this.adsT = damp(this.adsT, this.ads ? 1 : 0, w.def.adsSpeed || 20, h);
+    if (w.scoped) { const inNow = this.ads && this.adsT > 0.8; this.scopedIn = inNow; this.scopeLevel = inNow ? this.zoomLevel : 0; } // scoped accuracy only once the rifle is at the eye
+    else if (this.scopedIn) { this.scopedIn = false; this.scopeLevel = 0; }
+  }
+}
+
+/* =====================================================================
+   WEAPON SYSTEM — the local player's arsenal + its presentation: viewmodel (rendered in its own pass, never clips into
+   walls, but at the camera's WORLD transform and sharing the world sun's shadow map), ADS FOV, scope overlay, sprint pose,
+   spring-damper kick, bob/sway, reload/bolt/knife/grenade animations, crosshair.
+   ===================================================================== */
+class WeaponSystem extends Arsenal {
   constructor(game, defs) {
-    this.game = game;
+    super(game, game.player);
     this.scene = new THREE.Scene();
     this.camera = new THREE.PerspectiveCamera(58, innerWidth / innerHeight, 0.01, 10);
     this.hemi = new THREE.HemisphereLight(0xdfe7f2, 0x2c2824, 0.6); this.scene.add(this.hemi);
@@ -6587,57 +6767,34 @@ class WeaponSystem {
     this.key = new THREE.DirectionalLight(0xfff0dc, 5); this.scene.add(this.key, this.key.target); // v16 camera-relative key light: the back of the gun catches highlights instead of reading as a black block
     this.flashLight = new THREE.PointLight(0xffaa33, 0, 8, 2); this.scene.add(this.flashLight); this.flashLightT = 0;
     // v8 barrel smoke: pooled soft sprites in world space, emitted from the muzzle after sustained fire
-    this.heat = 0; this.lastShotT = -9; this.smokeT = 0; this.wisps = [];
+    this.smokeT = 0; this.wisps = [];
     const smokeTex = game.app.tex.smoke();
     for (let i = 0; i < 14; i++) { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: smokeTex, color: 0xd6d6d2, transparent: true, depthWrite: false, opacity: 0 })); s.visible = false; s.renderOrder = 8; this.scene.add(s); this.wisps.push({ s, t: 0, life: 0, v: new THREE.Vector3() }); }
     this.root = new THREE.Group(); this.scene.add(this.root);
     const models = game.app.models;
     this.vmPool = new Map(); // viewmodels are built once per weapon and reused when the loadout changes
-    this.weapons = this._make(defs);
-    this.index = 0; this.lastIndex = Math.min(1, this.weapons.length - 1);
-    this.aimTarget = null;
-    this.ads = false; this.zoomLevel = 0; this.adsT = 0; this.trigger = false; this.unscopeT = 0; this.scopedIn = false; this.scopeLevel = 0;
-    this.baseFov = Settings.data.fov; this.fov = this.baseFov; this.drawT = 0; this.sprintT = 0;
+    this.aimTarget = null; this._scopeShown = false; this._scopeLvl = 0;
+    this.baseFov = Settings.data.fov; this.fov = this.baseFov; this.sprintT = 0;
     this.kickPos = new THREE.Vector3(); this.kickVel = new THREE.Vector3(); this.kickRot = new THREE.Vector3(); this.kickRotVel = new THREE.Vector3();
     this.swayX = 0; this.swayY = 0; this.bobPhase = 0; this.bobAmt = 0; this.roll = 0; this.landY = 0; this.landV = 0;
     this.focusT = 0;
     this.leftArm = models.leftArm(); this.leftArm.group.visible = false; this.root.add(this.leftArm.group);
-    this.grabT = 0; this.grabCd = 0; this.grabHit = false;
     this._pos = new THREE.Vector3();
-    this.current.equip(); this.current.vm.group.visible = true;
+    this.init(defs);
   }
 
-  _make(defs) {
-    return defs.map((d) => {
-      let vm = this.vmPool.get(d.id);
-      if (!vm) { vm = this.game.app.models.build(d); this.vmPool.set(d.id, vm); this.root.add(vm.group); }
-      vm.group.visible = false;
-      return makePlayerWeapon(this.game, d, vm);
-    });
+  _vm(d) {
+    let vm = this.vmPool.get(d.id);
+    if (!vm) { vm = this.game.app.models.build(d); this.vmPool.set(d.id, vm); this.root.add(vm.group); }
+    return vm;
   }
-  // Swap the whole inventory (loadout applied on respawn).
-  rebuild(defs) {
-    this.exitADS();
-    for (const w of this.weapons) { w.holster(); w.vm.group.visible = false; }
-    this.weapons = this._make(defs);
-    this.index = 0; this.lastIndex = Math.min(1, this.weapons.length - 1); this.trigger = false;
-    this.current.equip(); this.current.vm.group.visible = true; this.drawT = 1;
-    if (this.scene.environment && this.game.applyEnvIntensity) this.game.applyEnvIntensity();
+  onInventory() { if (this.scene.environment && this.game.applyEnvIntensity) this.game.applyEnvIntensity(); this.game.app.hud.setWeapon(this); }
+  onSwitch() {
+    this.kickPos.set(0, 0, 0); this.kickVel.set(0, 0, 0); this.kickRot.set(0, 0, 0); this.kickRotVel.set(0, 0, 0);
+    this.game.audio.mech('draw'); this.game.app.hud.setWeapon(this);
   }
-
-  get current() { return this.weapons[this.index]; }
-  slotIndex(slot) { return this.weapons.findIndex((w) => w.def.slot === slot); }
-  // Weapon pickup: swap the gun in slot i (keeps the picked-up gun's remaining ammo).
-  replaceSlot(i, def, ammo, reserve) {
-    const cur = i === this.index;
-    if (cur) this.exitADS();
-    const old = this.weapons[i]; old.holster(); old.vm.group.visible = false;
-    const [w] = this._make([def]); w.ammo = ammo; w.reserveAmmo = reserve; this.weapons[i] = w;
-    if (cur) { w.equip(); w.vm.group.visible = true; this.drawT = 1; this.trigger = false; }
-    if (this.game.applyEnvIntensity) this.game.applyEnvIntensity();
-    this.game.app.hud.setWeapon(this);
-  }
-  selectable(i) { const w = this.weapons[i]; return !!w && !(w.kind === 'grenade' && w.count <= 0); }
+  onZoomSound() { this.game.audio.mech('zoom'); }
+  onFired() { this.game.app.hud.setWeapon(this); }
 
   setEnvironment(env) { this.scene.environment = env; }
   syncLighting(worldSun, hemi) {
@@ -6653,52 +6810,13 @@ class WeaponSystem {
     if (hemi) { this.hemi.color.copy(hemi.color); this.hemi.groundColor.copy(hemi.groundColor); this.hemi.intensity = hemi.intensity + 0.25; }
   }
 
-  resetLoadout() {
-    this.exitADS();
-    for (const w of this.weapons) { w.resetAmmo(); w.equip(); w.vm.group.visible = false; if (w.holster) w.holster(); }
-    this.index = 0; this.lastIndex = Math.min(1, this.weapons.length - 1); this.trigger = false;
-    this.current.equip(); this.current.vm.group.visible = true; this.drawT = 1;
-  }
-
-  // Force-leave ADS on the CURRENT weapon: FOV back to hip, 2D scope overlay removed, viewmodel shown again.
+  // Leaving ADS outside the normal flow (death, switch, respawn): FOV back to hip and the scope overlay off right away.
   exitADS() {
+    super.exitADS();
     const w = this.current;
-    this.zoomLevel = 0; this.ads = false; this.adsT = 0; this.unscopeT = 0; this.scopedIn = false; this.scopeLevel = 0;
-    this.game.app.hud.setScope(false, 0);
+    this._scopeShown = false; this._scopeLvl = 0; this.game.app.hud.setScope(false, 0);
     if (w) w.vm.group.visible = true;
     this.fov = this.baseFov; this.game.camera.fov = this.baseFov + this.game.player.fovPunch; this.game.camera.updateProjectionMatrix();
-  }
-
-  // QUICK CHANGE: instant swap, cancels cooldown/bolt/reload, resets recoil springs + FOV.
-  switchTo(i) {
-    if (i === this.index || !this.selectable(i) || !this.game.player.alive) return;
-    this.exitADS(); // scope bug fix: leave ADS BEFORE the index changes (wheel / number keys / Q)
-    const old = this.current; old.holster(); old.vm.group.visible = false;
-    this.lastIndex = this.index; this.index = i;
-    this.game.player.resetRecoil();
-    this.kickPos.set(0, 0, 0); this.kickVel.set(0, 0, 0); this.kickRot.set(0, 0, 0); this.kickRotVel.set(0, 0, 0);
-    const w = this.current; w.equip(); w.vm.group.visible = true; this.drawT = 1; this.trigger = false;
-    this.game.audio.mech('draw');
-    this.game.app.hud.setWeapon(this);
-  }
-  quickSwitch() { this.switchTo(this.lastIndex); }
-  switchBack() {
-    if (this.selectable(this.lastIndex) && this.lastIndex !== this.index) { this.switchTo(this.lastIndex); return; }
-    for (let i = 0; i < this.weapons.length; i++) if (i !== this.index && this.selectable(i) && this.weapons[i].kind !== 'grenade') { this.switchTo(i); return; }
-  }
-
-  setAds(on, silent = false, level = 1) {
-    const w = this.current;
-    if (on && (w.kind === 'knife' || w.kind === 'grenade' || w.reloading)) on = false;
-    const newLevel = on ? level : 0;
-    if (newLevel === this.zoomLevel) return;
-    const was = this.ads;
-    this.zoomLevel = newLevel; this.ads = newLevel > 0;
-    if (w.scoped) { // the rifle is raised to the eye first (adsT); the 2D scope fades in once it is there — see update()
-      if (!this.ads && this.scopedIn) { this.scopedIn = false; this.scopeLevel = 0; this.game.app.hud.setScope(false, 0); w.vm.group.visible = true; }
-      if (!silent) this.game.audio.mech('zoom');
-    }
-    if (this.ads && !was) this.game.player.sprinting = false;
   }
 
   // Viewmodel kick is cosmetic only: a backward z kickback + a tiny rotational shake (almost none in ADS, so the
@@ -6708,26 +6826,7 @@ class WeaponSystem {
     this.kickVel.z += k.z * 24 * (this.ads ? 0.7 : 1); this.kickVel.y += k.y * 5 * a;
     this.kickRotVel.x += k.rx * 20 * a; this.kickRotVel.z += rand(-1, 1) * k.rx * 3 * a; this.kickRotVel.y += rand(-1, 1) * k.rx * 1.5 * a;
   }
-  // F — left-hand grab (SF2 style): usable any time, even while aiming. Within killRange = instant kill, otherwise heavy damage.
-  grab() {
-    const g = this.game, p = g.player, w = this.current;
-    if (!g.canAct() || !p.alive || this.grabT > 0 || this.grabCd > 0 || (w.kind === 'grenade' && w.state !== 'idle')) return;
-    this.grabT = 1e-4; this.grabHit = false; this.grabCd = 1.0; this.setAds(false, true); this.trigger = false;
-    p.sprinting = false; p.sprintBlock = 0.5; g.audio.knifeSwing(); p.onAttack();
-  }
-  _grabHit() {
-    const g = this.game, p = g.player, def = WEAPON_DEFS.grab, ray = this.current.aimRay();
-    let best = null;
-    for (const [yaw, pitch] of [[0, 0], [0.16, 0], [-0.16, 0], [0, 0.1], [0, -0.14]]) {
-      const dir = ray.d.clone().addScaledVector(ray.r, yaw).addScaledVector(ray.u, pitch).normalize();
-      const h = g.meleeTrace(p, ray.o, dir, def.range);
-      if (h && h.target && (!best || h.t < best.t)) best = h;
-    }
-    if (!best) return;
-    const d = Math.hypot(best.target.motor.pos.x - p.motor.pos.x, best.target.motor.pos.z - p.motor.pos.z);
-    g.applyDamage(best.target, d <= def.killRange ? 999 : def.damage, 'chest', p, def, ray.d.clone(), best.point, { melee: true });
-    g.audio.knifeHit(true); p.punchV += 0.5;
-  }
+  muzzleLight(strength) { this.flashLightT = 0.04; this.flashLight.intensity = 15 * strength; }
 
   _barrelSmoke(dt, w) {
     const g = this.game, since = g.time - this.lastShotT;
@@ -6747,70 +6846,33 @@ class WeaponSystem {
       const sz = 0.025 + k * 0.14; q.s.scale.set(sz, sz, 1); q.s.material.opacity = q.a * Math.sin(Math.PI * Math.min(1, k * 1.4)) * (1 - k);
     }
   }
-  muzzleLight(strength) { this.flashLightT = 0.04; this.flashLight.intensity = 15 * strength; }
 
+  // Mouse buttons at event time: only ADS is decided here (toggle / hold is a local preference). Firing, knife and grenades
+  // run from the latched FIRE / ALT bits of the next UserCmd (tick).
   onButton(btn, down) {
-    const w = this.current, g = this.game;
-    if (w.kind === 'grenade') { if (btn === 0 || btn === 2) { if (down) w.press(btn); else w.release(); } return; }
-    if (btn === 0) {
-      this.trigger = down;
-      if (!down || !g.canAct()) return;
-      if (w.kind === 'knife') { w.attack(false); return; }
-      if (w.cooldown <= 0) this._fire(); else if (!w.auto) w.queued = 0.1;
-    } else if (btn === 2) {
-      if (w.kind === 'knife') { if (down && g.canAct()) w.attack(true); return; }
-      if (Settings.data.adsMode === 'hold') this.setAds(down);
-      else if (down) {
-        if (w.scoped && w.def.zoomFovs.length > 1) this.setAds(this.zoomLevel < w.def.zoomFovs.length, false, this.zoomLevel + 1);
-        else this.setAds(!this.ads);
-      }
+    const w = this.current;
+    if (btn !== 2 || w.kind === 'knife' || w.kind === 'grenade') return;
+    if (Settings.data.adsMode === 'hold') this.setAds(down);
+    else if (down) {
+      if (w.scoped && w.def.zoomFovs.length > 1) this.setAds(this.zoomLevel < w.def.zoomFovs.length, false, this.zoomLevel + 1);
+      else this.setAds(!this.ads);
     }
   }
 
-  onKey(code) {
-    const m = /^Digit([1-9])$/.exec(code);
-    if (m) { const i = parseInt(m[1], 10) - 1; if (i < this.weapons.length) this.switchTo(i); return; }
-    if (code === 'KeyQ') this.quickSwitch();
-    else if (code === 'KeyR') { if (this.current.tryReload && this.current.tryReload()) this.setAds(false, true); }
-  }
-
-  _fire() {
-    if (!this.game.canAct()) return;
-    const w = this.current;
-    this.game.player.sprinting = false; this.game.player.sprintBlock = 0.35;
-    if (w.fire(this)) { this.game.app.hud.setWeapon(this); this.heat = Math.min(14, this.heat + (w.kind === 'shotgun' || w.kind === 'sniper' ? 3 : 1)); this.lastShotT = this.game.time; }
-  }
-
+  // presentation, once per rendered frame
   update(dt, input, mouse) {
     const g = this.game, w = this.current, p = g.player, m = p.motor, cam = g.camera;
-    if (input.wheel) {
-      const n = this.weapons.length; let i = this.index;
-      for (let k = 0; k < n; k++) { i = (i + (input.wheel > 0 ? 1 : -1) + n) % n; if (this.selectable(i)) break; }
-      this.switchTo(i);
-    }
-    w.update(dt, this);
-    if (this.grabCd > 0) this.grabCd -= dt;
-    if (this.grabT > 0) { this.grabT += dt; if (!this.grabHit && this.grabT >= 0.12) { this.grabHit = true; this._grabHit(); } if (this.grabT >= 0.45) this.grabT = 0; }
-    if (w.kind !== 'knife' && w.kind !== 'grenade' && this.grabT <= 0) {
-      if (this.trigger && w.auto && !w.reloading && g.canAct()) {
-        let n = 0;
-        while (w.cooldown <= 0 && n < 3) { if (w.ammo <= 0) { this._fire(); this.trigger = false; break; } this._fire(); n++; }
-      } else if (w.queued > 0) { w.queued -= dt; if (w.cooldown <= 0) { w.queued = 0; this._fire(); } }
-    }
-    if (this.unscopeT > 0) { this.unscopeT -= dt; if (this.unscopeT <= 0) this.setAds(false, true); }
-    if (w.reloading && this.ads) this.setAds(false, true);
-    if (p.sprinting && this.ads) this.setAds(false, true);
+    w.animate(dt, this);
+    // the 2D scope overlay follows the gameplay state (tick): one place for every way into or out of the scope
+    const sc = w.scoped && this.scopedIn;
+    if (sc !== this._scopeShown || (sc && this.scopeLevel !== this._scopeLvl)) { this._scopeShown = sc; this._scopeLvl = this.scopeLevel; g.app.hud.setScope(sc, this.scopeLevel); }
+    w.vm.group.visible = !sc;
 
     const target = this.ads ? (w.scoped ? (this.scopedIn ? w.def.zoomFovs[this.zoomLevel - 1] : this.baseFov * 0.82) : w.def.adsFov) : this.baseFov;
     this.fov = THREE.MathUtils.lerp(this.fov, target, 1 - Math.exp(-(w.scoped ? 32 : w.def.adsSpeed * 1.4 || 28) * dt));
     if (Math.abs(this.fov - target) < 0.01) this.fov = target;
     const fovNow = this.fov + p.fovPunch;
     if (Math.abs(cam.fov - fovNow) > 1e-4) { cam.fov = fovNow; cam.updateProjectionMatrix(); }
-    this.adsT = damp(this.adsT, this.ads ? 1 : 0, w.def.adsSpeed || 20, dt);
-    if (w.scoped) { // scope-in: overlay (with a short fade) only after the raise animation reaches the eye
-      const inNow = this.ads && this.adsT > 0.8;
-      if (inNow !== this.scopedIn || (inNow && this.scopeLevel !== this.zoomLevel)) { this.scopedIn = inNow; this.scopeLevel = inNow ? this.zoomLevel : 0; g.app.hud.setScope(inNow, this.zoomLevel); w.vm.group.visible = !inNow; }
-    } else if (this.scopedIn) { this.scopedIn = false; this.scopeLevel = 0; g.app.hud.setScope(false, 0); }
     this.sprintT = damp(this.sprintT, p.sprinting ? 1 : 0, 12, dt);
     const vmFov = lerp(58, 48, this.adsT * (w.scoped ? 0 : 1));
     if (Math.abs(this.camera.fov - vmFov) > 0.01) { this.camera.fov = vmFov; this.camera.updateProjectionMatrix(); }
@@ -6907,7 +6969,6 @@ class WeaponSystem {
 
   onResize() { this.camera.aspect = innerWidth / innerHeight; this.camera.updateProjectionMatrix(); }
 }
-
 /* =====================================================================
    COMBATANT — shared by the player and every bot: motor, 6-zone
    hitboxes (head / chest / stomach / thigh / shin / foot), stats,
@@ -6948,17 +7009,113 @@ class Combatant {
 }
 
 /* =====================================================================
-   PLAYER — input → motor, sprint / edge-guard, view punch & recoil,
-   death camera, round-mode spectating.
+   v25 HUMAN — a soldier steered by UserCmds: sprint / edge-guard, crouch, tactical slide, mantle, ladders, footsteps.
+   The local Player and a remote NetPlayer (simulated on the host) both run this exact code.
    ===================================================================== */
-class Player extends Combatant {
-  constructor(game) {
-    super(game, 'alpha', 'YOU', true);
-    this.pitch = 0; this.recoilPitch = 0; this.recoilYaw = 0; this.recoilHold = 0; this.recoilTP = 0; this.recoilTY = 0;
+class Human extends Combatant {
+  constructor(game, team, name, isPlayer) {
+    super(game, team, name, isPlayer);
+    this.pitch = 0;
     this.slideT = 0; this.slideCd = 0; this.slideK = 0; this.slideV0 = 0; this.slideDir = new THREE.Vector3(); this.crouchHeld = false; // v14 tactical slide
     this.mantleT = 0; this.mantleK = 0; this.mFrom = new THREE.Vector3(); this.mTo = new THREE.Vector3(); // v15 mantle
-    this.punch = 0; this.punchV = 0; this.fovPunch = 0; this.shake = 0;
-    this.eyeH = CFG.player.eye; this.stepDist = 0; this.sprinting = false; this.sprintBlock = 0;
+    this.punch = 0; this.punchV = 0; this.fovPunch = 0;
+    this.stepDist = 0; this.sprinting = false; this.sprintBlock = 0;
+  }
+  gear() { return this.game.weapons; } // the arsenal whose current weapon sets the move speed (NetPlayer: its own)
+  _sfx(kind, surface, loud) { const a = this.game.audio; if (kind === 'step') a.footstep(null, surface, loud); else a.land(null, surface, loud); }
+
+  // v15 MANTLE: is there a ledge right in front whose top is `lo..hi` above the feet, with room to stand on it?
+  _ledge(lo, hi) {
+    const m = this.motor, w = this.game.collision, fx = -Math.sin(this.yaw), fz = -Math.cos(this.yaw), r = m.radius;
+    if (w.fits(m.pos.x + fx * 0.45, m.pos.y + lo * 0.6, m.pos.z + fz * 0.45, r * 0.8, 0.3)) return null; // nothing in front at knee/hip height
+    for (const d of [0.62, 0.85]) {
+      const x = m.pos.x + fx * d, z = m.pos.z + fz * d, g = w.groundBelow(x, m.pos.y + hi + 0.05, z, r * 0.7, hi - lo + 0.1, 0.02);
+      if (!g || g.steep) continue;
+      const rise = g.y - m.pos.y;
+      if (rise < lo || rise > hi) continue;
+      if (!w.fits(x, g.y + 0.03, z, r, m.standHeight) || !w.fits(m.pos.x, g.y + 0.03, m.pos.z, r * 0.9, 0.9)) continue; // stand on top + head room over the lip
+      return new THREE.Vector3(x, g.y + 0.02, z);
+    }
+    return null;
+  }
+  _startMantle(to) {
+    this.mantleT = 0.32; this.mFrom.copy(this.motor.pos); this.mTo.copy(to); this.sprinting = false; this.slideT = 0;
+    this.motor.vel.set(0, 0, 0); this.motor.jumpBufferT = 0; this.punchV -= 0.35;
+    this._sfx('land', 'concrete', 0.45); this.game.emitNoise(this.motor.pos, 10, this.team);
+  }
+
+  fixedUpdate(h, cmd) {
+    const m = this.motor, P = CFG.player, g = this.game;
+    if (!this.alive) { m.step(h, 0, 0, 0); this.holdE = false; return; }
+    const frozen = !g.canMove(), btn = frozen ? 0 : cmd.btn;
+    this.holdE = g.canAct() && !!(btn & BTN.USE);
+    if (btn & BTN.JUMP) m.requestJump();
+    if (this.mantleT > 0) { // up first, then over the lip
+      m.prevPos.copy(m.pos); this.mantleT -= h;
+      const k = 1 - Math.max(0, this.mantleT) / 0.32, ky = 1 - Math.pow(1 - Math.min(1, k * 1.7), 2), kx = Math.max(0, (k - 0.3) / 0.7);
+      m.pos.set(lerp(this.mFrom.x, this.mTo.x, kx * kx * (3 - 2 * kx)), lerp(this.mFrom.y, this.mTo.y + 0.04, ky), lerp(this.mFrom.z, this.mTo.z, kx * kx * (3 - 2 * kx)));
+      m.grounded = false; m.vel.set(0, 0, 0);
+      if (this.mantleT <= 0) { m.pos.copy(this.mTo); m.grounded = true; m.vel.set(-Math.sin(this.yaw) * 1.6, 0, -Math.cos(this.yaw) * 1.6); }
+      return;
+    }
+    const fwdHeld = !frozen && cmd.f > 0;
+    if (!frozen && fwdHeld && !m.climbing && !m.crouching) {
+      if (m.grounded && m.jumpBufferT > 0) { const t = this._ledge(0.5, 1.45); if (t) { this._startMantle(t); return; } } // vault / mantle instead of jumping
+      else if (!m.grounded && m.vel.y < 3.5) { const t = this._ledge(0.25, 1.15); if (t) { this._startMantle(t); return; } } // jump-grab a higher ledge
+    }
+    const f = frozen ? 0 : cmd.f, r = frozen ? 0 : cmd.r;
+    const s = Math.sin(this.yaw), c = Math.cos(this.yaw);
+    let wx = -s * f + c * r, wz = -c * f - s * r; const len = Math.hypot(wx, wz);
+    if (len > 0) { wx /= len; wz /= len; }
+    // ladders: W/S drive the vertical axis (facing away from the ladder inverts W, so walking off the top climbs down)
+    const lad = g.collision.ladders.length ? g.collision.ladderAt(m.pos.x, m.pos.y, m.pos.z, m.radius) : null;
+    if (lad) { const facing = -s * -lad.nx + -c * -lad.nz; m.climbInput = f * (facing < -0.3 ? -1 : 1); } else m.climbInput = 0;
+    const crouchKey = !!(btn & BTN.CROUCH);
+    // v14 TACTICAL SLIDE (COD): crouch while sprinting → 0.72 s slide with a speed burst, low camera + roll, A/D steer; jump cancels it keeping momentum
+    if (this.slideCd > 0) this.slideCd -= h;
+    if (crouchKey && !this.crouchHeld && this.sprinting && m.grounded && !lad && m.horizontalSpeed() > 5.5 && this.slideCd <= 0 && this.slideT <= 0) {
+      const hs0 = m.horizontalSpeed(); this.slideT = 0.72; this.slideDir.set(m.vel.x / hs0, 0, m.vel.z / hs0); this.slideV0 = Math.max(hs0 * 1.18, 8.4);
+      m.setCrouch(true); m.vel.x = this.slideDir.x * this.slideV0; m.vel.z = this.slideDir.z * this.slideV0; this.sprinting = false; this.fovPunch = 4;
+      this._sfx('land', m.surface, 0.75); g.emitNoise(m.pos, 13, this.team);
+    }
+    this.crouchHeld = crouchKey;
+    if (this.slideT > 0) {
+      this.slideT -= h;
+      const k = 1 - Math.max(0, this.slideT) / 0.72, ang = r * 1.1 * h, cs = Math.cos(ang), sn = Math.sin(ang), dx = this.slideDir.x, dz = this.slideDir.z;
+      this.slideDir.set(dx * cs - dz * sn, 0, dx * sn + dz * cs);
+      m.setCrouch(true); this.sprinting = false; m.edgeGuard = false;
+      m.step(h, this.slideDir.x, this.slideDir.z, lerp(this.slideV0, 2.6, k * k));
+      if (m.jumped || !m.grounded || this.slideT <= 0) { this.slideT = 0; this.slideCd = 0.75; }
+      return;
+    }
+    m.setCrouch(crouchKey);
+    const shift = !!(btn & BTN.SPRINT);
+    const ws = this.gear(), w = ws.current;
+    if (this.sprintBlock > 0) this.sprintBlock -= h;
+    this.sprinting = shift && f > 0 && !m.crouching && !ws.ads && this.sprintBlock <= 0 && !(w.kind === 'grenade' && w.state !== 'idle');
+    m.edgeGuard = shift && m.grounded;
+    let speed = w.moveSpeed * (this.carrying ? 0.88 : 1);
+    if (m.crouching) speed *= P.crouchMult; else if (this.sprinting) speed *= P.sprintMult;
+    if (ws.ads) speed *= w.adsMove ?? 1;
+    m.step(h, wx, wz, len > 0 ? speed : 0);
+    if (m.climbing) { if (m.climbDist > 0.6) { m.climbDist = 0; this._sfx('step', 'ladder', 0.6); g.emitNoise(m.pos, 9, this.team); } return; }
+    const hs = m.horizontalSpeed();
+    if (m.grounded && hs > 3.0 && !m.crouching) {
+      this.stepDist += hs * h;
+      if (this.stepDist > (this.sprinting ? 2.5 : 2.1)) { this.stepDist = 0; this._sfx('step', m.surface, this.sprinting ? 0.7 : 0.55); g.emitNoise(m.pos, this.sprinting ? 17 : 11, this.team); }
+    } else if (!m.grounded) this.stepDist = 1.4;
+    if (m.landSpeed > 3.5) { this._sfx('land', m.surface, m.landSpeed / 9); this.punchV += Math.min(m.landSpeed, 14) * -0.012; g.emitNoise(m.pos, 14, this.team); }
+  }
+}
+
+/* =====================================================================
+   PLAYER — the local human: mouse look, view punch & camera recoil, death camera, round-mode spectating.
+   ===================================================================== */
+class Player extends Human {
+  constructor(game) {
+    super(game, 'alpha', 'YOU', true);
+    this.recoilPitch = 0; this.recoilYaw = 0; this.recoilHold = 0; this.recoilTP = 0; this.recoilTY = 0; this.shake = 0;
+    this.eyeH = CFG.player.eye;
     this.streak = 0; this.multi = 0; this.lastKillT = -10; this.killer = null; this.spectating = null; this.deathT = 0;
     this.renderPos = new THREE.Vector3();
     this._euler = new THREE.Euler(0, 0, 0, 'YXZ');
@@ -6983,93 +7140,6 @@ class Player extends Combatant {
     const sh = this.shake > 0 ? this.shake : 0;
     this._euler.set(this.pitch + this.recoilPitch + this.punch + (sh ? rand(-sh, sh) * 0.02 : 0), this.yaw + this.recoilYaw + (sh ? rand(-sh, sh) * 0.02 : 0), this.slideK * 0.075, 'YXZ');
     cam.quaternion.setFromEuler(this._euler); cam.updateMatrixWorld();
-  }
-
-  // v15 MANTLE: is there a ledge right in front whose top is `lo..hi` above the feet, with room to stand on it?
-  _ledge(lo, hi) {
-    const m = this.motor, w = this.game.collision, fx = -Math.sin(this.yaw), fz = -Math.cos(this.yaw), r = m.radius;
-    if (w.fits(m.pos.x + fx * 0.45, m.pos.y + lo * 0.6, m.pos.z + fz * 0.45, r * 0.8, 0.3)) return null; // nothing in front at knee/hip height
-    for (const d of [0.62, 0.85]) {
-      const x = m.pos.x + fx * d, z = m.pos.z + fz * d, g = w.groundBelow(x, m.pos.y + hi + 0.05, z, r * 0.7, hi - lo + 0.1, 0.02);
-      if (!g || g.steep) continue;
-      const rise = g.y - m.pos.y;
-      if (rise < lo || rise > hi) continue;
-      if (!w.fits(x, g.y + 0.03, z, r, m.standHeight) || !w.fits(m.pos.x, g.y + 0.03, m.pos.z, r * 0.9, 0.9)) continue; // stand on top + head room over the lip
-      return new THREE.Vector3(x, g.y + 0.02, z);
-    }
-    return null;
-  }
-  _startMantle(to) {
-    this.mantleT = 0.32; this.mFrom.copy(this.motor.pos); this.mTo.copy(to); this.sprinting = false; this.slideT = 0;
-    this.motor.vel.set(0, 0, 0); this.motor.jumpBufferT = 0; this.punchV -= 0.35;
-    this.game.audio.land(null, 'concrete', 0.45); this.game.emitNoise(this.motor.pos, 10, this.team);
-  }
-
-  fixedUpdate(h, input) {
-    const m = this.motor, P = CFG.player, g = this.game;
-    if (!this.alive) { m.step(h, 0, 0, 0); return; }
-    const frozen = !g.canMove();
-    if (this.mantleT > 0) { // up first, then over the lip
-      m.prevPos.copy(m.pos); this.mantleT -= h;
-      const k = 1 - Math.max(0, this.mantleT) / 0.32, ky = 1 - Math.pow(1 - Math.min(1, k * 1.7), 2), kx = Math.max(0, (k - 0.3) / 0.7);
-      m.pos.set(lerp(this.mFrom.x, this.mTo.x, kx * kx * (3 - 2 * kx)), lerp(this.mFrom.y, this.mTo.y + 0.04, ky), lerp(this.mFrom.z, this.mTo.z, kx * kx * (3 - 2 * kx)));
-      m.grounded = false; m.vel.set(0, 0, 0);
-      if (this.mantleT <= 0) { m.pos.copy(this.mTo); m.grounded = true; m.vel.set(-Math.sin(this.yaw) * 1.6, 0, -Math.cos(this.yaw) * 1.6); }
-      return;
-    }
-    const fwdHeld = !frozen && (input.down('KeyW') || input.down('ArrowUp'));
-    if (!frozen && fwdHeld && !m.climbing && !m.crouching) {
-      if (m.grounded && m.jumpBufferT > 0) { const t = this._ledge(0.5, 1.45); if (t) { this._startMantle(t); return; } } // vault / mantle instead of jumping
-      else if (!m.grounded && m.vel.y < 3.5) { const t = this._ledge(0.25, 1.15); if (t) { this._startMantle(t); return; } } // jump-grab a higher ledge
-    }
-    let f = 0, r = 0;
-    if (!frozen) {
-      if (input.down('KeyW') || input.down('ArrowUp')) f += 1;
-      if (input.down('KeyS') || input.down('ArrowDown')) f -= 1;
-      if (input.down('KeyD') || input.down('ArrowRight')) r += 1;
-      if (input.down('KeyA') || input.down('ArrowLeft')) r -= 1;
-    }
-    const s = Math.sin(this.yaw), c = Math.cos(this.yaw);
-    let wx = -s * f + c * r, wz = -c * f - s * r; const len = Math.hypot(wx, wz);
-    if (len > 0) { wx /= len; wz /= len; }
-    // ladders: W/S drive the vertical axis (facing away from the ladder inverts W, so walking off the top climbs down)
-    const lad = g.collision.ladders.length ? g.collision.ladderAt(m.pos.x, m.pos.y, m.pos.z, m.radius) : null;
-    if (lad) { const facing = -s * -lad.nx + -c * -lad.nz; m.climbInput = f * (facing < -0.3 ? -1 : 1); } else m.climbInput = 0;
-    const crouchKey = !frozen && (input.down('KeyC') || input.down('ControlLeft') || input.down('ControlRight'));
-    // v14 TACTICAL SLIDE (COD): crouch while sprinting → 0.72 s slide with a speed burst, low camera + roll, A/D steer; jump cancels it keeping momentum
-    if (this.slideCd > 0) this.slideCd -= h;
-    if (crouchKey && !this.crouchHeld && this.sprinting && m.grounded && !lad && m.horizontalSpeed() > 5.5 && this.slideCd <= 0 && this.slideT <= 0) {
-      const hs0 = m.horizontalSpeed(); this.slideT = 0.72; this.slideDir.set(m.vel.x / hs0, 0, m.vel.z / hs0); this.slideV0 = Math.max(hs0 * 1.18, 8.4);
-      m.setCrouch(true); m.vel.x = this.slideDir.x * this.slideV0; m.vel.z = this.slideDir.z * this.slideV0; this.sprinting = false; this.fovPunch = 4;
-      g.audio.land(null, m.surface, 0.75); g.emitNoise(m.pos, 13, this.team);
-    }
-    this.crouchHeld = crouchKey;
-    if (this.slideT > 0) {
-      this.slideT -= h;
-      const k = 1 - Math.max(0, this.slideT) / 0.72, ang = r * 1.1 * h, cs = Math.cos(ang), sn = Math.sin(ang), dx = this.slideDir.x, dz = this.slideDir.z;
-      this.slideDir.set(dx * cs - dz * sn, 0, dx * sn + dz * cs);
-      m.setCrouch(true); this.sprinting = false; m.edgeGuard = false;
-      m.step(h, this.slideDir.x, this.slideDir.z, lerp(this.slideV0, 2.6, k * k));
-      if (m.jumped || !m.grounded || this.slideT <= 0) { this.slideT = 0; this.slideCd = 0.75; }
-      return;
-    }
-    m.setCrouch(crouchKey);
-    const shift = !frozen && (input.down('ShiftLeft') || input.down('ShiftRight'));
-    const ws = g.weapons, w = ws.current;
-    if (this.sprintBlock > 0) this.sprintBlock -= h;
-    this.sprinting = shift && f > 0 && !m.crouching && !ws.ads && this.sprintBlock <= 0 && !(w.kind === 'grenade' && w.state !== 'idle');
-    m.edgeGuard = shift && m.grounded;
-    let speed = w.moveSpeed * (this.carrying ? 0.88 : 1);
-    if (m.crouching) speed *= P.crouchMult; else if (this.sprinting) speed *= P.sprintMult;
-    if (ws.ads) speed *= w.adsMove ?? 1;
-    m.step(h, wx, wz, len > 0 ? speed : 0);
-    if (m.climbing) { if (m.climbDist > 0.6) { m.climbDist = 0; g.audio.footstep(null, 'ladder', 0.6); g.emitNoise(m.pos, 9, this.team); } return; }
-    const hs = m.horizontalSpeed();
-    if (m.grounded && hs > 3.0 && !m.crouching) {
-      this.stepDist += hs * h;
-      if (this.stepDist > (this.sprinting ? 2.5 : 2.1)) { this.stepDist = 0; g.audio.footstep(null, m.surface, this.sprinting ? 0.7 : 0.55); g.emitNoise(m.pos, this.sprinting ? 17 : 11, this.team); }
-    } else if (!m.grounded) this.stepDist = 1.4;
-    if (m.landSpeed > 3.5) { g.audio.land(null, m.surface, m.landSpeed / 9); this.punchV += Math.min(m.landSpeed, 14) * -0.012; g.emitNoise(m.pos, 14, this.team); }
   }
 
   // TRUE CAMERA RECOIL: every shot rotates the CAMERA (pitch/yaw offset) — the crosshair never leaves the screen
@@ -7154,6 +7224,46 @@ class Player extends Combatant {
   }
 }
 
+/* =====================================================================
+   v25 USER COMMANDS — everything a human does in one fixed tick (1/120 s), as plain data: movement axes, view angles,
+   held buttons and one-tick edges. The local player is simulated from these, and a remote player on the host from the
+   same commands received over the network — so both run the exact same movement and weapon rules.
+   ===================================================================== */
+// held: CROUCH SPRINT FIRE ALT USE · edges (set only in the first command after the press): JUMP RELOAD GRAB INTERACT QUICK
+const BTN = { JUMP: 1, CROUCH: 2, SPRINT: 4, FIRE: 8, ALT: 16, USE: 32, RELOAD: 64, GRAB: 128, INTERACT: 256, QUICK: 512 };
+const BTN_EDGES = BTN.JUMP | BTN.RELOAD | BTN.GRAB | BTN.INTERACT | BTN.QUICK;
+
+class UserCmd {
+  constructor() { this.seq = 0; this.f = 0; this.r = 0; this.yaw = 0; this.pitch = 0; this.btn = 0; this.sw = 0; this.zoom = 0; }
+  // f / r: −1, 0, 1 · yaw / pitch: aim angles in radians · sw: weapon index + 1 requested this tick (0 = none) · zoom: ADS level
+  copy(o) { this.seq = o.seq; this.f = o.f; this.r = o.r; this.yaw = o.yaw; this.pitch = o.pitch; this.btn = o.btn; this.sw = o.sw; this.zoom = o.zoom; return this; }
+}
+
+// Samples the keyboard / mouse into one UserCmd per fixed tick. Presses that start and end between two ticks (a quick
+// click, a tap of Space) are latched so they are never lost.
+class CmdBuilder {
+  constructor(input) { this.input = input; this.seq = 0; this.latched = 0; this.sw = 0; this.cmd = new UserCmd(); }
+  reset() { this.latched = 0; this.sw = 0; }
+  press(bit) { this.latched |= bit; }
+  switchTo(i) { this.sw = i + 1; }
+  build(player, ws, active) {
+    const inp = this.input, c = this.cmd, k = (code) => inp.down(code);
+    c.seq = ++this.seq; c.sw = 0; c.btn = 0; c.f = 0; c.r = 0;
+    c.yaw = player.yaw; c.pitch = player.pitch; c.zoom = ws ? ws.zoomLevel : 0;
+    if (active) {
+      c.f = (k('KeyW') || k('ArrowUp') ? 1 : 0) - (k('KeyS') || k('ArrowDown') ? 1 : 0);
+      c.r = (k('KeyD') || k('ArrowRight') ? 1 : 0) - (k('KeyA') || k('ArrowLeft') ? 1 : 0);
+      if (k('KeyC') || k('ControlLeft') || k('ControlRight')) c.btn |= BTN.CROUCH;
+      if (k('ShiftLeft') || k('ShiftRight')) c.btn |= BTN.SPRINT;
+      if (k('KeyE')) c.btn |= BTN.USE;
+      if (inp.buttons[0]) c.btn |= BTN.FIRE;
+      if (inp.buttons[2]) c.btn |= BTN.ALT;
+      c.btn |= this.latched; c.sw = this.sw;
+    }
+    this.latched = 0; this.sw = 0;
+    return c;
+  }
+}
 /* =====================================================================
    BOTS — soldiers for both teams + BotAI finite-state machine.
    NO WALLHACKS: a bot only knows what it SEES (120° cone + raycast
@@ -8819,6 +8929,7 @@ class Match {
     for (let i = 0; i < this.config.allies - 1; i++) this.bots.push(new Bot(this, 'alpha', i, this.botWeapon()));
     for (let i = 0; i < this.config.enemies; i++) this.bots.push(new Bot(this, 'bravo', i, this.botWeapon()));
     this.combatants.push(...this.bots);
+    this.combatants.forEach((c, i) => { c.netId = i + 1; }); // v25: stable ids (network snapshots, seeded spread)
     this.spawns = { alpha: this.makeSpawns('alpha'), bravo: this.makeSpawns('bravo') };
     this.spawnLOS = this.checkSpawnLOS(); window.__debug = Object.assign(window.__debug || {}, { map: def.id, spawnLOS: this.spawnLOS.visible > 0, spawnLOSPairs: this.spawnLOS });
     this.playerModel = app.soldiers.create(this.player.team, 'm4'); this.playerModel.root.visible = false; this.scene.add(this.playerModel.root); // third-person you, for killcams
@@ -9045,6 +9156,15 @@ class Match {
       if (d2 < 1.96) c.ai.onSuppressed(origin);
     }
     return { end: origin.clone().addScaledVector(dir, endT), dist: endT, hitPlayer };
+  }
+
+  // v25: muzzle flash, tracer and positional gunshot for a shot fired by anyone but the local player (remote humans)
+  thirdPersonShot(shooter, def, from, to, n = 1) {
+    if (from.distanceTo(this.camera.position) < 110) {
+      if (!def.suppressed) this.effects.worldFlash(from, def.kind === 'sniper' || def.kind === 'shotgun' ? 0.8 : 0.5);
+      if (def.kind === 'sniper' || (def.tracerEvery && n % def.tracerEvery === 0)) this.effects.tracer(from, to, 330, 3, 0xffc070);
+    }
+    this.audio.gunshot(def.sound, from, def.soundRate);
   }
 
   meleeTrace(shooter, origin, dir, range) {
@@ -9368,10 +9488,14 @@ class Match {
     if (this.phase === 'over') return;
     this.runTimers();
     p.look(mouse.x, mouse.y);
-    p.holdE = p.alive && this.canAct() && input.down('KeyE');
+    if (input.wheel && p.alive) this.app.cmds.switchTo(this.weapons.wheelTarget(input.wheel));
     this.acc += dt; let steps = 0;
     while (this.acc >= h && steps < 14) {
-      p.fixedUpdate(h, input);
+      // v25: one UserCmd per fixed step drives the local player's movement AND weapons (the host steps remote humans the same way)
+      const cmd = this.app.cmds.build(p, this.weapons, true);
+      p.fixedUpdate(h, cmd);
+      this.weapons.tick(h, cmd);
+      if ((cmd.btn & BTN.INTERACT) && p.alive && this.canMove()) this.onInteract();
       for (const b of this.bots) b.fixedUpdate(h);
       const ms = []; for (const c of this.combatants) if (c.alive) ms.push(c.motor);
       for (let i = 0; i < ms.length; i++) for (let j = i + 1; j < ms.length; j++) CharacterMotor.separate(ms[i], ms[j]);
@@ -9505,9 +9629,9 @@ class App {
     this.mats = new MaterialLib(this.tex);
     this.models = new WeaponModels(this.tex);
     this.soldiers = new SoldierFactory(this.tex, this.models);
-    this.audio = new AudioEngine(); this.input = new InputManager(this.canvas); this.hud = new HUD(this); this.post = new PostFX(r);
+    this.audio = new AudioEngine(); this.input = new InputManager(this.canvas); this.cmds = new CmdBuilder(this.input); this.hud = new HUD(this); this.post = new PostFX(r);
     this.hdrCache = new Map(); this.match = null; this.state = 'lobby';
-    this.last = performance.now(); this._mouse = { x: 0, y: 0 }; this._extra = { x: 0, y: 0 };
+    this.last = performance.now(); this._mouse = { x: 0, y: 0 };
     this.fpsAcc = 0; this.fpsFrames = 0; this.fpsText = '';
     this.$ = (id) => document.getElementById(id);
     this.buildLobby(); this.bindInput(); this.bindMenus(); this.onResize();
@@ -9615,6 +9739,7 @@ class App {
   async startMatch() {
     const $ = this.$, L = Settings.data.lobby, def = MAPS[L.map];
     this.state = 'loading';
+    this.cmds.reset();
     $('lbCount').classList.remove('on'); $('lobby').classList.remove('on');
     const ld = $('loader'); ld.classList.add('on'); ld.classList.remove('shot');
     $('ldTitle').firstChild.textContent = def.en; $('ldSub').textContent = `${def.name} · ${MODES[L.mode].name} · ${RULES[L.rule].name} · ${L.allies} vs ${L.enemies}${L.rule === 'relic' ? ' · 藍隊進攻 / 紅隊防守' : ''}`;
@@ -9720,8 +9845,8 @@ class App {
       if (this.state !== 'playing' || !m) return;
       this.audio.init();
       if (!m.player.alive) { if (down && btn === 0 && m.rules.roundBased) m.nextSpectate(); return; }
-      const mm = inp.consumeMouse(TMP_V1); m.player.look(mm.x, mm.y); this._extra.x += mm.x; this._extra.y += mm.y; m.player.applyView();
-      m.weapons.onButton(btn, down);
+      if (down) this.cmds.press(btn === 0 ? BTN.FIRE : btn === 2 ? BTN.ALT : 0); // v25: fired in the next fixed step (a sub-tick click is never lost)
+      m.weapons.onButton(btn, down); // ADS toggle / hold stays an instant local decision
     };
     inp.onKey = (code) => {
       const m = this.match;
@@ -9730,15 +9855,18 @@ class App {
       const fk = /^F([1-5])$/.exec(code);
       if (fk && m && (this.state === 'playing' || this.state === 'paused')) { m.queueLoadout(parseInt(fk[1], 10) - 1); return; } // works while dead too
       if (this.state !== 'playing' || !m || !m.player.alive) return;
-      if (code === 'Space') { if (m.canMove()) m.player.motor.requestJump(); }
-      else if (code === 'KeyF') m.weapons.grab();
-      else if (code === 'KeyE') { if (m.canMove()) m.onInteract(); }
-      else m.weapons.onKey(code);
+      const C = this.cmds, dg = /^Digit([1-9])$/.exec(code);
+      if (code === 'Space') C.press(BTN.JUMP);
+      else if (code === 'KeyF') C.press(BTN.GRAB);
+      else if (code === 'KeyE') C.press(BTN.INTERACT);
+      else if (code === 'KeyQ') C.press(BTN.QUICK);
+      else if (code === 'KeyR') C.press(BTN.RELOAD);
+      else if (dg) { const i = parseInt(dg[1], 10) - 1; if (i < m.weapons.weapons.length) C.switchTo(i); }
     };
     inp.onLockChange = (locked, error) => {
       if (error) return; // failed lock request (no user gesture) — the freeze overlay asks for a click instead
       if (locked) { if (this.state === 'paused') { this.$('pause').classList.remove('on'); this.state = 'playing'; this.last = performance.now(); } }
-      else if (this.state === 'playing' && this.match && this.match.phase !== 'over') { this.state = 'paused'; this.$('pause').classList.add('on'); if (this.match) this.match.weapons.trigger = false; }
+      else if (this.state === 'playing' && this.match && this.match.phase !== 'over') { this.state = 'paused'; this.$('pause').classList.add('on'); if (this.match) this.match.weapons.trigger = false; this.cmds.reset(); }
     };
     this.canvas.addEventListener('click', () => { if (this.state === 'playing' && !inp.locked) inp.lock(); });
     document.getElementById('hud').addEventListener('click', () => { if (this.state === 'playing' && !inp.locked) inp.lock(); });
@@ -10007,9 +10135,7 @@ class App {
     const m = this.match;
     if (m && m.running) {
       if (this.state === 'playing') {
-        mouse.x += this._extra.x; mouse.y += this._extra.y;
         const tt0 = performance.now(); m.tick(dt, mouse); const tt1 = performance.now(); m.prof.add('tick', tt1 - tt0);
-        this._extra.x = this._extra.y = 0;
         // dynamic resolution: keep the GPU out of overload (prevents hangs / TDR on weaker cards)
         this.frameMs = lerp(this.frameMs, dt * 1000, 0.08); this.dynT += dt; this.busyF++; if (inFlight >= 2) this.busyN++;
         // v24 dynamic resolution: react within ~1 s (was 2 s / >24 ms), down to the preset's minScale. `busy` = share of frames

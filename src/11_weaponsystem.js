@@ -1,13 +1,169 @@
 /* =====================================================================
-   WEAPON SYSTEM — inventory, Quick-Change, ADS / quick-scope, sprint
-   pose, spring-damper kick, bob/sway, reload/bolt/knife/grenade anims.
-   The viewmodel is rendered in its own pass (never clips into walls)
-   but lives at the camera's WORLD transform and shares the world sun's
-   shadow map, so it receives real environment shadows.
+   v25 ARSENAL — the gameplay half of a soldier's weapons: inventory, Quick-Change, ADS state, trigger / cooldown /
+   reload, knife, grenades, left-hand grab. Stepped once per fixed tick from a UserCmd, so the local player and a remote
+   human simulated on the host follow exactly the same rules and timing. A remote arsenal runs headless (no viewmodel).
    ===================================================================== */
-class WeaponSystem {
+const HEADLESS_VM = () => ({ group: new THREE.Object3D() });
+
+class Arsenal {
+  constructor(game, owner) {
+    this.game = game; this.owner = owner; this.weapons = []; this.index = 0; this.lastIndex = 0; this.remote = false;
+    this.ads = false; this.zoomLevel = 0; this.adsT = 0; this.trigger = false; this.unscopeT = 0; this.scopedIn = false; this.scopeLevel = 0;
+    this.grabT = 0; this.grabCd = 0; this.grabHit = false; this.prevBtn = 0; this.drawT = 0; this.heat = 0; this.lastShotT = -9;
+  }
+  init(defs) {
+    this.weapons = this._make(defs);
+    this.index = 0; this.lastIndex = Math.min(1, this.weapons.length - 1);
+    this.current.equip(); this.current.vm.group.visible = true;
+  }
+  _vm() { return HEADLESS_VM(); }
+  _make(defs) { return defs.map((d) => { const vm = this._vm(d); vm.group.visible = false; return makePlayerWeapon(this.game, d, vm, this.owner); }); }
+  // presentation hooks (the local WeaponSystem overrides them; a headless arsenal ignores them)
+  kick() {} muzzleLight() {} onSwitch() {} onInventory() {} onZoomSound() {} onFired() {}
+
+  get current() { return this.weapons[this.index]; }
+  slotIndex(slot) { return this.weapons.findIndex((w) => w.def.slot === slot); }
+  selectable(i) { const w = this.weapons[i]; return !!w && !(w.kind === 'grenade' && w.count <= 0); }
+
+  // Swap the whole inventory (loadout applied on respawn).
+  rebuild(defs) {
+    this.exitADS();
+    for (const w of this.weapons) { w.holster(); w.vm.group.visible = false; }
+    this.weapons = this._make(defs);
+    this.index = 0; this.lastIndex = Math.min(1, this.weapons.length - 1); this.trigger = false;
+    this.current.equip(); this.current.vm.group.visible = true; this.drawT = 1;
+    this.onInventory();
+  }
+  // Weapon pickup: swap the gun in slot i (keeps the picked-up gun's remaining ammo).
+  replaceSlot(i, def, ammo, reserve) {
+    const cur = i === this.index;
+    if (cur) this.exitADS();
+    const old = this.weapons[i]; old.holster(); old.vm.group.visible = false;
+    const [w] = this._make([def]); w.ammo = ammo; w.reserveAmmo = reserve; this.weapons[i] = w;
+    if (cur) { w.equip(); w.vm.group.visible = true; this.drawT = 1; this.trigger = false; }
+    this.onInventory();
+  }
+  resetLoadout() {
+    this.exitADS();
+    for (const w of this.weapons) { w.resetAmmo(); w.equip(); w.vm.group.visible = false; if (w.holster) w.holster(); }
+    this.index = 0; this.lastIndex = Math.min(1, this.weapons.length - 1); this.trigger = false;
+    this.current.equip(); this.current.vm.group.visible = true; this.drawT = 1;
+  }
+
+  // Force-leave ADS on the CURRENT weapon.
+  exitADS() { this.zoomLevel = 0; this.ads = false; this.adsT = 0; this.unscopeT = 0; this.scopedIn = false; this.scopeLevel = 0; }
+
+  // QUICK CHANGE: instant swap, cancels cooldown/bolt/reload, resets recoil.
+  switchTo(i) {
+    if (i === this.index || !this.selectable(i) || !this.owner.alive) return;
+    this.exitADS(); // scope bug fix: leave ADS BEFORE the index changes (wheel / number keys / Q)
+    const old = this.current; old.holster(); old.vm.group.visible = false;
+    this.lastIndex = this.index; this.index = i;
+    if (this.owner.resetRecoil) this.owner.resetRecoil();
+    const w = this.current; w.equip(); w.vm.group.visible = true; this.drawT = 1; this.trigger = false;
+    this.onSwitch();
+  }
+  quickSwitch() { this.switchTo(this.lastIndex); }
+  switchBack() {
+    if (this.selectable(this.lastIndex) && this.lastIndex !== this.index) { this.switchTo(this.lastIndex); return; }
+    for (let i = 0; i < this.weapons.length; i++) if (i !== this.index && this.selectable(i) && this.weapons[i].kind !== 'grenade') { this.switchTo(i); return; }
+  }
+  // the wheel steps through selectable slots
+  wheelTarget(dir) {
+    const n = this.weapons.length; let i = this.index;
+    for (let k = 0; k < n; k++) { i = (i + (dir > 0 ? 1 : -1) + n) % n; if (this.selectable(i)) break; }
+    return i;
+  }
+
+  setAds(on, silent = false, level = 1) {
+    const w = this.current;
+    if (on && (w.kind === 'knife' || w.kind === 'grenade' || w.reloading)) on = false;
+    const newLevel = on ? level : 0;
+    if (newLevel === this.zoomLevel) return;
+    const was = this.ads;
+    this.zoomLevel = newLevel; this.ads = newLevel > 0;
+    if (w.scoped) { // the rifle is raised to the eye first (adsT); the 2D scope only counts once it is there — see tick()
+      if (!this.ads && this.scopedIn) { this.scopedIn = false; this.scopeLevel = 0; }
+      if (!silent) this.onZoomSound();
+    }
+    if (this.ads && !was) this.owner.sprinting = false;
+  }
+
+  // F — left-hand grab (SF2 style): usable any time, even while aiming. Within killRange = instant kill, otherwise heavy damage.
+  grab() {
+    const g = this.game, p = this.owner, w = this.current;
+    if (!g.canAct() || !p.alive || this.grabT > 0 || this.grabCd > 0 || (w.kind === 'grenade' && w.state !== 'idle')) return;
+    this.grabT = 1e-4; this.grabHit = false; this.grabCd = 1.0; this.setAds(false, true); this.trigger = false;
+    p.sprinting = false; p.sprintBlock = 0.5; g.audio.knifeSwing(p.isPlayer ? null : p.motor.pos); p.onAttack();
+  }
+  _grabHit() {
+    const g = this.game, p = this.owner, def = WEAPON_DEFS.grab, ray = this.current.aimRay();
+    let best = null;
+    for (const [yaw, pitch] of [[0, 0], [0.16, 0], [-0.16, 0], [0, 0.1], [0, -0.14]]) {
+      const dir = ray.d.clone().addScaledVector(ray.r, yaw).addScaledVector(ray.u, pitch).normalize();
+      const h = g.meleeTrace(p, ray.o, dir, def.range);
+      if (h && h.target && (!best || h.t < best.t)) best = h;
+    }
+    if (!best) return;
+    const d = Math.hypot(best.target.motor.pos.x - p.motor.pos.x, best.target.motor.pos.z - p.motor.pos.z);
+    g.applyDamage(best.target, d <= def.killRange ? 999 : def.damage, 'chest', p, def, ray.d.clone(), best.point, { melee: true });
+    g.audio.knifeHit(true, p.isPlayer ? null : p.motor.pos); p.punchV += 0.5;
+  }
+
+  _fire() {
+    if (!this.game.canAct()) return;
+    const w = this.current;
+    this.owner.sprinting = false; this.owner.sprintBlock = 0.35;
+    if (w.fire(this)) { this.heat = Math.min(14, this.heat + (w.kind === 'shotgun' || w.kind === 'sniper' ? 3 : 1)); this.lastShotT = this.game.time; this.onFired(); }
+  }
+
+  // One fixed step. Edges (press / release) come from comparing with the previous command's buttons.
+  tick(h, cmd) {
+    const g = this.game, p = this.owner, btn = cmd.btn, pressed = btn & ~this.prevBtn, released = this.prevBtn & ~btn;
+    this.prevBtn = btn;
+    if (p.alive) {
+      if (cmd.sw) this.switchTo(cmd.sw - 1);
+      if (pressed & BTN.QUICK) this.quickSwitch();
+      if (pressed & BTN.RELOAD) { const w = this.current; if (w.tryReload && w.tryReload()) this.setAds(false, true); }
+      if (pressed & BTN.GRAB) this.grab();
+      if (this.remote) this.setAds(cmd.zoom > 0, true, cmd.zoom); // the client already resolved toggle / hold; mirror its ADS level
+      const w = this.current, act = g.canAct();
+      if (w.kind === 'grenade') {
+        if (pressed & BTN.FIRE) w.press(0); else if (released & BTN.FIRE) w.release();
+        if (pressed & BTN.ALT) w.press(2); else if (released & BTN.ALT) w.release();
+      } else {
+        this.trigger = !!(btn & BTN.FIRE);
+        if (w.kind === 'knife') { if (act && (pressed & BTN.FIRE)) w.attack(false); if (act && (pressed & BTN.ALT)) w.attack(true); }
+        else if (act && (pressed & BTN.FIRE)) { if (w.cooldown <= 0) this._fire(); else if (!w.auto) w.queued = 0.1; }
+      }
+    } else this.trigger = false;
+    const w = this.current;
+    w.tick(h, this);
+    if (this.grabCd > 0) this.grabCd -= h;
+    if (this.grabT > 0) { this.grabT += h; if (!this.grabHit && this.grabT >= 0.12) { this.grabHit = true; this._grabHit(); } if (this.grabT >= 0.45) this.grabT = 0; }
+    if (w.kind !== 'knife' && w.kind !== 'grenade' && this.grabT <= 0) {
+      if (this.trigger && w.auto && !w.reloading && g.canAct()) {
+        let n = 0;
+        while (w.cooldown <= 0 && n < 3) { if (w.ammo <= 0) { this._fire(); this.trigger = false; break; } this._fire(); n++; }
+      } else if (w.queued > 0) { w.queued -= h; if (w.cooldown <= 0) { w.queued = 0; this._fire(); } }
+    }
+    if (this.unscopeT > 0) { this.unscopeT -= h; if (this.unscopeT <= 0) this.setAds(false, true); }
+    if (w.reloading && this.ads) this.setAds(false, true);
+    if (p.sprinting && this.ads) this.setAds(false, true);
+    this.adsT = damp(this.adsT, this.ads ? 1 : 0, w.def.adsSpeed || 20, h);
+    if (w.scoped) { const inNow = this.ads && this.adsT > 0.8; this.scopedIn = inNow; this.scopeLevel = inNow ? this.zoomLevel : 0; } // scoped accuracy only once the rifle is at the eye
+    else if (this.scopedIn) { this.scopedIn = false; this.scopeLevel = 0; }
+  }
+}
+
+/* =====================================================================
+   WEAPON SYSTEM — the local player's arsenal + its presentation: viewmodel (rendered in its own pass, never clips into
+   walls, but at the camera's WORLD transform and sharing the world sun's shadow map), ADS FOV, scope overlay, sprint pose,
+   spring-damper kick, bob/sway, reload/bolt/knife/grenade animations, crosshair.
+   ===================================================================== */
+class WeaponSystem extends Arsenal {
   constructor(game, defs) {
-    this.game = game;
+    super(game, game.player);
     this.scene = new THREE.Scene();
     this.camera = new THREE.PerspectiveCamera(58, innerWidth / innerHeight, 0.01, 10);
     this.hemi = new THREE.HemisphereLight(0xdfe7f2, 0x2c2824, 0.6); this.scene.add(this.hemi);
@@ -18,57 +174,34 @@ class WeaponSystem {
     this.key = new THREE.DirectionalLight(0xfff0dc, 5); this.scene.add(this.key, this.key.target); // v16 camera-relative key light: the back of the gun catches highlights instead of reading as a black block
     this.flashLight = new THREE.PointLight(0xffaa33, 0, 8, 2); this.scene.add(this.flashLight); this.flashLightT = 0;
     // v8 barrel smoke: pooled soft sprites in world space, emitted from the muzzle after sustained fire
-    this.heat = 0; this.lastShotT = -9; this.smokeT = 0; this.wisps = [];
+    this.smokeT = 0; this.wisps = [];
     const smokeTex = game.app.tex.smoke();
     for (let i = 0; i < 14; i++) { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: smokeTex, color: 0xd6d6d2, transparent: true, depthWrite: false, opacity: 0 })); s.visible = false; s.renderOrder = 8; this.scene.add(s); this.wisps.push({ s, t: 0, life: 0, v: new THREE.Vector3() }); }
     this.root = new THREE.Group(); this.scene.add(this.root);
     const models = game.app.models;
     this.vmPool = new Map(); // viewmodels are built once per weapon and reused when the loadout changes
-    this.weapons = this._make(defs);
-    this.index = 0; this.lastIndex = Math.min(1, this.weapons.length - 1);
-    this.aimTarget = null;
-    this.ads = false; this.zoomLevel = 0; this.adsT = 0; this.trigger = false; this.unscopeT = 0; this.scopedIn = false; this.scopeLevel = 0;
-    this.baseFov = Settings.data.fov; this.fov = this.baseFov; this.drawT = 0; this.sprintT = 0;
+    this.aimTarget = null; this._scopeShown = false; this._scopeLvl = 0;
+    this.baseFov = Settings.data.fov; this.fov = this.baseFov; this.sprintT = 0;
     this.kickPos = new THREE.Vector3(); this.kickVel = new THREE.Vector3(); this.kickRot = new THREE.Vector3(); this.kickRotVel = new THREE.Vector3();
     this.swayX = 0; this.swayY = 0; this.bobPhase = 0; this.bobAmt = 0; this.roll = 0; this.landY = 0; this.landV = 0;
     this.focusT = 0;
     this.leftArm = models.leftArm(); this.leftArm.group.visible = false; this.root.add(this.leftArm.group);
-    this.grabT = 0; this.grabCd = 0; this.grabHit = false;
     this._pos = new THREE.Vector3();
-    this.current.equip(); this.current.vm.group.visible = true;
+    this.init(defs);
   }
 
-  _make(defs) {
-    return defs.map((d) => {
-      let vm = this.vmPool.get(d.id);
-      if (!vm) { vm = this.game.app.models.build(d); this.vmPool.set(d.id, vm); this.root.add(vm.group); }
-      vm.group.visible = false;
-      return makePlayerWeapon(this.game, d, vm);
-    });
+  _vm(d) {
+    let vm = this.vmPool.get(d.id);
+    if (!vm) { vm = this.game.app.models.build(d); this.vmPool.set(d.id, vm); this.root.add(vm.group); }
+    return vm;
   }
-  // Swap the whole inventory (loadout applied on respawn).
-  rebuild(defs) {
-    this.exitADS();
-    for (const w of this.weapons) { w.holster(); w.vm.group.visible = false; }
-    this.weapons = this._make(defs);
-    this.index = 0; this.lastIndex = Math.min(1, this.weapons.length - 1); this.trigger = false;
-    this.current.equip(); this.current.vm.group.visible = true; this.drawT = 1;
-    if (this.scene.environment && this.game.applyEnvIntensity) this.game.applyEnvIntensity();
+  onInventory() { if (this.scene.environment && this.game.applyEnvIntensity) this.game.applyEnvIntensity(); this.game.app.hud.setWeapon(this); }
+  onSwitch() {
+    this.kickPos.set(0, 0, 0); this.kickVel.set(0, 0, 0); this.kickRot.set(0, 0, 0); this.kickRotVel.set(0, 0, 0);
+    this.game.audio.mech('draw'); this.game.app.hud.setWeapon(this);
   }
-
-  get current() { return this.weapons[this.index]; }
-  slotIndex(slot) { return this.weapons.findIndex((w) => w.def.slot === slot); }
-  // Weapon pickup: swap the gun in slot i (keeps the picked-up gun's remaining ammo).
-  replaceSlot(i, def, ammo, reserve) {
-    const cur = i === this.index;
-    if (cur) this.exitADS();
-    const old = this.weapons[i]; old.holster(); old.vm.group.visible = false;
-    const [w] = this._make([def]); w.ammo = ammo; w.reserveAmmo = reserve; this.weapons[i] = w;
-    if (cur) { w.equip(); w.vm.group.visible = true; this.drawT = 1; this.trigger = false; }
-    if (this.game.applyEnvIntensity) this.game.applyEnvIntensity();
-    this.game.app.hud.setWeapon(this);
-  }
-  selectable(i) { const w = this.weapons[i]; return !!w && !(w.kind === 'grenade' && w.count <= 0); }
+  onZoomSound() { this.game.audio.mech('zoom'); }
+  onFired() { this.game.app.hud.setWeapon(this); }
 
   setEnvironment(env) { this.scene.environment = env; }
   syncLighting(worldSun, hemi) {
@@ -84,52 +217,13 @@ class WeaponSystem {
     if (hemi) { this.hemi.color.copy(hemi.color); this.hemi.groundColor.copy(hemi.groundColor); this.hemi.intensity = hemi.intensity + 0.25; }
   }
 
-  resetLoadout() {
-    this.exitADS();
-    for (const w of this.weapons) { w.resetAmmo(); w.equip(); w.vm.group.visible = false; if (w.holster) w.holster(); }
-    this.index = 0; this.lastIndex = Math.min(1, this.weapons.length - 1); this.trigger = false;
-    this.current.equip(); this.current.vm.group.visible = true; this.drawT = 1;
-  }
-
-  // Force-leave ADS on the CURRENT weapon: FOV back to hip, 2D scope overlay removed, viewmodel shown again.
+  // Leaving ADS outside the normal flow (death, switch, respawn): FOV back to hip and the scope overlay off right away.
   exitADS() {
+    super.exitADS();
     const w = this.current;
-    this.zoomLevel = 0; this.ads = false; this.adsT = 0; this.unscopeT = 0; this.scopedIn = false; this.scopeLevel = 0;
-    this.game.app.hud.setScope(false, 0);
+    this._scopeShown = false; this._scopeLvl = 0; this.game.app.hud.setScope(false, 0);
     if (w) w.vm.group.visible = true;
     this.fov = this.baseFov; this.game.camera.fov = this.baseFov + this.game.player.fovPunch; this.game.camera.updateProjectionMatrix();
-  }
-
-  // QUICK CHANGE: instant swap, cancels cooldown/bolt/reload, resets recoil springs + FOV.
-  switchTo(i) {
-    if (i === this.index || !this.selectable(i) || !this.game.player.alive) return;
-    this.exitADS(); // scope bug fix: leave ADS BEFORE the index changes (wheel / number keys / Q)
-    const old = this.current; old.holster(); old.vm.group.visible = false;
-    this.lastIndex = this.index; this.index = i;
-    this.game.player.resetRecoil();
-    this.kickPos.set(0, 0, 0); this.kickVel.set(0, 0, 0); this.kickRot.set(0, 0, 0); this.kickRotVel.set(0, 0, 0);
-    const w = this.current; w.equip(); w.vm.group.visible = true; this.drawT = 1; this.trigger = false;
-    this.game.audio.mech('draw');
-    this.game.app.hud.setWeapon(this);
-  }
-  quickSwitch() { this.switchTo(this.lastIndex); }
-  switchBack() {
-    if (this.selectable(this.lastIndex) && this.lastIndex !== this.index) { this.switchTo(this.lastIndex); return; }
-    for (let i = 0; i < this.weapons.length; i++) if (i !== this.index && this.selectable(i) && this.weapons[i].kind !== 'grenade') { this.switchTo(i); return; }
-  }
-
-  setAds(on, silent = false, level = 1) {
-    const w = this.current;
-    if (on && (w.kind === 'knife' || w.kind === 'grenade' || w.reloading)) on = false;
-    const newLevel = on ? level : 0;
-    if (newLevel === this.zoomLevel) return;
-    const was = this.ads;
-    this.zoomLevel = newLevel; this.ads = newLevel > 0;
-    if (w.scoped) { // the rifle is raised to the eye first (adsT); the 2D scope fades in once it is there — see update()
-      if (!this.ads && this.scopedIn) { this.scopedIn = false; this.scopeLevel = 0; this.game.app.hud.setScope(false, 0); w.vm.group.visible = true; }
-      if (!silent) this.game.audio.mech('zoom');
-    }
-    if (this.ads && !was) this.game.player.sprinting = false;
   }
 
   // Viewmodel kick is cosmetic only: a backward z kickback + a tiny rotational shake (almost none in ADS, so the
@@ -139,26 +233,7 @@ class WeaponSystem {
     this.kickVel.z += k.z * 24 * (this.ads ? 0.7 : 1); this.kickVel.y += k.y * 5 * a;
     this.kickRotVel.x += k.rx * 20 * a; this.kickRotVel.z += rand(-1, 1) * k.rx * 3 * a; this.kickRotVel.y += rand(-1, 1) * k.rx * 1.5 * a;
   }
-  // F — left-hand grab (SF2 style): usable any time, even while aiming. Within killRange = instant kill, otherwise heavy damage.
-  grab() {
-    const g = this.game, p = g.player, w = this.current;
-    if (!g.canAct() || !p.alive || this.grabT > 0 || this.grabCd > 0 || (w.kind === 'grenade' && w.state !== 'idle')) return;
-    this.grabT = 1e-4; this.grabHit = false; this.grabCd = 1.0; this.setAds(false, true); this.trigger = false;
-    p.sprinting = false; p.sprintBlock = 0.5; g.audio.knifeSwing(); p.onAttack();
-  }
-  _grabHit() {
-    const g = this.game, p = g.player, def = WEAPON_DEFS.grab, ray = this.current.aimRay();
-    let best = null;
-    for (const [yaw, pitch] of [[0, 0], [0.16, 0], [-0.16, 0], [0, 0.1], [0, -0.14]]) {
-      const dir = ray.d.clone().addScaledVector(ray.r, yaw).addScaledVector(ray.u, pitch).normalize();
-      const h = g.meleeTrace(p, ray.o, dir, def.range);
-      if (h && h.target && (!best || h.t < best.t)) best = h;
-    }
-    if (!best) return;
-    const d = Math.hypot(best.target.motor.pos.x - p.motor.pos.x, best.target.motor.pos.z - p.motor.pos.z);
-    g.applyDamage(best.target, d <= def.killRange ? 999 : def.damage, 'chest', p, def, ray.d.clone(), best.point, { melee: true });
-    g.audio.knifeHit(true); p.punchV += 0.5;
-  }
+  muzzleLight(strength) { this.flashLightT = 0.04; this.flashLight.intensity = 15 * strength; }
 
   _barrelSmoke(dt, w) {
     const g = this.game, since = g.time - this.lastShotT;
@@ -178,70 +253,33 @@ class WeaponSystem {
       const sz = 0.025 + k * 0.14; q.s.scale.set(sz, sz, 1); q.s.material.opacity = q.a * Math.sin(Math.PI * Math.min(1, k * 1.4)) * (1 - k);
     }
   }
-  muzzleLight(strength) { this.flashLightT = 0.04; this.flashLight.intensity = 15 * strength; }
 
+  // Mouse buttons at event time: only ADS is decided here (toggle / hold is a local preference). Firing, knife and grenades
+  // run from the latched FIRE / ALT bits of the next UserCmd (tick).
   onButton(btn, down) {
-    const w = this.current, g = this.game;
-    if (w.kind === 'grenade') { if (btn === 0 || btn === 2) { if (down) w.press(btn); else w.release(); } return; }
-    if (btn === 0) {
-      this.trigger = down;
-      if (!down || !g.canAct()) return;
-      if (w.kind === 'knife') { w.attack(false); return; }
-      if (w.cooldown <= 0) this._fire(); else if (!w.auto) w.queued = 0.1;
-    } else if (btn === 2) {
-      if (w.kind === 'knife') { if (down && g.canAct()) w.attack(true); return; }
-      if (Settings.data.adsMode === 'hold') this.setAds(down);
-      else if (down) {
-        if (w.scoped && w.def.zoomFovs.length > 1) this.setAds(this.zoomLevel < w.def.zoomFovs.length, false, this.zoomLevel + 1);
-        else this.setAds(!this.ads);
-      }
+    const w = this.current;
+    if (btn !== 2 || w.kind === 'knife' || w.kind === 'grenade') return;
+    if (Settings.data.adsMode === 'hold') this.setAds(down);
+    else if (down) {
+      if (w.scoped && w.def.zoomFovs.length > 1) this.setAds(this.zoomLevel < w.def.zoomFovs.length, false, this.zoomLevel + 1);
+      else this.setAds(!this.ads);
     }
   }
 
-  onKey(code) {
-    const m = /^Digit([1-9])$/.exec(code);
-    if (m) { const i = parseInt(m[1], 10) - 1; if (i < this.weapons.length) this.switchTo(i); return; }
-    if (code === 'KeyQ') this.quickSwitch();
-    else if (code === 'KeyR') { if (this.current.tryReload && this.current.tryReload()) this.setAds(false, true); }
-  }
-
-  _fire() {
-    if (!this.game.canAct()) return;
-    const w = this.current;
-    this.game.player.sprinting = false; this.game.player.sprintBlock = 0.35;
-    if (w.fire(this)) { this.game.app.hud.setWeapon(this); this.heat = Math.min(14, this.heat + (w.kind === 'shotgun' || w.kind === 'sniper' ? 3 : 1)); this.lastShotT = this.game.time; }
-  }
-
+  // presentation, once per rendered frame
   update(dt, input, mouse) {
     const g = this.game, w = this.current, p = g.player, m = p.motor, cam = g.camera;
-    if (input.wheel) {
-      const n = this.weapons.length; let i = this.index;
-      for (let k = 0; k < n; k++) { i = (i + (input.wheel > 0 ? 1 : -1) + n) % n; if (this.selectable(i)) break; }
-      this.switchTo(i);
-    }
-    w.update(dt, this);
-    if (this.grabCd > 0) this.grabCd -= dt;
-    if (this.grabT > 0) { this.grabT += dt; if (!this.grabHit && this.grabT >= 0.12) { this.grabHit = true; this._grabHit(); } if (this.grabT >= 0.45) this.grabT = 0; }
-    if (w.kind !== 'knife' && w.kind !== 'grenade' && this.grabT <= 0) {
-      if (this.trigger && w.auto && !w.reloading && g.canAct()) {
-        let n = 0;
-        while (w.cooldown <= 0 && n < 3) { if (w.ammo <= 0) { this._fire(); this.trigger = false; break; } this._fire(); n++; }
-      } else if (w.queued > 0) { w.queued -= dt; if (w.cooldown <= 0) { w.queued = 0; this._fire(); } }
-    }
-    if (this.unscopeT > 0) { this.unscopeT -= dt; if (this.unscopeT <= 0) this.setAds(false, true); }
-    if (w.reloading && this.ads) this.setAds(false, true);
-    if (p.sprinting && this.ads) this.setAds(false, true);
+    w.animate(dt, this);
+    // the 2D scope overlay follows the gameplay state (tick): one place for every way into or out of the scope
+    const sc = w.scoped && this.scopedIn;
+    if (sc !== this._scopeShown || (sc && this.scopeLevel !== this._scopeLvl)) { this._scopeShown = sc; this._scopeLvl = this.scopeLevel; g.app.hud.setScope(sc, this.scopeLevel); }
+    w.vm.group.visible = !sc;
 
     const target = this.ads ? (w.scoped ? (this.scopedIn ? w.def.zoomFovs[this.zoomLevel - 1] : this.baseFov * 0.82) : w.def.adsFov) : this.baseFov;
     this.fov = THREE.MathUtils.lerp(this.fov, target, 1 - Math.exp(-(w.scoped ? 32 : w.def.adsSpeed * 1.4 || 28) * dt));
     if (Math.abs(this.fov - target) < 0.01) this.fov = target;
     const fovNow = this.fov + p.fovPunch;
     if (Math.abs(cam.fov - fovNow) > 1e-4) { cam.fov = fovNow; cam.updateProjectionMatrix(); }
-    this.adsT = damp(this.adsT, this.ads ? 1 : 0, w.def.adsSpeed || 20, dt);
-    if (w.scoped) { // scope-in: overlay (with a short fade) only after the raise animation reaches the eye
-      const inNow = this.ads && this.adsT > 0.8;
-      if (inNow !== this.scopedIn || (inNow && this.scopeLevel !== this.zoomLevel)) { this.scopedIn = inNow; this.scopeLevel = inNow ? this.zoomLevel : 0; g.app.hud.setScope(inNow, this.zoomLevel); w.vm.group.visible = !inNow; }
-    } else if (this.scopedIn) { this.scopedIn = false; this.scopeLevel = 0; g.app.hud.setScope(false, 0); }
     this.sprintT = damp(this.sprintT, p.sprinting ? 1 : 0, 12, dt);
     const vmFov = lerp(58, 48, this.adsT * (w.scoped ? 0 : 1));
     if (Math.abs(this.camera.fov - vmFov) > 0.01) { this.camera.fov = vmFov; this.camera.updateProjectionMatrix(); }
@@ -338,4 +376,3 @@ class WeaponSystem {
 
   onResize() { this.camera.aspect = innerWidth / innerHeight; this.camera.updateProjectionMatrix(); }
 }
-

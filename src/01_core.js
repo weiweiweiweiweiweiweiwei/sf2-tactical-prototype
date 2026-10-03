@@ -389,6 +389,10 @@ const wrapAngle = (a) => { while (a > Math.PI) a -= Math.PI * 2; while (a < -Mat
 const nextFrame = () => new Promise((r) => { let done = false; const f = () => { if (!done) { done = true; r(); } }; requestAnimationFrame(f); setTimeout(f, 50); });
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const TMP_V1 = new THREE.Vector3(), TMP_V2 = new THREE.Vector3(), TMP_V3 = new THREE.Vector3(), TMP_V4 = new THREE.Vector3();
+// v25: a reproducible random stream per shot — the shooter's network id + shot number seed the spread cone, so the host
+// and the shooter's own client draw exactly the same bullet direction.
+function hash2(a, b) { let h = Math.imul((a | 0) ^ 0x9e3779b9, 0x85ebca6b) ^ Math.imul((b | 0) + 0x7f4a7c15, 0xc2b2ae35); h ^= h >>> 15; h = Math.imul(h, 0x2c1b3c6d); h ^= h >>> 12; h = Math.imul(h, 0x297a2d39); return (h ^ (h >>> 15)) >>> 0; }
+const shotRng = (id, n) => mulberry32(hash2(id, n));
 function mulberry32(seed) { let a = seed >>> 0; return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 
 // v21 (CLAUDE.md §4.2): linear falloff damageNear → damageFar between falloffStart and falloffEnd; sniper headshots always kill.
