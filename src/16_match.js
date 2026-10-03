@@ -521,7 +521,7 @@ class Match {
   /* ------------------------------ weapon drops / pickups ------------------------------ */
   static isGun(def) { return !!def && !!def.mag && def.kind !== 'knife' && def.kind !== 'grenade'; }
   // A dropped gun: physics body (it tumbles and settles), low-poly mesh, pulsing ground glow; remembers its ammo.
-  dropWeapon(def, ammo, reserve, pos, vel) {
+  dropWeapon(def, ammo, reserve, pos, vel, netId = 0) {
     if (!Match.isGun(def)) return null;
     const holder = new THREE.Group(), gun = new THREE.Mesh(this.app.models.tp(def.model), this.app.soldiers.gunMat);
     gun.scale.setScalar(1.25); gun.castShadow = true; holder.add(gun);
@@ -530,12 +530,56 @@ class Match {
       angularVelocity: { x: rand(-2, 2), y: rand(-6, 6), z: rand(-4, 4) }, linearDamping: 0.08, angularDamping: 0.45, life: 999, manual: true });
     const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.app.tex.dot(), color: new THREE.Color(0.45, 1, 0.8), transparent: true, opacity: 0.5, depthWrite: false, blending: THREE.AdditiveBlending }));
     glow.scale.set(1.3, 1.3, 1); glow.userData.noAO = true; this.scene.add(glow);
-    const d = { def, ammo, reserve, dyn, body: dyn.body, glow, t: 0, id: ++this.dropSeq };
+    const d = { def, ammo, reserve, dyn, body: dyn.body, glow, t: 0, id: netId || ++this.dropSeq };
     this.drops.push(d);
+    if (!netId && this.net && this.net.role === 'host') this.net.onDrop(d, pos, vel); // v30: friends see it fall the same way
     while (this.drops.length > 18) this.removeDrop(this.drops[0]);
     return d;
   }
-  removeDrop(d) { const i = this.drops.indexOf(d); if (i >= 0) this.drops.splice(i, 1); this.physics.remove(d.dyn); this.scene.remove(d.glow); d.glow.material.dispose(); if (this.pickTarget === d) this.pickTarget = null; }
+  removeDrop(d) {
+    const i = this.drops.indexOf(d); if (i < 0) return; this.drops.splice(i, 1);
+    this.physics.remove(d.dyn); this.scene.remove(d.glow); d.glow.material.dispose(); if (this.pickTarget === d) this.pickTarget = null;
+    if (this.net && this.net.role === 'host') this.net.onUndrop(d);
+  }
+  // v30 host: a friend pressed E — the relic first, then the gun in front of him (same reach and preference as yours)
+  netInteract(np) {
+    if (!np.alive || !this.canMove()) return;
+    const st = this.rules.hudState ? this.rules.hudState() : null;
+    if (st && st.kind === 'relic') { this.rules.interactPressed(np); }
+    const ars = np.arsenal, f = np.lookDir(TMP_V1); let best = null, bs = Infinity;
+    for (const d of this.drops) {
+      const b = d.body, dx = b.position.x - np.motor.pos.x, dz = b.position.z - np.motor.pos.z, dist = Math.hypot(dx, dz), dy = b.position.y - np.motor.pos.y;
+      if (dist > 2.0 || dy < -0.8 || dy > 1.8 || ars.slotIndex(d.def.slot) < 0) continue;
+      const sc = dist - (f.x * dx + f.z * dz) / (dist || 1) / Math.max(1e-3, Math.hypot(f.x, f.z)) * 0.9;
+      if (sc < bs) { bs = sc; best = d; }
+    }
+    if (!best) { this.rules.interactPressed(np); return; }
+    const i = ars.slotIndex(best.def.slot), old = ars.weapons[i], def = best.def, ammo = best.ammo, reserve = best.reserve;
+    this.removeDrop(best);
+    ars.replaceSlot(i, def, ammo, reserve);
+    const eye = np.eyePos(new THREE.Vector3()), fw = np.lookDir(new THREE.Vector3());
+    if (Match.isGun(old.def)) this.dropWeapon(old.def, old.ammo, old.reserveAmmo, eye.clone().addScaledVector(fw, 0.6).setY(eye.y - 0.35), fw.clone().multiplyScalar(3.2).setY(1.4));
+    this.net.onPickup(np, i, def, ammo, reserve);
+  }
+  // v30 client: the host's drops (spawned with the host's id, never by ourselves), and what we picked up
+  clientDrop(e) {
+    const def = WEAPON_DEFS[NET_WEAPONS[e.w | 0]], p = netV3(e.p), v = netV3(e.v);
+    if (!Match.isGun(def) || !p || !v || this.drops.some((d) => d.id === (e.id | 0))) return;
+    this.dropWeapon(def, clamp(e.a | 0, 0, 999), clamp(e.r | 0, 0, 9999), p, v, e.id | 0);
+  }
+  clientDropPose(e) {
+    const d = this.drops.find((x) => x.id === (e.id | 0)), p = netV3(e.p), v = netV3(e.v), q = e.q;
+    if (!d || !p || !v || !Array.isArray(q) || q.length !== 4 || !q.every(Number.isFinite)) return;
+    const b = d.body; b.position.set(p.x, p.y, p.z); b.velocity.set(v.x, v.y, v.z); b.quaternion.set(q[0], q[1], q[2], q[3]); b.angularVelocity.scale(0.5, b.angularVelocity);
+  }
+  clientUndrop(id) { const d = this.drops.find((x) => x.id === id); if (d) this.removeDrop(d); }
+  clientGot(e) {
+    const def = WEAPON_DEFS[NET_WEAPONS[e.w | 0]], ws = this.weapons, i = e.i | 0;
+    if (!Match.isGun(def) || !ws.weapons[i] || ws.weapons[i].def.slot !== def.slot) return;
+    ws.replaceSlot(i, def, clamp(e.a | 0, 0, 999), clamp(e.r | 0, 0, 9999));
+    this.audio.mech('draw'); this.audio.mech('magin'); this.app.hud.setWeapon(ws);
+    this.app.hud.toast(`拾取 ${def.name}（彈藥 ${e.a | 0}/${e.r | 0}）`);
+  }
   dropOnDeath(c, dir) {
     const at = new THREE.Vector3(c.motor.pos.x, c.motor.pos.y + 1.1, c.motor.pos.z), v = new THREE.Vector3(dir.x * 2.2 + rand(-0.6, 0.6), 1.6, dir.z * 2.2 + rand(-0.6, 0.6));
     if (c.isPlayer) {
@@ -573,7 +617,7 @@ class Match {
   }
   // E key: relic first (Capture the Relic), then a gun under your nose, otherwise the mode's interaction.
   onInteract() {
-    if (this.isClient) return; // v29: the host decides pickups (relic: held E reaches it in the commands; weapon drops are not synced yet)
+    if (this.isClient) return; // v29/v30: the host decides pickups — the E press reaches it in our commands (Match.netInteract)
     const st = this.rules.hudState ? this.rules.hudState() : null;
     if (st && st.kind === 'relic' && st.prompt) { this.rules.interactPressed(this.player); return; }
     if (this.pickTarget) { this.pickup(this.pickTarget); return; }
@@ -581,11 +625,27 @@ class Match {
   }
 
   /* ------------------------------ grenades ------------------------------ */
-  throwGrenade(owner, def, pos, vel) {
+  // remote (v30 client): someone else's grenade as the host announced it — it flies here too, but only the host's word
+  // (clientBoom) sets it off, where it really landed
+  throwGrenade(owner, def, pos, vel, remote = null) {
     const mesh = new THREE.Mesh(this.app.models.tp(def.id), this.app.soldiers.gunMat); mesh.castShadow = true;
     const dyn = this.physics.grenadeBody(mesh, pos, vel);
     dyn.body.linearDamping = 0.02; // keep the throw's momentum (long charged / jump throws)
-    this.grenades.push({ def, owner, dyn, body: dyn.body, t: 0, prev: pos.clone() });
+    const n = { def, owner, dyn, body: dyn.body, t: 0, prev: pos.clone(), id: remote ? remote.id : (this.nadeSeq = (this.nadeSeq || 0) + 1), remote: !!remote };
+    this.grenades.push(n);
+    if (!remote && this.net && this.net.role === 'host') this.net.onNade(n, pos, vel);
+  }
+  clientNade(e) {
+    const def = WEAPON_DEFS[NET_WEAPONS[e.w | 0]], p = netV3(e.p), v = netV3(e.v);
+    if (!def || def.kind !== 'grenade' || !p || !v || this.grenades.length > 40) return;
+    this.throwGrenade(this.net.byId(e.o | 0) || { team: null }, def, p, v, { id: e.id | 0 });
+  }
+  clientBoom(e) {
+    const def = WEAPON_DEFS[NET_WEAPONS[e.w | 0]], p = netV3(e.p);
+    if (!def || def.kind !== 'grenade' || !p || (e.o | 0) === this.player.netId) return; // ours already went off here
+    const i = this.grenades.findIndex((g) => g.remote && g.id === (e.id | 0));
+    if (i >= 0) { this.physics.remove(this.grenades[i].dyn); this.grenades.splice(i, 1); }
+    this.detonate({ def, owner: this.net.byId(e.o | 0) || { team: null }, body: { position: p } });
   }
 
   updateGrenades(dt) {
@@ -606,13 +666,14 @@ class Match {
         }
       }
       n.prev.copy(cur);
-      if (n.t >= n.def.fuse) { this.grenades.splice(i, 1); this.physics.remove(n.dyn); this.detonate(n); }
+      if (n.remote ? n.t > 12 : n.t >= n.def.fuse) { this.grenades.splice(i, 1); this.physics.remove(n.dyn); if (!n.remote) this.detonate(n); }
     }
   }
 
   detonate(n) {
     const pos = new THREE.Vector3(n.body.position.x, n.body.position.y, n.body.position.z), def = n.def, p = this.player, cam = this.camera.position;
     const probe = pos.clone(); probe.y += 0.25;
+    if (this.net && this.net.role === 'host') this.net.onBoom(n, pos); // v30: friends see it go off right there
     if (def.gtype === 'he') {
       this.effects.explosion(pos); this.audio.explosion('he', pos); this.physics.blast(pos, def.radius + 1, 8);
       for (const c of this.combatants) {
@@ -637,7 +698,7 @@ class Match {
         if (d > def.radius || !this.collision.segmentClear(probe, eye)) continue;
         const toF = pos.clone().sub(eye).normalize(), view = c.isPlayer ? this.camera.getWorldDirection(new THREE.Vector3()) : c.lookDir(new THREE.Vector3());
         const facing = 0.2 + 0.8 * clamp((view.dot(toF) + 0.25) / 1.25, 0, 1), s = clamp((1 - d / def.radius) * facing * 1.25, 0, 1);
-        if (c.isPlayer) { this.app.post.flash(s, 0.6 + 4.2 * s); this.audio.deafen(s * 0.9, 1 + 3 * s); }
+        if (c.isPlayer) { if (!this.isClient) { this.app.post.flash(s, 0.6 + 4.2 * s); this.audio.deafen(s * 0.9, 1 + 3 * s); } } // a client is blinded by the host's 'flash' message
         else if (c.ai) c.ai.blind(0.4 + 4.2 * s);
         else if (c.isNet && this.net && this.net.role === 'host') this.net.onFlash(c, s);
       }

@@ -7,7 +7,7 @@
      testing; WebRTC + a signalling service take its place in v26 with the same send / onMessage interface; from v27 a
      match talks through its room's RoomLink (18c_room.js), so the connection outlives the match.
    ===================================================================== */
-const NET_VERSION = 29;
+const NET_VERSION = 30;
 const NET_WEAPONS = Object.keys(WEAPON_DEFS), NET_WI = Object.fromEntries(NET_WEAPONS.map((k, i) => [k, i]));
 const NET_PHASES = ['loading', 'freeze', 'live', 'roundEnd', 'over'];
 const NET_SNAP_HZ = 30, NET_CMD_EVERY = 2, NET_INTERP = 0.1; // snapshots / s · send a cmd packet every 2nd tick (60 Hz) · ghosts drawn 100 ms behind
@@ -97,6 +97,7 @@ function netEntity(m, c) {
     x: c.motor.pos.x, y: c.motor.pos.y, z: c.motor.pos.z, yaw: c.yaw, pitch: p ? c.pitch : c.isNet ? c.pitch : c.aimPitch || 0, hp: c.alive ? c.hp : 0 };
 }
 const v3arr = (v) => [+v.x.toFixed(3), +v.y.toFixed(3), +v.z.toFixed(3)];
+const netV3 = (a) => (Array.isArray(a) && a.length === 3 && a.every((x) => Number.isFinite(+x) && Math.abs(+x) < 1e4) ? new THREE.Vector3(+a[0], +a[1], +a[2]) : null);
 // names and room fields come from other people's browsers: never let them carry markup into the page
 const safeName = (s, d = 'Player') => String(s ?? '').replace(/[<>&"'`\\]/g, '').trim().slice(0, 14) || d;
 const esc = (s) => String(s ?? '').replace(/[&<>"'`]/g, (c) => `&#${c.charCodeAt(0)};`);
@@ -114,7 +115,10 @@ class NetHost {
   _msg(from, d) {
     if (d instanceof ArrayBuffer) {
       const np = this.peers.get(from);
-      if (np && new DataView(d).getUint8(0) === NetCodec.CMD) { np.pushCmds(NetCodec.decodeCmds(d)); np.heardT = this.m.time; }
+      if (np && new DataView(d).getUint8(0) === NetCodec.CMD) {
+        np.pushCmds(NetCodec.decodeCmds(d)); np.heardT = this.m.time;
+        if (!np.gotDrops) { np.gotDrops = true; for (const g of this.m.drops) this.t.send(from, { k: 'drop', id: g.id, w: NET_WI[g.def.id] ?? 0, a: g.ammo, r: g.reserve, p: v3arr(g.body.position), v: [0, 0, 0] }); } // v30: his game is running now — the guns already on the ground
+      }
       return;
     }
     if (!d || typeof d !== 'object') return;
@@ -168,6 +172,12 @@ class NetHost {
     for (const [peer, np] of this.peers) if (m.time - np.heardT > 10) this._drop(peer, '連線中斷');
     if (!this.peers.size) { this.shots.length = 0; return; } // v27: every room match has a NetHost — alone, it sends nothing
     this._record();
+    // v30: a dropped gun tumbles differently on every computer — while it moves (first 3 s) the host's pose wins
+    for (const d of m.drops) {
+      if (d.t > 3.2 || d.t < (d.syncT || 0)) continue;
+      d.syncT = (d.syncT || 0) + 0.4; const b = d.body, e = { k: 'dpos', id: d.id, p: v3arr(b.position), q: [b.quaternion.x, b.quaternion.y, b.quaternion.z, b.quaternion.w].map((x) => +x.toFixed(4)), v: v3arr(b.velocity) };
+      for (const [peer] of this.peers) this.t.send(peer, e, false);
+    }
     // v29: the mode's state (relic, zones …) 10× a second; each friend gets his own view (his capture progress)
     this.ruleT = (this.ruleT || 0) - dt;
     if (this.ruleT <= 0 && m.rules.netState) { this.ruleT = 0.1; for (const [peer, np] of this.peers) this.t.send(peer, { k: 'rs', s: m.rules.netState(np) }, false); }
@@ -213,6 +223,12 @@ class NetHost {
   restore(moved) { if (moved) for (const s of moved) { s.c.motor.pos.set(s.x, s.y, s.z); s.c.motor.crouching = s.cr; s.c.yaw = s.yaw; } }
 
   // hooks called by the match
+  // v30: grenades and dropped guns
+  onNade(n, pos, vel) { const e = { k: 'nade', id: n.id, w: NET_WI[n.def.id] ?? 0, o: n.owner.netId || 0, p: v3arr(pos), v: v3arr(vel) }; for (const [peer, np] of this.peers) if (np !== n.owner) this.t.send(peer, e); }
+  onBoom(n, pos) { if (!this.peers.size) return; const e = { k: 'boom', id: n.id, w: NET_WI[n.def.id] ?? 0, o: n.owner.netId || 0, p: v3arr(pos) }; for (const [peer] of this.peers) this.t.send(peer, e); }
+  onDrop(d, pos, vel) { if (!this.peers.size) return; const e = { k: 'drop', id: d.id, w: NET_WI[d.def.id] ?? 0, a: d.ammo, r: d.reserve, p: v3arr(pos), v: v3arr(vel) }; for (const [peer] of this.peers) this.t.send(peer, e); }
+  onUndrop(d) { for (const [peer] of this.peers) this.t.send(peer, { k: 'undrop', id: d.id }); }
+  onPickup(np, i, def, ammo, reserve) { this.t.send(np.peer, { k: 'got', i, w: NET_WI[def.id] ?? 0, a: ammo, r: reserve }); }
   onRound(ev, a, b) { for (const [peer] of this.peers) this.t.send(peer, ev === 'start' ? { k: 'round', ev, n: a } : { k: 'round', ev, w: a || null, why: String(b || '').slice(0, 30) }); }
   onShot(c, from, to, def) { if (this.peers.size && this.shots.length < 120) this.shots.push({ id: c.netId, w: NET_WI[def.id] ?? 0, from: [from.x, from.y, from.z], to: [to.x, to.y, to.z] }); }
   onHit(attacker, victim, kind, point) { if (attacker.isNet && attacker.peer) this.t.send(attacker.peer, { k: 'hit', kind, pt: point ? v3arr(point) : null }); }
@@ -272,6 +288,12 @@ class NetClient {
     else if (d.k === 'flash') { m.app.post.flash(d.s, 0.6 + 4.2 * d.s); m.audio.deafen(d.s * 0.9, 1 + 3 * d.s); }
     else if (d.k === 'roster') { if (d.add) this._ghost(d.add); if (d.remove) this._unghost(d.remove); }
     else if (d.k === 'round') { if (d.ev === 'start') m.clientRoundStart(d.n | 0); else if (d.ev === 'end') m.clientRoundEnd(d.w === 'alpha' || d.w === 'bravo' ? d.w : null, String(d.why || '').slice(0, 30)); }
+    else if (d.k === 'nade') m.clientNade(d);
+    else if (d.k === 'boom') m.clientBoom(d);
+    else if (d.k === 'drop') m.clientDrop(d);
+    else if (d.k === 'undrop') m.clientUndrop(d.id | 0);
+    else if (d.k === 'dpos') m.clientDropPose(d);
+    else if (d.k === 'got') m.clientGot(d);
     else if (d.k === 'rs') { if (m.rules.applyNet && d.s && typeof d.s === 'object') { try { m.rules.applyNet(d.s); } catch (e) { console.warn('[net] rule state', e); } } }
     else if (d.k === 'end') { if (d.why) m.app.hud.toast(String(d.why).slice(0, 30)); m.winner = d.winner === 'alpha' || d.winner === 'bravo' ? d.winner : null; m.phase = 'live'; m.endMatch(m.winner); }
   }

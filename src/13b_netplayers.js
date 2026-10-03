@@ -57,6 +57,7 @@ class NetPlayer extends Human {
       this.curSeq = cmd.seq; this.viewT = cmd.vt; // the command being simulated (tests compare it with the client's) · v29: its view time
       this.fixedUpdate(h, cmd);
       this.arsenal.tick(h, cmd);
+      if (cmd.btn & BTN.INTERACT) this.game.netInteract(this); // v30: E — relic / weapon pickup, decided here on the host
       this.ackSeq = cmd.seq;
     }
     if (!ran) { this.motor.prevPos.copy(this.motor.pos); this.stalls = (this.stalls || 0) + 1; }
