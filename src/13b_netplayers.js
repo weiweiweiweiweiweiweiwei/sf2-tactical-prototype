@@ -94,7 +94,7 @@ NetPlayer.prototype.flinch = Bot.prototype.flinch;
 
 class Ghost extends Combatant {
   constructor(game, info) {
-    super(game, info.team, info.name, false);
+    super(game, info.team === 'bravo' ? 'bravo' : 'alpha', safeName(info.name), false);
     this.netId = info.id; this.kind = info.kind; this.isBot = info.kind === 'bot'; this.isNet = info.kind !== 'bot';
     this.aimPitch = 0; this.walkPhase = Math.random() * 6; this.buf = []; this.speed = 0; this.weaponId = NET_WEAPONS[info.w] || 'm4a1';
     this.model = game.app.soldiers.create(info.team, WEAPON_DEFS[this.weaponId].model || this.weaponId); game.scene.add(this.model.root);

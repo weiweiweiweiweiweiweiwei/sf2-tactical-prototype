@@ -5,25 +5,34 @@ import { chromium } from 'playwright'; import http from 'node:http'; import fs f
 const ROOT = process.cwd(), T = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript' };
 const srv = http.createServer((q, s) => { const p = path.join(ROOT, decodeURIComponent(new URL(q.url, 'http://x').pathname)); if (!fs.existsSync(p) || fs.statSync(p).isDirectory()) { s.writeHead(404); s.end(); return; } s.writeHead(200, { 'Content-Type': T[path.extname(p)] || 'application/octet-stream' }); fs.createReadStream(p).pipe(s); });
 await new Promise((r) => srv.listen(0, '127.0.0.1', r));
-const [lag = '40', jitter = '10', loss = '0.02'] = process.argv.slice(2), base = `http://127.0.0.1:${srv.address().port}/index.html`, net = `&lag=${lag}&jitter=${jitter}&loss=${loss}`;
+const RTC = process.argv[2] === 'rtc', [lag = '40', jitter = '10', loss = '0.02'] = process.argv.slice(RTC ? 3 : 2), base = `http://127.0.0.1:${srv.address().port}/index.html`, net = `&lag=${lag}&jitter=${jitter}&loss=${loss}`;
 const b = await chromium.launch({ channel: 'chrome', args: ['--use-angle=d3d11', '--enable-gpu', '--autoplay-policy=no-user-gesture-required', '--disable-renderer-backgrounding', '--disable-background-timer-throttling', '--disable-backgrounding-occluded-windows'] });
-const ctx = await b.newContext({ viewport: { width: 800, height: 450 } }), errs = { host: [], client: [] };
-const H = await ctx.newPage(), C = await ctx.newPage();
+// rtc: two separate browser contexts (like two computers) linked through Supabase signalling + WebRTC; loop: two tabs, BroadcastChannel
+const ctx = await b.newContext({ viewport: { width: 800, height: 450 } }), ctx2 = RTC ? await b.newContext({ viewport: { width: 800, height: 450 } }) : ctx, errs = { host: [], client: [] };
+const H = await ctx.newPage(), C = await ctx2.newPage();
 for (const [pg, k] of [[H, 'host'], [C, 'client']]) { pg.on('pageerror', (e) => errs[k].push('uncaught: ' + e.message)); pg.on('console', (m) => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) errs[k].push(m.text()); }); }
 const log = (...a) => console.log(...a);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // 1. host starts a 3v3 warehouse TDM in a tab opened with ?host=
-await H.goto(`${base}?host=t1${net}`); await H.waitForFunction(() => window.app && window.SF2);
-await H.evaluate(async () => {
-  const S = SF2.Settings.data; S.quality = 'low'; Object.assign(S.lobby, { map: 0, rule: 'tdm', mode: 'general', allies: 3, enemies: 3, loadout: 0 });
+await H.goto(RTC ? `${base}?x=1` : `${base}?host=t1${net}`); await H.waitForFunction(() => window.app && window.SF2);
+await H.evaluate(async (rtc) => {
+  const S = SF2.Settings.data; S.onlineHost = rtc; S.nick = rtc ? 'HostWei' : ''; S.quality = 'low'; Object.assign(S.lobby, { map: 0, rule: 'tdm', mode: 'general', allies: 3, enemies: 3, loadout: 0 });
   S.loadouts[0] = { name: 'A', primary: 'm4a1', secondary: 'p226' };
   await app.startMatch(); app.state = 'playing'; app.input.locked = true; app.match.player.spawnProtect = 0;
-});
+}, RTC);
+let code = null;
+if (RTC) { await H.waitForFunction(() => app.match && app.match.onlineCode, null, { timeout: 30000 }).catch(() => {}); code = await H.evaluate(() => app.match.onlineCode); log('room code', code); }
 log('host match running:', await H.evaluate(() => ({ combatants: app.match.combatants.length, net: app.match.net && app.match.net.role })));
 
 // 2. client joins from a second tab
-await C.goto(`${base}?join=t1&name=Tester&team=bravo${net}`);
+if (RTC) {
+  await C.goto(`${base}?x=2`); await C.waitForFunction(() => window.app && window.SF2);
+  await C.waitForFunction((code) => app.dir && app.dir.rooms.some((r) => r.code === code), code, { timeout: 20000 }).catch(() => {});
+  log('room list on the client', JSON.stringify(await C.evaluate(() => app.dir.rooms.map((r) => ({ code: r.code, host: r.host, map: r.map, players: r.players })))));
+  const t0 = Date.now(); await C.evaluate((code) => { SF2.Settings.data.nick = 'Tester'; app.netJoinOnline(code); }, code);
+  await C.waitForFunction(() => app.netClient && app.netClient.t.isOpen, null, { timeout: 30000 }).catch(() => {}); log('WebRTC open after', Date.now() - t0, 'ms');
+} else await C.goto(`${base}?join=t1&name=Tester&team=bravo${net}`);
 await C.waitForFunction(() => window.app && app.state === 'playing' && app.match && app.match.net && app.match.net.ready, null, { timeout: 60000 }).catch(() => {});
 await C.evaluate(() => { app.state = 'playing'; app.input.locked = true; });
 await sleep(1500);
@@ -40,7 +49,7 @@ const spots = await H.evaluate(() => { const m = app.match, V = SF2.THREE.Vector
       const n = m.humans[0], p = m.player; n.motor.teleport(a.clone()); p.motor.teleport(b.clone()); p.yaw = Math.atan2(-(a.x - b.x), -(a.z - b.z)); p.pitch = -0.05; return { a: a.toArray(), b: b.toArray() }; } } }
   return null; });
 await sleep(1500);
-await C.evaluate(() => { const m = app.match, g = [...m.net.ghosts.values()].find((x) => x.name === '房主'), p = m.player, e = p.eyePos(new SF2.THREE.Vector3()), c = g.chestPos(new SF2.THREE.Vector3()); p.yaw = Math.atan2(-(c.x - e.x), -(c.z - e.z)); p.pitch = -0.05; });
+await C.evaluate(() => { const m = app.match, g = [...m.net.ghosts.values()].find((x) => !x.isBot), p = m.player, e = p.eyePos(new SF2.THREE.Vector3()), c = g.chestPos(new SF2.THREE.Vector3()); p.yaw = Math.atan2(-(c.x - e.x), -(c.z - e.z)); p.pitch = -0.05; });
 await sleep(600); await C.screenshot({ path: 'tools/out/net_client.png' }); await H.screenshot({ path: 'tools/out/net_host.png' });
 log('screenshot spots', JSON.stringify(spots));
 // 3. movement agreement: client holds W for 1.2 s, then compare the client's predicted position with the host's soldier

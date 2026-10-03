@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SF2 Tactical Prototype v25</title>
+<title>SF2 Tactical Prototype v26</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Teko:wght@300;400;500;600&family=Rajdhani:wght@500;600;700&family=Noto+Sans+TC:wght@500;700&display=swap" rel="stylesheet">
@@ -174,14 +174,27 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
   radial-gradient(ellipse at 90% 100%,rgba(120,40,30,.22),transparent 55%),
   repeating-linear-gradient(135deg,rgba(255,255,255,.018) 0 2px,transparent 2px 9px),
   linear-gradient(180deg,#0b100d,#060807)}
-#lobby .lbz{position:absolute;left:50%;top:50%;width:1440px;height:820px;transform:translate(-50%,-50%) scale(var(--lz,1));transform-origin:center}
+#lobby .lbz{position:absolute;left:50%;top:50%;width:1440px;height:860px;transform:translate(-50%,-50%) scale(var(--lz,1));transform-origin:center}
 .lb-top{display:flex;align-items:center;gap:22px;height:62px;padding:0 6px;border-bottom:1px solid var(--line)}
 .lb-brand{font-size:30px;font-weight:700;letter-spacing:5px}
 .lb-brand span{color:var(--accent)}
 .lb-brand small{display:block;font-size:11px;letter-spacing:5px;color:var(--dim);margin-top:-4px}
 .lb-room{flex:1;font-size:16px;color:var(--dim);letter-spacing:2px}
 .lb-room b{color:var(--hud)}
-.lb-main{display:grid;grid-template-columns:1fr 470px;gap:18px;height:696px;padding-top:16px}
+.lb-main{display:grid;grid-template-columns:1fr 470px;gap:18px;height:760px;padding-top:16px;align-items:start} /* v26: 860-high design (right column ~750) */
+/* v26 online panel: under the team lists */
+.lb-left{display:grid;grid-template-rows:minmax(0,1fr) auto;gap:12px;height:744px}.lb-left .lb-teams{min-height:0}
+#lbOnline{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:10px 14px;display:flex;flex-direction:column;gap:7px;height:222px}
+#lbOnline header{display:flex;align-items:center;gap:12px}#lbOnline h3{font-size:13px;letter-spacing:4px;color:var(--accent);flex:1}
+#lbOnline input[type=text]{height:28px;font-family:inherit;font-size:14px;color:var(--hud);background:#0c100e;border:1px solid rgba(255,255,255,.16);border-radius:3px;padding:0 8px}
+#lbNick{width:150px}#lbCode{width:96px;text-transform:uppercase;letter-spacing:3px;font-family:Consolas,monospace}
+.ol-row{display:flex;align-items:center;gap:10px;font-size:14px}.ol-row label{flex:1;display:flex;align-items:center;gap:7px;cursor:pointer;color:var(--hud)}
+.ol-row .btn,.room .btn{padding:3px 12px;font-size:13px}
+#lbRooms{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:4px}
+.room{display:flex;align-items:center;gap:10px;padding:4px 10px;background:rgba(255,255,255,.04);border-radius:3px;font-size:14px}
+.room b{font-family:Consolas,monospace;color:var(--accent);letter-spacing:2px}.room span{flex:1;color:var(--hud);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#lbRooms .empty{color:var(--faint);font-size:13px;padding:6px 2px;line-height:1.5}#lbNetMsg{font-size:12px;color:var(--warn);min-height:14px}
+#pOnline{margin:8px 0 2px;font-size:14px;color:var(--hud);display:flex;align-items:center;gap:10px;flex-wrap:wrap}#pOnline code{color:var(--accent);font-size:16px;letter-spacing:3px}#pOnline .btn{padding:3px 12px;font-size:13px}
 .lb-teams{display:grid;grid-template-columns:1fr 56px 1fr;gap:0;align-items:start}
 .team-col{background:var(--panel);border:1px solid var(--line);border-radius:6px;overflow:hidden}
 .team-col header{display:flex;align-items:center;gap:10px;padding:10px 14px}
@@ -194,7 +207,7 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
 .stepper button{width:30px;height:30px;border-radius:3px;border:1px solid rgba(255,255,255,.25);background:rgba(0,0,0,.35);color:#fff;font-size:18px;cursor:pointer}
 .stepper button:hover{border-color:var(--accent);color:var(--accent)}
 .stepper b{min-width:28px;text-align:center;font-size:20px!important;color:#fff!important;letter-spacing:0!important}
-.team-col ol{list-style:none;padding:6px}
+.team-col ol{list-style:none;padding:6px;max-height:440px;overflow-y:auto}
 .team-col li{display:flex;align-items:center;gap:10px;height:44px;padding:0 10px;margin:3px 0;border-radius:3px;background:rgba(255,255,255,.035);font-size:17px;font-weight:600}
 .team-col li .n{width:22px;color:var(--faint);font-size:14px}
 .team-col li .rank{width:24px;height:24px;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700}
@@ -210,7 +223,7 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
 .mapPrev canvas{width:100%;height:100%;display:block}
 .mapPrev .info{position:absolute;left:0;right:0;bottom:0;padding:8px 12px;background:linear-gradient(0deg,rgba(0,0,0,.85),transparent)}
 .mapPrev .info b{font-size:22px;letter-spacing:2px}.mapPrev .info span{display:block;font-size:13px;color:var(--dim)}
-.maps{display:grid;grid-template-columns:repeat(6,1fr);gap:5px;margin-top:6px}
+.maps{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-top:6px} /* v26: one row (all 7 maps) */
 .maps button{cursor:pointer;border:1px solid rgba(255,255,255,.14);background:rgba(0,0,0,.3);color:var(--hud);border-radius:3px;padding:3px;font-size:11px;white-space:nowrap;overflow:hidden;font-weight:700;letter-spacing:1px}
 .maps button canvas{width:100%;height:38px;display:block;border-radius:2px;margin-bottom:2px}
 .maps button.on{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset;color:var(--accent)}
@@ -533,14 +546,14 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
 <!-- ROOM / LOBBY -->
 <div id="lobby" class="screen on"><div class="lbz">
   <div class="lb-top">
-    <div class="lb-brand">SPECIAL FORCE <span>2</span><small>TACTICAL PROTOTYPE · v25</small></div>
+    <div class="lb-brand">SPECIAL FORCE <span>2</span><small>TACTICAL PROTOTYPE · v26</small></div>
     <div class="lb-room">ROOM #0427 · <b>單機練習房</b> · <span id="lbStatus">等待中</span></div>
     <button class="btn ghost" id="lbWh" title="倉庫：編輯 5 組配裝">🗄 倉庫 WAREHOUSE</button>
     <button class="btn ghost icon" id="lbFull" title="全螢幕">⛶</button>
     <button class="btn ghost icon gear" id="lbSettings" title="設定">⚙</button>
   </div>
   <div class="lb-main">
-    <section class="lb-teams">
+    <div class="lb-left"><section class="lb-teams">
       <div class="team-col a"><header><b>藍隊 ALPHA</b><span id="lbAllyLbl">我方（含你）</span>
         <div class="stepper"><button data-step="allies" data-d="-1">−</button><b id="lbAllies">6</b><button data-step="allies" data-d="1">+</button></div></header>
         <ol id="lbListA"></ol></div>
@@ -549,6 +562,13 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
         <div class="stepper"><button data-step="enemies" data-d="-1">−</button><b id="lbEnemies">6</b><button data-step="enemies" data-d="1">+</button></div></header>
         <ol id="lbListB"></ol></div>
     </section>
+    <section id="lbOnline">
+      <header><h3>線上對戰 ONLINE</h3><span style="font-size:13px;color:var(--dim)">暱稱</span><input type="text" id="lbNick" maxlength="12" placeholder="你的名字" autocomplete="off"></header>
+      <div class="ol-row"><label><input type="checkbox" id="lbHostOn">出發時開放線上房間（朋友可以中途加入 · 只限團隊死鬥）</label>
+        <input type="text" id="lbCode" maxlength="5" placeholder="代碼" autocomplete="off"><button class="btn ghost" id="lbJoinCode">加入</button></div>
+      <div id="lbRooms"><div class="empty">正在讀取房間列表…</div></div>
+      <div id="lbNetMsg"></div>
+    </section></div>
     <aside class="lb-side">
       <div><h3>地圖 MAP</h3>
         <div class="mapPrev"><canvas id="lbMapBig" width="880" height="330"></canvas><div class="info"><b id="lbMapName"></b><span id="lbMapDesc"></span></div></div>
@@ -590,6 +610,7 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
     <kbd>Q</kbd><span>切回上一把武器（QC）</span><kbd>R</kbd><span>換彈（子彈打完會自動換）</span><kbd>TAB</kbd><span>計分板</span>
   </div>
   <div class="row-btns"><button class="btn" id="pResume">繼續遊戲</button><button class="btn ghost" id="pSettings">⚙ 設定</button><button class="btn ghost" id="pLeave">離開對戰 → 回到房間</button></div>
+  <div id="pOnline"></div>
   <div id="pMsg" style="margin-top:10px;color:var(--warn);font-size:14px"></div>
 </div></div>
 

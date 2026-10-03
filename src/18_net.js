@@ -6,7 +6,7 @@
    · Transport: LoopbackTransport links tabs of one browser (BroadcastChannel) with artificial lag / jitter / loss for
      testing; WebRTC + a signalling service take its place in v26 with the same send / onMessage interface.
    ===================================================================== */
-const NET_VERSION = 25;
+const NET_VERSION = 26;
 const NET_WEAPONS = Object.keys(WEAPON_DEFS), NET_WI = Object.fromEntries(NET_WEAPONS.map((k, i) => [k, i]));
 const NET_PHASES = ['loading', 'freeze', 'live', 'roundEnd', 'over'];
 const NET_SNAP_HZ = 30, NET_CMD_EVERY = 2, NET_INTERP = 0.1; // snapshots / s · send a cmd packet every 2nd tick (60 Hz) · ghosts drawn 100 ms behind
@@ -94,13 +94,18 @@ function netEntity(m, c) {
     x: c.motor.pos.x, y: c.motor.pos.y, z: c.motor.pos.z, yaw: c.yaw, pitch: p ? c.pitch : c.isNet ? c.pitch : c.aimPitch || 0, hp: c.alive ? c.hp : 0 };
 }
 const v3arr = (v) => [+v.x.toFixed(3), +v.y.toFixed(3), +v.z.toFixed(3)];
+// names and room fields come from other people's browsers: never let them carry markup into the page
+const safeName = (s, d = 'Player') => String(s ?? '').replace(/[<>&"'`\\]/g, '').trim().slice(0, 14) || d;
+const esc = (s) => String(s ?? '').replace(/[&<>"'`]/g, (c) => `&#${c.charCodeAt(0)};`);
 
 class NetHost {
   constructor(app, match, transport) {
     this.role = 'host'; this.app = app; this.m = match; this.t = transport; this.peers = new Map(); this.snapT = 0; this.tick = 0; this.shots = [];
     match.net = this; match.humans = match.humans || []; match.netSeq = Math.max(match.netSeq || 0, ...match.combatants.map((c) => c.netId || 0));
     transport.onMessage = (from, d) => this._msg(from, d);
-    match.player.name = (app.netOpts && app.netOpts.name) || '房主';
+    transport.onLeave = (peer) => this._drop(peer, '離開了房間');
+    this.onRoster = null; // v26: room list player count
+    match.player.name = (app.netOpts && app.netOpts.name) || Settings.data.nick || '房主';
     transport.send('*', { k: 'host', v: NET_VERSION, room: transport.room });
   }
   _msg(from, d) {
@@ -114,7 +119,9 @@ class NetHost {
     else if (d.k === 'hello') this.t.send(from, { k: 'host', v: NET_VERSION, room: this.t.room });
     else if (d.k === 'leave') this._drop(from, '離開了房間');
     else if (d.k === 'loadout') { const np = this.peers.get(from); if (np) np.nextLoadout = NetPlayer.validLoadout(d); }
+    else if (d.k === 'ping') { this.t.send(from, { k: 'pong', t: d.t }); const np = this.peers.get(from); if (np) np.heardT = this.m.time; }
   }
+  get players() { return 1 + this.peers.size; }
   _balance() { const n = (t) => this.m.combatants.filter((c) => !c.isBot && c.team === t).length; return n('bravo') <= n('alpha') ? 'bravo' : 'alpha'; }
   _join(from, d) {
     if (d.v !== NET_VERSION) { this.t.send(from, { k: 'reject', why: '版本不同，請重新整理頁面' }); return; }
@@ -123,12 +130,13 @@ class NetHost {
       if (m.phase === 'over' || m.rules.roundBased) { this.t.send(from, { k: 'reject', why: m.phase === 'over' ? '對戰已結束' : 'v25 只支援團隊死鬥' }); return; }
       const team = d.team === 'alpha' || d.team === 'bravo' ? d.team : this._balance();
       const bot = m.bots.filter((b) => b.team === team).pop(); if (bot) this._removeBot(bot); // a friend takes a bot's place
-      const np = new NetPlayer(m, team, String(d.name || 'Friend').slice(0, 14), from, d);
+      const np = new NetPlayer(m, team, safeName(d.name, 'Friend'), from, d);
       np.netId = ++m.netSeq; np.heardT = m.time; m.humans.push(np); m.combatants.push(np); this.peers.set(from, np);
       const sp = m.pickSpawn(team); np.respawn(sp, sp.spawnYaw ?? m.spawns[team].yaw);
       m.applyEnvIntensity();
       for (const [peer] of this.peers) if (peer !== from) this.t.send(peer, { k: 'roster', add: this._info(np) });
       this.app.hud.toast(`${np.name} 加入了對戰（${team === 'alpha' ? '藍隊' : '紅隊'}）`);
+      if (this.onRoster) this.onRoster();
     }
     const np = this.peers.get(from), c = m.config;
     this.t.send(from, { k: 'welcome', v: NET_VERSION, you: np.netId, team: np.team, name: np.name, life: np.life, pos: v3arr(np.motor.pos), yaw: np.yaw,
@@ -146,6 +154,7 @@ class NetHost {
     this.peers.delete(peer); np.remove(); m.humans.splice(m.humans.indexOf(np), 1); m.combatants.splice(m.combatants.indexOf(np), 1);
     for (const [p] of this.peers) this.t.send(p, { k: 'roster', remove: np.netId });
     this.app.hud.toast(`${np.name} ${why}`);
+    if (this.onRoster) this.onRoster();
   }
 
   // fixed step: remote humans run their next commands
@@ -183,7 +192,13 @@ class NetClient {
   constructor(app, transport, opts = {}) {
     this.role = 'client'; this.app = app; this.t = transport; this.opts = opts; this.m = null; this.hostId = null; this.ready = false;
     this.ghosts = new Map(); this.hist = new Array(256); this.sent = []; this.stepN = 0; this.lastTick = 0; this.hostClock = null; this.corr = { n: 0, snaps: 0, max: 0 };
+    this.rtt = 0; this.pingT = 0;
     transport.onMessage = (from, d) => this._msg(from, d);
+    transport.onLeave = () => this._hostLost();
+  }
+  _hostLost() {
+    if (this.m && this.m.phase !== 'over') { this.m.app.hud.toast('與房主的連線中斷'); this.m.winner = null; this.m.phase = 'live'; this.m.endMatch(null); }
+    else if (!this.m) this.app.netError('與房主的連線中斷');
   }
   start() {
     const join = () => { if (this.hostId) return; this.t.send('*', { k: 'join', v: NET_VERSION, name: this.opts.name, team: this.opts.team, hipMode: Settings.data.hipMode, ...this._loadout() }); };
@@ -198,6 +213,7 @@ class NetClient {
     if (d.k === 'host' && !this.hostId) { this.t.send(from, { k: 'join', v: NET_VERSION, name: this.opts.name, team: this.opts.team, hipMode: Settings.data.hipMode, ...this._loadout() }); return; }
     if (from !== this.hostId || !this.ready) return;
     const m = this.m;
+    if (d.k === 'pong') { const w = this.rttWin || (this.rttWin = []); w.push(performance.now() - d.t); if (w.length > 5) w.shift(); this.rtt = w.slice().sort((a, b) => a - b)[w.length >> 1]; return; } // median of the last 5: one hitch does not stick
     if (d.k === 'kill') this._kill(d);
     else if (d.k === 'hit') {
       const kind = d.kind; m.app.hud.hitmarker(kind); if (kind !== 'shield') m.stats.hits++;
@@ -271,7 +287,9 @@ class NetClient {
   }
   // per frame: draw everyone at host time − 100 ms
   frame(dt) {
-    if (!this.ready || this.hostClock === null) return;
+    if (!this.ready) return;
+    this.pingT -= dt; if (this.pingT <= 0) { this.pingT = 1; this.t.send(this.hostId, { k: 'ping', t: performance.now() }); }
+    if (this.hostClock === null) return;
     this.hostClock += dt;
     const rt = this.hostClock - NET_INTERP;
     for (const g of this.ghosts.values()) g.update(dt, rt);

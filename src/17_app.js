@@ -47,6 +47,8 @@ class App {
   netBoot() {
     const q = new URLSearchParams(location.search), o = { lag: q.get('lag'), jitter: q.get('jitter'), loss: q.get('loss'), name: q.get('name') };
     this.netOpts = o;
+    this.onlineInit();
+    if (q.get('room')) setTimeout(() => this.netJoinOnline(q.get('room')), 400);
     if (q.get('host')) { this.netHostRoom = q.get('host'); this.$('lbStatus').textContent = `連線房間「${this.netHostRoom}」已開放`; }
     if (q.get('join')) setTimeout(() => this.netJoin(q.get('join'), { ...o, name: q.get('name'), team: q.get('team') }), 300);
   }
@@ -60,6 +62,69 @@ class App {
     return c;
   }
   async startNetMatch(client) { await this.startMatch(client); }
+
+  /* ------------------------------ v26 online: room list, host a room, join by code / link ------------------------------ */
+  onlineInit() {
+    const $ = this.$, S = Settings.data;
+    this.dir = new RoomDirectory(); this.bgTick = new BackgroundTicker(() => this.hiddenTick());
+    const nick = $('lbNick'); nick.value = S.nick || ''; nick.oninput = () => { S.nick = safeName(nick.value, ''); Settings.save(); };
+    const hostOn = $('lbHostOn'); hostOn.checked = !!S.onlineHost; hostOn.onchange = () => { S.onlineHost = hostOn.checked; Settings.save(); this.refreshOnline(); };
+    const code = $('lbCode'), join = () => { if (code.value.length === 5) this.netJoinOnline(code.value); else $('lbNetMsg').textContent = '房間代碼是 5 個英文字母或數字'; };
+    code.oninput = () => { code.value = code.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 5); };
+    code.onkeydown = (e) => { e.stopPropagation(); if (e.key === 'Enter') join(); };
+    nick.onkeydown = (e) => e.stopPropagation();
+    $('lbJoinCode').onclick = join;
+    this.dir.onChange = (rooms) => this.renderRooms(rooms);
+    this.dir.open().then(() => this.renderRooms(this.dir.rooms))
+      .catch(() => { $('lbRooms').innerHTML = '<div class="empty">連不上配對伺服器（需要網路）。單機遊戲不受影響。</div>'; });
+    this.refreshOnline();
+  }
+  refreshOnline() { const S = Settings.data; this.$('lbNetMsg').textContent = S.onlineHost && S.lobby.rule !== 'tdm' ? '線上房間目前只支援「團隊死鬥」：換成其他賽制時不會開放房間' : ''; }
+  renderRooms(rooms) {
+    const el = this.$('lbRooms');
+    if (!rooms.length) { el.innerHTML = '<div class="empty">目前沒有開放的房間。勾選上方「開放線上房間」再按出發，就能把邀請連結傳給朋友。</div>'; return; }
+    el.innerHTML = rooms.map((r) => `<div class="room"><b>${esc(r.code)}</b><span>${esc(safeName(r.host, '房主'))} 的房間 · ${esc(String(r.map).slice(0, 12))} · ${esc(String(r.mode).slice(0, 8))} · ${r.players | 0}/${r.max | 0} 人</span><button class="btn ghost" data-code="${esc(r.code)}">加入</button></div>`).join('');
+    el.querySelectorAll('button[data-code]').forEach((b) => { b.onclick = () => this.netJoinOnline(b.dataset.code); });
+  }
+  // host: after the match is built, open a room for it (drop-in: friends join the running match)
+  async openRoom(m) {
+    const code = roomCode(), t = new RtcHostTransport(code);
+    try { await t.ready; } catch (e) { this.hud.toast('線上房間開啟失敗（需要網路）'); t.close(); return; }
+    if (this.match !== m) { t.close(); return; }
+    const h = new NetHost(this, m, t); m.onlineCode = code;
+    h.onRoster = () => this.dir.update({ players: h.players }).catch(() => {});
+    this.dir.announce({ code, host: m.player.name, map: m.def.name, mode: RULES[m.rule].name, players: h.players, max: ONLINE.maxPlayers }).catch(() => {});
+    this.hud.toast(`線上房間 ${code} 已開放 · 按 ESC 複製邀請連結`);
+    this.bgTick.set(true);
+  }
+  netJoinOnline(code) {
+    code = String(code || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 5);
+    if (code.length !== 5 || (this.state !== 'lobby' && this.state !== 'loading')) return;
+    if (this.netClient) this.netClient.close();
+    const $ = this.$, t = new RtcClientTransport(code), c = this.netClient = new NetClient(this, t, { name: Settings.data.nick || 'Player' + Math.floor(Math.random() * 900 + 100) });
+    $('lobby').classList.remove('on'); $('warehouse').classList.remove('on'); const ld = $('loader'); ld.classList.add('on'); ld.classList.remove('shot');
+    $('ldTitle').firstChild.textContent = 'JOINING'; $('ldSub').textContent = `加入房間 ${code}`; $('ldTip').textContent = '提示：遊戲資料是你和房主的電腦直接連線傳送，房主離開時對戰就會結束'; $('ldSlogan').textContent = 'ONLINE';
+    this.loadShown = 0; this.loadTarget = 0.08; this.loadLabel = '連線中';
+    t.onStatus = (s) => { if (!c.m) { $('ldSub').textContent = s; this.loadLabel = s; this.loadTarget = Math.min(0.3, this.loadTarget + 0.07); } };
+    t.onOpen = () => c.start();
+    t.onError = (why) => this.netError(why);
+    t.start().catch((e) => this.netError('連不上配對伺服器：' + e.message));
+    this.bgTick.set(true);
+    return c;
+  }
+  // hidden tab during an online match: keep simulating (no rendering) so nobody else freezes
+  hiddenTick() {
+    const m = this.match; if (!m || !m.running || !m.net || !document.hidden) return;
+    const now = performance.now(), dt = clamp((now - this.last) / 1000, 0, 0.1); this.last = now;
+    if (this.state === 'playing' || this.state === 'paused') { m.tick(dt, { x: 0, y: 0 }); this.input.endFrame(); }
+  }
+  updatePauseOnline() {
+    const el = this.$('pOnline'), m = this.match, n = m && m.net;
+    if (!n || !(n.t instanceof RtcHostTransport || n.t instanceof RtcClientTransport)) { el.innerHTML = ''; return; }
+    const code = n.t.room, host = n.role === 'host';
+    el.innerHTML = `<b>${host ? '你是房主' : '已連線'}</b><span>房間 <code>${esc(code)}</code></span><span>${host ? n.players + ' 人在線' : 'Ping ' + Math.round(n.rtt) + ' ms'}</span><span style="color:var(--dim)">連線對戰不會暫停</span><button class="btn ghost" id="pCopy">複製邀請連結</button>`;
+    this.$('pCopy').onclick = () => { const link = inviteLink(code); navigator.clipboard.writeText(link).then(() => { this.$('pMsg').textContent = '已複製：' + link; }).catch(() => { this.$('pMsg').textContent = link; }); };
+  }
   netError(why) {
     const $ = this.$; $('ldSub').textContent = '無法加入：' + why; this.loadLabel = '已取消';
     setTimeout(() => { if (this.state === 'lobby' || this.state === 'loading') { $('loader').classList.remove('on'); $('lobby').classList.add('on'); this.state = 'lobby'; } }, 2500);
@@ -142,6 +207,7 @@ class App {
     };
     list('lbListA', 'alpha', L.allies, true); list('lbListB', 'bravo', L.enemies, false);
     Settings.save();
+    if (this.dir) this.refreshOnline();
   }
 
   beginCountdown() {
@@ -177,6 +243,7 @@ class App {
       console.error(e); $('ldStep').textContent = '載入失敗：' + e.message; return;
     }
     if (!net && this.netHostRoom) new NetHost(this, m, new LoopbackTransport(this.netHostRoom, this.netOpts)); // v25: friends in the same browser can join this match
+    else if (!net && Settings.data.onlineHost && cfg.rule === 'tdm') this.openRoom(m); // v26: friends on other computers
     this.audio.setAcoustics(ACOUSTICS[def.acoustics] || ACOUSTICS.outdoor); this.audio.setAmbience(def.ambience);
     // cinematic "screenshot" of the real map behind the loading text
     this.state = 'shot'; this.shotT = 0; ld.classList.add('shot'); this.loadTarget = 1; this.loadLabel = '即將部署';
@@ -200,6 +267,7 @@ class App {
     this.loadShown = 0; this.loadTarget = 1; this.loadLabel = '結算戰績';
     await sleep(900);
     if (this.match) { if (this.match.net) this.match.net.close(); this.match.dispose(); this.match = null; }
+    this.netClient = null; this.bgTick.set(false); this.dir.withdraw().catch(() => {});
     this.audio.setAmbience('none');
     await sleep(700);
     ld.classList.remove('on'); $('lobby').classList.add('on'); $('lbStatus').textContent = '等待中';
@@ -289,7 +357,7 @@ class App {
     inp.onLockChange = (locked, error) => {
       if (error) return; // failed lock request (no user gesture) — the freeze overlay asks for a click instead
       if (locked) { if (this.state === 'paused') { this.$('pause').classList.remove('on'); this.state = 'playing'; this.last = performance.now(); } }
-      else if (this.state === 'playing' && this.match && this.match.phase !== 'over') { this.state = 'paused'; this.$('pause').classList.add('on'); if (this.match) this.match.weapons.trigger = false; this.cmds.reset(); }
+      else if (this.state === 'playing' && this.match && this.match.phase !== 'over') { this.state = 'paused'; this.$('pause').classList.add('on'); if (this.match) this.match.weapons.trigger = false; this.cmds.reset(); this.updatePauseOnline(); }
     };
     this.canvas.addEventListener('click', () => { if (this.state === 'playing' && !inp.locked) inp.lock(); });
     document.getElementById('hud').addEventListener('click', () => { if (this.state === 'playing' && !inp.locked) inp.lock(); });
@@ -352,7 +420,7 @@ class App {
 
   onResize() {
     document.documentElement.style.setProperty('--ui', clamp(innerHeight / 1000, 0.55, 1.3).toFixed(3));
-    document.documentElement.style.setProperty('--lz', clamp(Math.min(innerWidth / 1480, innerHeight / 880), 0.2, 1.4).toFixed(3));
+    document.documentElement.style.setProperty('--lz', clamp(Math.min(innerWidth / 1480, innerHeight / 910), 0.2, 1.4).toFixed(3));
     this.post.setSize();
     if (this.match && this.match.camera) { this.match.camera.aspect = innerWidth / innerHeight; this.match.camera.updateProjectionMatrix(); }
     if (this.match && this.match.weapons) this.match.weapons.onResize();
@@ -557,7 +625,8 @@ class App {
     }
     const m = this.match;
     if (m && m.running) {
-      if (this.state === 'playing') {
+      const netLive = !!m.net && this.state === 'paused' && m.phase !== 'over'; // v26: an online match never pauses — your soldier just stands still
+      if (this.state === 'playing' || netLive) {
         const tt0 = performance.now(); m.tick(dt, mouse); const tt1 = performance.now(); m.prof.add('tick', tt1 - tt0);
         // dynamic resolution: keep the GPU out of overload (prevents hangs / TDR on weaker cards)
         this.frameMs = lerp(this.frameMs, dt * 1000, 0.08); this.dynT += dt; this.busyF++; if (inFlight >= 2) this.busyN++;
@@ -576,7 +645,8 @@ class App {
             else if (this.autoFast >= 20 && i < Q_ORDER.indexOf(this.autoCeil)) { AUTO_Q = Q_ORDER[i + 1]; this.autoFast = 0; this.post.configure(m, AUTO_Q); }
           }
         }
-        this.hud.setFps(`${this.fpsText} · ${this.gpuShort}${this.gpuIntegrated ? '（內顯）' : ''}`, Settings.data.showFps);
+        const nt = m.net && (m.net.t instanceof RtcHostTransport || m.net.t instanceof RtcClientTransport) ? (m.net.role === 'host' ? ` · 房間 ${m.net.t.room} · ${m.net.players} 人` : ` · 房間 ${m.net.t.room} · ${Math.round(m.net.rtt)} ms`) : '';
+        this.hud.setFps(`${this.fpsText} · ${this.gpuShort}${this.gpuIntegrated ? '（內顯）' : ''}${nt}`, Settings.data.showFps || !!nt);
         const st = window.__stats || (window.__stats = { frames: 0, seconds: 0 }); st.frames++; st.seconds += dt; st.avgFps = Math.round(st.frames / Math.max(1e-3, st.seconds)); st.frameMs = +this.frameMs.toFixed(2); st.fps = this.fpsText; st.gpuBusy = this.gpuBusy; st.inflight = this.pacer.hist; st.scale = this.post.scale; st.q = activeQuality(); // tools/check.mjs
         const ring = st.dts || (st.dts = []); ring.push(dt * 1000); if (ring.length > 900) ring.shift(); // frame-time distribution (stutter shows in p99 / max, not in the average)
       }
@@ -589,11 +659,11 @@ class App {
         this.post.render(dt, false);
       } else if (this.state === 'playing' || this.state === 'paused' || this.state === 'ended') {
         // v23: a paused / finished match only redraws ~10×/s — a forgotten paused tab no longer pins the GPU at 100 %
-        const idle = this.state !== 'playing';
+        const idle = this.state !== 'playing' && !netLive;
         if (!idle || now - (this.idleDrawT || 0) > 100) {
           this.idleDrawT = now;
           const showVM = m.player.alive && m.weapons.current.vm.group.visible && this.state !== 'ended';
-          const rt0 = performance.now(); this.post.render(this.state === 'playing' ? dt : 0, showVM); if (m.prof) m.prof.add('render', performance.now() - rt0);
+          const rt0 = performance.now(); this.post.render(this.state === 'playing' || netLive ? dt : 0, showVM); if (m.prof) m.prof.add('render', performance.now() - rt0);
           if (this.state === 'playing') this.pacer.mark();
         }
       }
@@ -606,7 +676,7 @@ try {
   const app = new App();
   window.app = app;
   window.SF2 = { THREE, Settings, MAPS, WEAPON_DEFS, WEAPON_DATABASE, CFG, MODES, RULES, calcDamage, loadoutDefs, LOOK_DEFAULT, resolveLook, CAO }; // debug handle for the console
-  window.SF2net = { NetHost, NetClient, LoopbackTransport, NetCodec, host: (room, o = {}) => new NetHost(app, app.match, new LoopbackTransport(room, o)), join: (room, o = {}) => app.netJoin(room, o) }; // v25 tests
+  window.SF2net = { NetHost, NetClient, LoopbackTransport, NetCodec, RoomDirectory, RtcHostTransport, RtcClientTransport, BackgroundTicker, inviteLink, ONLINE, host: (room, o = {}) => new NetHost(app, app.match, new LoopbackTransport(room, o)), join: (room, o = {}) => app.netJoin(room, o) }; // v25 tests
   window.__gameReady = true;
   document.getElementById('boot').classList.add('done');
 } catch (e) {
