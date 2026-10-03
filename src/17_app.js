@@ -50,7 +50,7 @@ class App {
     const q = new URLSearchParams(location.search), o = { lag: q.get('lag'), jitter: q.get('jitter'), loss: q.get('loss'), name: q.get('name') };
     this.netOpts = o;
     this.dir = new RoomDirectory(); this.bgTick = new BackgroundTicker(() => this.hiddenTick());
-    this.buildHub(); this.buildFriends();
+    this.buildHub(); this.buildFriends(); this.buildChat();
     addEventListener('pagehide', () => this.closeRoom()); // best effort: tell the room right away
     const code = parseCode(q.get('room'));
     if (code) {
@@ -187,7 +187,7 @@ class App {
     if (next && next.id === old.myId) {
       const c = old.cfg, L = Settings.data.lobby;
       if (c) { Object.assign(L, { map: c.map, mode: c.mode, rule: c.rule, difficulty: c.difficulty, allies: c.allies, enemies: c.enemies }); L.ruleCfg[c.rule] = Object.assign({}, c.ruleCfg[c.rule]); Settings.save(); }
-      const r = this.room = new RoomHost(this, { code: old.code, migrate: true, pub: old.pub });
+      const r = this.room = new RoomHost(this, { code: old.code, migrate: true, pub: old.pub }); r.chat = old.chat;
       this.roomToast('房主離開了 · 你成為新的房主');
       r.ready.then(() => { if (this.room === r) this.onRoomChange(r); })
         .catch((e) => { if (this.room !== r) return; if (e.message === 'TAKEN') this._rejoinRoom(old, '連線中斷 · 正在重新連回房間…'); else { r.failed = true; this.onRoomChange(r); } });
@@ -196,7 +196,7 @@ class App {
   }
   _rejoinRoom(old, msg) {
     const r = this.room = new RoomGuest(this, old.code, { team: old.team, rejoin: true });
-    r.members = old.members.filter((m) => !m.host); r.myId = old.myId; r.cfg = old.cfg; // shown while reconnecting
+    r.members = old.members.filter((m) => !m.host); r.myId = old.myId; r.cfg = old.cfg; r.chat = old.chat; // shown while reconnecting
     this.roomToast(msg); r.start();
   }
   // room settings as this player sees them: his own (host / no room) or the host's (guest; his loadout stays his)
@@ -250,6 +250,56 @@ class App {
     if (!r || !r.online) { el.innerHTML = ''; return; }
     el.innerHTML = `<b>${r.role === 'host' ? '你是房主' : '連線中'}</b><span>房間 <code>${fmtCode(r.code)}</code></span><span>${host ? m.net.players + ' 人在對戰中' : m && m.net && m.net.rtt ? 'Ping ' + Math.round(m.net.rtt) + ' ms' : ''}</span>${shared ? '<span style="color:var(--dim)">連線對戰不會暫停</span>' : ''}<button class="btn ghost" id="pCopy">複製邀請連結</button>`;
     $('pCopy').onclick = () => { const link = inviteLink(r.code); this.copyText(link, (ok) => { $('pMsg').textContent = ok ? '已複製邀請連結：' + link : link; }); };
+  }
+
+  /* ------------------------------ v31 chat: room panel + in-match (Enter) ------------------------------ */
+  buildChat() {
+    const $ = this.$;
+    this.chatTeam = false; this.chatOpen = false;
+    const send = (inp, team) => { const r = this.room; if (r && inp.value.trim() && r.say(inp.value, team)) inp.value = ''; };
+    const li = $('lbChatIn');
+    li.onkeydown = (e) => { e.stopPropagation(); if (e.key === 'Enter') send(li, this.chatTeam); else if (e.key === 'Tab') { e.preventDefault(); this.setChatTeam(!this.chatTeam); } };
+    $('lbChatMode').onclick = () => { this.setChatTeam(!this.chatTeam); li.focus(); };
+    $('lbChatSend').onclick = () => send(li, this.chatTeam);
+    const gi = $('chatInput');
+    gi.onkeydown = (e) => {
+      e.stopPropagation();
+      if (e.key === 'Enter') { send(gi, this.chatTeam); this.closeChat(); }
+      else if (e.key === 'Escape') this.closeChat();
+      else if (e.key === 'Tab') { e.preventDefault(); this.setChatTeam(!this.chatTeam); }
+    };
+    gi.onkeyup = (e) => e.stopPropagation();
+    li.onkeyup = (e) => e.stopPropagation();
+    this.setChatTeam(false);
+  }
+  setChatTeam(on) { this.chatTeam = !!on; for (const id of ['lbChatMode', 'chatMode']) { const b = this.$(id); b.textContent = on ? '隊伍' : '全體'; b.classList.toggle('team', on); } }
+  _chatLine(m) {
+    const d = document.createElement('div'); d.className = 'cl' + (m.sys ? ' sys' : '') + (m.tm ? ' tm' : '');
+    if (m.sys) { d.textContent = m.t; return d; }
+    const n = document.createElement('b'); n.className = (m.me ? 'me ' : '') + (m.c || ''); n.textContent = (m.tm ? '[隊伍] ' : '') + m.n + '：';
+    const t = document.createElement('span'); t.textContent = m.t; d.append(n, t); return d;
+  }
+  renderChat() {
+    const r = this.room, log = this.$('lbChatLog'), on = !!(r && r.online);
+    log.replaceChildren(...(r ? r.chat : []).slice(-40).map((m) => this._chatLine(m)));
+    if (!log.children.length) { const e = document.createElement('div'); e.className = 'cl sys'; e.textContent = on ? '房間裡的人都看得到這裡的訊息 · 對戰中按 Enter 聊天' : '朋友進房後就能在這裡聊天'; log.append(e); }
+    log.scrollTop = log.scrollHeight; this.$('lbChatIn').disabled = !on;
+  }
+  onChat(r, m) {
+    if (r !== this.room) return;
+    if (this.state === 'lobby' || this.state === 'countdown') { this.renderChat(); if (!m.me && !m.sys) try { this.audio.uiClick(); } catch (e) { /* audio locked */ } }
+    const box = this.$('chatlog'), el = this._chatLine(m); el.dataset.t = performance.now(); box.append(el);
+    while (box.children.length > 8) box.firstChild.remove();
+    setTimeout(() => el.classList.add('old'), 9000); // in a match a line fades after 9 s (all of them show while typing)
+  }
+  openChat(team = false) {
+    if (!this.room || !this.room.online || this.chatOpen) return;
+    this.chatOpen = true; this.setChatTeam(team); this.input.keys.clear(); this.cmds.reset();
+    this.$('chatbox').classList.add('open'); const gi = this.$('chatInput'); gi.value = ''; setTimeout(() => gi.focus(), 0);
+  }
+  closeChat() {
+    if (!this.chatOpen) return;
+    this.chatOpen = false; this.input.keys.clear(); const gi = this.$('chatInput'); gi.blur(); this.$('chatbox').classList.remove('open');
   }
 
   /* ------------------------------ v28 friends: panel, invites, join a friend ------------------------------ */
@@ -440,7 +490,7 @@ class App {
     $('lbLoadoutInfo').textContent = `配裝 ${LOADOUT_KEYS[L.loadout]}：${WEAPON_DEFS[lo.primary].name} + ${WEAPON_DEFS[lo.secondary].name}`;
     [...$('lbLoadout').children].forEach((b, i) => { b.title = `配裝 ${LOADOUT_KEYS[i]} · 對戰中按 F${i + 1}`; });
     $('lbAllies').textContent = L.allies; $('lbEnemies').textContent = L.enemies;
-    this.renderTeams(L); this.renderRoomBar(L);
+    this.renderTeams(L); this.renderRoomBar(L); this.renderChat();
     if (!guest) Settings.save();
     if (r && r.role === 'host') r.broadcast();
   }
@@ -569,7 +619,7 @@ class App {
     else { this.showHub(this.pendingMsg || ''); this.pendingMsg = ''; }
   }
   _teardownMatch() {
-    const $ = this.$; clearInterval(this.endTimer);
+    const $ = this.$; clearInterval(this.endTimer); this.closeChat(); $('chatlog').replaceChildren();
     for (const id of ['endscreen', 'pause', 'settings', 'lbCount']) $(id).classList.remove('on');
     this.input.unlock(); this.hud.show(false);
     if (this.match) { if (this.match.net) this.match.net.close(); this.match.dispose(); this.match = null; }
@@ -651,6 +701,7 @@ class App {
       }
       const fk = /^F([1-5])$/.exec(code);
       if (fk && m && (this.state === 'playing' || this.state === 'paused')) { m.queueLoadout(parseInt(fk[1], 10) - 1); return; } // works while dead too
+      if (this.state === 'playing' && m && (code === 'Enter' || code === 'NumpadEnter') && this.room && this.room.online) { this.openChat(false); return; } // v31: chat (Tab in the box: team only)
       if (this.state !== 'playing' || !m || !m.player.alive) return;
       const C = this.cmds, dg = /^Digit([1-9])$/.exec(code);
       if (code === 'Space') C.press(BTN.JUMP);
@@ -663,7 +714,7 @@ class App {
     inp.onLockChange = (locked, error) => {
       if (error) return; // failed lock request (no user gesture) — the freeze overlay asks for a click instead
       if (locked) { if (this.state === 'paused') { this.$('pause').classList.remove('on'); this.state = 'playing'; this.last = performance.now(); } }
-      else if (this.state === 'playing' && this.match && this.match.phase !== 'over') { this.state = 'paused'; this.$('pause').classList.add('on'); if (this.match) this.match.weapons.trigger = false; this.cmds.reset(); this.updatePauseOnline(); }
+      else if (this.state === 'playing' && this.match && this.match.phase !== 'over') { this.closeChat(); this.state = 'paused'; this.$('pause').classList.add('on'); if (this.match) this.match.weapons.trigger = false; this.cmds.reset(); this.updatePauseOnline(); }
     };
     this.canvas.addEventListener('click', () => { if (this.state === 'playing' && !inp.locked) inp.lock(); });
     document.getElementById('hud').addEventListener('click', () => { if (this.state === 'playing' && !inp.locked) inp.lock(); });

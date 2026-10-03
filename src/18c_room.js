@@ -7,7 +7,13 @@
    · When the host leaves the room, the member who joined first opens the same code as the new host and the others
      reconnect to him. A match in progress ends for everyone (nobody else has its state).
    ===================================================================== */
-const ROOM_KEYS = new Set(['rhello', 'rwelcome', 'rreject', 'rstate', 'rteam', 'rst', 'rleave', 'rcount', 'rcancel', 'rgo']);
+const ROOM_KEYS = new Set(['rhello', 'rwelcome', 'rreject', 'rstate', 'rteam', 'rst', 'rleave', 'rcount', 'rcancel', 'rgo', 'rchat']);
+// v31 chat: { n name, c team colour, t text, tm team-only, sys system line } — text is shown with textContent only
+const chatText = (t) => String(t ?? '').replace(/[\u0000-\u001f\u007f\u2028\u2029]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 120);
+function chatSafe(m) {
+  if (!m || typeof m !== 'object') return null; const t = chatText(m.t); if (!t) return null;
+  return { n: m.sys ? '' : safeName(m.n, '玩家'), c: m.c === 'bravo' ? 'bravo' : m.c === 'alpha' ? 'alpha' : null, t, tm: !!m.tm, sys: !!m.sys };
+}
 const ROOM_ST = { room: 'READY', loading: '載入中', playing: '對戰中', ended: '結算中' };
 
 // the room's settings as the host sends them, and as a member accepts them (a broken or hostile value can never reach Match)
@@ -37,8 +43,9 @@ class RoomLink {
 class RoomSession {
   constructor(app, code) {
     this.app = app; this.code = code; this.members = []; this.cfg = null; this.mcfg = null; this.phase = 'room';
-    this.t = null; this.link = null; this.online = false; this.closed = false; this.pub = false; this.myId = null;
+    this.t = null; this.link = null; this.online = false; this.closed = false; this.pub = false; this.myId = null; this.chat = [];
   }
+  _addChat(m) { this.chat.push(m); if (this.chat.length > 60) this.chat.shift(); this.app.onChat(this, m); }
   _route(from, d) {
     if (d && !(d instanceof ArrayBuffer) && ROOM_KEYS.has(d.k)) { try { this._room(from, d); } catch (e) { console.warn('[room]', e); } }
     else if (this.link && this.link.onMessage) this.link.onMessage(from, d);
@@ -76,6 +83,10 @@ class RoomHost extends RoomSession {
   _room(from, d) {
     if (d.k === 'rhello') { this._hello(from, d); return; }
     const m = this.members.find((x) => x.id === from); if (!m) return;
+    if (d.k === 'rchat') { // one line per 0.4 s per player; the host re-sends it (team lines only to that team)
+      const now = performance.now(), t = chatText(d.t); if (!t || now - (m.chatT || 0) < 400) return; m.chatT = now;
+      this._deliver({ n: m.name, c: m.team, t, tm: !!d.tm, sys: false }, from); return;
+    }
     if (d.k === 'rteam') { if (this.phase === 'room' && (d.team === 'alpha' || d.team === 'bravo') && m.team !== d.team) { m.team = d.team; this._changed(); } }
     else if (d.k === 'rst') { if (Object.prototype.hasOwnProperty.call(ROOM_ST, d.st) && m.st !== d.st) { m.st = d.st; this._changed(); } }
     else if (d.k === 'rleave') this._remove(from, '離開了房間');
@@ -88,15 +99,23 @@ class RoomHost extends RoomSession {
       // friends land on the host's team (play together against bots); one click on the other team switches
       const team = d.team === 'alpha' || d.team === 'bravo' ? d.team : this.humans('alpha').length < Math.max(2, Settings.data.lobby.allies) ? 'alpha' : 'bravo';
       m = { id: from, name: safeName(d.name, '朋友'), team, host: false, st: 'room', order: this.order++ };
-      this.members.push(m); this.app.roomToast(`${m.name} 進入了房間`);
+      this.members.push(m); this.app.roomToast(`${m.name} 進入了房間`); this.sys(`${m.name} 進入了房間`, from);
     }
-    this.t.send(from, { k: 'rwelcome', you: from, ...this._state() });
+    this.t.send(from, { k: 'rwelcome', you: from, ...this._state(), chat: this.chat.filter((x) => !x.tm).slice(-15) });
     this._changed();
   }
   _remove(id, why) {
     const i = this.members.findIndex((x) => x.id === id); if (i < 1) return;
-    const [m] = this.members.splice(i, 1); this.app.roomToast(`${m.name} ${why}`); this._changed();
+    const [m] = this.members.splice(i, 1); this.app.roomToast(`${m.name} ${why}`); this.sys(`${m.name} ${why}`); this._changed();
   }
+  // a chat line for everyone it is meant for (not back to its sender — he showed it already)
+  _deliver(msg, except = null) {
+    const host = this.members[0];
+    if (!msg.tm || msg.c === host.team || except === 'host') { if (except !== 'host') this._addChat(msg); }
+    if (this.t) for (const m of this.members) if (m.id !== 'host' && m.id !== except && (!msg.tm || m.team === msg.c)) this.t.send(m.id, { k: 'rchat', ...msg });
+  }
+  say(text, team = false) { const t = chatText(text); if (!t) return false; const me = this.members[0]; this._addChat({ n: me.name, c: me.team, t, tm: team, sys: false, me: true }); this._deliver({ n: me.name, c: me.team, t, tm: team, sys: false }, 'host'); return true; }
+  sys(text, except = null) { this._deliver({ n: '', c: null, t: chatText(text), tm: false, sys: true }, except); }
   _state() { return { code: this.code, phase: this.phase, cfg: roomCfgOut(), mcfg: this.mcfg, members: this.members, pub: this.pub }; }
   // something changed: tell the members (one message per burst of changes) and redraw the room
   _changed() { this.broadcast(); this.app.onRoomChange(this); }
@@ -142,6 +161,7 @@ class RoomGuest extends RoomSession {
   _room(from, d) {
     if (d.k === 'rwelcome') {
       this.myId = String(d.you); this._apply(d);
+      if (Array.isArray(d.chat) && !this.chat.length) for (const x of d.chat.slice(-15)) { const m = chatSafe(x); if (m) this.chat.push(m); }
       if (!this.entered) { this.entered = true; clearTimeout(this.wT); this.app.onRoomEnter(this); }
       return;
     }
@@ -151,6 +171,7 @@ class RoomGuest extends RoomSession {
     else if (d.k === 'rcount') this.app.guestCountdown(true);
     else if (d.k === 'rcancel') this.app.guestCountdown(false);
     else if (d.k === 'rgo') { this.phase = 'playing'; this.mcfg = roomCfgSafe(d.cfg); this.app.startGuestMatch(); }
+    else if (d.k === 'rchat') { const m = chatSafe(d); if (m) this._addChat(m); }
   }
   _apply(d) {
     this.code = parseCode(d.code) || this.code; this.phase = d.phase === 'playing' ? 'playing' : 'room'; this.pub = !!d.pub;
@@ -160,6 +181,10 @@ class RoomGuest extends RoomSession {
     const me = this.me; if (me) this.team = me.team;
   }
   setTeam(team) { if (this.t && this.phase === 'room') this.t.send('host', { k: 'rteam', team }); }
+  say(text, team = false) {
+    const t = chatText(text), me = this.me; if (!t || !this.t || !this.online || !this.entered) return false;
+    this.t.send('host', { k: 'rchat', t, tm: team }); this._addChat({ n: me ? me.name : safeName(Settings.data.nick), c: this.team, t, tm: team, sys: false, me: true }); return true;
+  }
   status(st) { const me = this.me; if (me) me.st = st; if (this.t && this.online && !this.closed) this.t.send('host', { k: 'rst', st }); }
   leave() {
     if (this.closed) return; this.closed = true; this.dropLink(); clearTimeout(this.wT);

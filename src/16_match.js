@@ -733,7 +733,7 @@ class Match {
     this.acc += dt; let steps = 0;
     while (this.acc >= h && steps < 14) {
       // v25: one UserCmd per fixed step drives the local player's movement AND weapons (the host steps remote humans the same way)
-      const cmd = this.app.cmds.build(p, this.weapons, true);
+      const cmd = this.app.cmds.build(p, this.weapons, !this.app.chatOpen); // v31: typing a chat line → the soldier stands still
       p.fixedUpdate(h, cmd);
       this.weapons.tick(h, cmd);
       if ((cmd.btn & BTN.INTERACT) && p.alive && this.canMove()) this.onInteract();

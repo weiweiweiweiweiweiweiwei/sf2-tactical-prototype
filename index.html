@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SF2 Tactical Prototype v30</title>
+<title>SF2 Tactical Prototype v31</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Teko:wght@300;400;500;600&family=Rajdhani:wght@500;600;700&family=Noto+Sans+TC:wght@500;700&display=swap" rel="stylesheet">
@@ -183,7 +183,25 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
 .lb-room b{color:var(--hud)}
 .lb-main{display:grid;grid-template-columns:1fr 470px;gap:18px;height:760px;padding-top:16px;align-items:start} /* v26: 860-high design (right column ~750) */
 /* v27 room bar: code, room name, ＋ 邀請朋友 pop-up, 離開房間 */
-.lb-left{height:744px}
+.lb-left{height:744px;display:flex;flex-direction:column;gap:12px}.lb-left .lb-teams{flex:none}
+/* v31 chat — room panel under the team lists, and the in-match box (bottom left, above the health) */
+.lb-chat{flex:1;min-height:0;display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:8px 10px 10px}
+#lbChatLog{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:2px;padding:2px 4px 6px}
+.cl{font-size:15px;line-height:1.45;color:var(--hud);word-break:break-word;user-select:text;-webkit-user-select:text}.cl b{font-weight:700;margin-right:2px}
+.cl b.alpha{color:var(--blue)}.cl b.bravo{color:var(--red)}.cl b.me{text-decoration:underline;text-underline-offset:3px}.cl.tm span{color:#bfe9ff}.cl.sys{color:var(--faint);font-size:13px}
+.ci{display:flex;gap:8px;align-items:center}
+#lbChatIn{flex:1;min-width:0;height:34px;font:15px var(--font);color:var(--hud);background:#060908;border:1px solid rgba(255,255,255,.16);border-radius:4px;padding:0 10px;user-select:text;-webkit-user-select:text}
+#lbChatIn:focus{outline:none;border-color:var(--accent)}#lbChatIn:disabled{opacity:.45}
+#lbChatMode{padding:6px 12px;font-size:14px;letter-spacing:1px}#lbChatMode.team,#chatMode.team{color:#7fd0ff;border-color:#7fd0ff}
+#lbChatSend{padding:7px 14px;font-size:14px;letter-spacing:2px}
+#chatbox{position:absolute;left:18px;bottom:150px;width:460px;display:flex;flex-direction:column;gap:6px;pointer-events:none;z-index:3} /* above the freeze blur: the countdown is a good time to talk */
+#chatlog{display:flex;flex-direction:column;gap:2px}
+#chatlog .cl{font-size:16px;text-shadow:0 1px 2px #000,0 0 6px rgba(0,0,0,.8);transition:opacity .6s}
+#chatlog .cl.old{opacity:0}#chatbox.open #chatlog .cl.old{opacity:.85}
+#chatbox .ci{display:none;pointer-events:auto;background:rgba(0,0,0,.6);border:1px solid rgba(125,255,166,.45);border-radius:4px;padding:4px 6px}
+#chatbox.open .ci{display:flex}
+#chatMode{font-size:13px;font-weight:700;letter-spacing:1px;padding:3px 8px;border:1px solid rgba(255,255,255,.3);border-radius:3px;color:var(--hud)}
+#chatInput{flex:1;min-width:0;height:28px;font:16px var(--font);color:#fff;background:transparent;border:none;outline:none;user-select:text;-webkit-user-select:text}
 .lb-room #lbCodeTxt{font-family:Consolas,monospace;font-weight:700;color:var(--accent);letter-spacing:3px;margin-right:4px}
 .lb-room .rmk{font-size:12px;letter-spacing:3px;color:var(--faint);margin-right:6px}
 .inv{position:relative}
@@ -309,8 +327,8 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
 .stepper button{width:30px;height:30px;border-radius:3px;border:1px solid rgba(255,255,255,.25);background:rgba(0,0,0,.35);color:#fff;font-size:18px;cursor:pointer}
 .stepper button:hover{border-color:var(--accent);color:var(--accent)}
 .stepper b{min-width:28px;text-align:center;font-size:20px!important;color:#fff!important;letter-spacing:0!important}
-.team-col ol{list-style:none;padding:6px;max-height:630px;overflow-y:auto}
-.team-col li{display:flex;align-items:center;gap:10px;height:44px;padding:0 10px;margin:3px 0;border-radius:3px;background:rgba(255,255,255,.035);font-size:17px;font-weight:600}
+.team-col ol{list-style:none;padding:5px 6px;max-height:440px;overflow-y:auto}
+.team-col li{display:flex;align-items:center;gap:10px;height:33px;padding:0 10px;margin:2px 0;border-radius:3px;background:rgba(255,255,255,.035);font-size:16px;font-weight:600}
 .team-col li .n{width:22px;color:var(--faint);font-size:14px}
 .team-col li .rank{width:24px;height:24px;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700}
 .team-col.a li .rank{background:rgba(99,179,255,.2);color:var(--blue)}.team-col.b li .rank{background:rgba(255,93,82,.2);color:var(--red)}
@@ -612,6 +630,7 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
     <div id="objBar"></div><div id="lockout"></div>
     <div id="capture"><div class="cring" id="capRing"><b id="capLetter"></b></div><div class="lbl" id="capLbl"></div></div>
     <div id="interact"></div><div id="toast"></div>
+    <div id="chatbox"><div id="chatlog"></div><div class="ci"><span id="chatMode">全體</span><input type="text" id="chatInput" maxlength="120" autocomplete="off" spellcheck="false" placeholder="Enter 送出 · Tab 切換全體／隊伍 · Esc 取消"></div></div>
     <div id="timerBot"><i></i><b id="timerBotT">15:00</b><i></i></div>
     <div id="killfeed"></div>
     <div id="announce"><div class="m" id="annMain"></div><div class="s" id="annSub"></div></div>
@@ -649,7 +668,7 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
 <!-- HUB (v27 大廳): create a room, or join one -->
 <div id="hub" class="screen on"><div class="hbz">
   <div class="lb-top">
-    <div class="lb-brand">SPECIAL FORCE <span>2</span><small>TACTICAL PROTOTYPE · v30</small></div>
+    <div class="lb-brand">SPECIAL FORCE <span>2</span><small>TACTICAL PROTOTYPE · v31</small></div>
     <div class="lb-room"><span class="rmk">LOBBY</span><b>大廳</b> · 配對伺服器 <span id="hubNet">連線中…</span></div>
     <label class="hub-nick">暱稱<input type="text" id="hubNick" maxlength="12" placeholder="你的名字" autocomplete="off" spellcheck="false"></label>
     <button class="btn ghost" id="hubFriends" title="好友名單、加好友">👥 好友</button>
@@ -690,7 +709,7 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
 <!-- ROOM (the room you created or joined) -->
 <div id="lobby" class="screen"><div class="lbz">
   <div class="lb-top">
-    <div class="lb-brand">SPECIAL FORCE <span>2</span><small>TACTICAL PROTOTYPE · v30</small></div>
+    <div class="lb-brand">SPECIAL FORCE <span>2</span><small>TACTICAL PROTOTYPE · v31</small></div>
     <div class="lb-room"><span class="rmk">ROOM</span><span id="lbCodeTxt">——— ———</span> · <b id="lbRoomName">單機練習房</b> · <span id="lbStatus">等待中</span></div>
     <div class="inv"><button class="btn" id="lbInvite" title="邀請朋友加入這個房間">＋ 邀請朋友</button>
       <div class="inv-pop" id="lbInvPop">
@@ -715,7 +734,9 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
       <div class="team-col b"><header><b>紅隊 BRAVO</b><span id="lbEnemyLbl"></span><button class="btn ghost tsw" id="lbJoinB" style="display:none">換到紅隊</button>
         <div class="stepper"><button data-step="enemies" data-d="-1">−</button><b id="lbEnemies">6</b><button data-step="enemies" data-d="1">+</button></div></header>
         <ol id="lbListB"></ol></div>
-    </section></div>
+    </section>
+    <section class="lb-chat"><div id="lbChatLog"></div>
+      <div class="ci"><button class="btn ghost" id="lbChatMode" title="Tab：切換全體／隊伍">全體</button><input type="text" id="lbChatIn" maxlength="120" autocomplete="off" spellcheck="false" placeholder="輸入訊息，Enter 送出"><button class="btn" id="lbChatSend">送出</button></div></section></div>
     <aside class="lb-side">
       <div class="hostonly"><h3>地圖 MAP</h3>
         <div class="mapPrev"><canvas id="lbMapBig" width="880" height="330"></canvas><div class="info"><b id="lbMapName"></b><span id="lbMapDesc"></span></div></div>
@@ -9970,7 +9991,7 @@ class Match {
     this.acc += dt; let steps = 0;
     while (this.acc >= h && steps < 14) {
       // v25: one UserCmd per fixed step drives the local player's movement AND weapons (the host steps remote humans the same way)
-      const cmd = this.app.cmds.build(p, this.weapons, true);
+      const cmd = this.app.cmds.build(p, this.weapons, !this.app.chatOpen); // v31: typing a chat line → the soldier stands still
       p.fixedUpdate(h, cmd);
       this.weapons.tick(h, cmd);
       if ((cmd.btn & BTN.INTERACT) && p.alive && this.canMove()) this.onInteract();
@@ -10667,7 +10688,13 @@ class BackgroundTicker {
    · When the host leaves the room, the member who joined first opens the same code as the new host and the others
      reconnect to him. A match in progress ends for everyone (nobody else has its state).
    ===================================================================== */
-const ROOM_KEYS = new Set(['rhello', 'rwelcome', 'rreject', 'rstate', 'rteam', 'rst', 'rleave', 'rcount', 'rcancel', 'rgo']);
+const ROOM_KEYS = new Set(['rhello', 'rwelcome', 'rreject', 'rstate', 'rteam', 'rst', 'rleave', 'rcount', 'rcancel', 'rgo', 'rchat']);
+// v31 chat: { n name, c team colour, t text, tm team-only, sys system line } — text is shown with textContent only
+const chatText = (t) => String(t ?? '').replace(/[\u0000-\u001f\u007f\u2028\u2029]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 120);
+function chatSafe(m) {
+  if (!m || typeof m !== 'object') return null; const t = chatText(m.t); if (!t) return null;
+  return { n: m.sys ? '' : safeName(m.n, '玩家'), c: m.c === 'bravo' ? 'bravo' : m.c === 'alpha' ? 'alpha' : null, t, tm: !!m.tm, sys: !!m.sys };
+}
 const ROOM_ST = { room: 'READY', loading: '載入中', playing: '對戰中', ended: '結算中' };
 
 // the room's settings as the host sends them, and as a member accepts them (a broken or hostile value can never reach Match)
@@ -10697,8 +10724,9 @@ class RoomLink {
 class RoomSession {
   constructor(app, code) {
     this.app = app; this.code = code; this.members = []; this.cfg = null; this.mcfg = null; this.phase = 'room';
-    this.t = null; this.link = null; this.online = false; this.closed = false; this.pub = false; this.myId = null;
+    this.t = null; this.link = null; this.online = false; this.closed = false; this.pub = false; this.myId = null; this.chat = [];
   }
+  _addChat(m) { this.chat.push(m); if (this.chat.length > 60) this.chat.shift(); this.app.onChat(this, m); }
   _route(from, d) {
     if (d && !(d instanceof ArrayBuffer) && ROOM_KEYS.has(d.k)) { try { this._room(from, d); } catch (e) { console.warn('[room]', e); } }
     else if (this.link && this.link.onMessage) this.link.onMessage(from, d);
@@ -10736,6 +10764,10 @@ class RoomHost extends RoomSession {
   _room(from, d) {
     if (d.k === 'rhello') { this._hello(from, d); return; }
     const m = this.members.find((x) => x.id === from); if (!m) return;
+    if (d.k === 'rchat') { // one line per 0.4 s per player; the host re-sends it (team lines only to that team)
+      const now = performance.now(), t = chatText(d.t); if (!t || now - (m.chatT || 0) < 400) return; m.chatT = now;
+      this._deliver({ n: m.name, c: m.team, t, tm: !!d.tm, sys: false }, from); return;
+    }
     if (d.k === 'rteam') { if (this.phase === 'room' && (d.team === 'alpha' || d.team === 'bravo') && m.team !== d.team) { m.team = d.team; this._changed(); } }
     else if (d.k === 'rst') { if (Object.prototype.hasOwnProperty.call(ROOM_ST, d.st) && m.st !== d.st) { m.st = d.st; this._changed(); } }
     else if (d.k === 'rleave') this._remove(from, '離開了房間');
@@ -10748,15 +10780,23 @@ class RoomHost extends RoomSession {
       // friends land on the host's team (play together against bots); one click on the other team switches
       const team = d.team === 'alpha' || d.team === 'bravo' ? d.team : this.humans('alpha').length < Math.max(2, Settings.data.lobby.allies) ? 'alpha' : 'bravo';
       m = { id: from, name: safeName(d.name, '朋友'), team, host: false, st: 'room', order: this.order++ };
-      this.members.push(m); this.app.roomToast(`${m.name} 進入了房間`);
+      this.members.push(m); this.app.roomToast(`${m.name} 進入了房間`); this.sys(`${m.name} 進入了房間`, from);
     }
-    this.t.send(from, { k: 'rwelcome', you: from, ...this._state() });
+    this.t.send(from, { k: 'rwelcome', you: from, ...this._state(), chat: this.chat.filter((x) => !x.tm).slice(-15) });
     this._changed();
   }
   _remove(id, why) {
     const i = this.members.findIndex((x) => x.id === id); if (i < 1) return;
-    const [m] = this.members.splice(i, 1); this.app.roomToast(`${m.name} ${why}`); this._changed();
+    const [m] = this.members.splice(i, 1); this.app.roomToast(`${m.name} ${why}`); this.sys(`${m.name} ${why}`); this._changed();
   }
+  // a chat line for everyone it is meant for (not back to its sender — he showed it already)
+  _deliver(msg, except = null) {
+    const host = this.members[0];
+    if (!msg.tm || msg.c === host.team || except === 'host') { if (except !== 'host') this._addChat(msg); }
+    if (this.t) for (const m of this.members) if (m.id !== 'host' && m.id !== except && (!msg.tm || m.team === msg.c)) this.t.send(m.id, { k: 'rchat', ...msg });
+  }
+  say(text, team = false) { const t = chatText(text); if (!t) return false; const me = this.members[0]; this._addChat({ n: me.name, c: me.team, t, tm: team, sys: false, me: true }); this._deliver({ n: me.name, c: me.team, t, tm: team, sys: false }, 'host'); return true; }
+  sys(text, except = null) { this._deliver({ n: '', c: null, t: chatText(text), tm: false, sys: true }, except); }
   _state() { return { code: this.code, phase: this.phase, cfg: roomCfgOut(), mcfg: this.mcfg, members: this.members, pub: this.pub }; }
   // something changed: tell the members (one message per burst of changes) and redraw the room
   _changed() { this.broadcast(); this.app.onRoomChange(this); }
@@ -10802,6 +10842,7 @@ class RoomGuest extends RoomSession {
   _room(from, d) {
     if (d.k === 'rwelcome') {
       this.myId = String(d.you); this._apply(d);
+      if (Array.isArray(d.chat) && !this.chat.length) for (const x of d.chat.slice(-15)) { const m = chatSafe(x); if (m) this.chat.push(m); }
       if (!this.entered) { this.entered = true; clearTimeout(this.wT); this.app.onRoomEnter(this); }
       return;
     }
@@ -10811,6 +10852,7 @@ class RoomGuest extends RoomSession {
     else if (d.k === 'rcount') this.app.guestCountdown(true);
     else if (d.k === 'rcancel') this.app.guestCountdown(false);
     else if (d.k === 'rgo') { this.phase = 'playing'; this.mcfg = roomCfgSafe(d.cfg); this.app.startGuestMatch(); }
+    else if (d.k === 'rchat') { const m = chatSafe(d); if (m) this._addChat(m); }
   }
   _apply(d) {
     this.code = parseCode(d.code) || this.code; this.phase = d.phase === 'playing' ? 'playing' : 'room'; this.pub = !!d.pub;
@@ -10820,6 +10862,10 @@ class RoomGuest extends RoomSession {
     const me = this.me; if (me) this.team = me.team;
   }
   setTeam(team) { if (this.t && this.phase === 'room') this.t.send('host', { k: 'rteam', team }); }
+  say(text, team = false) {
+    const t = chatText(text), me = this.me; if (!t || !this.t || !this.online || !this.entered) return false;
+    this.t.send('host', { k: 'rchat', t, tm: team }); this._addChat({ n: me ? me.name : safeName(Settings.data.nick), c: this.team, t, tm: team, sys: false, me: true }); return true;
+  }
   status(st) { const me = this.me; if (me) me.st = st; if (this.t && this.online && !this.closed) this.t.send('host', { k: 'rst', st }); }
   leave() {
     if (this.closed) return; this.closed = true; this.dropLink(); clearTimeout(this.wT);
@@ -10976,7 +11022,7 @@ class App {
     const q = new URLSearchParams(location.search), o = { lag: q.get('lag'), jitter: q.get('jitter'), loss: q.get('loss'), name: q.get('name') };
     this.netOpts = o;
     this.dir = new RoomDirectory(); this.bgTick = new BackgroundTicker(() => this.hiddenTick());
-    this.buildHub(); this.buildFriends();
+    this.buildHub(); this.buildFriends(); this.buildChat();
     addEventListener('pagehide', () => this.closeRoom()); // best effort: tell the room right away
     const code = parseCode(q.get('room'));
     if (code) {
@@ -11113,7 +11159,7 @@ class App {
     if (next && next.id === old.myId) {
       const c = old.cfg, L = Settings.data.lobby;
       if (c) { Object.assign(L, { map: c.map, mode: c.mode, rule: c.rule, difficulty: c.difficulty, allies: c.allies, enemies: c.enemies }); L.ruleCfg[c.rule] = Object.assign({}, c.ruleCfg[c.rule]); Settings.save(); }
-      const r = this.room = new RoomHost(this, { code: old.code, migrate: true, pub: old.pub });
+      const r = this.room = new RoomHost(this, { code: old.code, migrate: true, pub: old.pub }); r.chat = old.chat;
       this.roomToast('房主離開了 · 你成為新的房主');
       r.ready.then(() => { if (this.room === r) this.onRoomChange(r); })
         .catch((e) => { if (this.room !== r) return; if (e.message === 'TAKEN') this._rejoinRoom(old, '連線中斷 · 正在重新連回房間…'); else { r.failed = true; this.onRoomChange(r); } });
@@ -11122,7 +11168,7 @@ class App {
   }
   _rejoinRoom(old, msg) {
     const r = this.room = new RoomGuest(this, old.code, { team: old.team, rejoin: true });
-    r.members = old.members.filter((m) => !m.host); r.myId = old.myId; r.cfg = old.cfg; // shown while reconnecting
+    r.members = old.members.filter((m) => !m.host); r.myId = old.myId; r.cfg = old.cfg; r.chat = old.chat; // shown while reconnecting
     this.roomToast(msg); r.start();
   }
   // room settings as this player sees them: his own (host / no room) or the host's (guest; his loadout stays his)
@@ -11176,6 +11222,56 @@ class App {
     if (!r || !r.online) { el.innerHTML = ''; return; }
     el.innerHTML = `<b>${r.role === 'host' ? '你是房主' : '連線中'}</b><span>房間 <code>${fmtCode(r.code)}</code></span><span>${host ? m.net.players + ' 人在對戰中' : m && m.net && m.net.rtt ? 'Ping ' + Math.round(m.net.rtt) + ' ms' : ''}</span>${shared ? '<span style="color:var(--dim)">連線對戰不會暫停</span>' : ''}<button class="btn ghost" id="pCopy">複製邀請連結</button>`;
     $('pCopy').onclick = () => { const link = inviteLink(r.code); this.copyText(link, (ok) => { $('pMsg').textContent = ok ? '已複製邀請連結：' + link : link; }); };
+  }
+
+  /* ------------------------------ v31 chat: room panel + in-match (Enter) ------------------------------ */
+  buildChat() {
+    const $ = this.$;
+    this.chatTeam = false; this.chatOpen = false;
+    const send = (inp, team) => { const r = this.room; if (r && inp.value.trim() && r.say(inp.value, team)) inp.value = ''; };
+    const li = $('lbChatIn');
+    li.onkeydown = (e) => { e.stopPropagation(); if (e.key === 'Enter') send(li, this.chatTeam); else if (e.key === 'Tab') { e.preventDefault(); this.setChatTeam(!this.chatTeam); } };
+    $('lbChatMode').onclick = () => { this.setChatTeam(!this.chatTeam); li.focus(); };
+    $('lbChatSend').onclick = () => send(li, this.chatTeam);
+    const gi = $('chatInput');
+    gi.onkeydown = (e) => {
+      e.stopPropagation();
+      if (e.key === 'Enter') { send(gi, this.chatTeam); this.closeChat(); }
+      else if (e.key === 'Escape') this.closeChat();
+      else if (e.key === 'Tab') { e.preventDefault(); this.setChatTeam(!this.chatTeam); }
+    };
+    gi.onkeyup = (e) => e.stopPropagation();
+    li.onkeyup = (e) => e.stopPropagation();
+    this.setChatTeam(false);
+  }
+  setChatTeam(on) { this.chatTeam = !!on; for (const id of ['lbChatMode', 'chatMode']) { const b = this.$(id); b.textContent = on ? '隊伍' : '全體'; b.classList.toggle('team', on); } }
+  _chatLine(m) {
+    const d = document.createElement('div'); d.className = 'cl' + (m.sys ? ' sys' : '') + (m.tm ? ' tm' : '');
+    if (m.sys) { d.textContent = m.t; return d; }
+    const n = document.createElement('b'); n.className = (m.me ? 'me ' : '') + (m.c || ''); n.textContent = (m.tm ? '[隊伍] ' : '') + m.n + '：';
+    const t = document.createElement('span'); t.textContent = m.t; d.append(n, t); return d;
+  }
+  renderChat() {
+    const r = this.room, log = this.$('lbChatLog'), on = !!(r && r.online);
+    log.replaceChildren(...(r ? r.chat : []).slice(-40).map((m) => this._chatLine(m)));
+    if (!log.children.length) { const e = document.createElement('div'); e.className = 'cl sys'; e.textContent = on ? '房間裡的人都看得到這裡的訊息 · 對戰中按 Enter 聊天' : '朋友進房後就能在這裡聊天'; log.append(e); }
+    log.scrollTop = log.scrollHeight; this.$('lbChatIn').disabled = !on;
+  }
+  onChat(r, m) {
+    if (r !== this.room) return;
+    if (this.state === 'lobby' || this.state === 'countdown') { this.renderChat(); if (!m.me && !m.sys) try { this.audio.uiClick(); } catch (e) { /* audio locked */ } }
+    const box = this.$('chatlog'), el = this._chatLine(m); el.dataset.t = performance.now(); box.append(el);
+    while (box.children.length > 8) box.firstChild.remove();
+    setTimeout(() => el.classList.add('old'), 9000); // in a match a line fades after 9 s (all of them show while typing)
+  }
+  openChat(team = false) {
+    if (!this.room || !this.room.online || this.chatOpen) return;
+    this.chatOpen = true; this.setChatTeam(team); this.input.keys.clear(); this.cmds.reset();
+    this.$('chatbox').classList.add('open'); const gi = this.$('chatInput'); gi.value = ''; setTimeout(() => gi.focus(), 0);
+  }
+  closeChat() {
+    if (!this.chatOpen) return;
+    this.chatOpen = false; this.input.keys.clear(); const gi = this.$('chatInput'); gi.blur(); this.$('chatbox').classList.remove('open');
   }
 
   /* ------------------------------ v28 friends: panel, invites, join a friend ------------------------------ */
@@ -11366,7 +11462,7 @@ class App {
     $('lbLoadoutInfo').textContent = `配裝 ${LOADOUT_KEYS[L.loadout]}：${WEAPON_DEFS[lo.primary].name} + ${WEAPON_DEFS[lo.secondary].name}`;
     [...$('lbLoadout').children].forEach((b, i) => { b.title = `配裝 ${LOADOUT_KEYS[i]} · 對戰中按 F${i + 1}`; });
     $('lbAllies').textContent = L.allies; $('lbEnemies').textContent = L.enemies;
-    this.renderTeams(L); this.renderRoomBar(L);
+    this.renderTeams(L); this.renderRoomBar(L); this.renderChat();
     if (!guest) Settings.save();
     if (r && r.role === 'host') r.broadcast();
   }
@@ -11495,7 +11591,7 @@ class App {
     else { this.showHub(this.pendingMsg || ''); this.pendingMsg = ''; }
   }
   _teardownMatch() {
-    const $ = this.$; clearInterval(this.endTimer);
+    const $ = this.$; clearInterval(this.endTimer); this.closeChat(); $('chatlog').replaceChildren();
     for (const id of ['endscreen', 'pause', 'settings', 'lbCount']) $(id).classList.remove('on');
     this.input.unlock(); this.hud.show(false);
     if (this.match) { if (this.match.net) this.match.net.close(); this.match.dispose(); this.match = null; }
@@ -11577,6 +11673,7 @@ class App {
       }
       const fk = /^F([1-5])$/.exec(code);
       if (fk && m && (this.state === 'playing' || this.state === 'paused')) { m.queueLoadout(parseInt(fk[1], 10) - 1); return; } // works while dead too
+      if (this.state === 'playing' && m && (code === 'Enter' || code === 'NumpadEnter') && this.room && this.room.online) { this.openChat(false); return; } // v31: chat (Tab in the box: team only)
       if (this.state !== 'playing' || !m || !m.player.alive) return;
       const C = this.cmds, dg = /^Digit([1-9])$/.exec(code);
       if (code === 'Space') C.press(BTN.JUMP);
@@ -11589,7 +11686,7 @@ class App {
     inp.onLockChange = (locked, error) => {
       if (error) return; // failed lock request (no user gesture) — the freeze overlay asks for a click instead
       if (locked) { if (this.state === 'paused') { this.$('pause').classList.remove('on'); this.state = 'playing'; this.last = performance.now(); } }
-      else if (this.state === 'playing' && this.match && this.match.phase !== 'over') { this.state = 'paused'; this.$('pause').classList.add('on'); if (this.match) this.match.weapons.trigger = false; this.cmds.reset(); this.updatePauseOnline(); }
+      else if (this.state === 'playing' && this.match && this.match.phase !== 'over') { this.closeChat(); this.state = 'paused'; this.$('pause').classList.add('on'); if (this.match) this.match.weapons.trigger = false; this.cmds.reset(); this.updatePauseOnline(); }
     };
     this.canvas.addEventListener('click', () => { if (this.state === 'playing' && !inp.locked) inp.lock(); });
     document.getElementById('hud').addEventListener('click', () => { if (this.state === 'playing' && !inp.locked) inp.lock(); });
