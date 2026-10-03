@@ -349,6 +349,15 @@
 - **相容**：協定版本沒有變（30），v30 的朋友可以進同一個房間，只是看不到聊天。
 - **驗證**：`tools/_chat.mjs`（真實 Supabase + WebRTC，兩個獨立瀏覽器環境）13 項全過，涵蓋晚進房看到之前的訊息、雙向聊天、HTML 只顯示成文字、紅藍兩隊的隊伍訊息互相看不到、對戰中 Enter 開框、打字不會移動、送出後房主畫面出現、框自動關閉。`_room`、`_gear`、`_nettest`、單機 `_feel` 不變。
 
+## v32 進行中（2026-10-03）：TURN 中繼
+
+- **方案**：Cloudflare TURN，每月前 1,000 GB 免費（和他們的 SFU 共用額度），超過每 GB 0.05 美元。長期金鑰只能放在伺服器上，所以由 Supabase Edge Function `turn`（`supabase/functions/turn/index.ts`，已部署，verify_jwt 關閉）發放 2 小時有效的短期憑證。
+  - 函式只接受遊戲網址的請求（GitHub Pages、localhost、本機雙擊開啟的檔案）。
+  - 同一個執行個體 30 分鐘內重用同一組憑證，並過濾掉瀏覽器不允許的 53 埠。
+- **遊戲端**：開房和加入時一起取得中繼設定（`iceServers()`，3.5 秒逾時就退回原本只用 STUN 的設定，5 分鐘後再試），每條連線都帶上中繼伺服器。連上後從 `getStats()` 判斷這條連線是直連還是經中繼，顯示在暫停選單與 FPS 列。網址加上 `?relay=1` 會強制只走中繼，用來測試。
+- **待使用者**：申請 Cloudflare 帳號、建立 TURN 金鑰，把 `CF_TURN_KEY_ID`、`CF_TURN_TOKEN` 設成 Supabase Edge Function 的 Secrets。沒設定前，函式回應 `configured: false`，遊戲行為和 v31 相同。
+- **驗證**：函式可以從遊戲網址呼叫，其他網址被拒（403）。`_room` 26 項通過（直連）；`_samebrowser` 顯示「direct」。中繼測試指令是 `node tools/_samebrowser.mjs relay`。
+
 ## 數值調整紀錄
 
 | 日期 | 項目 | 舊 → 新 | 原因 |

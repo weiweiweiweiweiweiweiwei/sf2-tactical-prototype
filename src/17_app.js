@@ -248,7 +248,8 @@ class App {
     const $ = this.$, el = $('pOnline'), m = this.match, r = this.room, shared = this.netShared(m), host = !!(m && m.net && m.net.role === 'host');
     $('pLeave').textContent = host && shared ? '結束對戰 → 所有人回到房間' : r ? '離開對戰 → 回到房間' : '離開對戰 → 回到大廳';
     if (!r || !r.online) { el.innerHTML = ''; return; }
-    el.innerHTML = `<b>${r.role === 'host' ? '你是房主' : '連線中'}</b><span>房間 <code>${fmtCode(r.code)}</code></span><span>${host ? m.net.players + ' 人在對戰中' : m && m.net && m.net.rtt ? 'Ping ' + Math.round(m.net.rtt) + ' ms' : ''}</span>${shared ? '<span style="color:var(--dim)">連線對戰不會暫停</span>' : ''}<button class="btn ghost" id="pCopy">複製邀請連結</button>`;
+    const via = r.role === 'host' ? (r.t && r.t.relayed ? `${r.t.relayed} 人經中繼伺服器` : '') : r.t && r.t.via === 'relay' ? '經中繼伺服器' : r.t && r.t.via === 'direct' ? '直連' : '';
+    el.innerHTML = `<b>${r.role === 'host' ? '你是房主' : '連線中'}</b><span>房間 <code>${fmtCode(r.code)}</code></span><span>${host ? m.net.players + ' 人在對戰中' : m && m.net && m.net.rtt ? 'Ping ' + Math.round(m.net.rtt) + ' ms' : ''}</span>${via ? `<span>${via}</span>` : ''}${shared ? '<span style="color:var(--dim)">連線對戰不會暫停</span>' : ''}<button class="btn ghost" id="pCopy">複製邀請連結</button>`;
     $('pCopy').onclick = () => { const link = inviteLink(r.code); this.copyText(link, (ok) => { $('pMsg').textContent = ok ? '已複製邀請連結：' + link : link; }); };
   }
 
@@ -1009,7 +1010,7 @@ class App {
             else if (this.autoFast >= 20 && i < Q_ORDER.indexOf(this.autoCeil)) { AUTO_Q = Q_ORDER[i + 1]; this.autoFast = 0; this.post.configure(m, AUTO_Q); }
           }
         }
-        const rm = this.room, nt = rm && rm.online && this.netShared(m) ? ` · 房間 ${fmtCode(rm.code)} · ${m.net.role === 'host' ? m.net.players + ' 人' : m.net.rttWin && m.net.rttWin.length >= 3 ? Math.round(m.net.rtt) + ' ms' : '測量延遲中'}` : '';
+        const rm = this.room, nt = rm && rm.online && this.netShared(m) ? ` · 房間 ${fmtCode(rm.code)} · ${m.net.role === 'host' ? m.net.players + ' 人' : m.net.rttWin && m.net.rttWin.length >= 3 ? Math.round(m.net.rtt) + ' ms' : '測量延遲中'}${rm.t && rm.t.via === 'relay' ? ' · 中繼' : ''}` : '';
         this.hud.setFps(`${this.fpsText} · ${this.gpuShort}${this.gpuIntegrated ? '（內顯）' : ''}${nt}`, Settings.data.showFps || !!nt);
         const st = window.__stats || (window.__stats = { frames: 0, seconds: 0 }); st.frames++; st.seconds += dt; st.avgFps = Math.round(st.frames / Math.max(1e-3, st.seconds)); st.frameMs = +this.frameMs.toFixed(2); st.fps = this.fpsText; st.gpuBusy = this.gpuBusy; st.inflight = this.pacer.hist; st.scale = this.post.scale; st.q = activeQuality(); // tools/check.mjs
         const ring = st.dts || (st.dts = []); ring.push(dt * 1000); if (ring.length > 900) ring.shift(); // frame-time distribution (stutter shows in p99 / max, not in the average)

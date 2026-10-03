@@ -26,6 +26,37 @@ const fmtCode = (c) => (c ? c.slice(0, 3) + ' ' + c.slice(3) : '——— ——
 function parseCode(s) { s = String(s || ''); const m = /room=(\d{6})/.exec(s), d = m ? m[1] : s.replace(/\D/g, ''); return d.length === 6 ? d : null; }
 const netRid = () => Math.random().toString(36).slice(2, 10);
 const subscribed = (ch) => new Promise((res, rej) => { const to = setTimeout(() => rej(new Error('TIMED_OUT')), 15000); ch.subscribe((s) => { if (s === 'SUBSCRIBED') { clearTimeout(to); res(ch); } else if (s === 'CHANNEL_ERROR' || s === 'TIMED_OUT') { clearTimeout(to); rej(new Error(s)); } }); });
+// v32 TURN relay: the Edge Function "turn" (supabase/functions/turn) hands out short-lived Cloudflare TURN credentials.
+// Not configured (or unreachable within 3.5 s) → STUN only, as before. ?relay=1 forces relayed connections (tests).
+ONLINE.relayOnly = /[?&]relay=1(&|$)/.test(location.search); ONLINE.turn = false;
+let _iceP = null, _iceAt = 0;
+function iceServers() {
+  if (_iceP && performance.now() - _iceAt < 30 * 60e3) return _iceP;
+  _iceAt = performance.now();
+  _iceP = (async () => {
+    try {
+      const ctl = new AbortController(), to = setTimeout(() => ctl.abort(), 3500);
+      const r = await fetch(ONLINE.url + '/functions/v1/turn', { method: 'POST', headers: { apikey: ONLINE.key, 'Content-Type': 'application/json' }, body: '{}', signal: ctl.signal });
+      clearTimeout(to); const d = await r.json();
+      const turn = (Array.isArray(d.iceServers) ? d.iceServers : []).map((s) => ({ urls: [].concat(s && s.urls).filter((u) => typeof u === 'string' && /^turns?:/.test(u)), username: String(s.username || ''), credential: String(s.credential || '') })).filter((s) => s.urls.length);
+      ONLINE.turn = turn.length > 0;
+      return [...ONLINE.ice, ...turn];
+    } catch (e) { _iceAt -= 25 * 60e3; return ONLINE.ice; } // try again in 5 minutes
+  })();
+  return _iceP;
+}
+const rtcConfig = (ice) => ({ iceServers: ice, iceTransportPolicy: ONLINE.relayOnly ? 'relay' : 'all' });
+// which path a connection took: 'direct' (peer-to-peer) or 'relay' (through the TURN server)
+async function rtcVia(pc) {
+  try {
+    const st = await pc.getStats(); let pair = null;
+    st.forEach((r) => { if (r.type === 'transport' && r.selectedCandidatePairId) pair = st.get(r.selectedCandidatePairId); });
+    if (!pair) st.forEach((r) => { if (r.type === 'candidate-pair' && r.nominated && r.state === 'succeeded') pair = r; });
+    if (!pair) return null;
+    const a = st.get(pair.localCandidateId), b = st.get(pair.remoteCandidateId);
+    return (a && a.candidateType === 'relay') || (b && b.candidateType === 'relay') ? 'relay' : 'direct';
+  } catch (e) { return null; }
+}
 const PUBLIC_URL = 'https://weiweiweiweiweiweiweiwei.github.io/sf2-tactical-prototype/'; // friends open the online copy, never your local file
 const inviteLink = (code) => (location.protocol === 'file:' ? PUBLIC_URL : location.href.split(/[?#]/)[0]) + '?room=' + code;
 
@@ -69,7 +100,8 @@ class RtcHostTransport {
     this.probing = !!opts.probe; this.ready = this._open();
   }
   async _open() {
-    const sb = await supa(), ch = sb.channel('sf2:room:' + this.room, { config: { broadcast: { self: false } } }), nonce = netRid();
+    const [sb, ice] = await Promise.all([supa(), iceServers()]), ch = sb.channel('sf2:room:' + this.room, { config: { broadcast: { self: false } } }), nonce = netRid();
+    this.iceList = ice;
     let taken = null;
     ch.on('broadcast', { event: 'sig' }, ({ payload }) => {
       if (payload && payload.t === 'taken' && payload.to === nonce) { if (taken) taken(); return; }
@@ -97,13 +129,13 @@ class RtcHostTransport {
     else if (m.t === 'bye') this._drop(m.from);
   }
   async _newPeer(id) {
-    const pc = new RTCPeerConnection({ iceServers: ONLINE.ice }), p = { id, pc, ice: [], open: false };
+    const pc = new RTCPeerConnection(rtcConfig(await iceServers())), p = { id, pc, ice: [], open: false, via: null };
     this.peers.set(id, p);
     p.r = pc.createDataChannel('r', { ordered: true }); p.u = pc.createDataChannel('u', { ordered: false, maxRetransmits: 0 });
     for (const dc of [p.r, p.u]) {
       dc.binaryType = 'arraybuffer';
       dc.onmessage = (e) => { this.stats.recv++; const d = rtcParse(e.data); if (d && this.onMessage) this.onMessage(id, d); };
-      dc.onopen = () => { if (p.r.readyState === 'open' && p.u.readyState === 'open') { p.open = true; clearTimeout(p.timer); } };
+      dc.onopen = () => { if (p.r.readyState === 'open' && p.u.readyState === 'open' && !p.open) { p.open = true; clearTimeout(p.timer); setTimeout(() => rtcVia(pc).then((v) => { p.via = v; }), 300); } };
       dc.onclose = () => this._drop(id);
     }
     pc.onicecandidate = (e) => { if (e.candidate) this._signal(id, { t: 'ice', cand: e.candidate.toJSON() }); };
@@ -112,6 +144,7 @@ class RtcHostTransport {
     await pc.setLocalDescription(await pc.createOffer());
     this._signal(id, { t: 'offer', sdp: pc.localDescription.toJSON() });
   }
+  get relayed() { let n = 0; for (const p of this.peers.values()) if (p.via === 'relay') n++; return n; }
   send(to, data, reliable = true) {
     const list = to === '*' ? this.peers.values() : [this.peers.get(to)];
     for (const p of list) if (p && p.open) rtcSend(reliable ? p.r : p.u, data, reliable, this.stats);
@@ -135,13 +168,14 @@ class RtcClientTransport {
   }
   async start() {
     this._status('連線到配對伺服器…');
-    const sb = await supa(), ch = sb.channel('sf2:room:' + this.room, { config: { broadcast: { self: false } } });
+    const [sb, ice] = await Promise.all([supa(), iceServers()]), ch = sb.channel('sf2:room:' + this.room, { config: { broadcast: { self: false } } });
+    this.iceList = ice; this.via = null;
     ch.on('broadcast', { event: 'sig' }, ({ payload }) => this._sig(payload).catch((e) => this._fail('連線交握失敗：' + e.message)));
     this.ch = await subscribed(ch);
     this._status(`尋找房間 ${fmtCode(this.room)} 的房主…`);
     const hello = () => { if (!this.pc && !this.closed) this._signal({ t: 'hello' }); };
     hello(); this.helloTimer = setInterval(hello, 1500);
-    this.giveUp = setTimeout(() => { if (!this.isOpen) this._fail(this.pc ? '無法和房主建立直接連線（雙方的網路環境阻擋點對點連線）' : `找不到房間 ${fmtCode(this.room)}：代碼打錯了，或房主已經離開`); }, this.wait);
+    this.giveUp = setTimeout(() => { if (!this.isOpen) this._fail(this.pc ? (ONLINE.turn ? '連線失敗：直連和中繼伺服器都連不上（網路可能封鎖了遊戲連線）' : '無法和房主建立直接連線（雙方的網路環境阻擋點對點連線）') : `找不到房間 ${fmtCode(this.room)}：代碼打錯了，或房主已經離開`); }, this.wait);
   }
   _status(s) { if (this.onStatus) this.onStatus(s); }
   _signal(msg) { if (this.ch) this.ch.send({ type: 'broadcast', event: 'sig', payload: Object.assign(msg, { from: this.id, to: 'host' }) }); }
@@ -149,12 +183,12 @@ class RtcClientTransport {
     if (!m || m.to !== this.id || this.closed) return;
     if (m.t === 'offer' && !this.pc) {
       clearInterval(this.helloTimer); this._status('找到房主，建立點對點連線…');
-      const pc = this.pc = new RTCPeerConnection({ iceServers: ONLINE.ice });
+      const pc = this.pc = new RTCPeerConnection(rtcConfig(this.iceList || ONLINE.ice));
       pc.onicecandidate = (e) => { if (e.candidate) this._signal({ t: 'ice', cand: e.candidate.toJSON() }); };
       pc.ondatachannel = (e) => {
         const dc = e.channel; dc.binaryType = 'arraybuffer'; this[dc.label] = dc;
         dc.onmessage = (ev) => { this.stats.recv++; const d = rtcParse(ev.data); if (d && this.onMessage) this.onMessage('host', d); };
-        dc.onopen = () => { if (this.r && this.u && this.r.readyState === 'open' && this.u.readyState === 'open' && !this.isOpen) { this.isOpen = true; clearTimeout(this.giveUp); this._status('已連線，進入房間…'); if (this.onOpen) this.onOpen(); } };
+        dc.onopen = () => { if (this.r && this.u && this.r.readyState === 'open' && this.u.readyState === 'open' && !this.isOpen) { this.isOpen = true; clearTimeout(this.giveUp); this._status('已連線，進入房間…'); setTimeout(() => rtcVia(pc).then((v) => { this.via = v; }), 300); if (this.onOpen) this.onOpen(); } };
         dc.onclose = () => this._lost();
       };
       pc.onconnectionstatechange = () => { if (pc.connectionState === 'failed') this._lost(); };
