@@ -1236,6 +1236,75 @@ const MAPS = [
       void SY; void DIR;
     },
   },
+  {
+    // v43 RIVERSIDE VILLAGE (after SF2 'Riverside Village' / 'Heavy Rain'): a shallow river snakes through a valley between
+    // diagonal spawns. Each side has a terraced village (3 m) joined by a wooden bridge over the river (B); a high ridge trail
+    // (12 m) with a sniper overlook drops to the north ford (A), a low path runs to the south ford (C). Point-symmetric.
+    id: 'river', name: '河谷村落', en: 'RIVERSIDE VILLAGE', desc: '戶外地形 · 對角出生、蜿蜒淺河、木橋、山脊狙擊步道、兩處淺灘 · 150×120', slogan: 'CROSSING · 搶木橋，或涉水繞淺灘',
+    look: { desat: 0.32, contrast: 1.12, pivot: 0.38, highlights: 1.06 },
+    bounds: { minX: -75, maxX: 75, minZ: -60, maxZ: 60 }, indoor: false, navLevels: [3.2], navStep: 2, viewMult: 1.2, radarRange: 36,
+    hdri: 'kloofendal_48d_partly_cloudy_puresky', hdriBackground: true, envIntensity: 0.6, sky: { turbidity: 5, rayleigh: 1.4, elevation: 40, azimuth: 210 },
+    sun: { pos: [-30, 55, 25], color: 0xfff0dc, intensity: 2.9, auto: true }, hemi: [0xdbe6f5, 0x6a7450, 0.85], exposure: 0.88,
+    fog: { color: 0xc4ced6, near: 70, far: 260 }, acoustics: 'canyon', ambience: 'hill', shadowFollow: 64,
+    shot: { pos: [-30, 18, 20], target: [0, 1, 0] },
+    objectives: { dom: [[15, -0.5, 27], [0, 3.2, 0], [-15, -0.5, -27]], relic: [0, 3.2, 0], domRadius: 5 },
+    build(b) {
+      const LT = b.def._lanes || (b.def._lanes = makeLaneTerrain({
+        top: 18, wall: 1.7, dirt: 0.75,
+        lanes: [
+          { w: 10, pts: [[0, 0, -1.5], [6, 12, -1.5], [14, 26, -1.5], [16, 40, -1.5], [22, 56, -1.5], [26, 72, -1.5]] },                 // river bed (mirror = the southern half)
+          { w: 7, pts: [[-64, 36, 8], [-52, 30, 7], [-40, 22, 5.5], [-28, 10, 3.5], [-20, 4, 3]] },                                         // spawn road down to the village
+          { w: 5, pts: [[-64, 36, 8], [-56, 50, 10], [-40, 56, 12], [-20, 54, 12], [-4, 46, 8], [7, 36, 3], [15, 27, -0.5]] },           // ridge trail → north ford (A)
+          { w: 6, pts: [[-64, 36, 8], [-63, 18, 6], [-55, 0, 4], [-42, -14, 2], [-28, -24, 0.5], [-15, -27, -0.5]] },                    // low path → south ford (C)
+          { w: 5, pts: [[-20, 4, 3], [-31, -4, 2.6], [-42, -14, 2]] },                                                                   // village → low path
+        ],
+        arenas: [[-64, 36, 10, 8, 8], [-18, 3, 9, 7, 3], [15, 27, 7, 6, -0.5], [-16, 49, 5, 4, 12]],
+      }));
+      b.terrain({ minX: -96, maxX: 96, minZ: -80, maxZ: 80, step: 1.5, sample: (x, z) => LT.sample(x, z) });
+      b.grass();
+      for (const [x0, z0, x1, z1] of [[-77, -62, 77, -60], [-77, 60, 77, 62], [-77, -60, -75, 60], [75, -60, 77, 60]]) b.box(x0, -20, z0, x1, 60, z1, null, { blocksShot: false, radar: false });
+      if (!b.dry) { // river water (knee deep: the bed is 0.9 m below)
+        const wm = b.lib.basic('riverWater', () => new THREE.MeshPhysicalMaterial({ color: 0x3b5a52, roughness: 0.12, metalness: 0, transparent: true, opacity: 0.78 }));
+        const wg = new THREE.PlaneGeometry(190, 160); wg.rotateX(-Math.PI / 2); wg.translate(0, -0.65, 0); const wmesh = new THREE.Mesh(wg, wm); wmesh.userData.noAO = true; b.scene.add(wmesh);
+      }
+      // wooden bridge across the river (B), deck at 3.2 m on pilings
+      b.box(-11.5, 2.9, -2, 11.5, 3.2, 2, 'wood', { radar: 'catwalk', material: 'wood' });
+      for (const x of [-6, -2, 2, 6]) for (const z of [-1.8, 1.8]) b.cyl(x, z, 0.2, -1.6, 2.9, 'wood', { seg: 8, radar: false });
+      b.railing(-11.5, -2, 11.5, -2, 3.2, 'wood'); b.railing(-11.5, 2, 11.5, 2, 3.2, 'wood');
+      b.navRegion(-11, -1.6, 11, 1.6, 3.2);
+      b.sym((s) => {
+        const X = (x) => x * s, Z = (z) => z * s, G = (x, z) => b.gy(X(x), Z(z));
+        const footMin = (x, z, r) => b.gyMin(Math.min(X(x - r), X(x + r)), Math.min(Z(z - r), Z(z + r)), Math.max(X(x - r), X(x + r)), Math.max(Z(z - r), Z(z + r)));
+        const ROCK = (x, z, r) => b.boulder(X(x), Z(z), r, { y0: footMin(x, z, r * 0.6) - r * 0.2, sy: 0.7 });
+        const CRATE = (x, z, sz) => b.crate(X(x), Z(z), sz, footMin(x, z, sz / 2) - 0.03);
+        const BAGS = (x0, z0, x1, z1, h = 1.05) => b.sandbags(X(x0), Z(z0), X(x1), Z(z1), h + 0.12, b.gyMin(Math.min(X(x0), X(x1)), Math.min(Z(z0), Z(z1)), Math.max(X(x0), X(x1)), Math.max(Z(z0), Z(z1))) - 0.12);
+        const PINE = (x, z, h = 8) => b.tree(X(x), Z(z), 'pine', h, G(x, z) - 0.25);
+        const OAK = (x, z, h = 5.4) => b.broadleaf(X(x), Z(z), h, G(x, z) - 0.2);
+        const MS = { n: 's', s: 'n', e: 'w', w: 'e' };
+        const BLD = (o) => { const doors = {}; for (const k in o.doors || {}) doors[s > 0 ? k : MS[k]] = o.doors[k].map((c) => c * s);
+          return b.building(Object.assign({}, o, { x0: Math.min(X(o.x0), X(o.x1)), x1: Math.max(X(o.x0), X(o.x1)), z0: Math.min(Z(o.z0), Z(o.z1)), z1: Math.max(Z(o.z0), Z(o.z1)), doors,
+            ladder: o.ladder && { side: s > 0 ? o.ladder.side : MS[o.ladder.side], at: o.ladder.at * s } })); };
+        // village on the 3 m terrace: two-storey house blocks the spawn diagonal, a shed and a well
+        BLD({ x0: -22, z0: 6, x1: -15, z1: 11, y0: footMin(-18.5, 8.5, 3.5) + 0.05, floors: 2, mat: 'plaster', doors: { s: [-18.5], e: [8.5] }, ladder: { side: 'w', at: 8.5 } });
+        BLD({ x0: -26, z0: -3, x1: -21, z1: 1.5, y0: footMin(-23.5, -0.8, 2.5) + 0.05, floors: 1, fh: 3, mat: 'plasterWhite', doors: { e: [-0.8] } });
+        b.cyl(X(-13), Z(-1), 1.0, G(-13, -1) - 0.2, G(-13, -1) + 0.9, 'ruinStone', { seg: 14, radar: 'crate' });
+        BAGS(-11, 5, -10.2, 8); CRATE(-14, 10, 1.1); CRATE(-12.8, 10.3, 0.9); OAK(-26, 8, 5.8);
+        // north ford (A): stepping boulders, a broken boat
+        ROCK(11, 22, 1.3); ROCK(19, 31, 1.2); ROCK(9, 31, 1.0); b.box(Math.min(X(16), X(19.5)), G(17, 22) - 0.2, Math.min(Z(21), Z(23)), Math.max(X(16), X(19.5)), G(17, 22) + 0.8, Math.max(Z(21), Z(23)), 'wood', { radar: 'crate', material: 'wood', penetrable: true }); // beached boat
+        // ridge trail: pines, a sniper overlook with sandbags facing the river
+        BAGS(-14, 45.5, -11, 46.3); BAGS(-11.6, 46.3, -10.8, 49); PINE(-46, 60, 8.5); PINE(-30, 60, 8); PINE(-24, 47, 7.5); ROCK(-36, 52, 1.6);
+        // low path: fallen logs, rocks, a fishing hut at the south ford
+        ROCK(-58, 10, 1.6); ROCK(-48, -8, 1.4); ROCK(-34, -20, 1.5); OAK(-60, 26, 5.5); OAK(-38, -26, 5.8);
+        b.box(Math.min(X(-22), X(-18)), G(-20, -30) - 0.2, Math.min(Z(-33), Z(-29)), Math.max(X(-22), X(-18)), G(-20, -30) + 2.6, Math.max(Z(-33), Z(-29)), 'wood', { radar: 'building', material: 'wood', penetrable: true });
+        // spawn camp
+        const tint = s > 0 ? 'canvasBlue' : 'canvasRed';
+        b.box(Math.min(X(-70), X(-66)), G(-68, 40) - 0.1, Math.min(Z(38), Z(42)), Math.max(X(-70), X(-66)), G(-68, 40) + 2.6, Math.max(Z(38), Z(42)), tint, { radar: 'building', material: 'sandbag' });
+        CRATE(-58, 40, 1.2); CRATE(-57, 41, 0.9); BAGS(-56, 33, -54, 32.2);
+        b.sign(s > 0 ? 'ALPHA' : 'BRAVO', s > 0 ? '#6fb6ff' : '#ff6a5f', X(-72.5), G(-72, 36) + 2.6, Z(36), s > 0 ? Math.PI / 2 : -Math.PI / 2, 3.2, 0.8);
+      });
+      b.spawnZone('alpha', -68, 32, -60, 40, Math.atan2(-64, 36)); b.spawnZone('bravo', 60, -40, 68, -32, Math.atan2(64, -36));
+    },
+  },
 ];
 
 // Radar/thumbnail rendering from the builder's footprint list.
