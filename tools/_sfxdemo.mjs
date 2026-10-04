@@ -28,14 +28,14 @@ const res = await p.evaluate(async () => {
   const at = (dx, dz) => new V(A.listener.x + dx, A.listener.y, A.listener.z + dz);
   const peaks = []; const probe = setInterval(() => peaks.push(A._peak(A.probe)), 100);
   A.setAmbience('none'); await sleep(400);
+  // v34: kill confirm ×2, then switch sounds rifle → pistol → knife → grenade
+  for (const k of ['body', 'body', 'head', 'kill']) { A.gunshot('m4', null); await sleep(60); A.hit(k); await sleep(380); } await sleep(600); A.gunshot('awp', null); await sleep(80); A.hit('kill'); await sleep(1400);
+  for (let i = 0; i < 3; i++) { A.mech('draw_rifle'); A.mech('draw'); await sleep(700); }
   // 1. own guns: 3 taps + a short burst each
   for (const [snd, gap, n] of [['m4', 95, 6], ['ak', 100, 6], ['mp5', 75, 7], ['m870', 700, 2], ['awp', 1300, 2], ['p226', 220, 4], ['deagle', 400, 2]]) {
     for (let i = 0; i < n; i++) { A.gunshot(snd, null); await sleep(i < 3 ? Math.max(gap, 260) : gap); }
     await sleep(700);
   }
-  // v34: kill confirm ×2, then switch sounds rifle → pistol → knife → grenade
-  for (const k of ['body', 'body', 'head', 'kill']) { A.gunshot('m4', null); await sleep(60); A.hit(k); await sleep(380); } await sleep(600); A.gunshot('awp', null); await sleep(80); A.hit('kill'); await sleep(1400);
-  for (let i = 0; i < 3; i++) { A.mech('draw_rifle'); A.mech('draw'); await sleep(700); }
   // 2. an enemy M4 at 15 m (left), then at 60 m (right, far recording)
   for (const [dx, dz] of [[-15, 0], [60, -10]]) { for (let i = 0; i < 5; i++) { A.gunshot('m4', at(dx, dz)); await sleep(110); } await sleep(1100); }
   // 3. footsteps: walk on concrete, metal, grass (running), ADS twice
