@@ -167,6 +167,60 @@ function terrainShade(T, B, px = 256) {
 
 // `look`: SF2 / UE3-style levels (see LOOK_DEFAULT in 15_postfx.js), matched to SF2 screenshots in v17 and carried over in v24:
 // SF2 interiors sit at mean luma ≈ 0.16–0.18 with chroma ≈ 0.01–0.02, its sunny exteriors at luma ≈ 0.45, chroma ≈ 0.035.
+
+/* ---------------------------------------------------------------------
+   v43 LANE TERRAIN (after the SF2 tournament floor plans: Desert Camp, Air Base, Construction Site, Satellite): the whole
+   map is a rock massif and the playable space is CARVED into it — winding lanes (each with its own floor height, so they
+   climb and drop), open arenas, and steep unclimbable cliff walls between them. Spawns sit in opposite corners
+   (diagonal, like SF2), everything is point-symmetric. Spec (alpha half; the mirror is added automatically):
+     top: plateau height · lanes: [{ w, pts: [[x, z, y], …] }] · arenas: [[x, z, rx, rz, y]] · wall: cliff steepness
+   Returns { sample(x, z) → { h, rock, dirt }, floorAt(x, z) }.
+   ------------------------------------------------------------------- */
+function makeLaneTerrain(L) {
+  const clamp01 = (t) => (t < 0 ? 0 : t > 1 ? 1 : t);
+  const sm = (a, b, x) => { const t = clamp01((x - a) / (b - a)); return t * t * (3 - 2 * t); };
+  const hash = (i, j) => { const s = Math.sin(i * 127.1 + j * 311.7) * 43758.5453; return s - Math.floor(s); };
+  const vn = (x, z) => { const i = Math.floor(x), j = Math.floor(z), u = x - i, v = z - j, a = hash(i, j), b = hash(i + 1, j), c = hash(i, j + 1), d = hash(i + 1, j + 1), su = u * u * (3 - 2 * u), sv = v * v * (3 - 2 * v); return a + (b - a) * su + (c - a) * sv + (a - b - c + d) * su * sv; };
+  const ridged = (x, z) => { let s = 0, a = 0.55, f = 1; for (let k = 0; k < 3; k++) { s += a * (1 - Math.abs(vn(x * f, z * f) * 2 - 1)); f *= 2.1; a *= 0.5; } return s; };
+  const S = (fn) => (x, z) => 0.5 * (fn(x, z) + fn(-x, -z));
+  const cliffN = S((x, z) => ridged(x / 7, z / 7)), floorN = S((x, z) => vn(x / 9, z / 9));
+  const WALL = L.wall ?? 2.2, TOP = L.top ?? 14;
+  // segments of every lane (alpha copy + point mirror), resampled every 2 m and lightly smoothed
+  const segs = [];
+  for (const lane of L.lanes) for (const s of [1, -1]) {
+    const P = lane.pts.map(([x, z, y]) => [x * s, z * s, y]);
+    for (let i = 0; i < P.length - 1; i++) {
+      const [ax, az, ay] = P[i], [bx, bz, by] = P[i + 1], m = lane.w + 30;
+      segs.push({ ax, az, ay, bx, bz, by, w: lane.w, x0: Math.min(ax, bx) - m, x1: Math.max(ax, bx) + m, z0: Math.min(az, bz) - m, z1: Math.max(az, bz) + m });
+    }
+  }
+  const arenas = []; for (const [x, z, rx, rz, y] of L.arenas || []) { arenas.push([x, z, rx, rz, y]); arenas.push([-x, -z, rx, rz, y]); }
+  // carved floor: the lowest of every carve's "floor + wall rising away from its edge" surface
+  const carve = (x, z) => {
+    let h = Infinity, fy = 0, best = Infinity;
+    for (const s of segs) {
+      if (x < s.x0 || x > s.x1 || z < s.z0 || z > s.z1) continue;
+      const dx = s.bx - s.ax, dz = s.bz - s.az, L2 = dx * dx + dz * dz || 1, t = clamp01(((x - s.ax) * dx + (z - s.az) * dz) / L2);
+      const d = Math.hypot(x - s.ax - dx * t, z - s.az - dz * t), y = s.ay + (s.by - s.ay) * t, e = Math.max(0, d - s.w / 2);
+      const v = y + e * WALL; if (v < h) h = v; if (e < best) { best = e; fy = y; }
+    }
+    for (const [cx, cz, rx, rz, y] of arenas) {
+      const q = Math.hypot((x - cx) / rx, (z - cz) / rz), e = Math.max(0, (q - 1) * Math.min(rx, rz));
+      const v = y + e * WALL; if (v < h) h = v; if (e < best) { best = e; fy = y; }
+    }
+    return { h, fy, edge: best };
+  };
+  const sample = (x, z) => {
+    const c = carve(x, z), wall = Math.max(0, c.h - c.fy);
+    // cliffs: ragged above the floor, capped at the plateau (+ a rougher skyline toward the edges)
+    const cap = TOP + (cliffN(x, z) - 0.45) * 6;
+    let h = Math.min(c.h + (cliffN(x * 1.7, z * 1.7) - 0.5) * Math.min(wall, 4) * 0.9, cap);
+    if (c.edge <= 0) h = c.fy + (floorN(x, z) - 0.5) * 0.35; // lane / arena floors: almost flat with a little undulation
+    const rock = sm(0.4, 2.2, wall), dirt = 1 - sm(0, 1.5, c.edge);
+    return { h, rock, dirt: dirt * (L.dirt ?? 0.9) };
+  };
+  return { sample, floorAt: (x, z) => carve(x, z).fy };
+}
 const MAPS = [
   {
     id: 'warehouse', name: '廢棄倉庫', en: 'WAREHOUSE', desc: '室內 · 貨櫃巷道與二樓鐵網走廊 · 60×40', slogan: 'CLOSE QUARTERS · 室內近戰與中距離交火',
@@ -1119,6 +1173,67 @@ const MAPS = [
         b.sign(s > 0 ? 'ALPHA' : 'BRAVO', s > 0 ? '#6fb6ff' : '#ff6a5f', X(-42.6), 2.6, 0, s > 0 ? Math.PI / 2 : -Math.PI / 2, 3.2, 0.8);
       });
       b.spawnZone('alpha', -42, -7, -36, 7, -Math.PI / 2); b.spawnZone('bravo', 36, -7, 42, 7, Math.PI / 2);
+    },
+  },
+  {
+    // v43 CANYON CAMP (after SF2 'Desert Camp' tournament plan): the spawns sit in opposite corners of a rock massif; three
+    // carved routes wind between them — the high outer arcs (A / C plazas, 10 m), the descending middle gully into a sunken
+    // bowl (B, 0 m), and ramps / side canyons linking them. Cliffs between routes cannot be climbed.
+    id: 'canyon', name: '峽谷陣地', en: 'CANYON CAMP', desc: '戶外地形 · 對角出生、彎曲峽谷、高低三路線、下沉中央窪地 · 160×112', slogan: 'GORGE · 高處繞遠路，低處搶中央',
+    look: { desat: 0.36, contrast: 1.14, pivot: 0.4, highlights: 1.08 },
+    bounds: { minX: -80, maxX: 80, minZ: -56, maxZ: 56 }, indoor: false, navLevels: [], navStep: 2, viewMult: 1.2, radarRange: 36,
+    hdri: 'qwantani_noon_puresky', hdriBackground: true, envIntensity: 0.6, sky: { turbidity: 7, rayleigh: 1.2, elevation: 48, azimuth: 150 },
+    sun: { pos: [30, 60, -20], color: 0xfff0d2, intensity: 3.0, auto: true }, hemi: [0xdce8ff, 0x8a7656, 0.85], exposure: 0.88,
+    fog: { color: 0xd9cfbd, near: 70, far: 260 }, acoustics: 'canyon', ambience: 'desert', shadowFollow: 64,
+    shot: { pos: [-40, 24, -6], target: [0, 2, 0] },
+    objectives: { dom: [[-21, 10, 34], [0, 0, 0], [21, 10, -34]], relic: [0, 0, 0], domRadius: 5 },
+    build(b) {
+      const LT = b.def._lanes || (b.def._lanes = makeLaneTerrain({
+        top: 15, wall: 2.3, dirt: 1,
+        lanes: [
+          { w: 7, pts: [[-62, -40, 6], [-66, -22, 7], [-62, -4, 8], [-52, 14, 9], [-38, 28, 10], [-20, 36, 10], [0, 38, 9.5], [20, 36, 8.5], [38, 32, 7], [54, 30, 6], [62, 40, 6]] }, // outer arc (mirror = the other arc)
+          { w: 8, pts: [[-62, -40, 6], [-50, -50, 5], [-34, -51, 4], [-20, -43, 3], [-9, -29, 1.5], [-2, -14, 0.4], [0, 0, 0]] }, // middle gully: swings south, enters the bowl from the side (no spawn-to-spawn line)
+          { w: 5, pts: [[-12, 4, 0.4], [-20, 14, 4], [-25, 24, 8], [-21, 34, 10]] },                  // ramp from the bowl up to the A plaza
+          { w: 5, pts: [[-20, -43, 3], [-4, -49, 5], [12, -45, 7.5], [21, -34, 10]] },                 // south canyon climbing to the C plaza
+          { w: 5, pts: [[-62, -4, 8], [-56, -12, 7.5]] },                                              // spur to the outpost
+        ],
+        arenas: [[-62, -40, 10, 8, 6], [0, 0, 12, 10, 0], [-21, 34, 9, 6.5, 10], [-54, -15, 6, 5, 7.5]],
+      }));
+      b.terrain({ minX: -100, maxX: 100, minZ: -76, maxZ: 76, step: 1.5, sample: (x, z) => LT.sample(x, z) });
+      b.grass();
+      for (const [x0, z0, x1, z1] of [[-82, -58, 82, -56], [-82, 56, 82, 58], [-82, -56, -80, 56], [80, -56, 82, 56]]) b.box(x0, -20, z0, x1, 60, z1, null, { blocksShot: false, radar: false });
+      b.sym((s) => {
+        const X = (x) => x * s, Z = (z) => z * s, G = (x, z) => b.gy(X(x), Z(z));
+        const footMin = (x, z, r) => b.gyMin(Math.min(X(x - r), X(x + r)), Math.min(Z(z - r), Z(z + r)), Math.max(X(x - r), X(x + r)), Math.max(Z(z - r), Z(z + r)));
+        const ROCK = (x, z, r) => b.boulder(X(x), Z(z), r, { y0: footMin(x, z, r * 0.6) - r * 0.2, sy: 0.7 });
+        const CRATE = (x, z, sz) => b.crate(X(x), Z(z), sz, footMin(x, z, sz / 2) - 0.03);
+        const BAGS = (x0, z0, x1, z1, h = 1.05) => b.sandbags(X(x0), Z(z0), X(x1), Z(z1), h + 0.12, b.gyMin(Math.min(X(x0), X(x1)), Math.min(Z(z0), Z(z1)), Math.max(X(x0), X(x1)), Math.max(Z(z0), Z(z1))) - 0.12);
+        const BOX = (x0, z0, x1, z1, h, m, o = {}) => { const y = b.gyMin(Math.min(X(x0), X(x1)), Math.min(Z(z0), Z(z1)), Math.max(X(x0), X(x1)), Math.max(Z(z0), Z(z1))) - 0.1; b.box(Math.min(X(x0), X(x1)), y, Math.min(Z(z0), Z(z1)), Math.max(X(x0), X(x1)), y + h, Math.max(Z(z0), Z(z1)), m, o); };
+        const tint = s > 0 ? 'canvasBlue' : 'canvasRed';
+        // spawn camp: two tents, supply crates, a jeep
+        BOX(-68, -46, -64, -42, 2.6, tint, { radar: 'building', material: 'sandbag' }); BOX(-60, -47, -56, -44, 2.6, tint, { radar: 'building', material: 'sandbag' });
+        CRATE(-66, -36, 1.2); CRATE(-64.8, -35.6, 0.9); b.car(X(-57), Z(-37), s > 0 ? 0.9 : 0.9 + Math.PI, 'sidingTan', footMin(-57, -37, 2) - 0.05);
+        BAGS(-52, -36, -50, -33.5); BAGS(-60, -30, -57, -29.2);
+        // A plaza (high arc): a ruined adobe post with a roof you can climb, sandbag nests
+        b.building({ x0: Math.min(X(-26), X(-19)), z0: Math.min(Z(37), Z(41.5)), x1: Math.max(X(-26), X(-19)), z1: Math.max(Z(37), Z(41.5)), y0: footMin(-22.5, 39.2, 3.5) + 0.05, floors: 1, fh: 3.2, mat: 'plaster',
+          doors: s > 0 ? { s: [X(-22.5)] } : { n: [X(-22.5)] }, ladder: { side: s > 0 ? 'e' : 'w', at: Z(39.2) } });
+        BAGS(-17, 30, -14, 30.8); BAGS(-28, 29, -27.2, 32); CRATE(-15, 36, 1.1); ROCK(-30, 36, 1.6);
+        // side-canyon outpost (-48,-4): a sandbagged gun pit and a lookout shed
+        BAGS(-56, -10, -52, -9.2); BAGS(-50, -17, -49.2, -14); BOX(-58, -20, -55, -17, 2.4, 'wood', { radar: 'building', material: 'wood', penetrable: true });
+        // middle gully: boulders and a wrecked jeep break the long sightline into the bowl
+        ROCK(-42, -49, 2.0); ROCK(-14, -36, 1.6); b.car(X(-27), Z(-47), 0.4, 'rust', footMin(-27, -47, 2) - 0.05); CRATE(-5, -20, 1.0);
+        // bowl (B): ruined well, sandbags, crates around the edge
+        BAGS(-8, -5, -5, -4.2); BAGS(-10, 3, -9.2, 6); CRATE(-6, 7, 1.1); CRATE(-4.8, 7.3, 0.9); ROCK(-11, -1, 1.4);
+        // south canyon + ramp: rocks for cover on the climbs
+        ROCK(4, -47, 1.4); ROCK(-17, 12, 1.3); ROCK(-24, 22, 1.4); CRATE(-60, 0, 1.1); ROCK(-65, -24, 1.6); ROCK(-44, 22, 1.5);
+        b.sign(s > 0 ? 'ALPHA' : 'BRAVO', s > 0 ? '#6fb6ff' : '#ff6a5f', X(-70), G(-70, -40) + 2.6, Z(-40), s > 0 ? Math.PI / 2 : -Math.PI / 2, 3.2, 0.8);
+      });
+      // centre: the well + a burnt truck in the bowl
+      b.cyl(0, 0, 1.3, b.gy(0, 0) - 0.2, b.gy(0, 0) + 0.9, 'ruinStone', { seg: 16, radar: 'crate' });
+      b.car(4.5, -3.5, 0.5, 'rust', b.gyMin(2, -6, 7, -1) - 0.05); b.car(-4.5, 3.5, 0.5 + Math.PI, 'rust', b.gyMin(-7, 1, -2, 6) - 0.05);
+      const SY = b.gy(-62, -40), DIR = Math.atan2(-62, -40); // face the map centre from the corner
+      b.spawnZone('alpha', -66, -44, -58, -36, Math.atan2(-(0 - -62), -(0 - -40))); b.spawnZone('bravo', 58, 36, 66, 44, Math.atan2(-(0 - 62), -(0 - 40)));
+      void SY; void DIR;
     },
   },
 ];

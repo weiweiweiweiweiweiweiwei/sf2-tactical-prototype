@@ -272,6 +272,7 @@ class HUD {
     const fade = ctx.createRadialGradient(S / 2, S / 2, S * 0.3, S / 2, S / 2, S * 0.72); fade.addColorStop(0, 'rgba(0,0,0,.18)'); fade.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = fade; ctx.fillRect(0, 0, S, S);
     ctx.save(); ctx.translate(S / 2, S / 2); ctx.scale(scale, scale); ctx.translate(-center.x, -center.z);
     ctx.fillStyle = 'rgba(225,228,224,.30)'; ctx.fillRect(B.minX, B.minZ, B.maxX - B.minX, B.maxZ - B.minZ);
+    if (m.builder.T) { ctx.globalAlpha = 0.55; ctx.drawImage(terrainShade(m.builder.T, B, 512), B.minX, B.minZ, B.maxX - B.minX, B.maxZ - B.minZ); ctx.globalAlpha = 1; } // terrain maps: hill-shaded relief
     ctx.globalCompositeOperation = 'destination-out'; ctx.fillStyle = 'rgba(0,0,0,.8)';
     for (const r of m.builder.radar) if (r.kind === 'wall' || r.kind === 'building' || r.kind === 'solid' || r.kind === 'container' || r.kind === 'container2') ctx.fillRect(r.x0, r.z0, r.x1 - r.x0, r.z1 - r.z0);
     ctx.globalCompositeOperation = 'source-over'; ctx.fillStyle = 'rgba(30,34,36,.35)';

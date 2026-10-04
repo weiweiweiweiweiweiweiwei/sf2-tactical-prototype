@@ -9,5 +9,6 @@ console.log(JSON.stringify(await p.evaluate(async (map) => {
   const S = SF2.Settings.data; S.quality = 'low'; Object.assign(S.lobby, { map, rule: 'tdm', allies: 1, enemies: 1 }); await app.startMatch();
   const m = app.match, V = SF2.THREE.Vector3, pick = (pts) => pts.filter((_, i) => i % Math.max(1, Math.floor(pts.length / 16)) === 0).slice(0, 16), A = pick(m.spawns.alpha.pts), B = pick(m.spawns.bravo.pts), out = [];
   for (const p of A) for (const q of B) { const a = new V(p.x, p.y + 1.6, p.z), b = new V(q.x, q.y + 1.6, q.z); if (m.collision.segmentClear(a, b)) out.push([+p.x.toFixed(1), +p.z.toFixed(1), +q.x.toFixed(1), +q.z.toFixed(1)]); }
-  return out;
+  const T = m.collision.terrain, a0 = m.spawns.alpha.pts[0], b0 = m.spawns.bravo.pts[0];
+  return { n: out.length, a0: [a0.x, a0.y, a0.z, T && T.heightAt(a0.x, a0.z)], b0: [b0.x, b0.y, b0.z, T && T.heightAt(b0.x, b0.z)], mid: T && [T.heightAt(0, 0), T.heightAt(-30, -20), T.heightAt(-20, -30), T.heightAt(-40, 0)] };
 }, MAP))); await b.close(); srv.close();
