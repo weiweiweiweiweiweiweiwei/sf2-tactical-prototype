@@ -102,8 +102,8 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
 #emb .ei svg{width:100%;height:100%}
 #emb .en{display:block;margin-top:4px;font-size:26px;font-weight:700;color:#fff;letter-spacing:1px;text-shadow:0 0 8px rgba(0,0,0,.9),0 2px 0 #000;white-space:nowrap}
 #emb .ez{font-size:13px;color:#d8dde3;text-shadow:0 1px 2px #000}
-#emb.show{animation:emb 1.25s linear forwards}
-@keyframes emb{0%{opacity:1}80%{opacity:1}100%{opacity:0}}
+#emb.show{animation:emb 1.8s linear forwards}
+@keyframes emb{0%{opacity:1}86%{opacity:1}100%{opacity:0}}
 #emb .ttl{position:relative;display:inline-block}
 #emb .gh{position:absolute;left:0;top:0;opacity:0;pointer-events:none}
 #emb.slam .ttl{animation:embSlam .2s cubic-bezier(.2,.7,.3,1) both}
@@ -648,7 +648,7 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
 #alive{display:none}
 #hud.minimal #alive{position:absolute;right:22px;top:12px;display:flex;gap:16px;font:600 17px/1 var(--num);color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.8)}
 #hud.minimal #alive span{display:flex;align-items:center;gap:5px}#hud.minimal #alive i{font-style:normal;font-size:20px}
-#hud.minimal #alive .a i{color:#3d7bff}#hud.minimal #alive .b i{color:#9a9a9a}
+#hud.minimal #alive .a i{color:#e8392f}#hud.minimal #alive .b i{color:#b8b8b8}
 #hud.minimal #killfeed{top:42px}
 #hud.minimal #radarWrap,#hud.minimal #radarWrap.panel{width:230px;height:230px;left:10px;top:10px;padding:0;border-radius:0;box-shadow:none!important;background:none!important;backdrop-filter:none}
 #hud.minimal #radar{width:230px;height:230px;border-radius:0}
@@ -875,6 +875,7 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
   <div class="opt"><span>擊殺語音</span><input type="checkbox" id="optAnn"><span></span></div>
   <div class="opt"><span>死亡回放 KILLCAM</span><input type="checkbox" id="optKc"><span></span></div>
   <div class="opt"><span>顯示卡</span><span id="optGpu" style="font-size:13px;color:var(--dim)"></span><span></span></div>
+  <div class="opt"><span>命中音效（試聽中）</span><select id="optHit"></select><button class="btn" id="optHitPlay" style="padding:2px 10px;font-size:12px">▶ 試聽</button></div>
   <div class="opt"><span>HUD 樣式</span><select id="optHud"><option value="minimal">極簡（SF2 風格，v19）</option><option value="panel">戰術面板（v5–v18）</option></select><span></span></div>
   <div class="opt"><span>顯示 FPS</span><input type="checkbox" id="optFps"><span></span></div>
   <div class="row-btns"><button class="btn" id="setClose">完成</button></div>

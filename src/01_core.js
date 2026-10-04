@@ -434,6 +434,7 @@ class GpuPacer {
 const Settings = {
   data: {
     sens: 2.0, zoomSens: 1.0, volume: 0.8, fov: 75, quality: 'high', hdri: true, adsMode: 'toggle', announcer: true, showFps: true, hipMode: 'precise', killcam: true,
+    hitSound: 'flesh', // v38 ESC → 命中音效 (audition list, HIT_SOUNDS)
     hudStyle: 'minimal', // v19: 'minimal' (SF2) | 'panel' (v5)
     loadouts: DEFAULT_LOADOUTS.map((l) => Object.assign({}, l)),
     lobby: { map: 5, mode: 'general', rule: 'dom', difficulty: 1, allies: 6, enemies: 6, loadout: 0,

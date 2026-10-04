@@ -741,6 +741,10 @@ class App {
     bindRange('optFov', 'fov', (v) => String(Math.round(v)), (v) => { if (this.match) { this.match.weapons.baseFov = v; if (!this.match.weapons.ads) this.match.weapons.fov = v; } });
     const sel = (id, key, apply) => { const el = $(id); el.value = String(S[key]); el.addEventListener('change', () => { S[key] = el.value; if (apply) apply(el.value); Settings.save(); }); };
     sel('optQuality', 'quality', (q) => { if (q === 'auto') AUTO_Q = this.autoCeil; this.tex.setQuality(activeQuality()); if (this.match) this.post.configure(this.match, activeQuality()); });
+    { const hs = $('optHit'); for (const [k, v] of Object.entries(HIT_SOUNDS)) { const o = document.createElement('option'); o.value = k; o.textContent = v.label; hs.append(o); }
+      if (!HIT_SOUNDS[S.hitSound]) S.hitSound = 'flesh';
+      const demo = () => { this.audio.init(); AudioEngine.loadSamples(); [0, 260, 520].forEach((d, i) => setTimeout(() => this.audio.hit(['body', 'head', 'kill'][i]), d)); };
+      sel('optHit', 'hitSound', demo); $('optHitPlay').addEventListener('click', demo); } // v38: preview body → head → kill on change
     sel('optAds', 'adsMode'); sel('optHip', 'hipMode'); sel('optHud', 'hudStyle', () => this.hud.applyStyle());
     const chk = (id, key) => { const el = $(id); el.checked = !!S[key]; el.addEventListener('change', () => { S[key] = el.checked; Settings.save(); }); };
     chk('optHdri', 'hdri'); chk('optAnn', 'announcer'); chk('optFps', 'showFps'); chk('optKc', 'killcam');

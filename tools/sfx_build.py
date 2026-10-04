@@ -128,6 +128,15 @@ def wet(paths, length):
         out.append(cut(a, on, length, fade=0.5))
     return out
 
+def segs(path, times, length):
+    """v38: hand-picked hits from one recording (times in s, found by onset + band analysis); 40 Hz DC/rumble cut"""
+    a = load(path); a = a - np.convolve(a, np.ones(600) / 600, mode='same')  # ~80 Hz high-pass (moving-average subtract)
+    out = []
+    for t in times:
+        i = int(t * SR); w = a[max(0, i - 2400):i + 4800]; e = envelope(w, 1); on = max(0, i - 2400) + int(np.argmax(e > e.max() * 0.15))
+        out.append(cut(a, on, length, fade=0.55))
+    return out
+
 def main():
     pack, sizes = {}, {}
     def put(name, arrs, kbps, ch=1):
@@ -154,6 +163,24 @@ def main():
     put('punch', kenney(K_IMP, 'impactPunch_medium', 5, trim=0.3), 48)
     # v37 juicy body hits: 'Squish Sounds Effects' (CC0) + Independent.nu 'wet squish, slurp impacts' (CC0)
     WET = os.path.join(SRC, 'dl', 'wet')
+    # v38 realistic bullet-into-flesh hits (Freesound, CC0): u1769092 'VisceralBulletImpacts' (whizzes skipped), Pablobd 'Headshot', Duasun 'Gore sounds'
+    FL = os.path.join(SRC, 'dl', 'flesh')
+    put('hit_flesh', segs(os.path.join(FL, '423301_8202639.mp3'), [0.12, 0.46, 0.93, 1.2, 1.53, 1.9, 2.24], 0.22), 64)
+    put('hit_head', segs(os.path.join(FL, '511194_5701403.mp3'), [0.07], 0.3), 64)
+    put('hit_gore', segs(os.path.join(FL, '631895_5503971.mp3'), [3.52, 9.39, 13.49], 0.25), 56)
+    # v38 hit-sound audition set (ESC → 命中音效): every candidate below is CC0
+    OG = os.path.join(SRC, 'dl', 'oga')  # OpenGameArt 'Various Sound Effects' (Julie Damsgaard, CC0)
+    put('hs_gore2', segs(os.path.join(FL, '631895_5503971.mp3'), [0.11, 2.8, 4.37, 7.97, 8.96], 0.25), 56)
+    put('hs_stab', segs(os.path.join(FL, '259542_2316086.mp3'), [0.19, 1.53, 2.75, 4.01, 5.19, 6.29], 0.25), 56)
+    put('hs_bullethit', wet([os.path.join(OG, 'snd_bullethit.wav')], 0.2), 56)
+    put('hs_splathit', wet([os.path.join(OG, 'snd_splathit.wav'), os.path.join(OG, 'snd_splat.wav')], 0.35), 56)
+    put('hs_splurt', segs(os.path.join(OG, 'snd_splurt.wav'), [0.07, 0.22, 0.39], 0.2), 56)
+    put('hs_crush', segs(os.path.join(OG, 'crush.wav'), [0.01, 0.18, 0.38], 0.2), 56)
+    put('hs_playerhit', segs(os.path.join(OG, 'player_hit.wav'), [0.0, 0.15], 0.2), 56)
+    put('hs_spear', wet([os.path.join(OG, 'spear.wav')], 0.4), 56)
+    put('hs_punchheavy', kenney(K_IMP, 'impactPunch_heavy', 5, trim=0.3), 48)
+    put('hs_softheavy', kenney(K_IMP, 'impactSoft_heavy', 5, trim=0.3), 48)
+    put('hs_bell', kenney(K_IMP, 'impactBell_heavy', 3, trim=0.5), 48)
     put('hit_wet', wet([os.path.join(WET, f + '.mp3') for f in ['squish_01_0', 'squish_02', 'squish_03', 'squish_04', 'squish_05', 'squish_06', 'squishsplat_impact']], 0.28), 56)
     put('hit_splat', wet([os.path.join(WET, 'x', 'impsplat', 'impactsplat0%d.mp3.flac' % i) for i in (1, 3, 6, 7)], 0.45), 56)
     # ambience loops (stereo) + one-shots

@@ -102,8 +102,8 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
 #emb .ei svg{width:100%;height:100%}
 #emb .en{display:block;margin-top:4px;font-size:26px;font-weight:700;color:#fff;letter-spacing:1px;text-shadow:0 0 8px rgba(0,0,0,.9),0 2px 0 #000;white-space:nowrap}
 #emb .ez{font-size:13px;color:#d8dde3;text-shadow:0 1px 2px #000}
-#emb.show{animation:emb 1.25s linear forwards}
-@keyframes emb{0%{opacity:1}80%{opacity:1}100%{opacity:0}}
+#emb.show{animation:emb 1.8s linear forwards}
+@keyframes emb{0%{opacity:1}86%{opacity:1}100%{opacity:0}}
 #emb .ttl{position:relative;display:inline-block}
 #emb .gh{position:absolute;left:0;top:0;opacity:0;pointer-events:none}
 #emb.slam .ttl{animation:embSlam .2s cubic-bezier(.2,.7,.3,1) both}
@@ -648,7 +648,7 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
 #alive{display:none}
 #hud.minimal #alive{position:absolute;right:22px;top:12px;display:flex;gap:16px;font:600 17px/1 var(--num);color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.8)}
 #hud.minimal #alive span{display:flex;align-items:center;gap:5px}#hud.minimal #alive i{font-style:normal;font-size:20px}
-#hud.minimal #alive .a i{color:#3d7bff}#hud.minimal #alive .b i{color:#9a9a9a}
+#hud.minimal #alive .a i{color:#e8392f}#hud.minimal #alive .b i{color:#b8b8b8}
 #hud.minimal #killfeed{top:42px}
 #hud.minimal #radarWrap,#hud.minimal #radarWrap.panel{width:230px;height:230px;left:10px;top:10px;padding:0;border-radius:0;box-shadow:none!important;background:none!important;backdrop-filter:none}
 #hud.minimal #radar{width:230px;height:230px;border-radius:0}
@@ -875,6 +875,7 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
   <div class="opt"><span>擊殺語音</span><input type="checkbox" id="optAnn"><span></span></div>
   <div class="opt"><span>死亡回放 KILLCAM</span><input type="checkbox" id="optKc"><span></span></div>
   <div class="opt"><span>顯示卡</span><span id="optGpu" style="font-size:13px;color:var(--dim)"></span><span></span></div>
+  <div class="opt"><span>命中音效（試聽中）</span><select id="optHit"></select><button class="btn" id="optHitPlay" style="padding:2px 10px;font-size:12px">▶ 試聽</button></div>
   <div class="opt"><span>HUD 樣式</span><select id="optHud"><option value="minimal">極簡（SF2 風格，v19）</option><option value="panel">戰術面板（v5–v18）</option></select><span></span></div>
   <div class="opt"><span>顯示 FPS</span><input type="checkbox" id="optFps"><span></span></div>
   <div class="row-btns"><button class="btn" id="setClose">完成</button></div>
@@ -1345,6 +1346,7 @@ class GpuPacer {
 const Settings = {
   data: {
     sens: 2.0, zoomSens: 1.0, volume: 0.8, fov: 75, quality: 'high', hdri: true, adsMode: 'toggle', announcer: true, showFps: true, hipMode: 'precise', killcam: true,
+    hitSound: 'flesh', // v38 ESC → 命中音效 (audition list, HIT_SOUNDS)
     hudStyle: 'minimal', // v19: 'minimal' (SF2) | 'panel' (v5)
     loadouts: DEFAULT_LOADOUTS.map((l) => Object.assign({}, l)),
     lobby: { map: 5, mode: 'general', rule: 'dom', difficulty: 1, allies: 6, enemies: 6, loadout: 0,
@@ -1391,6 +1393,35 @@ function loadoutDefs(mode, loadout) {
    delay, per-map convolution reverb and outdoor slap-back echo.
    ===================================================================== */
 // v34 per-gun weight of the live sub kick (0 = none: suppressed guns)
+// v38 hit-sound audition list (ESC → 設定 → 命中音效): s = [sample group, gain] layers, synth = procedural layer
+const HIT_SOUNDS = {
+  flesh:      { label: '真實子彈入肉', s: [['hit_flesh', 1.25]], headS: 'hit_head' },
+  fleshgore:  { label: '子彈入肉＋血肉聲', s: [['hit_flesh', 1.15], ['hit_gore', 0.6]], headS: 'hit_head' },
+  gore:       { label: '血肉撕裂（中頻）', s: [['hit_gore', 1.2]] },
+  gore2:      { label: '血肉撕裂（高頻）', s: [['hs_gore2', 1.2]] },
+  stab:       { label: '刀刺悶響', s: [['hs_stab', 1.0]] },
+  bullethit:  { label: '子彈命中（遊戲式）', s: [['hs_bullethit', 1.1]] },
+  splathit:   { label: '噴濺命中', s: [['hs_splathit', 1.1]] },
+  splurt:     { label: '噴汁', s: [['hs_splurt', 1.1]] },
+  crush:      { label: '壓碎', s: [['hs_crush', 1.1]] },
+  playerhit:  { label: '受擊悶響', s: [['hs_playerhit', 1.1]] },
+  spear:      { label: '刺穿', s: [['hs_spear', 1.0]] },
+  punch:      { label: '拳擊', s: [['punch', 1.2]] },
+  punchheavy: { label: '重拳', s: [['hs_punchheavy', 1.2]] },
+  soft:       { label: '沙包軟擊', s: [['hitsoft', 1.2]] },
+  softheavy:  { label: '沙包重擊', s: [['hs_softheavy', 1.2]] },
+  squish:     { label: '濕潤擠壓（v37）', s: [['hit_wet', 1.1]], killS: 'hit_splat' },
+  splat:      { label: '大噴濺', s: [['hit_splat', 1.0]] },
+  fleshtick:  { label: '子彈入肉＋清脆咔', s: [['hit_flesh', 1.1]], synth: 'cod', headS: 'hit_head' },
+  punchtick:  { label: '重拳＋清脆咔', s: [['hs_punchheavy', 1.0]], synth: 'cod' },
+  juice:      { label: '合成多汁（v36）', synth: 'juice' },
+  cod:        { label: '清脆咔（COD 式，v35）', synth: 'cod' },
+  thud:       { label: '合成悶擊', synth: 'thud' },
+  ping:       { label: '金屬叮', synth: 'ping' },
+  bell:       { label: '鐵鐘重擊', s: [['hs_bell', 0.7]] },
+  none:       { label: '無聲', synth: 'none' },
+};
+for (const [k, v] of Object.entries(HIT_SOUNDS)) v.key = k;
 const AMB_LEVEL = 0.55; // v34 master level of the recorded ambience (user: too loud)
 const GUN_KICK = { m4: 0.7, scar: 0.75, ak: 0.85, mp5: 0.5, ump: 0.55, vector: 0.45, mp7: 0.4, p90: 0.45, m249: 0.85, pkm: 0.95, mg42: 0.8,
   m870: 1.15, saiga: 1.05, awp: 1.2, m200: 1.25, barrett: 1.4, kar98: 1.1, svd: 1.0, p226: 0.5, m1911: 0.6, deagle: 0.85 };
@@ -1827,24 +1858,54 @@ class AudioEngine {
 
   // COD-style hit confirmation — dry, crisp and WIDE: every layer is doubled into a left and a right voice
   // (slightly detuned and 4 ms apart) so the tick / ding sits across the whole stereo field.
-  // v37 hit confirm (user: SF2 body hits are juicy): a real CC0 wet squish on every body hit, a wet splat on the killing hit,
-  // under a short meaty thud + slap; headshots add a bone crack. No separate "kill success" jingle.
+  // v38 hit confirm — the sound is chosen in ESC → 設定 → 命中音效 (temporary audition list, HIT_SOUNDS). The killing hit is the
+  // same sound a little louder (no "kill success" jingle); headshots add a short bone crack.
   hit(kind) {
     if (!this.ctx) return;
-    const ctx = this.ctx, t = ctx.currentTime, out = ctx.createGain(); out.gain.value = 0.85; out.connect(this.dry);
+    const ctx = this.ctx, t = ctx.currentTime, out = ctx.createGain(); out.gain.value = 0.7; out.connect(this.dry);
     if (kind === 'shield') { this._osc('sine', t, 1200, 1800, 0.12, out, 0.16); this._osc('sine', t, 2400, 3000, 0.1, out, 0.07); return; }
-    const k = kind === 'kill' ? 1.25 : kind === 'head' ? 1.1 : 1, wet = this._s('hit_wet'), splat = this._s('hit_splat');
-    if (wet) this._one(pick(wet), out, 1.1 * k, 0.92 + Math.random() * 0.2);
-    if (splat && kind === 'kill') this._one(pick(splat), out, 0.9, 0.95 + Math.random() * 0.12);
-    this._osc('sine', t, 170, 55, 0.07, out, (wet ? 0.35 : 0.5) * k, 0.001);                                       // flesh thud
-    this._nb(t, out, 'highpass', 2800, 0.7, 0.18, 0.0004, 0.006);                                                   // slap
-    if (!wet) { const sp = this._nb(t, out, 'bandpass', 1900, 1.3, 0.42 * k, 0.001, 0.055); sp.frequency.setValueAtTime(2100, t); sp.frequency.exponentialRampToValueAtTime(520, t + 0.07); } // synth fallback until the pack loads
-    if (kind === 'head') { this._nb(t, out, 'highpass', 5200, 0.9, 0.28, 0.0003, 0.006); this._osc('triangle', t, 1300, 700, 0.028, out, 0.16, 0.0005); } // bone crack
+    const H = HIT_SOUNDS[Settings.data.hitSound] || HIT_SOUNDS.flesh, k = (kind === 'kill' ? 1.2 : kind === 'head' ? 1.1 : 1) * (H.gain || 1);
+    let played = false;
+    for (const [grp, g] of H.s || []) { const l = this._s(grp); if (l) { this._one(pick(l), out, g * k, 0.94 + Math.random() * 0.12); played = true; } }
+    if (H.headS && kind === 'head') { const l = this._s(H.headS); if (l) this._one(l[0], out, 1.0, 0.96 + Math.random() * 0.08); }
+    if (H.killS && kind === 'kill') { const l = this._s(H.killS); if (l) this._one(pick(l), out, 0.8, 0.95 + Math.random() * 0.1); }
+    if (H.synth || (!played && H.s)) this['_hit_' + (H.synth || 'juice')](t, out, k);
+    if (kind === 'head' && H.key !== 'none') { this._nb(t, out, 'highpass', 5200, 0.9, 0.24, 0.0003, 0.006); this._osc('triangle', t, 1300, 700, 0.028, out, 0.14, 0.0005); }
   }
+  _hit_juice(t, out, k) { // v36 synthesized wet hit
+    this._osc('sine', t, 170, 55, 0.08, out, 0.5 * k, 0.001);
+    const sp = this._nb(t, out, 'bandpass', 1900, 1.3, 0.42 * k, 0.001, 0.055); sp.frequency.setValueAtTime(2100, t); sp.frequency.exponentialRampToValueAtTime(520, t + 0.07);
+    for (let i = 0; i < 3; i++) this._nb(t + 0.014 + i * 0.012, out, 'bandpass', 650 + Math.random() * 1100, 7, 0.18 * k, 0.0008, 0.014);
+    this._nb(t, out, 'highpass', 2800, 0.7, 0.22, 0.0004, 0.007);
+  }
+  _hit_cod(t, out, k) { // v8–v35 crisp tick
+    this._nb(t, out, 'highpass', 4200, 0.7, 0.3 * k, 0.0005, 0.012); this._osc('triangle', t, 1850, 1500, 0.045, out, 0.26 * k, 0.001);
+  }
+  _hit_thud(t, out, k) { // dull body thump
+    this._osc('sine', t, 120, 45, 0.11, out, 0.75 * k, 0.001); this._nb(t, out, 'lowpass', 700, 0.8, 0.45 * k, 0.001, 0.04);
+  }
+  _hit_ping(t, out, k) { // helmet-style metallic ping
+    [[2650, 0.3, 0.26], [3980, 0.16, 0.18], [5310, 0.07, 0.1]].forEach(([f, pk, d]) => this._osc('sine', t, f, f * 0.99, d, out, pk * k, 0.001));
+  }
+  _hit_none() {}
 
 
 
 
+
+
+  // v38 EMBLEM STING (SF2: every medal lands with a sound): a short whoosh into a metallic medal 'clank' (inharmonic partials)
+  // + a low thump; multi-kill tiers climb in pitch and get brighter, 5 = lucky chime
+  emblem(tier = 0) {
+    if (!this.ctx) return;
+    const ctx = this.ctx, t = ctx.currentTime, out = ctx.createGain(); out.gain.value = 0.55; out.connect(this.dry);
+    if (tier === 5) { [1318, 1760, 2637].forEach((f, i) => this._osc('sine', t + i * 0.06, f, f, 0.35, out, 0.22, 0.003)); return; }
+    const up = Math.pow(2, tier * 2 / 12);
+    const w = this._nb(t, out, 'bandpass', 900, 1.2, 0.18, 0.05, 0.06); w.frequency.setValueAtTime(700, t); w.frequency.exponentialRampToValueAtTime(3200, t + 0.1);
+    const h = t + 0.07;
+    [[560, 0.32, 0.45], [1510, 0.2, 0.32], [2700, 0.13, 0.22], [4100, 0.07, 0.14]].forEach(([f, pk, d]) => this._osc('sine', h, f * up, f * up * 0.997, d, out, pk * (1 + tier * 0.08), 0.001));
+    this._osc('sine', h, 130, 55, 0.12, out, 0.45, 0.002); this._nb(h, out, 'highpass', 3500, 0.8, 0.14, 0.0005, 0.02);
+  }
 
   // Footsteps: dry, strictly positional (HRTF + inverse distance); o.pitch = per-soldier timbre, o.occluded = heard through a wall.
   footstep(pos, surface = 'concrete', loud = 1, o = {}) {
@@ -8807,7 +8868,8 @@ class HUD {
     // SF2 entrances (frame-stepped from gameplay video): the name slams in from 3× with a ghost trail, the medal flashes white
     // for a frame, or the medal snaps in from the side; the next emblem cuts in instantly
     el.classList.remove('show', 'slam', 'flash', 'side'); void el.offsetWidth; el.classList.add('show', E.anim || 'flash');
-    clearTimeout(this.embT); this.embT = setTimeout(() => this._embNext(), this.embQ.length ? 650 : 1250);
+    if (this.app && this.app.audio) this.app.audio.emblem(E.tier || 0); // every emblem has its own sting (SF2)
+    clearTimeout(this.embT); this.embT = setTimeout(() => this._embNext(), EMB_HOLD); // SF2: ~1.8 s per emblem, the next one cuts in
   }
   // SF2 centre line: 擊殺 [medal] victim name
   killNote(name, id) {
@@ -8818,7 +8880,7 @@ class HUD {
     const el = document.getElementById('emb');
     el.querySelector('.ei').innerHTML = '<svg viewBox="0 0 100 100"><rect x="20" y="20" width="60" height="60" rx="8" fill="#3a3220" stroke="#e8b84a" stroke-width="3"/><g fill="#ffd23a" transform="translate(50 50)"><circle cx="0" cy="-11" r="11"/><circle cx="11" cy="0" r="11"/><circle cx="0" cy="11" r="11"/><circle cx="-11" cy="0" r="11"/></g><circle cx="50" cy="50" r="4" fill="#b8892c"/></svg>';
     el.querySelector('.t').textContent = el.querySelector('.gh').textContent = '幸運！'; el.querySelector('.ez').textContent = `獲得額外積分 +${n}`;
-    el.classList.remove('show', 'slam', 'flash', 'side'); void el.offsetWidth; el.classList.add('show', 'side');
+    el.classList.remove('show', 'slam', 'flash', 'side'); void el.offsetWidth; el.classList.add('show', 'side'); if (this.app && this.app.audio) this.app.audio.emblem(5);
   }
   emblemClear() { const row = document.getElementById('embRow'); if (row) row.innerHTML = ''; }
   announce(main, sub = '') { const a = this.el.ann; this.el.annMain.textContent = main; this.el.annSub.textContent = sub; a.classList.remove('show'); void a.offsetWidth; a.classList.add('show'); }
@@ -9101,6 +9163,7 @@ class HUD {
    collects along the bottom for the current life. Art is drawn here as SVG (no game assets); conditions follow the
    SF2 emblem list in docs/SF2_RESEARCH.md.
    ===================================================================== */
+const EMB_HOLD = 1800; // ms each emblem stays (measured from SF2 gameplay video)
 const EMBLEMS = {
   kill:        { name: 'Kill',          zh: '擊殺',     ray: '#9fb4c8', icon: 'cross' },
   headshot:    { name: 'Headshot',      zh: '爆頭',     ray: '#e04838', icon: 'skull' },
@@ -9118,10 +9181,10 @@ const EMBLEMS = {
   welcome:     { name: 'Welcome Back',  zh: '重返戰場', ray: '#5fd17a', icon: 'up', anim: 'slam' },
   love:        { name: 'Love Shot',     zh: '同歸於盡', ray: '#ff6fa8', icon: 'heart', anim: 'slam' },
   assist:      { name: 'Assist',        zh: '助攻',     ray: '#9fb4c8', icon: 'plus' },
-  double:      { name: 'Double Kill',   zh: '雙殺',     ray: '#f0b23a', icon: 'n2', anim: 'slam' },
-  multi:       { name: 'Multi Kill',    zh: '三殺',     ray: '#f0b23a', icon: 'n3', anim: 'slam' },
-  specialist:  { name: 'Specialist',    zh: '四殺',     ray: '#e04838', icon: 'n4', anim: 'slam' },
-  specialforce:{ name: 'Special Force', zh: '五殺',     ray: '#ffd23a', icon: 'n5', anim: 'slam', gold: true },
+  double:      { name: 'Double Kill',   zh: '雙殺',     ray: '#f0b23a', icon: 'n2', anim: 'slam', tier: 1 },
+  multi:       { name: 'Multi Kill',    zh: '三殺',     ray: '#f0b23a', icon: 'n3', anim: 'slam', tier: 2 },
+  specialist:  { name: 'Specialist',    zh: '四殺',     ray: '#e04838', icon: 'n4', anim: 'slam', tier: 3 },
+  specialforce:{ name: 'Special Force', zh: '五殺',     ray: '#ffd23a', icon: 'n5', anim: 'slam', gold: true, tier: 4 },
 };
 const EMB_ICON = {
   cross: '<circle cx="50" cy="50" r="15" fill="none" stroke="#fff" stroke-width="4"/><path d="M50 28v14M50 58v14M28 50h14M58 50h14" stroke="#fff" stroke-width="4"/><circle cx="50" cy="50" r="3" fill="#e04838"/>',
@@ -12316,6 +12379,10 @@ class App {
     bindRange('optFov', 'fov', (v) => String(Math.round(v)), (v) => { if (this.match) { this.match.weapons.baseFov = v; if (!this.match.weapons.ads) this.match.weapons.fov = v; } });
     const sel = (id, key, apply) => { const el = $(id); el.value = String(S[key]); el.addEventListener('change', () => { S[key] = el.value; if (apply) apply(el.value); Settings.save(); }); };
     sel('optQuality', 'quality', (q) => { if (q === 'auto') AUTO_Q = this.autoCeil; this.tex.setQuality(activeQuality()); if (this.match) this.post.configure(this.match, activeQuality()); });
+    { const hs = $('optHit'); for (const [k, v] of Object.entries(HIT_SOUNDS)) { const o = document.createElement('option'); o.value = k; o.textContent = v.label; hs.append(o); }
+      if (!HIT_SOUNDS[S.hitSound]) S.hitSound = 'flesh';
+      const demo = () => { this.audio.init(); AudioEngine.loadSamples(); [0, 260, 520].forEach((d, i) => setTimeout(() => this.audio.hit(['body', 'head', 'kill'][i]), d)); };
+      sel('optHit', 'hitSound', demo); $('optHitPlay').addEventListener('click', demo); } // v38: preview body → head → kill on change
     sel('optAds', 'adsMode'); sel('optHip', 'hipMode'); sel('optHud', 'hudStyle', () => this.hud.applyStyle());
     const chk = (id, key) => { const el = $(id); el.checked = !!S[key]; el.addEventListener('change', () => { S[key] = el.checked; Settings.save(); }); };
     chk('optHdri', 'hdri'); chk('optAnn', 'announcer'); chk('optFps', 'showFps'); chk('optKc', 'killcam');

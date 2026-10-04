@@ -146,7 +146,8 @@ class HUD {
     // SF2 entrances (frame-stepped from gameplay video): the name slams in from 3× with a ghost trail, the medal flashes white
     // for a frame, or the medal snaps in from the side; the next emblem cuts in instantly
     el.classList.remove('show', 'slam', 'flash', 'side'); void el.offsetWidth; el.classList.add('show', E.anim || 'flash');
-    clearTimeout(this.embT); this.embT = setTimeout(() => this._embNext(), this.embQ.length ? 650 : 1250);
+    if (this.app && this.app.audio) this.app.audio.emblem(E.tier || 0); // every emblem has its own sting (SF2)
+    clearTimeout(this.embT); this.embT = setTimeout(() => this._embNext(), EMB_HOLD); // SF2: ~1.8 s per emblem, the next one cuts in
   }
   // SF2 centre line: 擊殺 [medal] victim name
   killNote(name, id) {
@@ -157,7 +158,7 @@ class HUD {
     const el = document.getElementById('emb');
     el.querySelector('.ei').innerHTML = '<svg viewBox="0 0 100 100"><rect x="20" y="20" width="60" height="60" rx="8" fill="#3a3220" stroke="#e8b84a" stroke-width="3"/><g fill="#ffd23a" transform="translate(50 50)"><circle cx="0" cy="-11" r="11"/><circle cx="11" cy="0" r="11"/><circle cx="0" cy="11" r="11"/><circle cx="-11" cy="0" r="11"/></g><circle cx="50" cy="50" r="4" fill="#b8892c"/></svg>';
     el.querySelector('.t').textContent = el.querySelector('.gh').textContent = '幸運！'; el.querySelector('.ez').textContent = `獲得額外積分 +${n}`;
-    el.classList.remove('show', 'slam', 'flash', 'side'); void el.offsetWidth; el.classList.add('show', 'side');
+    el.classList.remove('show', 'slam', 'flash', 'side'); void el.offsetWidth; el.classList.add('show', 'side'); if (this.app && this.app.audio) this.app.audio.emblem(5);
   }
   emblemClear() { const row = document.getElementById('embRow'); if (row) row.innerHTML = ''; }
   announce(main, sub = '') { const a = this.el.ann; this.el.annMain.textContent = main; this.el.annSub.textContent = sub; a.classList.remove('show'); void a.offsetWidth; a.classList.add('show'); }

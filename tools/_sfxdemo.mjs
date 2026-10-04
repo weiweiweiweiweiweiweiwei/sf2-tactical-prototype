@@ -1,5 +1,5 @@
 // v33 sound check + listening demo: records the game's real audio output while it plays a scripted sequence
-// (own guns, distant guns, footsteps on several surfaces, ADS, three ambiences) → tools/out/v37_demo_<rec|proc>.webm
+// (own guns, distant guns, footsteps on several surfaces, ADS, three ambiences) → tools/out/v38_demo_<rec|proc>.webm
 // node tools/_sfxdemo.mjs [proc]   (proc = the old procedural sounds, for an A/B)
 import { chromium } from 'playwright'; import http from 'node:http'; import fs from 'node:fs'; import path from 'node:path';
 const ROOT = process.cwd(), T = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript' }, PROC = process.argv[2] === 'proc';
@@ -50,7 +50,7 @@ const res = await p.evaluate(async () => {
   return { b64: btoa(s), maxPeak: Math.max(...peaks), finite: peaks.every(Number.isFinite), silentShare: +(peaks.filter((x) => x < 1e-4).length / peaks.length).toFixed(2), resets: A.busResets };
 });
 fs.mkdirSync('tools/out', { recursive: true });
-const out = `tools/out/v37_demo_${PROC ? 'proc' : 'rec'}.webm`; fs.writeFileSync(out, Buffer.from(res.b64, 'base64'));
+const out = `tools/out/v38_demo_${PROC ? 'proc' : 'rec'}.webm`; fs.writeFileSync(out, Buffer.from(res.b64, 'base64'));
 console.log(out, `${(fs.statSync(out).size / 1024).toFixed(0)} KB`, JSON.stringify({ maxPeak: +res.maxPeak.toFixed(3), finite: res.finite, silentShare: res.silentShare, busResets: res.resets }));
 if (errs.length) console.log('MESSAGES', errs.slice(0, 8));
 await b.close(); srv.close();

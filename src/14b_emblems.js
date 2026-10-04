@@ -3,6 +3,7 @@
    collects along the bottom for the current life. Art is drawn here as SVG (no game assets); conditions follow the
    SF2 emblem list in docs/SF2_RESEARCH.md.
    ===================================================================== */
+const EMB_HOLD = 1800; // ms each emblem stays (measured from SF2 gameplay video)
 const EMBLEMS = {
   kill:        { name: 'Kill',          zh: '擊殺',     ray: '#9fb4c8', icon: 'cross' },
   headshot:    { name: 'Headshot',      zh: '爆頭',     ray: '#e04838', icon: 'skull' },
@@ -20,10 +21,10 @@ const EMBLEMS = {
   welcome:     { name: 'Welcome Back',  zh: '重返戰場', ray: '#5fd17a', icon: 'up', anim: 'slam' },
   love:        { name: 'Love Shot',     zh: '同歸於盡', ray: '#ff6fa8', icon: 'heart', anim: 'slam' },
   assist:      { name: 'Assist',        zh: '助攻',     ray: '#9fb4c8', icon: 'plus' },
-  double:      { name: 'Double Kill',   zh: '雙殺',     ray: '#f0b23a', icon: 'n2', anim: 'slam' },
-  multi:       { name: 'Multi Kill',    zh: '三殺',     ray: '#f0b23a', icon: 'n3', anim: 'slam' },
-  specialist:  { name: 'Specialist',    zh: '四殺',     ray: '#e04838', icon: 'n4', anim: 'slam' },
-  specialforce:{ name: 'Special Force', zh: '五殺',     ray: '#ffd23a', icon: 'n5', anim: 'slam', gold: true },
+  double:      { name: 'Double Kill',   zh: '雙殺',     ray: '#f0b23a', icon: 'n2', anim: 'slam', tier: 1 },
+  multi:       { name: 'Multi Kill',    zh: '三殺',     ray: '#f0b23a', icon: 'n3', anim: 'slam', tier: 2 },
+  specialist:  { name: 'Specialist',    zh: '四殺',     ray: '#e04838', icon: 'n4', anim: 'slam', tier: 3 },
+  specialforce:{ name: 'Special Force', zh: '五殺',     ray: '#ffd23a', icon: 'n5', anim: 'slam', gold: true, tier: 4 },
 };
 const EMB_ICON = {
   cross: '<circle cx="50" cy="50" r="15" fill="none" stroke="#fff" stroke-width="4"/><path d="M50 28v14M50 58v14M28 50h14M58 50h14" stroke="#fff" stroke-width="4"/><circle cx="50" cy="50" r="3" fill="#e04838"/>',

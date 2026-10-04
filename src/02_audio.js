@@ -10,6 +10,35 @@
    delay, per-map convolution reverb and outdoor slap-back echo.
    ===================================================================== */
 // v34 per-gun weight of the live sub kick (0 = none: suppressed guns)
+// v38 hit-sound audition list (ESC → 設定 → 命中音效): s = [sample group, gain] layers, synth = procedural layer
+const HIT_SOUNDS = {
+  flesh:      { label: '真實子彈入肉', s: [['hit_flesh', 1.25]], headS: 'hit_head' },
+  fleshgore:  { label: '子彈入肉＋血肉聲', s: [['hit_flesh', 1.15], ['hit_gore', 0.6]], headS: 'hit_head' },
+  gore:       { label: '血肉撕裂（中頻）', s: [['hit_gore', 1.2]] },
+  gore2:      { label: '血肉撕裂（高頻）', s: [['hs_gore2', 1.2]] },
+  stab:       { label: '刀刺悶響', s: [['hs_stab', 1.0]] },
+  bullethit:  { label: '子彈命中（遊戲式）', s: [['hs_bullethit', 1.1]] },
+  splathit:   { label: '噴濺命中', s: [['hs_splathit', 1.1]] },
+  splurt:     { label: '噴汁', s: [['hs_splurt', 1.1]] },
+  crush:      { label: '壓碎', s: [['hs_crush', 1.1]] },
+  playerhit:  { label: '受擊悶響', s: [['hs_playerhit', 1.1]] },
+  spear:      { label: '刺穿', s: [['hs_spear', 1.0]] },
+  punch:      { label: '拳擊', s: [['punch', 1.2]] },
+  punchheavy: { label: '重拳', s: [['hs_punchheavy', 1.2]] },
+  soft:       { label: '沙包軟擊', s: [['hitsoft', 1.2]] },
+  softheavy:  { label: '沙包重擊', s: [['hs_softheavy', 1.2]] },
+  squish:     { label: '濕潤擠壓（v37）', s: [['hit_wet', 1.1]], killS: 'hit_splat' },
+  splat:      { label: '大噴濺', s: [['hit_splat', 1.0]] },
+  fleshtick:  { label: '子彈入肉＋清脆咔', s: [['hit_flesh', 1.1]], synth: 'cod', headS: 'hit_head' },
+  punchtick:  { label: '重拳＋清脆咔', s: [['hs_punchheavy', 1.0]], synth: 'cod' },
+  juice:      { label: '合成多汁（v36）', synth: 'juice' },
+  cod:        { label: '清脆咔（COD 式，v35）', synth: 'cod' },
+  thud:       { label: '合成悶擊', synth: 'thud' },
+  ping:       { label: '金屬叮', synth: 'ping' },
+  bell:       { label: '鐵鐘重擊', s: [['hs_bell', 0.7]] },
+  none:       { label: '無聲', synth: 'none' },
+};
+for (const [k, v] of Object.entries(HIT_SOUNDS)) v.key = k;
 const AMB_LEVEL = 0.55; // v34 master level of the recorded ambience (user: too loud)
 const GUN_KICK = { m4: 0.7, scar: 0.75, ak: 0.85, mp5: 0.5, ump: 0.55, vector: 0.45, mp7: 0.4, p90: 0.45, m249: 0.85, pkm: 0.95, mg42: 0.8,
   m870: 1.15, saiga: 1.05, awp: 1.2, m200: 1.25, barrett: 1.4, kar98: 1.1, svd: 1.0, p226: 0.5, m1911: 0.6, deagle: 0.85 };
@@ -446,24 +475,54 @@ class AudioEngine {
 
   // COD-style hit confirmation — dry, crisp and WIDE: every layer is doubled into a left and a right voice
   // (slightly detuned and 4 ms apart) so the tick / ding sits across the whole stereo field.
-  // v37 hit confirm (user: SF2 body hits are juicy): a real CC0 wet squish on every body hit, a wet splat on the killing hit,
-  // under a short meaty thud + slap; headshots add a bone crack. No separate "kill success" jingle.
+  // v38 hit confirm — the sound is chosen in ESC → 設定 → 命中音效 (temporary audition list, HIT_SOUNDS). The killing hit is the
+  // same sound a little louder (no "kill success" jingle); headshots add a short bone crack.
   hit(kind) {
     if (!this.ctx) return;
-    const ctx = this.ctx, t = ctx.currentTime, out = ctx.createGain(); out.gain.value = 0.85; out.connect(this.dry);
+    const ctx = this.ctx, t = ctx.currentTime, out = ctx.createGain(); out.gain.value = 0.7; out.connect(this.dry);
     if (kind === 'shield') { this._osc('sine', t, 1200, 1800, 0.12, out, 0.16); this._osc('sine', t, 2400, 3000, 0.1, out, 0.07); return; }
-    const k = kind === 'kill' ? 1.25 : kind === 'head' ? 1.1 : 1, wet = this._s('hit_wet'), splat = this._s('hit_splat');
-    if (wet) this._one(pick(wet), out, 1.1 * k, 0.92 + Math.random() * 0.2);
-    if (splat && kind === 'kill') this._one(pick(splat), out, 0.9, 0.95 + Math.random() * 0.12);
-    this._osc('sine', t, 170, 55, 0.07, out, (wet ? 0.35 : 0.5) * k, 0.001);                                       // flesh thud
-    this._nb(t, out, 'highpass', 2800, 0.7, 0.18, 0.0004, 0.006);                                                   // slap
-    if (!wet) { const sp = this._nb(t, out, 'bandpass', 1900, 1.3, 0.42 * k, 0.001, 0.055); sp.frequency.setValueAtTime(2100, t); sp.frequency.exponentialRampToValueAtTime(520, t + 0.07); } // synth fallback until the pack loads
-    if (kind === 'head') { this._nb(t, out, 'highpass', 5200, 0.9, 0.28, 0.0003, 0.006); this._osc('triangle', t, 1300, 700, 0.028, out, 0.16, 0.0005); } // bone crack
+    const H = HIT_SOUNDS[Settings.data.hitSound] || HIT_SOUNDS.flesh, k = (kind === 'kill' ? 1.2 : kind === 'head' ? 1.1 : 1) * (H.gain || 1);
+    let played = false;
+    for (const [grp, g] of H.s || []) { const l = this._s(grp); if (l) { this._one(pick(l), out, g * k, 0.94 + Math.random() * 0.12); played = true; } }
+    if (H.headS && kind === 'head') { const l = this._s(H.headS); if (l) this._one(l[0], out, 1.0, 0.96 + Math.random() * 0.08); }
+    if (H.killS && kind === 'kill') { const l = this._s(H.killS); if (l) this._one(pick(l), out, 0.8, 0.95 + Math.random() * 0.1); }
+    if (H.synth || (!played && H.s)) this['_hit_' + (H.synth || 'juice')](t, out, k);
+    if (kind === 'head' && H.key !== 'none') { this._nb(t, out, 'highpass', 5200, 0.9, 0.24, 0.0003, 0.006); this._osc('triangle', t, 1300, 700, 0.028, out, 0.14, 0.0005); }
   }
+  _hit_juice(t, out, k) { // v36 synthesized wet hit
+    this._osc('sine', t, 170, 55, 0.08, out, 0.5 * k, 0.001);
+    const sp = this._nb(t, out, 'bandpass', 1900, 1.3, 0.42 * k, 0.001, 0.055); sp.frequency.setValueAtTime(2100, t); sp.frequency.exponentialRampToValueAtTime(520, t + 0.07);
+    for (let i = 0; i < 3; i++) this._nb(t + 0.014 + i * 0.012, out, 'bandpass', 650 + Math.random() * 1100, 7, 0.18 * k, 0.0008, 0.014);
+    this._nb(t, out, 'highpass', 2800, 0.7, 0.22, 0.0004, 0.007);
+  }
+  _hit_cod(t, out, k) { // v8–v35 crisp tick
+    this._nb(t, out, 'highpass', 4200, 0.7, 0.3 * k, 0.0005, 0.012); this._osc('triangle', t, 1850, 1500, 0.045, out, 0.26 * k, 0.001);
+  }
+  _hit_thud(t, out, k) { // dull body thump
+    this._osc('sine', t, 120, 45, 0.11, out, 0.75 * k, 0.001); this._nb(t, out, 'lowpass', 700, 0.8, 0.45 * k, 0.001, 0.04);
+  }
+  _hit_ping(t, out, k) { // helmet-style metallic ping
+    [[2650, 0.3, 0.26], [3980, 0.16, 0.18], [5310, 0.07, 0.1]].forEach(([f, pk, d]) => this._osc('sine', t, f, f * 0.99, d, out, pk * k, 0.001));
+  }
+  _hit_none() {}
 
 
 
 
+
+
+  // v38 EMBLEM STING (SF2: every medal lands with a sound): a short whoosh into a metallic medal 'clank' (inharmonic partials)
+  // + a low thump; multi-kill tiers climb in pitch and get brighter, 5 = lucky chime
+  emblem(tier = 0) {
+    if (!this.ctx) return;
+    const ctx = this.ctx, t = ctx.currentTime, out = ctx.createGain(); out.gain.value = 0.55; out.connect(this.dry);
+    if (tier === 5) { [1318, 1760, 2637].forEach((f, i) => this._osc('sine', t + i * 0.06, f, f, 0.35, out, 0.22, 0.003)); return; }
+    const up = Math.pow(2, tier * 2 / 12);
+    const w = this._nb(t, out, 'bandpass', 900, 1.2, 0.18, 0.05, 0.06); w.frequency.setValueAtTime(700, t); w.frequency.exponentialRampToValueAtTime(3200, t + 0.1);
+    const h = t + 0.07;
+    [[560, 0.32, 0.45], [1510, 0.2, 0.32], [2700, 0.13, 0.22], [4100, 0.07, 0.14]].forEach(([f, pk, d]) => this._osc('sine', h, f * up, f * up * 0.997, d, out, pk * (1 + tier * 0.08), 0.001));
+    this._osc('sine', h, 130, 55, 0.12, out, 0.45, 0.002); this._nb(h, out, 'highpass', 3500, 0.8, 0.14, 0.0005, 0.02);
+  }
 
   // Footsteps: dry, strictly positional (HRTF + inverse distance); o.pitch = per-soldier timbre, o.occluded = heard through a wall.
   footstep(pos, surface = 'concrete', loud = 1, o = {}) {
