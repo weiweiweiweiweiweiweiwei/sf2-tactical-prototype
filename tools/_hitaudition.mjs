@@ -13,6 +13,7 @@ const r = await p.evaluate(async () => {
   const rec = new MediaRecorder(dest.stream, { mimeType: 'audio/webm;codecs=opus', audioBitsPerSecond: 160000 }), chunks = []; rec.ondataavailable = (e) => chunks.push(e.data); rec.start();
   await sleep(300);
   for (const [k] of opts) { SF2.Settings.data.hitSound = k; for (const kind of ['body', 'body', 'head', 'kill']) { A.hit(kind); await sleep(380); } await sleep(480); }
+  for (const tr of [0, 0, 1, 2, 3, 4, 5]) { A.emblem(tr); await sleep(900); } // emblem whooshes: kill, headshot, ×2…×5, lucky
   rec.stop(); await new Promise((r) => (rec.onstop = r));
   const buf = new Uint8Array(await new Blob(chunks).arrayBuffer()); let s = ''; for (let i = 0; i < buf.length; i += 0x8000) s += String.fromCharCode.apply(null, buf.subarray(i, i + 0x8000));
   return { opts, b64: btoa(s) };

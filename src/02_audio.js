@@ -511,18 +511,29 @@ class AudioEngine {
 
 
 
-  // v38 EMBLEM STING (SF2: every medal lands with a sound): a short whoosh into a metallic medal 'clank' (inharmonic partials)
-  // + a low thump; multi-kill tiers climb in pitch and get brighter, 5 = lucky chime
+  // v38 EMBLEM WHOOSH (user: like a YouTube edit transition — whoosh / caption slide / scene swipe, not a medal): filtered noise
+  // swept up then down while it pans across the stereo field, with a soft low body; multi-kill tiers are longer and brighter,
+  // 5 = a short high caption swipe (lucky bonus)
   emblem(tier = 0) {
     if (!this.ctx) return;
-    const ctx = this.ctx, t = ctx.currentTime, out = ctx.createGain(); out.gain.value = 0.55; out.connect(this.dry);
-    if (tier === 5) { [1318, 1760, 2637].forEach((f, i) => this._osc('sine', t + i * 0.06, f, f, 0.35, out, 0.22, 0.003)); return; }
-    const up = Math.pow(2, tier * 2 / 12);
-    const w = this._nb(t, out, 'bandpass', 900, 1.2, 0.18, 0.05, 0.06); w.frequency.setValueAtTime(700, t); w.frequency.exponentialRampToValueAtTime(3200, t + 0.1);
-    const h = t + 0.07;
-    [[560, 0.32, 0.45], [1510, 0.2, 0.32], [2700, 0.13, 0.22], [4100, 0.07, 0.14]].forEach(([f, pk, d]) => this._osc('sine', h, f * up, f * up * 0.997, d, out, pk * (1 + tier * 0.08), 0.001));
-    this._osc('sine', h, 130, 55, 0.12, out, 0.45, 0.002); this._nb(h, out, 'highpass', 3500, 0.8, 0.14, 0.0005, 0.02);
+    const ctx = this.ctx, t = ctx.currentTime + 0.005, dur = tier === 5 ? 0.18 : 0.26 + tier * 0.03, out = ctx.createGain(); out.gain.value = 0.5; out.connect(this.dry);
+    const layer = (f0, f1, f2, q, peak, panFrom, panTo, len) => {
+      const src = this._noiseSrc(t, len), bp = ctx.createBiquadFilter(), g = ctx.createGain(), pn = ctx.createStereoPanner();
+      bp.type = 'bandpass'; bp.Q.value = q;
+      bp.frequency.setValueAtTime(f0, t); bp.frequency.exponentialRampToValueAtTime(f1, t + len * 0.6); bp.frequency.exponentialRampToValueAtTime(f2, t + len);
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(peak, t + len * 0.55); g.gain.exponentialRampToValueAtTime(0.0001, t + len);
+      pn.pan.setValueAtTime(panFrom, t); pn.pan.linearRampToValueAtTime(panTo, t + len);
+      src.connect(bp); bp.connect(g); g.connect(pn); pn.connect(out);
+    };
+    const bright = 1 + tier * 0.12;
+    if (tier === 5) { layer(1800, 6500, 3000, 2.2, 0.5, -0.7, 0.7, dur); return; } // caption swipe
+    layer(350, 2600 * bright, 900, 1.4, 0.55, -0.8, 0.8, dur);   // main whoosh
+    layer(2000, 7000 * bright, 3500, 3, 0.18, -0.5, 0.6, dur * 0.85); // air on top
+    const o = ctx.createOscillator(), og = ctx.createGain(); o.type = 'sine'; o.frequency.setValueAtTime(90, t + dur * 0.4); o.frequency.exponentialRampToValueAtTime(45, t + dur + 0.15);
+    og.gain.setValueAtTime(0, t + dur * 0.4); og.gain.linearRampToValueAtTime(0.25 + tier * 0.04, t + dur * 0.55); og.gain.exponentialRampToValueAtTime(0.0001, t + dur + 0.2);
+    o.connect(og); og.connect(out); o.start(t + dur * 0.4); o.stop(t + dur + 0.25); // soft low "landing" under the whoosh
   }
+
 
   // Footsteps: dry, strictly positional (HRTF + inverse distance); o.pitch = per-soldier timbre, o.occluded = heard through a wall.
   footstep(pos, surface = 'concrete', loud = 1, o = {}) {
