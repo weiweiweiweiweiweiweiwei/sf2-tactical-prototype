@@ -875,7 +875,7 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
   <div class="opt"><span>擊殺語音</span><input type="checkbox" id="optAnn"><span></span></div>
   <div class="opt"><span>死亡回放 KILLCAM</span><input type="checkbox" id="optKc"><span></span></div>
   <div class="opt"><span>顯示卡</span><span id="optGpu" style="font-size:13px;color:var(--dim)"></span><span></span></div>
-  <div class="opt"><span>命中音效（試聽中）</span><select id="optHit"></select><button class="btn" id="optHitPlay" style="padding:2px 10px;font-size:12px">▶ 試聽</button></div>
+  <div class="opt"><span>命中音效</span><select id="optHit"></select><button class="btn" id="optHitPlay" style="padding:2px 10px;font-size:12px">▶ 試聽</button></div>
   <div class="opt"><span>HUD 樣式</span><select id="optHud"><option value="minimal">極簡（SF2 風格，v19）</option><option value="panel">戰術面板（v5–v18）</option></select><span></span></div>
   <div class="opt"><span>顯示 FPS</span><input type="checkbox" id="optFps"><span></span></div>
   <div class="row-btns"><button class="btn" id="setClose">完成</button></div>
@@ -1133,138 +1133,138 @@ const WEAPON_DATABASE = {
   m16a3: {
     name: 'M16A3', type: 'assault', slot: 'primary', damageNear: 28, damageFar: 22, falloffStart: 30, falloffEnd: 70, fireRate: 0.08, recoilPitch: 0.0135, recoilYaw: 0.008, recoilRecovery: 9,
     hipSpread: 0.08, adsSpread: 0.0018, adsFov: 54, adsType: '3d_sight', mobility: 0.93, maxAmmo: 30, reloadTime: 2.4, modelUrl: null,
-    model: 'm4', sound: 'm4', rate: 0.95, penetration: 1, tp: { len: 0.98, body: 'dark', mag: 'box' }, desc: '長槍管 M16，射程與精度高於 M4，後座略大。',
+    sound: 'm4', rate: 0.95, penetration: 1, tp: { len: 0.98, body: 'dark', mag: 'box' }, desc: '長槍管 M16，射程與精度高於 M4，後座略大。',
   },
   k2: {
     name: 'K2', type: 'assault', slot: 'primary', damageNear: 27, damageFar: 20, falloffStart: 25, falloffEnd: 60, fireRate: 0.084, recoilPitch: 0.0115, recoilYaw: 0.0095, recoilRecovery: 10,
     hipSpread: 0.072, adsSpread: 0.0021, adsFov: 55, adsType: '3d_sight', mobility: 0.96, maxAmmo: 30, reloadTime: 2.2, modelUrl: null,
-    model: 'm4', sound: 'm4', rate: 1.04, penetration: 1, tp: { len: 0.9, body: 'dark', mag: 'box' }, desc: '韓國制式步槍，平衡好用、機動性佳。',
+    sound: 'm4', rate: 1.04, penetration: 1, tp: { len: 0.9, body: 'dark', mag: 'box' }, desc: '韓國制式步槍，平衡好用、機動性佳。',
   },
   xm8: {
     name: 'XM8', type: 'assault', slot: 'primary', damageNear: 25, damageFar: 19, falloffStart: 25, falloffEnd: 60, fireRate: 0.075, recoilPitch: 0.0095, recoilYaw: 0.0075, recoilRecovery: 11,
     hipSpread: 0.068, adsSpread: 0.0019, adsFov: 50, adsType: 'red_dot', mobility: 0.98, maxAmmo: 30, reloadTime: 2.1, modelUrl: null,
-    model: 'scarl', sound: 'scar', rate: 1.1, penetration: 1, tp: { len: 0.82, body: 'tan', mag: 'box' }, desc: '一體成形的未來步槍，後座柔和、射速快。',
+    sound: 'scar', rate: 1.1, penetration: 1, tp: { len: 0.82, body: 'tan', mag: 'box' }, desc: '一體成形的未來步槍，後座柔和、射速快。',
   },
   galil: {
     name: 'GALIL', type: 'assault', slot: 'primary', damageNear: 31, damageFar: 23, falloffStart: 25, falloffEnd: 60, fireRate: 0.092, recoilPitch: 0.0145, recoilYaw: 0.011, recoilRecovery: 8,
     hipSpread: 0.078, adsSpread: 0.0026, adsFov: 56, adsType: '3d_sight', mobility: 0.93, maxAmmo: 35, reloadTime: 2.6, modelUrl: null,
-    model: 'ak47', sound: 'ak', rate: 1.06, penetration: 1, tp: { len: 0.95, body: 'wood', mag: 'curved' }, desc: '以色列 AK 系步槍，35 發大彈匣，威力與後座介於 M4 和 AK 之間。',
+    sound: 'ak', rate: 1.06, penetration: 1, tp: { len: 0.95, body: 'wood', mag: 'curved' }, desc: '以色列 AK 系步槍，35 發大彈匣，威力與後座介於 M4 和 AK 之間。',
   },
   sg551: {
     name: 'SG 551', type: 'assault', slot: 'primary', damageNear: 27, damageFar: 22, falloffStart: 30, falloffEnd: 70, fireRate: 0.088, recoilPitch: 0.0105, recoilYaw: 0.0065, recoilRecovery: 11,
     hipSpread: 0.074, adsSpread: 0.0014, adsFov: 46, adsType: 'red_dot', mobility: 0.94, maxAmmo: 30, reloadTime: 2.5, modelUrl: null,
-    model: 'scarl', sound: 'scar', rate: 1.04, penetration: 1, tp: { len: 0.86, body: 'dark', mag: 'box' }, desc: '瑞士精準步槍，開鏡極穩，適合中距離點射。',
+    sound: 'scar', rate: 1.04, penetration: 1, tp: { len: 0.86, body: 'dark', mag: 'box' }, desc: '瑞士精準步槍，開鏡極穩，適合中距離點射。',
   },
   hk417: {
     name: 'HK417', type: 'assault', slot: 'primary', damageNear: 36, damageFar: 29, falloffStart: 30, falloffEnd: 80, fireRate: 0.11, recoilPitch: 0.017, recoilYaw: 0.01, recoilRecovery: 8,
     hipSpread: 0.085, adsSpread: 0.0015, adsFov: 50, adsType: '3d_sight', mobility: 0.9, maxAmmo: 20, reloadTime: 2.6, modelUrl: null,
-    model: 'scarl', sound: 'ak', rate: 0.93, penetration: 2, tp: { len: 0.98, body: 'dark', mag: 'box' }, desc: '7.62mm 戰鬥步槍：爆頭 1 發、身體 3 發，20 發彈匣，後座重。',
+    sound: 'ak', rate: 0.93, penetration: 2, tp: { len: 0.98, body: 'dark', mag: 'box' }, desc: '7.62mm 戰鬥步槍：爆頭 1 發、身體 3 發，20 發彈匣，後座重。',
   },
   scarh: {
     name: 'SCAR-H', type: 'assault', slot: 'primary', damageNear: 37, damageFar: 29, falloffStart: 30, falloffEnd: 80, fireRate: 0.104, recoilPitch: 0.0175, recoilYaw: 0.011, recoilRecovery: 8,
     hipSpread: 0.085, adsSpread: 0.0017, adsFov: 52, adsType: '3d_sight', mobility: 0.9, maxAmmo: 20, reloadTime: 2.5, modelUrl: null,
-    model: 'scarl', sound: 'ak', rate: 0.9, penetration: 2, tp: { len: 0.96, body: 'tan', mag: 'box' }, desc: 'SCAR 的 7.62mm 版本：單發傷害高、穿透強，射速較慢。',
+    sound: 'ak', rate: 0.9, penetration: 2, tp: { len: 0.96, body: 'tan', mag: 'box' }, desc: 'SCAR 的 7.62mm 版本：單發傷害高、穿透強，射速較慢。',
   },
   qbz97: {
     name: 'QBZ-97', type: 'assault', slot: 'primary', damageNear: 26, damageFar: 20, falloffStart: 25, falloffEnd: 65, fireRate: 0.08, recoilPitch: 0.0105, recoilYaw: 0.0085, recoilRecovery: 11,
     hipSpread: 0.07, adsSpread: 0.0017, adsFov: 44, adsType: 'red_dot', mobility: 0.96, maxAmmo: 30, reloadTime: 2.6, modelUrl: null,
-    model: 'aug', sound: 'm4', rate: 1.08, penetration: 1, tp: { len: 0.78, body: 'dark', mag: 'box', bull: true }, desc: '無托步槍，槍身短、開鏡穩定。',
+    sound: 'm4', rate: 1.08, penetration: 1, tp: { len: 0.78, body: 'dark', mag: 'box', bull: true }, desc: '無托步槍，槍身短、開鏡穩定。',
   },
   pp2000: {
     name: 'PP-2000', type: 'smg', slot: 'primary', damageNear: 21, damageFar: 14, falloffStart: 10, falloffEnd: 32, fireRate: 0.06, recoilPitch: 0.0075, recoilYaw: 0.0075, recoilRecovery: 13,
     hipSpread: 0.05, adsSpread: 0.0035, adsFov: 60, adsType: 'red_dot', mobility: 1.07, maxAmmo: 44, reloadTime: 2.1, modelUrl: null,
-    model: 'mp7', sound: 'mp7', rate: 0.94, range: 150, tp: { len: 0.48, body: 'dark', mag: 'none' }, desc: '俄製輕量衝鋒槍，44 發長彈匣，跑打靈活。',
+    sound: 'mp7', rate: 0.94, range: 150, tp: { len: 0.48, body: 'dark', mag: 'none' }, desc: '俄製輕量衝鋒槍，44 發長彈匣，跑打靈活。',
   },
   vz61: {
     name: 'Scorpion vz.61', type: 'smg', slot: 'primary', damageNear: 19, damageFar: 12, falloffStart: 8, falloffEnd: 28, fireRate: 0.056, recoilPitch: 0.008, recoilYaw: 0.009, recoilRecovery: 13,
     hipSpread: 0.044, adsSpread: 0.0045, adsFov: 62, adsType: '3d_sight', mobility: 1.09, maxAmmo: 20, reloadTime: 1.7, modelUrl: null,
-    model: 'mp7', sound: 'p90', rate: 1.15, range: 130, tp: { len: 0.42, body: 'dark', mag: 'none' }, desc: '蠍式衝鋒槍：極輕、射速高，彈匣小、換彈快。',
+    sound: 'p90', rate: 1.15, range: 130, tp: { len: 0.42, body: 'dark', mag: 'none' }, desc: '蠍式衝鋒槍：極輕、射速高，彈匣小、換彈快。',
   },
   m40a1: {
     name: 'M40A1', type: 'sniper', slot: 'primary', damageNear: 110, damageFar: 96, falloffStart: 60, falloffEnd: 200, fireRate: 1.35, recoilPitch: 0.065, recoilYaw: 0.01, recoilRecovery: 6,
     hipSpread: 0.14, adsSpread: 0.0, adsFov: 20, adsType: '2d_scope_overlay', mobility: 0.82, maxAmmo: 5, reloadTime: 3.3, modelUrl: null,
-    model: 'kar98k', sound: 'kar98', rate: 1.04, zoomFovs: [20, 9], penetration: 2, range: 420, adsSpeed: 17, tracerEvery: 1, tp: { len: 1.12, body: 'green', mag: 'none', scope: true }, desc: '美軍陸戰隊栓動狙擊槍，身體 1 發，移動較 AWP 靈活。',
+    sound: 'kar98', rate: 1.04, zoomFovs: [20, 9], penetration: 2, range: 420, adsSpeed: 17, tracerEvery: 1, tp: { len: 1.12, body: 'green', mag: 'none', scope: true }, desc: '美軍陸戰隊栓動狙擊槍，身體 1 發，移動較 AWP 靈活。',
   },
   sr25: {
     name: 'SR-25', type: 'sniper', slot: 'primary', damageNear: 62, damageFar: 52, falloffStart: 50, falloffEnd: 180, fireRate: 0.3, recoilPitch: 0.042, recoilYaw: 0.011, recoilRecovery: 7,
     hipSpread: 0.1, adsSpread: 0.0007, adsFov: 26, adsType: '2d_scope_overlay', mobility: 0.87, maxAmmo: 20, reloadTime: 3.0, modelUrl: null,
-    model: 'svd', sound: 'svd', rate: 1.08, bolt: false, zoomFovs: [26, 13], penetration: 2, range: 400, adsSpeed: 16, tracerEvery: 1, tp: { len: 1.12, body: 'dark', mag: 'box', scope: true }, desc: '半自動精確射手步槍，20 發彈匣：身體 2 發、爆頭 1 發。',
+    sound: 'svd', rate: 1.08, bolt: false, zoomFovs: [26, 13], penetration: 2, range: 400, adsSpeed: 16, tracerEvery: 1, tp: { len: 1.12, body: 'dark', mag: 'box', scope: true }, desc: '半自動精確射手步槍，20 發彈匣：身體 2 發、爆頭 1 發。',
   },
   psg1: {
     name: 'PSG1', type: 'sniper', slot: 'primary', damageNear: 66, damageFar: 56, falloffStart: 50, falloffEnd: 180, fireRate: 0.38, recoilPitch: 0.048, recoilYaw: 0.01, recoilRecovery: 7,
     hipSpread: 0.11, adsSpread: 0.0005, adsFov: 24, adsType: '2d_scope_overlay', mobility: 0.84, maxAmmo: 10, reloadTime: 3.1, modelUrl: null,
-    model: 'svd', sound: 'svd', rate: 1.12, bolt: false, zoomFovs: [24, 11], penetration: 2, range: 420, adsSpeed: 15, tracerEvery: 1, tp: { len: 1.2, body: 'dark', mag: 'box', scope: true }, desc: 'HK 半自動狙擊槍，精準度最高，射速比 SR-25 慢。',
+    sound: 'svd', rate: 1.12, bolt: false, zoomFovs: [24, 11], penetration: 2, range: 420, adsSpeed: 15, tracerEvery: 1, tp: { len: 1.2, body: 'dark', mag: 'box', scope: true }, desc: 'HK 半自動狙擊槍，精準度最高，射速比 SR-25 慢。',
   },
   mg4: {
     name: 'MG4', type: 'lmg', slot: 'primary', damageNear: 26, damageFar: 20, falloffStart: 30, falloffEnd: 80, fireRate: 0.068, recoilPitch: 0.0105, recoilYaw: 0.013, recoilRecovery: 8,
     hipSpread: 0.088, adsSpread: 0.0038, adsFov: 54, adsType: 'red_dot', mobility: 0.82, maxAmmo: 100, reloadTime: 5.0, modelUrl: null,
-    model: 'negev', sound: 'm249', rate: 1.05, penetration: 2, range: 300, adsSpeed: 11, reserveMult: 2, tracerEvery: 2, tp: { len: 1.0, body: 'dark', mag: 'box' }, desc: '德製輕機槍：100 發，射速高、比 M249 輕巧。',
+    sound: 'm249', rate: 1.05, penetration: 2, range: 300, adsSpeed: 11, reserveMult: 2, tracerEvery: 2, tp: { len: 1.0, body: 'dark', mag: 'box' }, desc: '德製輕機槍：100 發，射速高、比 M249 輕巧。',
   },
   k3: {
     name: 'K3', type: 'lmg', slot: 'primary', damageNear: 27, damageFar: 21, falloffStart: 30, falloffEnd: 80, fireRate: 0.078, recoilPitch: 0.011, recoilYaw: 0.0135, recoilRecovery: 8,
     hipSpread: 0.09, adsSpread: 0.0042, adsFov: 55, adsType: '3d_sight', mobility: 0.81, maxAmmo: 100, reloadTime: 5.3, modelUrl: null,
-    model: 'm249', sound: 'm249', rate: 0.98, penetration: 2, range: 300, adsSpeed: 10, reserveMult: 2, tracerEvery: 2, tp: { len: 1.02, body: 'dark', mag: 'box' }, desc: '韓國制式輕機槍，穩定的 100 發火力。',
+    sound: 'm249', rate: 0.98, penetration: 2, range: 300, adsSpeed: 10, reserveMult: 2, tracerEvery: 2, tp: { len: 1.02, body: 'dark', mag: 'box' }, desc: '韓國制式輕機槍，穩定的 100 發火力。',
   },
   aa12: {
     name: 'AA-12', type: 'shotgun', slot: 'primary', damageNear: 11, damageFar: 2.5, falloffStart: 4, falloffEnd: 20, pellets: 8, fireRate: 0.2, recoilPitch: 0.05, recoilYaw: 0.02, recoilRecovery: 8,
     hipSpread: 0.12, adsSpread: 0.085, adsFov: 64, adsType: '3d_sight', mobility: 0.88, maxAmmo: 20, reloadTime: 3.4, modelUrl: null,
-    model: 'saiga12', sound: 'saiga', rate: 1.08, pump: false, auto: true, range: 45, tracerEvery: 0, tp: { len: 0.98, body: 'dark', mag: 'box' }, desc: '全自動散彈槍，20 發彈鼓，貼身壓制無敵。',
+    sound: 'saiga', rate: 1.08, pump: false, auto: true, range: 45, tracerEvery: 0, tp: { len: 0.98, body: 'dark', mag: 'box' }, desc: '全自動散彈槍，20 發彈鼓，貼身壓制無敵。',
   },
   m92fs: {
     name: 'Beretta M92FS', type: 'pistol', slot: 'secondary', damageNear: 27, damageFar: 18, falloffStart: 10, falloffEnd: 35, fireRate: 0.17, recoilPitch: 0.028, recoilYaw: 0.006, recoilRecovery: 12,
     hipSpread: 0.03, adsSpread: 0.004, adsFov: 60, adsType: '3d_sight', mobility: 1.0, maxAmmo: 15, reloadTime: 1.6, modelUrl: null,
-    model: 'p226', sound: 'p226', rate: 0.97, range: 160, tp: { len: 0.22, body: 'dark', pistol: true }, desc: '經典 9mm 手槍，穩定好控。',
+    sound: 'p226', rate: 0.97, range: 160, tp: { len: 0.22, body: 'dark', pistol: true }, desc: '經典 9mm 手槍，穩定好控。',
   },
   cz75: {
     name: 'CZ 75 BD', type: 'pistol', slot: 'secondary', damageNear: 26, damageFar: 17, falloffStart: 10, falloffEnd: 35, fireRate: 0.15, recoilPitch: 0.026, recoilYaw: 0.006, recoilRecovery: 13,
     hipSpread: 0.028, adsSpread: 0.0038, adsFov: 60, adsType: '3d_sight', mobility: 1.01, maxAmmo: 16, reloadTime: 1.5, modelUrl: null,
-    model: 'p226', sound: 'p226', rate: 1.05, range: 160, tp: { len: 0.2, body: 'dark', pistol: true }, desc: '捷克手槍，射速快、16 發。',
+    sound: 'p226', rate: 1.05, range: 160, tp: { len: 0.2, body: 'dark', pistol: true }, desc: '捷克手槍，射速快、16 發。',
   },
   jericho: {
     name: 'Jericho 941', type: 'pistol', slot: 'secondary', damageNear: 30, damageFar: 20, falloffStart: 10, falloffEnd: 35, fireRate: 0.19, recoilPitch: 0.032, recoilYaw: 0.007, recoilRecovery: 11,
     hipSpread: 0.03, adsSpread: 0.0042, adsFov: 60, adsType: '3d_sight', mobility: 1.0, maxAmmo: 13, reloadTime: 1.6, modelUrl: null,
-    model: 'p226', sound: 'p226', rate: 0.92, range: 165, tp: { len: 0.22, body: 'steel', pistol: true }, desc: '以色列手槍，單發威力略高於 P226。',
+    sound: 'p226', rate: 0.92, range: 165, tp: { len: 0.22, body: 'steel', pistol: true }, desc: '以色列手槍，單發威力略高於 P226。',
   },
   sw60: {
     name: 'S&W Model 60', type: 'pistol', slot: 'secondary', damageNear: 44, damageFar: 30, falloffStart: 10, falloffEnd: 35, fireRate: 0.34, recoilPitch: 0.05, recoilYaw: 0.01, recoilRecovery: 8,
     hipSpread: 0.036, adsSpread: 0.0042, adsFov: 58, adsType: '3d_sight', mobility: 1.02, maxAmmo: 5, reloadTime: 2.4, modelUrl: null,
-    model: 'deagle', sound: 'deagle', rate: 1.14, range: 170, tp: { len: 0.18, body: 'steel', pistol: true }, desc: '.38 左輪：5 發，身體 3 發、爆頭 1 發。',
+    sound: 'deagle', rate: 1.14, range: 170, tp: { len: 0.18, body: 'steel', pistol: true }, desc: '.38 左輪：5 發，身體 3 發、爆頭 1 發。',
   },
   // ---------------- v40 batch 2 ----------------
   m14ebr: {
     name: 'M14 EBR', type: 'sniper', slot: 'primary', damageNear: 58, damageFar: 48, falloffStart: 45, falloffEnd: 160, fireRate: 0.26, recoilPitch: 0.04, recoilYaw: 0.012, recoilRecovery: 8,
     hipSpread: 0.09, adsSpread: 0.001, adsFov: 30, adsType: '2d_scope_overlay', mobility: 0.89, maxAmmo: 20, reloadTime: 2.8, modelUrl: null,
-    model: 'svd', sound: 'svd', rate: 1.02, bolt: false, zoomFovs: [30, 15], penetration: 2, range: 380, adsSpeed: 18, tracerEvery: 1, tp: { len: 1.05, body: 'dark', mag: 'box', scope: true }, desc: '半自動精確射手步槍，射速最快的狙擊選項。',
+    sound: 'svd', rate: 1.02, bolt: false, zoomFovs: [30, 15], penetration: 2, range: 380, adsSpeed: 18, tracerEvery: 1, tp: { len: 1.05, body: 'dark', mag: 'box', scope: true }, desc: '半自動精確射手步槍，射速最快的狙擊選項。',
   },
   type89: {
     name: 'Howa Type 89', type: 'assault', slot: 'primary', damageNear: 26, damageFar: 20, falloffStart: 25, falloffEnd: 65, fireRate: 0.08, recoilPitch: 0.0098, recoilYaw: 0.0078, recoilRecovery: 11,
     hipSpread: 0.07, adsSpread: 0.0019, adsFov: 54, adsType: '3d_sight', mobility: 0.95, maxAmmo: 30, reloadTime: 2.3, modelUrl: null,
-    model: 'm4', sound: 'm4', rate: 1.06, penetration: 1, tp: { len: 0.92, body: 'dark', mag: 'box' }, desc: '日本自衛隊步槍，後座低、連射穩定。',
+    sound: 'm4', rate: 1.06, penetration: 1, tp: { len: 0.92, body: 'dark', mag: 'box' }, desc: '日本自衛隊步槍，後座低、連射穩定。',
   },
   l86a1: {
     name: 'L86A1 LSW', type: 'lmg', slot: 'primary', damageNear: 27, damageFar: 22, falloffStart: 35, falloffEnd: 85, fireRate: 0.085, recoilPitch: 0.009, recoilYaw: 0.008, recoilRecovery: 10,
     hipSpread: 0.085, adsSpread: 0.0016, adsFov: 42, adsType: 'red_dot', mobility: 0.86, maxAmmo: 30, reloadTime: 2.8, modelUrl: null,
-    model: 'aug', sound: 'm4', rate: 0.97, penetration: 2, range: 300, adsSpeed: 13, tracerEvery: 2, tp: { len: 0.9, body: 'dark', mag: 'box', bull: true }, desc: '英軍無托輕機槍：彈匣只有 30 發，但精準度是機槍裡最高的。',
+    sound: 'm4', rate: 0.97, penetration: 2, range: 300, adsSpeed: 13, tracerEvery: 2, tp: { len: 0.9, body: 'dark', mag: 'box', bull: true }, desc: '英軍無托輕機槍：彈匣只有 30 發，但精準度是機槍裡最高的。',
   },
   hk23e: {
     name: 'HK23E', type: 'lmg', slot: 'primary', damageNear: 28, damageFar: 22, falloffStart: 30, falloffEnd: 80, fireRate: 0.072, recoilPitch: 0.0115, recoilYaw: 0.014, recoilRecovery: 8,
     hipSpread: 0.09, adsSpread: 0.004, adsFov: 55, adsType: '3d_sight', mobility: 0.8, maxAmmo: 100, reloadTime: 5.4, modelUrl: null,
-    model: 'm249', sound: 'm249', rate: 1.02, penetration: 2, range: 300, adsSpeed: 10, reserveMult: 2, tracerEvery: 2, tp: { len: 1.04, body: 'dark', mag: 'box' }, desc: 'HK 彈鏈機槍，100 發，射速與 M249 相近。',
+    sound: 'm249', rate: 1.02, penetration: 2, range: 300, adsSpeed: 10, reserveMult: 2, tracerEvery: 2, tp: { len: 1.04, body: 'dark', mag: 'box' }, desc: 'HK 彈鏈機槍，100 發，射速與 M249 相近。',
   },
   frf2: {
     name: 'FR-F2', type: 'sniper', slot: 'primary', damageNear: 112, damageFar: 98, falloffStart: 60, falloffEnd: 200, fireRate: 1.4, recoilPitch: 0.066, recoilYaw: 0.01, recoilRecovery: 6,
     hipSpread: 0.14, adsSpread: 0.0, adsFov: 19, adsType: '2d_scope_overlay', mobility: 0.8, maxAmmo: 10, reloadTime: 3.5, modelUrl: null,
-    model: 'awp', sound: 'awp', rate: 1.06, zoomFovs: [19, 8], penetration: 2, range: 450, adsSpeed: 16, tracerEvery: 1, tp: { len: 1.14, body: 'dark', mag: 'box', scope: true }, desc: '法軍栓動狙擊槍，10 發，身體 1 發。',
+    sound: 'awp', rate: 1.06, zoomFovs: [19, 8], penetration: 2, range: 450, adsSpeed: 16, tracerEvery: 1, tp: { len: 1.14, body: 'dark', mag: 'box', scope: true }, desc: '法軍栓動狙擊槍，10 發，身體 1 發。',
   },
   cz700: {
     name: 'CZ 700', type: 'sniper', slot: 'primary', damageNear: 108, damageFar: 94, falloffStart: 60, falloffEnd: 200, fireRate: 1.3, recoilPitch: 0.062, recoilYaw: 0.01, recoilRecovery: 6,
     hipSpread: 0.13, adsSpread: 0.0, adsFov: 20, adsType: '2d_scope_overlay', mobility: 0.84, maxAmmo: 10, reloadTime: 3.2, modelUrl: null,
-    model: 'kar98k', sound: 'kar98', rate: 1.08, zoomFovs: [20, 9], penetration: 2, range: 420, adsSpeed: 18, tracerEvery: 1, tp: { len: 1.1, body: 'dark', mag: 'box', scope: true }, desc: '捷克栓動狙擊槍，拉栓快、移動靈活。',
+    sound: 'kar98', rate: 1.08, zoomFovs: [20, 9], penetration: 2, range: 420, adsSpeed: 18, tracerEvery: 1, tp: { len: 1.1, body: 'dark', mag: 'box', scope: true }, desc: '捷克栓動狙擊槍，拉栓快、移動靈活。',
   },
   infinity: {
     name: 'Infinity', type: 'pistol', slot: 'secondary', damageNear: 29, damageFar: 19, falloffStart: 10, falloffEnd: 35, fireRate: 0.13, recoilPitch: 0.024, recoilYaw: 0.005, recoilRecovery: 14,
     hipSpread: 0.026, adsSpread: 0.0032, adsFov: 60, adsType: '3d_sight', mobility: 1.01, maxAmmo: 17, reloadTime: 1.5, modelUrl: null,
-    model: 'p226', sound: 'm1911', rate: 1.06, range: 170, tp: { len: 0.24, body: 'steel', pistol: true }, desc: '競賽級手槍，射速快、精準度高、後座小。',
+    sound: 'm1911', rate: 1.06, range: 170, tp: { len: 0.24, body: 'steel', pistol: true }, desc: '競賽級手槍，射速快、精準度高、後座小。',
   },
 };
 
@@ -7095,6 +7095,348 @@ Object.assign(WeaponModels.prototype, {
     gb.box(0.03, 0.02, 0.012, 0, -0.02, 0.082, M.parkerized, 'body', 0.003); // grip safety
     for (const sx of [-1, 1]) gb.cylAxis(0.003, 0.004, sx * 0.016, -0.05, 0.06, 'x', M.bright);
     return this._fin(gb, { muzzleU: 0.13, sightY: sy, hipPos: [0.095, -0.1, -0.27], adsZ: -0.25, flash: 0.15, slide: true });
+  },
+});
+
+/* =====================================================================
+   v41 SF2 ARSENAL MODELS — dedicated first-person builders for the 27 guns added in v40 (previously shared models),
+   assembled from the GP part library. Silhouettes follow each real gun.
+   ===================================================================== */
+Object.assign(WeaponModels.prototype, {
+  _ar15(gb, o) { // AR-15 family core: receiver, buffer-tube stock, grip, trigger, STANAG mag
+    gb.node('mag', new THREE.Vector3(0, -0.035, -0.03)).node('charge', new THREE.Vector3(0, 0.03, -0.1));
+    GP.recv(gb, { style: 'ar', mat: o.recv || 'black', u0: -0.12, u1: 0.12, vt: 0.036 });
+    GP.stock(gb, o.stock || 'ar', { mat: o.stockMat || 'polymer', u: -0.12, len: o.stockLen ?? 0.26 });
+    GP.grip(gb, { mat: 'polymer', u: -0.078 }); GP.trigger(gb, { u: -0.035 });
+    GP.mag(gb, 'stanag', { mat: o.magMat || 'black', u: 0.0, len: 0.17 });
+  },
+  m16a3() { // full-length rifle: round handguard, carry handle with rear aperture, A2 front sight post, bird-cage
+    const M = this.M, gb = new GunBuilder(M);
+    this._ar15(gb, { stock: 'wood', stockMat: 'polymer', stockLen: 0.3 });
+    GP.handguard(gb, 'round', { mat: 'polymer', u0: 0.12, u1: 0.42, r: 0.026 });
+    GP.barrel(gb, 0.42, 0.62, 0.0085); const mz = GP.muzzle(gb, 'bird', 0.62, 0.0105);
+    gb.prof([[-0.08, 0.036], [0.1, 0.036], [0.09, 0.07], [-0.07, 0.07]], 0.016, M.black, 'body', { bevel: 0.003, holes: [[[-0.05, 0.042], [0.07, 0.042], [0.065, 0.062], [-0.045, 0.062]]] }); // carry handle
+    const sightY = GP.iron(gb, -0.06, 0.5, 0.074, { base: 0.07, frontBase: 0.012 });
+    GP.hands(this, gb, { support: 0.28, sw: 0.052 });
+    return this._fin(gb, { muzzleU: mz, sightY, adsPos: [0, -(sightY + 0.012), -0.28], flash: 0.22 });
+  },
+  k2() { // Korean K2: AR-like upper, side-folding polymer stock, ribbed handguard, holo
+    const M = this.M, gb = new GunBuilder(M);
+    this._ar15(gb, { stock: 'skeleton', stockMat: 'polymer', stockLen: 0.24 });
+    gb.rail(-0.11, 0.1, 0.036, M.black, 'body', 0.022);
+    GP.handguard(gb, 'akwood', { mat: 'polymer', u0: 0.12, u1: 0.32, r: 0.024 });
+    GP.barrel(gb, 0.32, 0.5, 0.009); const mz = GP.muzzle(gb, 'slots', 0.5, 0.011);
+    const sightY = gb.holo(-0.04, 0.036, M.black);
+    GP.hands(this, gb, { support: 0.23, sw: 0.048 });
+    return this._fin(gb, { muzzleU: mz, sightY, reticle: true, flash: 0.2 });
+  },
+  type89() { // Howa Type 89: black AR-pattern, slim handguard, folded bipod, iron sights
+    const M = this.M, gb = new GunBuilder(M);
+    this._ar15(gb, { stock: 'ar', stockLen: 0.27 });
+    GP.handguard(gb, 'round', { mat: 'polymer', u0: 0.12, u1: 0.34, r: 0.023 });
+    GP.barrel(gb, 0.34, 0.54, 0.0085); const mz = GP.muzzle(gb, 'cone', 0.54, 0.0105);
+    GP.bipod(gb, 0.33, -0.026, 0.18);
+    const sightY = GP.iron(gb, -0.03, 0.46, 0.06, { base: 0.036 });
+    GP.hands(this, gb, { support: 0.24, sw: 0.048 });
+    return this._fin(gb, { muzzleU: mz, sightY, adsPos: [0, -(sightY + 0.008), -0.24], flash: 0.2 });
+  },
+  xm8() { // XM8: one-piece rounded polymer shell, integrated carry-handle optic, curved mag
+    const M = this.M, gb = new GunBuilder(M);
+    gb.node('mag', new THREE.Vector3(0, -0.035, -0.02));
+    gb.prof([[-0.13, -0.034], [0.28, -0.034], [0.32, -0.01], [0.3, 0.03], [0.1, 0.04], [-0.12, 0.04], [-0.13, 0.02]], 0.05, M.tan, 'body', { bevel: 0.012 }); // shell
+    GP.stock(gb, 'skeleton', { mat: 'tan', u: -0.13, len: 0.24 });
+    GP.grip(gb, { mat: 'tan', u: -0.08, vb: -0.034 }); GP.trigger(gb, { u: -0.036, vb: -0.034 });
+    GP.mag(gb, 'stanag', { mat: 'magClear', u: 0.0, len: 0.17, vb: -0.034 });
+    gb.prof([[-0.06, 0.04], [0.12, 0.04], [0.11, 0.066], [-0.05, 0.066]], 0.03, M.tan, 'body', { bevel: 0.006, holes: [[[-0.03, 0.044], [0.08, 0.044], [0.08, 0.06], [-0.03, 0.06]]] });
+    GP.barrel(gb, 0.32, 0.44, 0.0085); const mz = GP.muzzle(gb, 'bird', 0.44, 0.0105);
+    const sightY = gb.redDot(0.0, 0.066, M.black);
+    GP.hands(this, gb, { support: 0.22, sw: 0.054, sy: -0.006 });
+    return this._fin(gb, { muzzleU: mz, sightY, reticle: 'dot', flash: 0.18 });
+  },
+  galil() { // Galil ARM: AK action, wooden handguard, folding skeleton stock, carry handle bar, 35-rd curved mag
+    const M = this.M, gb = new GunBuilder(M);
+    gb.node('mag', new THREE.Vector3(0, -0.035, -0.03)).node('charge', new THREE.Vector3(0.03, 0.02, -0.1));
+    GP.recv(gb, { style: 'ak', mat: 'parkerized', u0: -0.14, u1: 0.12, vt: 0.038 });
+    GP.stock(gb, 'skeleton', { mat: 'parkerized', u: -0.14, len: 0.25 });
+    GP.grip(gb, { mat: 'polymer', u: -0.085, slant: 1.2 }); GP.trigger(gb, { u: -0.04 });
+    GP.mag(gb, 'ak', { mat: 'black', u: 0.0, len: 0.2 });
+    GP.handguard(gb, 'akwood', { mat: 'wood', u0: 0.12, u1: 0.3, r: 0.023 });
+    GP.barrel(gb, 0.3, 0.5, 0.009); GP.gasTube(gb, 0.3, 0.36, 0.026, 0.0065);
+    gb.box(0.012, 0.012, 0.09, 0, 0.06, -0.06, M.parkerized, 'body', 0.003); // carry handle bar
+    const mz = GP.muzzle(gb, 'slots', 0.5, 0.011);
+    const sightY = GP.iron(gb, 0.1, 0.46, 0.054, { base: 0.036, frontBase: 0.012 });
+    GP.hands(this, gb, { support: 0.22, sw: 0.046 });
+    return this._fin(gb, { muzzleU: mz, sightY, flash: 0.22 });
+  },
+  sg551() { // SIG SG 551: translucent orange-brown mag, folding skeleton stock, slotted handguard, diopter + red dot
+    const M = this.M, gb = new GunBuilder(M);
+    gb.node('mag', new THREE.Vector3(0, -0.035, -0.03));
+    GP.recv(gb, { style: 'ar', mat: 'black', u0: -0.12, u1: 0.12, vt: 0.036, w: 0.042 });
+    GP.stock(gb, 'skeleton', { mat: 'polymer', u: -0.12, len: 0.25 });
+    GP.grip(gb, { mat: 'polymer', u: -0.078 }); GP.trigger(gb, { u: -0.035 });
+    GP.mag(gb, 'stanag', { mat: 'magClear', u: 0.0, len: 0.16 });
+    GP.handguard(gb, 'svd', { mat: 'polymer', u0: 0.12, u1: 0.3, r: 0.025 });
+    GP.barrel(gb, 0.3, 0.44, 0.009); const mz = GP.muzzle(gb, 'bird', 0.44, 0.0105);
+    gb.rail(-0.1, 0.1, 0.036, M.black, 'body', 0.022);
+    const sightY = gb.redDot(-0.03, 0.036, M.black);
+    GP.hands(this, gb, { support: 0.22, sw: 0.052 });
+    return this._fin(gb, { muzzleU: mz, sightY, reticle: 'dot', flash: 0.2 });
+  },
+  hk417() { // 7.62 AR-10: thick receiver, quad-rail handguard, 20-rd straight mag, holo
+    const M = this.M, gb = new GunBuilder(M);
+    gb.node('mag', new THREE.Vector3(0, -0.035, -0.03)).node('charge', new THREE.Vector3(0, 0.03, -0.1));
+    GP.recv(gb, { style: 'ar', mat: 'black', u0: -0.12, u1: 0.13, vt: 0.04, w: 0.046 });
+    GP.stock(gb, 'ar', { mat: 'polymer', u: -0.12, len: 0.27 });
+    GP.grip(gb, { mat: 'polymer', u: -0.078 }); GP.trigger(gb, { u: -0.035 });
+    GP.mag(gb, 'straight', { mat: 'black', u: 0.0, len: 0.13, w: 0.03, tilt: 0.04 });
+    GP.handguard(gb, 'quad', { mat: 'black', u0: 0.13, u1: 0.36, r: 0.026 });
+    gb.rail(-0.11, 0.13, 0.04, M.black, 'body', 0.022);
+    GP.barrel(gb, 0.36, 0.54, 0.0105); const mz = GP.muzzle(gb, 'brake', 0.54, 0.0115);
+    const sightY = gb.holo(-0.04, 0.04, M.black);
+    GP.hands(this, gb, { support: 0.25, sw: 0.054 });
+    return this._fin(gb, { muzzleU: mz, sightY, reticle: true, flash: 0.24 });
+  },
+  scarh() { // SCAR-H: SCAR-L shell in black, 20-rd 7.62 mag, longer barrel, brake
+    const M = this.M, gb = new GunBuilder(M);
+    gb.node('mag', new THREE.Vector3(0, -0.035, -0.03)).node('charge', new THREE.Vector3(-0.026, 0.02, -0.1));
+    GP.recv(gb, { mat: 'black', u0: -0.12, u1: 0.12, vt: 0.036, w: 0.046 });
+    gb.prof([[-0.12, 0.036], [0.32, 0.036], [0.32, 0.048], [-0.12, 0.048]], 0.036, M.black, 'body', { bevel: 0.003 });
+    gb.rail(-0.11, 0.31, 0.048, M.black, 'body', 0.022);
+    gb.box(0.052, 0.052, 0.2, 0, 0.012, -0.22, M.black, 'body', 0.008);
+    GP.stock(gb, 'skeleton', { mat: 'black', u: -0.12, len: 0.27 });
+    GP.grip(gb, { mat: 'polymer', u: -0.078 }); GP.trigger(gb, { u: -0.035 });
+    GP.mag(gb, 'straight', { mat: 'black', u: 0.0, len: 0.13, w: 0.032, tilt: 0.05 });
+    GP.barrel(gb, 0.32, 0.48, 0.0105); const mz = GP.muzzle(gb, 'brake', 0.48, 0.0115);
+    const sightY = gb.holo(-0.04, 0.048, M.black);
+    GP.hands(this, gb, { support: 0.23, sw: 0.054 });
+    return this._fin(gb, { muzzleU: mz, sightY, reticle: true, flash: 0.22 });
+  },
+  qbz97() { // QBZ-97: bullpup with the mag behind the grip, carry-handle sight rail, short handguard
+    const M = this.M, gb = new GunBuilder(M);
+    gb.node('mag', new THREE.Vector3(0, -0.04, 0.12));
+    gb.prof([[-0.38, 0.03], [-0.38, -0.08], [-0.33, -0.1], [-0.22, -0.1], [-0.18, -0.04], [0.12, -0.04], [0.2, -0.02], [0.2, 0.02], [0.08, 0.03]], 0.05, M.black, 'body', { bevel: 0.008 });
+    gb.box(0.05, 0.1, 0.012, 0, -0.03, 0.385, M.rubber, 'body', 0.004);
+    GP.grip(gb, { mat: 'polymer', u: 0.02, vb: -0.04 });
+    GP.mag(gb, 'stanag', { mat: 'black', u: -0.2, len: 0.15, vb: -0.04 });
+    gb.prof([[-0.18, 0.03], [0.04, 0.03], [0.04, 0.06], [-0.18, 0.06]], 0.022, M.black, 'body', { bevel: 0.004 }); // sight bridge
+    GP.barrel(gb, 0.2, 0.34, 0.009); const mz = GP.muzzle(gb, 'bird', 0.34, 0.0105);
+    const sightY = gb.redDot(-0.12, 0.06, M.black);
+    this.arm(gb, [0.02, -0.12, 0.0], [0.19, -0.3, 0.36], 0.034); this.gripHand(gb, 0.001, -0.09, 0.028, -0.36);
+    this.arm(gb, [-0.036, -0.06, -0.16], [-0.3, -0.3, 0.06], 0.033); this.supportHand(gb, 0, -0.012, 0.15, 0.05);
+    return this._fin(gb, { muzzleU: mz, sightY, reticle: 'dot', hipPos: [0.12, -0.15, -0.31], flash: 0.18, magMove: [0, -0.26, 0.04] });
+  },
+
+  /* ---------------- SMGs ---------------- */
+  pp2000() { // PP-2000: slab-sided polymer frame with the trigger-guard grip cut-out, mag in the grip, extended 44-rd mag
+    const M = this.M, gb = new GunBuilder(M);
+    gb.node('mag', new THREE.Vector3(0, -0.1, 0.04));
+    gb.prof([[-0.08, 0.034], [0.16, 0.034], [0.17, 0.0], [0.15, -0.03], [0.04, -0.03], [0.03, -0.1], [-0.01, -0.1], [-0.03, -0.03], [-0.08, -0.025]], 0.036, M.polymer, 'body', {
+      bevel: 0.006, holes: [[[0.06, -0.012], [0.13, -0.012], [0.13, 0.016], [0.06, 0.016]]] });
+    gb.box(0.026, 0.2, 0.034, 0, -0.17, -0.0, M.black, 'mag', 0.003, 0.08);
+    gb.rail(-0.06, 0.12, 0.034, M.black, 'body', 0.02);
+    GP.trigger(gb, { u: -0.02, vb: -0.03 });
+    GP.barrel(gb, 0.17, 0.21, 0.009); const mz = GP.muzzle(gb, 'none', 0.21, 0.009);
+    const sightY = gb.redDot(-0.02, 0.034, M.black);
+    this.arm(gb, [0.02, -0.12, 0.02], [0.18, -0.3, 0.38], 0.034); this.gripHand(gb, 0.001, -0.07, 0.01, -0.3);
+    this.arm(gb, [-0.036, -0.03, -0.1], [-0.28, -0.3, 0.06], 0.033); this.supportHand(gb, 0, -0.008, 0.1, 0.044);
+    return this._fin(gb, { muzzleU: mz, sightY, reticle: 'dot', hipPos: [0.12, -0.13, -0.3], flash: 0.13 });
+  },
+  vz61() { // Scorpion: tiny receiver, wire stock folded over the top, curved 20-rd mag ahead of the trigger, iron sights
+    const M = this.M, gb = new GunBuilder(M);
+    gb.node('mag', new THREE.Vector3(0, -0.035, -0.04));
+    GP.recv(gb, { style: 'smg', mat: 'parkerized', u0: -0.1, u1: 0.12, vt: 0.03, vb: -0.03, w: 0.034 });
+    GP.stock(gb, 'wire', { u: -0.1, len: 0.2 });
+    GP.grip(gb, { mat: 'woodDark', u: -0.08, vb: -0.03, len: 0.08 }); GP.trigger(gb, { u: -0.04, vb: -0.03 });
+    GP.mag(gb, 'ak', { mat: 'parkerized', u: 0.0, len: 0.13, w: 0.02, vb: -0.03 });
+    GP.barrel(gb, 0.12, 0.2, 0.0075); const mz = GP.muzzle(gb, 'none', 0.2, 0.0085);
+    const sightY = GP.iron(gb, -0.06, 0.11, 0.046, { base: 0.03, frontBase: 0.03 });
+    GP.hands(this, gb, { support: 0.1, sw: 0.04, grip: -0.085 });
+    return this._fin(gb, { muzzleU: mz, sightY, hipPos: [0.12, -0.13, -0.3], adsPos: [0, -(sightY + 0.004), -0.26], flash: 0.12 });
+  },
+
+  /* ---------------- snipers / DMRs ---------------- */
+  _boltSniper(gb, o) { // bolt-action chassis on a stock; returns sightY
+    const M = this.M;
+    gb.node('mag', new THREE.Vector3(0, -0.04, -0.04)).node('bolt', new THREE.Vector3(0.03, 0.02, 0.1));
+    GP.recv(gb, { style: 'bolt', mat: o.recv || 'black', u0: -0.12, u1: 0.18, w: 0.044 });
+    gb.prof(o.stockPts || [[-0.14, 0.01], [0.42, 0.01], [0.44, -0.012], [0.42, -0.034], [0.05, -0.04], [-0.02, -0.04], [-0.14, -0.03]], 0.046, GP.m(gb, o.stockMat), 'body', { bevel: 0.008 });
+    GP.stock(gb, o.stock || 'thumbhole', { mat: o.stockMat, u: -0.14, len: 0.3, vt: 0.01 });
+    if (o.mag !== false) gb.box(0.036, 0.07, 0.06, 0, -0.07, -0.06, M.black, 'mag', 0.004);
+    GP.trigger(gb, { u: -0.05, vb: -0.04 });
+    GP.barrel(gb, 0.3, o.barrel || 0.84, o.r || 0.0115);
+    gb.cylAxis(0.006, 0.05, 0.055, 0.004, -0.1, 'x', M.bright, 'bolt'); const k = new THREE.SphereGeometry(0.011, 12, 10); k.translate(0.082, 0.004, 0.1); gb.add(k, M.black, 'bolt');
+    if (o.bipod) GP.bipod(gb, 0.38, -0.034, 0.2);
+    const sightY = GP.scope(gb, -0.1, o.scopeLen || 0.26, o.scopeR || 0.019, 0.024, { mat: 'black' });
+    this.arm(gb, [0.02, -0.12, 0.12], [0.19, -0.3, 0.44], 0.034); this.gripHand(gb, 0.001, -0.092, -0.1, -0.3);
+    this.arm(gb, [-0.04, -0.06, -0.26], [-0.32, -0.3, 0.02], 0.033); this.supportHand(gb, 0, -0.01, 0.26, 0.05);
+    return sightY;
+  },
+  m40a1() { // USMC M40A1: olive McMillan stock, heavy barrel, internal mag (no box)
+    const gb = new GunBuilder(this.M), sightY = this._boltSniper(gb, { stockMat: 'odGreen', stock: 'wood', mag: false, barrel: 0.8 });
+    const mz = GP.muzzle(gb, 'none', 0.8, 0.012);
+    return this._fin(gb, { muzzleU: mz, sightY, hipPos: [0.14, -0.15, -0.36], adsZ: -0.12, flash: 0.3, bolt: true });
+  },
+  frf2() { // French FR-F2: black, thermal sleeve over the barrel, bipod, brake
+    const M = this.M, gb = new GunBuilder(M), sightY = this._boltSniper(gb, { stockMat: 'polymer', stock: 'wood', barrel: 0.82, bipod: true });
+    gb.cyl(0.018, 0.018, 0.36, 0, 0.0, 0.58, M.polymer, 'body', 16); // thermal sleeve
+    const mz = GP.muzzle(gb, 'brake', 0.82, 0.013);
+    return this._fin(gb, { muzzleU: mz, sightY, hipPos: [0.14, -0.15, -0.36], adsZ: -0.12, flash: 0.3, bolt: true });
+  },
+  cz700() { // CZ 700: grey laminated thumbhole stock, fluted barrel, 10-rd mag
+    const M = this.M, gb = new GunBuilder(M), sightY = this._boltSniper(gb, { stockMat: 'grayPaint', stock: 'thumbhole', barrel: 0.8 });
+    for (let i = 0; i < 6; i++) for (const sx of [-1, 1]) gb.box(0.002, 0.004, 0.06, sx * 0.0115, 0, -(0.36 + i * 0.07), M.black);
+    const mz = GP.muzzle(gb, 'cone', 0.8, 0.012);
+    return this._fin(gb, { muzzleU: mz, sightY, hipPos: [0.14, -0.15, -0.36], adsZ: -0.12, flash: 0.3, bolt: true });
+  },
+  _dmr(gb, o) { // semi-auto AR-10 / M14 style marksman rifle with a scope; returns sightY
+    const M = this.M;
+    gb.node('mag', new THREE.Vector3(0, -0.035, -0.03));
+    GP.recv(gb, { style: o.style || 'ar', mat: o.recv || 'black', u0: -0.12, u1: 0.13, vt: 0.04, w: 0.046 });
+    GP.stock(gb, o.stock || 'ar', { mat: o.stockMat || 'polymer', u: -0.12, len: 0.28 });
+    GP.grip(gb, { mat: 'polymer', u: -0.078 }); GP.trigger(gb, { u: -0.035 });
+    GP.mag(gb, 'straight', { mat: 'black', u: 0.0, len: o.magLen || 0.12, w: 0.032, tilt: 0.04 });
+    GP.handguard(gb, o.hg || 'quad', { mat: o.hgMat || 'black', u0: 0.13, u1: 0.38, r: 0.026 });
+    gb.rail(-0.11, 0.13, 0.04, M.black, 'body', 0.022);
+    GP.barrel(gb, 0.38, o.barrel || 0.74, 0.011);
+    if (o.bipod) GP.bipod(gb, 0.36, -0.028, 0.18);
+    const sightY = GP.scope(gb, -0.1, 0.22, 0.017, 0.04, { mat: 'black' });
+    GP.hands(this, gb, { support: 0.26, sw: 0.054 });
+    return sightY;
+  },
+  sr25() { const gb = new GunBuilder(this.M), sightY = this._dmr(gb, { barrel: 0.76, magLen: 0.14 }); const mz = GP.muzzle(gb, 'brake', 0.76, 0.012); return this._fin(gb, { muzzleU: mz, sightY, hipPos: [0.14, -0.15, -0.36], adsZ: -0.12, flash: 0.26, magMove: [0, -0.22, 0.02] }); },
+  psg1() { // PSG1: G3-style receiver, adjustable thumbhole stock, big scope, no iron sights
+    const M = this.M, gb = new GunBuilder(M);
+    gb.node('mag', new THREE.Vector3(0, -0.035, -0.03));
+    GP.recv(gb, { style: 'ak', mat: 'black', u0: -0.13, u1: 0.14, vt: 0.04, w: 0.044 });
+    GP.stock(gb, 'thumbhole', { mat: 'polymer', u: -0.12, len: 0.32, vt: 0.02 });
+    GP.trigger(gb, { u: -0.04 });
+    GP.mag(gb, 'straight', { mat: 'black', u: 0.0, len: 0.12, w: 0.03, tilt: 0.04 });
+    GP.handguard(gb, 'lmg', { mat: 'polymer', u0: 0.14, u1: 0.36, r: 0.026 });
+    GP.barrel(gb, 0.36, 0.8, 0.011); const mz = GP.muzzle(gb, 'none', 0.8, 0.012);
+    const sightY = GP.scope(gb, -0.1, 0.28, 0.021, 0.045, { mat: 'black' });
+    GP.hands(this, gb, { support: 0.26, sw: 0.054, grip: -0.09 });
+    return this._fin(gb, { muzzleU: mz, sightY, hipPos: [0.14, -0.15, -0.36], adsZ: -0.12, flash: 0.26, magMove: [0, -0.22, 0.02] });
+  },
+  m14ebr() { // M14 EBR: tan chassis with rails, telescoping stock, 20-rd mag, bipod
+    const gb = new GunBuilder(this.M), sightY = this._dmr(gb, { style: 'ak', recv: 'parkerized', stock: 'skeleton', stockMat: 'tan', hg: 'quad', hgMat: 'tan', barrel: 0.7, bipod: true });
+    const mz = GP.muzzle(gb, 'slots', 0.7, 0.012);
+    return this._fin(gb, { muzzleU: mz, sightY, hipPos: [0.14, -0.15, -0.36], adsZ: -0.12, flash: 0.26, magMove: [0, -0.22, 0.02] });
+  },
+
+  /* ---------------- LMGs ---------------- */
+  mg4() { // MG4: polymer LMG, feed cover, red dot on the cover rail, box mag on the left, bipod
+    const M = this.M, gb = new GunBuilder(M);
+    gb.node('mag', new THREE.Vector3(-0.04, -0.09, -0.03)).node('cover', new THREE.Vector3(0, 0.05, 0.12));
+    GP.recv(gb, { style: 'lmg', mat: 'polymer', u0: -0.14, u1: 0.16, vt: 0.034, vb: -0.042, w: 0.05, coverNode: true });
+    GP.stock(gb, 'skeleton', { mat: 'polymer', u: -0.14, len: 0.28 });
+    GP.grip(gb, { mat: 'polymer', u: -0.08, vb: -0.042 }); GP.trigger(gb, { u: -0.035, vb: -0.042 });
+    GP.mag(gb, 'belt', { mat: 'polymer', u: 0.02, vb: -0.042 });
+    GP.handguard(gb, 'lmg', { mat: 'polymer', u0: 0.16, u1: 0.36, r: 0.026 });
+    GP.barrel(gb, 0.36, 0.7, 0.011); GP.bipod(gb, 0.6, -0.022, 0.24);
+    const mz = GP.muzzle(gb, 'bird', 0.7, 0.012);
+    const sightY = gb.redDot(-0.02, 0.058, M.black, 'cover');
+    this.arm(gb, [0.02, -0.13, 0.1], [0.19, -0.31, 0.42], 0.034); this.gripHand(gb, 0.001, -0.095, -0.078, -0.36);
+    this.arm(gb, [-0.036, -0.06, -0.24], [-0.3, -0.3, 0.06], 0.033); this.supportHand(gb, 0, -0.01, 0.26, 0.054);
+    return this._fin(gb, { muzzleU: mz, sightY, reticle: 'dot', hipPos: [0.135, -0.155, -0.35], flash: 0.28, cover: true, magMove: [-0.04, -0.26, 0.02] });
+  },
+  k3() { // K3: Minimi-like, ribbed handguard, carry handle, 100-rd box, iron sights
+    const M = this.M, gb = new GunBuilder(M);
+    gb.node('mag', new THREE.Vector3(-0.04, -0.09, -0.03)).node('cover', new THREE.Vector3(0, 0.05, 0.12));
+    GP.recv(gb, { style: 'lmg', mat: 'black', u0: -0.14, u1: 0.16, vt: 0.034, vb: -0.042, w: 0.05, coverNode: true });
+    GP.stock(gb, 'ar', { mat: 'polymer', u: -0.14, len: 0.3 });
+    GP.grip(gb, { mat: 'polymer', u: -0.08, vb: -0.042 }); GP.trigger(gb, { u: -0.035, vb: -0.042 });
+    GP.mag(gb, 'belt', { mat: 'greenPaint', u: 0.02, vb: -0.042 });
+    GP.handguard(gb, 'lmg', { mat: 'polymer', u0: 0.16, u1: 0.38, r: 0.026 });
+    gb.box(0.012, 0.03, 0.1, 0, 0.034, -0.32, M.black, 'body', 0.004);
+    GP.barrel(gb, 0.38, 0.72, 0.011); GP.bipod(gb, 0.62, -0.022, 0.24);
+    const mz = GP.muzzle(gb, 'bird', 0.72, 0.012);
+    const sightY = GP.iron(gb, 0.12, 0.68, 0.054, { base: 0.04 });
+    this.arm(gb, [0.02, -0.13, 0.1], [0.19, -0.31, 0.42], 0.034); this.gripHand(gb, 0.001, -0.095, -0.078, -0.36);
+    this.arm(gb, [-0.036, -0.06, -0.24], [-0.3, -0.3, 0.06], 0.033); this.supportHand(gb, 0, -0.01, 0.26, 0.054);
+    return this._fin(gb, { muzzleU: mz, sightY, hipPos: [0.135, -0.155, -0.35], adsPos: [0, -(sightY + 0.046), -0.32], flash: 0.28, cover: true, magMove: [-0.04, -0.26, 0.02] });
+  },
+  hk23e() { // HK23E: G3-family belt-fed, slotted handguard, drum-like belt box, rear drum sight
+    const M = this.M, gb = new GunBuilder(M);
+    gb.node('mag', new THREE.Vector3(-0.04, -0.09, -0.03));
+    GP.recv(gb, { style: 'ak', mat: 'black', u0: -0.14, u1: 0.16, vt: 0.04, w: 0.048 });
+    GP.stock(gb, 'wood', { mat: 'polymer', u: -0.14, len: 0.3 });
+    GP.grip(gb, { mat: 'polymer', u: -0.08 }); GP.trigger(gb, { u: -0.035 });
+    GP.mag(gb, 'belt', { mat: 'black', u: 0.02 });
+    GP.handguard(gb, 'svd', { mat: 'black', u0: 0.16, u1: 0.4, r: 0.026 });
+    GP.barrel(gb, 0.4, 0.72, 0.011); GP.bipod(gb, 0.38, -0.028, 0.22);
+    const mz = GP.muzzle(gb, 'cone', 0.72, 0.012);
+    const sightY = GP.iron(gb, 0.1, 0.68, 0.06, { base: 0.04 });
+    GP.hands(this, gb, { support: 0.28, sw: 0.054 });
+    return this._fin(gb, { muzzleU: mz, sightY, hipPos: [0.135, -0.155, -0.35], adsPos: [0, -(sightY + 0.03), -0.3], flash: 0.28, magMove: [-0.04, -0.26, 0.02] });
+  },
+  l86a1() { // L86A1 LSW: SA80 bullpup, long heavy barrel, SUSAT-style optic, bipod
+    const M = this.M, gb = new GunBuilder(M);
+    gb.node('mag', new THREE.Vector3(0, -0.04, 0.12));
+    gb.prof([[-0.38, 0.026], [-0.38, -0.08], [-0.33, -0.1], [-0.2, -0.1], [-0.16, -0.04], [0.1, -0.04], [0.16, -0.02], [0.16, 0.026]], 0.052, M.black, 'body', { bevel: 0.008 });
+    gb.box(0.052, 0.1, 0.012, 0, -0.03, 0.385, M.rubber, 'body', 0.004);
+    GP.grip(gb, { mat: 'polymer', u: 0.02, vb: -0.04 });
+    GP.mag(gb, 'stanag', { mat: 'black', u: -0.19, len: 0.15, vb: -0.04 });
+    GP.handguard(gb, 'round', { mat: 'polymer', u0: 0.16, u1: 0.32, r: 0.024 });
+    GP.barrel(gb, 0.32, 0.62, 0.0105); GP.bipod(gb, 0.5, -0.024, 0.22);
+    const mz = GP.muzzle(gb, 'bird', 0.62, 0.0115);
+    const sightY = GP.scope(gb, -0.12, 0.16, 0.017, 0.026, { mat: 'black', open: true });
+    this.arm(gb, [0.02, -0.12, 0.02], [0.19, -0.3, 0.36], 0.034); this.gripHand(gb, 0.001, -0.1, 0.01, -0.3);
+    this.arm(gb, [-0.036, -0.06, -0.22], [-0.3, -0.3, 0.06], 0.033); this.supportHand(gb, 0, -0.006, 0.24, 0.05);
+    return this._fin(gb, { muzzleU: mz, sightY, reticle: 'dot', hipPos: [0.125, -0.15, -0.31], adsZ: -0.2, flash: 0.22, magMove: [0, -0.24, 0.04] });
+  },
+
+  /* ---------------- shotgun ---------------- */
+  aa12() { // AA-12: boxy receiver with the carry handle, 20-rd drum, straight stock in line
+    const M = this.M, gb = new GunBuilder(M);
+    gb.node('mag', new THREE.Vector3(0, -0.06, -0.06));
+    gb.prof([[-0.16, 0.05], [0.3, 0.05], [0.32, 0.02], [0.3, -0.04], [-0.16, -0.04]], 0.056, M.black, 'body', { bevel: 0.008 });
+    gb.prof([[-0.1, 0.05], [0.2, 0.05], [0.18, 0.09], [-0.08, 0.09]], 0.02, M.black, 'body', { bevel: 0.004, holes: [[[-0.06, 0.056], [0.16, 0.056], [0.15, 0.08], [-0.05, 0.08]]] });
+    gb.box(0.05, 0.06, 0.16, 0, 0.02, 0.24, M.polymer, 'body', 0.01); // straight stock
+    GP.grip(gb, { mat: 'polymer', u: -0.06, vb: -0.04 }); GP.trigger(gb, { u: -0.02, vb: -0.04 });
+    GP.mag(gb, 'drum', { mat: 'black', u: 0.04, vb: -0.04, r: 0.075 });
+    GP.barrel(gb, 0.32, 0.46, 0.013); const mz = GP.muzzle(gb, 'none', 0.46, 0.0145);
+    const sightY = GP.iron(gb, 0.0, 0.3, 0.098, { base: 0.09, frontBase: 0.05 });
+    GP.hands(this, gb, { support: 0.22, sw: 0.06, grip: -0.07, gy: -0.09 });
+    return this._fin(gb, { muzzleU: mz, sightY, hipPos: [0.13, -0.15, -0.34], adsPos: [0, -(sightY + 0.008), -0.24], flash: 0.28 });
+  },
+
+  /* ---------------- pistols ---------------- */
+  m92fs() { // Beretta 92: open-top slide (two-tone), wood grips
+    const M = this.M, gb = new GunBuilder(M);
+    const sy = this._pistol(gb, { slide: 'black', frame: 'black', grip: 'wood', len: 0.21, top: 0.03, w: 0.029 });
+    gb.box(0.016, 0.012, 0.05, 0, 0.022, 0.07, M.steel, 'slide', 0.002); // exposed barrel window
+    return this._fin(gb, { muzzleU: 0.13, sightY: sy, hipPos: [0.095, -0.1, -0.27], adsZ: -0.25, flash: 0.14, slide: true });
+  },
+  cz75() { // CZ 75: slide rides inside the frame, two-tone silver slide
+    const M = this.M, gb = new GunBuilder(M);
+    const sy = this._pistol(gb, { slide: 'steel', frame: 'black', grip: 'rubber', len: 0.2, top: 0.029, w: 0.028 });
+    return this._fin(gb, { muzzleU: 0.12, sightY: sy, hipPos: [0.095, -0.1, -0.27], adsZ: -0.25, flash: 0.14, slide: true });
+  },
+  jericho() { // Jericho 941: full steel, polygonal, slightly taller slide
+    const M = this.M, gb = new GunBuilder(M);
+    const sy = this._pistol(gb, { slide: 'parkerized', frame: 'parkerized', grip: 'rubber', len: 0.205, top: 0.034, w: 0.031 });
+    return this._fin(gb, { muzzleU: 0.125, sightY: sy, hipPos: [0.095, -0.1, -0.27], adsZ: -0.25, flash: 0.14, slide: true });
+  },
+  infinity() { // Infinity race gun: compensator, two-tone gold barrel, extended mag
+    const M = this.M, gb = new GunBuilder(M);
+    const sy = this._pistol(gb, { slide: 'steel', frame: 'black', grip: 'polymer', len: 0.21, top: 0.031, w: 0.029 });
+    gb.box(0.032, 0.028, 0.05, 0, 0.011, 0.155, M.black, 'slide', 0.006); // compensator (top stays under the sight line)
+    gb.box(0.03, 0.05, 0.04, 0, -0.13, 0.062, M.polymer, 'mag', 0.004, -0.28);
+    return this._fin(gb, { muzzleU: 0.18, sightY: sy, hipPos: [0.095, -0.1, -0.27], adsZ: -0.25, flash: 0.14, slide: true });
+  },
+  sw60() { // S&W Model 60: snub-nose revolver — cylinder, short barrel with ejector shroud, round butt
+    const M = this.M, gb = new GunBuilder(M);
+    gb.node('slide', new THREE.Vector3(0, 0, 0)).node('mag', new THREE.Vector3(0, 0, 0));
+    gb.cyl(0.022, 0.022, 0.05, 0, 0.012, 0.0, M.steel, 'body', 18); // cylinder
+    for (let k = 0; k < 5; k++) { const a = (k / 5) * Math.PI * 2; gb.box(0.003, 0.003, 0.05, Math.cos(a) * 0.022, 0.012 + Math.sin(a) * 0.022, 0, M.black); }
+    gb.prof([[-0.05, 0.03], [0.02, 0.03], [0.02, -0.01], [-0.05, -0.012]], 0.024, M.steel, 'body', { bevel: 0.003 }); // frame
+    gb.cyl(0.008, 0.008, 0.06, 0, 0.022, 0.06, M.steel, 'body', 14); gb.box(0.014, 0.012, 0.05, 0, 0.012, -0.065, M.steel, 'body', 0.003); // barrel + shroud
+    gb.box(0.003, 0.008, 0.005, 0, 0.034, -0.088, M.steel); // ramp front sight
+    gb.prof([[-0.075, -0.012], [-0.03, -0.012], [-0.045, -0.09], [-0.08, -0.095], [-0.092, -0.06]], 0.03, M.wood, 'body', { bevel: 0.006 }); // round-butt grip
+    gb.box(0.008, 0.016, 0.012, 0, 0.032, 0.05, M.black, 'body', 0.002, 0.4); // hammer
+    gb.box(0.05, 0.07, 0.078, 0.006, -0.058, 0.057, M.glove, 'body', 0.02, -0.28); gb.box(0.04, 0.066, 0.078, -0.028, -0.064, 0.045, M.glove, 'body', 0.02, -0.28, 0.2);
+    this.arm(gb, [0.012, -0.1, 0.1], [0.14, -0.24, 0.42], 0.036); this.arm(gb, [-0.03, -0.1, 0.09], [-0.16, -0.25, 0.4], 0.036);
+    return this._fin(gb, { muzzleU: 0.09, sightY: 0.04, hipPos: [0.095, -0.1, -0.27], adsZ: -0.25, flash: 0.15 });
   },
 });
 
