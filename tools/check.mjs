@@ -19,7 +19,7 @@ const arg = (k, d) => { const i = process.argv.indexOf('--' + k); if (i < 0) ret
 const SECONDS = +arg('seconds', 10), QUALITY = arg('quality', 'high'), FILE = arg('file', 'index.html'), SHOT = arg('shot', false), HEADED = !!arg('headed', false);
 // v24 profiling options: --size 1920x1080 · --novsync (true frame cost, no 60 Hz cap) · --bots 12 (per team) · --audio (run the audio engine too)
 const [VW, VH] = String(arg('size', '1280x720')).split('x').map(Number), NOVSYNC = !!arg('novsync', false), BOTS = +arg('bots', 5), AUDIO = !!arg('audio', false);
-const MAPS = arg('map', '0') === 'all' ? [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10] : String(arg('map', '0')).split(',').map(Number);
+const MAPS = arg('map', '0') === 'all' ? [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11] : String(arg('map', '0')).split(',').map(Number);
 
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.mjs': 'text/javascript', '.json': 'application/json', '.png': 'image/png', '.webp': 'image/webp', '.jpg': 'image/jpeg', '.css': 'text/css', '.cube': 'text/plain' };
 const server = http.createServer((req, res) => {
