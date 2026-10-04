@@ -263,6 +263,7 @@ Object.assign(WEAPON_DEFS, {
     stab: { dmg: 70, range: 1.75, interval: 0.95, delay: 0.18 },
     headMult: 1.5, falloff: 1, noise: 6,
   },
+  fall: { id: 'fall', name: '墜落', kind: 'fall', headMult: 1, falloff: 1 },
   grab: { id: 'grab', name: '擒拿', kind: 'grab', damage: 78, killRange: 1.15, range: 1.9, headMult: 1, falloff: 1 },
   he: { id: 'he', name: '手榴彈', kind: 'grenade', gtype: 'he', model: 'he', count: 1, fuse: 2.6, damage: 130, radius: 9, lethal: 1.4, moveSpeed: 6.0, adsMove: 1, falloff: 1 },
   flash: { id: 'flash', name: '閃光彈', kind: 'grenade', gtype: 'flash', model: 'flash', count: 2, fuse: 1.9, radius: 24, moveSpeed: 6.0, adsMove: 1, falloff: 1 },

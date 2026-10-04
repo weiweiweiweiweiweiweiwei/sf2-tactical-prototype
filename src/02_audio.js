@@ -9,6 +9,9 @@
    then played with HRTF panning, distance low-pass, speed-of-sound
    delay, per-map convolution reverb and outdoor slap-back echo.
    ===================================================================== */
+// v34 per-gun weight of the live sub kick (0 = none: suppressed guns)
+const GUN_KICK = { m4: 0.7, scar: 0.75, ak: 0.85, mp5: 0.5, ump: 0.55, vector: 0.45, mp7: 0.4, p90: 0.45, m249: 0.85, pkm: 0.95, mg42: 0.8,
+  m870: 1.15, saiga: 1.05, awp: 1.2, m200: 1.25, barrett: 1.4, kar98: 1.1, svd: 1.0, p226: 0.5, m1911: 0.6, deagle: 0.85 };
 const GUN_PROFILES = {
   m4:   { dur: 1.0, crack: { g: 1.0, hp: 2200, tau: 0.004 }, body: { g: 1.0, f: 950, q: 0.7, tau: 0.05, drive: 3.5 },
           low: { g: 1.0, f0: 150, f1: 48, sweep: 0.08, tau: 0.085, drive: 2.2 }, punch: { g: 0.55, f0: 600, f1: 170, tau: 0.028 },
@@ -205,7 +208,10 @@ class AudioEngine {
     for (const [name, p] of Object.entries(GUN_PROFILES)) {
       const n = name === 'he' || name === 'flash' ? 2 : 3;
       AudioEngine.banks[name] = [];
-      for (let i = 0; i < n; i++) AudioEngine.banks[name].push(await AudioEngine.renderProfile(p, seed++));
+      // v34 (user: heavy, deep, solid — no room echo up close): +45 % low end and a fatter chest thump, baked reflections / tail cut to 15 %
+      const q = name === 'he' || name === 'flash' || name === 'g36s' || name === 'usp' ? p : { ...p, dry: 0.15,
+        low: p.low && { ...p.low, g: p.low.g * 1.45, tau: p.low.tau * 1.25 }, punch: p.punch && { ...p.punch, g: p.punch.g * 1.3 } };
+      for (let i = 0; i < n; i++) AudioEngine.banks[name].push(await AudioEngine.renderProfile(q, seed++));
     }
     AudioEngine.banksReady = true;
   }
@@ -366,7 +372,7 @@ class AudioEngine {
     const src = ctx.createBufferSource(); src.buffer = pick(bank); src.playbackRate.value = rand(0.965, 1.035) * (o.rate || 1);
     const g = ctx.createGain(); g.gain.value = o.gain ?? 1;
     src.connect(g);
-    let node = g, delay = 0, send = this.acoustics.wet * (o.send ?? 1), echo = this.acoustics.echo * 0.8;
+    let node = g, delay = 0, send = this.acoustics.wet * (o.send ?? 1), echo = this.acoustics.echo * 0.8 * (o.echo ?? 1);
     if (pos) {
       const d = this.listener.distanceTo(pos);
       const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = clamp(20000 * Math.exp(-d / (o.lpDist || 42)), o.lpMin || 1200, 20000);
@@ -382,16 +388,24 @@ class AudioEngine {
     this.voiceList.push({ src, g, end: t + delay + src.buffer.duration / src.playbackRate.value });
   }
 
-  // v33: a recorded shot (the far-perspective recording beyond 30 m: tail and echo of a distant gun, less high end) —
-  // suppressed guns have no recording and keep their procedural bank
+  // v34: near shots (own + within 30 m) = the procedural banks (deep, dry, punchy — the user preferred them to the CC0 recordings,
+  // which sounded thin) plus a live sub-bass kick; beyond 30 m the far-perspective recording (its natural echo is the point there).
+  // Room reverb / echo scale with distance: up close it is almost dry.
   gunshot(sound, pos = null, rate = 1) {
-    const near = this.ctx && this._s('gun_' + sound);
-    if (near) {
-      const d = pos ? this.listener.distanceTo(pos) : 0, far = d > 30 ? this._s('gunfar_' + sound) : null;
-      this._playBuf(far || near, pos, { gain: pos ? (far ? 1.35 : 1.05) : 0.9, rate: (AudioEngine.sampleRate[sound] || 1) * rate, lpDist: far ? 95 : 42, send: far ? 0.75 : 1 });
-      return;
-    }
-    this.playBank(sound, pos, { gain: pos ? 1.1 : 0.95, rate });
+    if (!this.ctx) return;
+    const d = pos ? this.listener.distanceTo(pos) : 0, far = d > 30 && AudioEngine.samplesReady ? this._s('gunfar_' + sound) : null;
+    if (far) { this._playBuf(far, pos, { gain: 1.35, rate: (AudioEngine.sampleRate[sound] || 1) * rate, lpDist: 95, send: 0.75 }); return; }
+    const wet = clamp(d / 30, 0, 1);
+    this.playBank(sound, pos, { gain: pos ? 1.1 : 0.95, rate, send: 0.12 + wet * 0.6, echo: 0.15 + wet * 0.7 });
+    const k = GUN_KICK[sound]; if (k && d < 22) this._kick(pos, k * (pos ? 0.7 : 1));
+  }
+  // sub-bass kick under a close shot: felt more than heard (55 → 32 Hz sine, saturated)
+  _kick(pos, g) {
+    const ctx = this.ctx, t = ctx.currentTime + 0.002, out = pos ? this._bus(pos, 0, 6, 0, 0.9) : this.dry;
+    const o = ctx.createOscillator(), e = ctx.createGain(); o.type = 'sine';
+    o.frequency.setValueAtTime(72, t); o.frequency.exponentialRampToValueAtTime(34, t + 0.11);
+    e.gain.setValueAtTime(0, t); e.gain.linearRampToValueAtTime(0.55 * g, t + 0.003); e.gain.setTargetAtTime(0, t + 0.02, 0.05 + g * 0.03);
+    o.connect(e); e.connect(out); o.start(t); o.stop(t + 0.45);
   }
 
   // Explosions carry across the whole map: large refDistance + an extra sub-bass rumble that barely attenuates.
@@ -497,6 +511,11 @@ class AudioEngine {
       case 'boltfwd': click(0, 2100, 4, 0.5, 0.03); click(0.06, 1500, 5, 0.45, 0.035); break;
       case 'dry': this._osc('square', t, 3200, 2800, 0.015, out, 0.12); click(0, 3500, 8, 0.3, 0.02); break;
       case 'draw': { this._nb(t, out, 'bandpass', 1200, 1, 0.12, 0.02, 0.08); click(0.06, 2400, 6, 0.2, 0.02); const c = this._s('cloth'); if (c) this._one(pick(c), out, 0.22, 1.05); break; }
+      // v34: each kind of item has its own switch sound (mouse wheel / number keys)
+      case 'draw_rifle': click(0, 1100, 2, 0.4, 0.04); click(0.05, 2600, 6, 0.35, 0.02); this._osc('sine', t + 0.05, 230, 120, 0.06, out, 0.25); click(0.14, 1700, 4, 0.45, 0.03); break;
+      case 'draw_pistol': this._nb(t, out, 'bandpass', 900, 1.2, 0.18, 0.02, 0.07); click(0.08, 3200, 8, 0.35, 0.015); break;
+      case 'draw_knife': { const f = this._nb(t, out, 'bandpass', 3000, 6, 0.3, 0.01, 0.16); f.frequency.setValueAtTime(2500, t); f.frequency.exponentialRampToValueAtTime(7000, t + 0.16); this._osc('sine', t + 0.02, 6200, 6100, 0.3, out, 0.05); break; }
+      case 'draw_grenade': click(0, 3800, 9, 0.25, 0.015); this._osc('sine', t + 0.01, 4700, 4600, 0.18, out, 0.07); click(0.07, 2900, 7, 0.2, 0.015); break;
       case 'zoom': { // v33: raising the gun to the eye — sleeve rustle + the stock touching the shoulder
         const c = this._s('cloth'), m = this._s('metalclick');
         if (c) { this._one(pick(c), out, 0.2, 1.15 + Math.random() * 0.15); if (m) this._one(m[0], out, 0.07, 1.5, 0.05); } else click(0, 3000, 6, 0.12, 0.02);

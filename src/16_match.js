@@ -431,7 +431,7 @@ class Match {
     if (main && !opts.collateral) { hud.announce(main, sub); this.app.speak(main); }
   }
   _killFeed(victim, killer, def, head, valid, opts) {
-    this.app.hud.killfeed(valid ? killer.name : killer === victim ? '' : null, killer ? killer.team : 'bravo', killer === victim ? '自爆' : def, victim.name, victim.team, head, (killer && killer.isPlayer) || victim.isPlayer, opts.collateral);
+    this.app.hud.killfeed(valid ? killer.name : killer === victim ? '' : null, killer ? killer.team : 'bravo', killer === victim && def.kind !== 'fall' ? '自爆' : def, victim.name, victim.team, head, (killer && killer.isPlayer) || victim.isPlayer, opts.collateral);
   }
 
   onKill(victim, killer, def, part, dir, opts) {

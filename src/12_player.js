@@ -1,3 +1,5 @@
+const RELOAD_MOVE = 0.8, FALL_SAFE = 3.5, FALL_LETHAL = 11; // metres: below 3.5 m no damage, then linear, 11 m+ = death
+
 /* =====================================================================
    COMBATANT — shared by the player and every bot: motor, 6-zone
    hitboxes (head / chest / stomach / thigh / shin / foot), stats,
@@ -121,11 +123,12 @@ class Human extends Combatant {
     const shift = !!(btn & BTN.SPRINT);
     const ws = this.gear(), w = ws.current;
     if (this.sprintBlock > 0) this.sprintBlock -= h;
-    this.sprinting = shift && f > 0 && !m.crouching && !ws.ads && this.sprintBlock <= 0 && !(w.kind === 'grenade' && w.state !== 'idle');
+    this.sprinting = shift && f > 0 && !m.crouching && !ws.ads && !w.reloading && this.sprintBlock <= 0 && !(w.kind === 'grenade' && w.state !== 'idle');
     m.edgeGuard = shift && m.grounded;
     let speed = w.moveSpeed * (this.carrying ? 0.88 : 1);
     if (m.crouching) speed *= P.crouchMult; else if (this.sprinting) speed *= P.sprintMult;
     if (ws.ads) speed *= w.adsMove ?? 1;
+    if (w.reloading) speed *= RELOAD_MOVE; // v34: reloading = slower walk, no sprint
     m.step(h, wx, wz, len > 0 ? speed : 0);
     if (m.climbing) { if (m.climbDist > 0.6) { m.climbDist = 0; this._sfx('step', 'ladder', 0.6); g.emitNoise(m.pos, 9, this.team); } return; }
     const hs = m.horizontalSpeed();
@@ -134,6 +137,9 @@ class Human extends Combatant {
       if (this.stepDist > (this.sprinting ? 2.5 : 2.1)) { this.stepDist = 0; this._sfx('step', m.surface, this.sprinting ? 0.7 : 0.55); g.emitNoise(m.pos, this.sprinting ? 17 : 11, this.team); }
     } else if (!m.grounded) this.stepDist = 1.4;
     if (m.landSpeed > 3.5) { this._sfx('land', m.surface, m.landSpeed / 9); this.punchV += Math.min(m.landSpeed, 14) * -0.012; g.emitNoise(m.pos, 14, this.team); }
+    // v34 fall damage (Source / UE-style, fixed HP): drop height h = v² / 2g; safe up to FALL_SAFE m, lethal at FALL_LETHAL m
+    if (m.landSpeed > 11 && this.alive) { const hgt = m.landSpeed * m.landSpeed / (-2 * CFG.gravity), dmg = Math.round((hgt - FALL_SAFE) / (FALL_LETHAL - FALL_SAFE) * 100);
+      if (dmg > 0) { g.applyDamage(this, dmg, 'legs', this, WEAPON_DEFS.fall, null, null, { fall: true }); if (this.isPlayer) g.audio.land(null, m.surface, 1.4); } }
   }
 }
 

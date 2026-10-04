@@ -1111,6 +1111,7 @@ Object.assign(WEAPON_DEFS, {
     stab: { dmg: 70, range: 1.75, interval: 0.95, delay: 0.18 },
     headMult: 1.5, falloff: 1, noise: 6,
   },
+  fall: { id: 'fall', name: '墜落', kind: 'fall', headMult: 1, falloff: 1 },
   grab: { id: 'grab', name: '擒拿', kind: 'grab', damage: 78, killRange: 1.15, range: 1.9, headMult: 1, falloff: 1 },
   he: { id: 'he', name: '手榴彈', kind: 'grenade', gtype: 'he', model: 'he', count: 1, fuse: 2.6, damage: 130, radius: 9, lethal: 1.4, moveSpeed: 6.0, adsMove: 1, falloff: 1 },
   flash: { id: 'flash', name: '閃光彈', kind: 'grenade', gtype: 'flash', model: 'flash', count: 2, fuse: 1.9, radius: 24, moveSpeed: 6.0, adsMove: 1, falloff: 1 },
@@ -1326,6 +1327,9 @@ function loadoutDefs(mode, loadout) {
    then played with HRTF panning, distance low-pass, speed-of-sound
    delay, per-map convolution reverb and outdoor slap-back echo.
    ===================================================================== */
+// v34 per-gun weight of the live sub kick (0 = none: suppressed guns)
+const GUN_KICK = { m4: 0.7, scar: 0.75, ak: 0.85, mp5: 0.5, ump: 0.55, vector: 0.45, mp7: 0.4, p90: 0.45, m249: 0.85, pkm: 0.95, mg42: 0.8,
+  m870: 1.15, saiga: 1.05, awp: 1.2, m200: 1.25, barrett: 1.4, kar98: 1.1, svd: 1.0, p226: 0.5, m1911: 0.6, deagle: 0.85 };
 const GUN_PROFILES = {
   m4:   { dur: 1.0, crack: { g: 1.0, hp: 2200, tau: 0.004 }, body: { g: 1.0, f: 950, q: 0.7, tau: 0.05, drive: 3.5 },
           low: { g: 1.0, f0: 150, f1: 48, sweep: 0.08, tau: 0.085, drive: 2.2 }, punch: { g: 0.55, f0: 600, f1: 170, tau: 0.028 },
@@ -1522,7 +1526,10 @@ class AudioEngine {
     for (const [name, p] of Object.entries(GUN_PROFILES)) {
       const n = name === 'he' || name === 'flash' ? 2 : 3;
       AudioEngine.banks[name] = [];
-      for (let i = 0; i < n; i++) AudioEngine.banks[name].push(await AudioEngine.renderProfile(p, seed++));
+      // v34 (user: heavy, deep, solid — no room echo up close): +45 % low end and a fatter chest thump, baked reflections / tail cut to 15 %
+      const q = name === 'he' || name === 'flash' || name === 'g36s' || name === 'usp' ? p : { ...p, dry: 0.15,
+        low: p.low && { ...p.low, g: p.low.g * 1.45, tau: p.low.tau * 1.25 }, punch: p.punch && { ...p.punch, g: p.punch.g * 1.3 } };
+      for (let i = 0; i < n; i++) AudioEngine.banks[name].push(await AudioEngine.renderProfile(q, seed++));
     }
     AudioEngine.banksReady = true;
   }
@@ -1683,7 +1690,7 @@ class AudioEngine {
     const src = ctx.createBufferSource(); src.buffer = pick(bank); src.playbackRate.value = rand(0.965, 1.035) * (o.rate || 1);
     const g = ctx.createGain(); g.gain.value = o.gain ?? 1;
     src.connect(g);
-    let node = g, delay = 0, send = this.acoustics.wet * (o.send ?? 1), echo = this.acoustics.echo * 0.8;
+    let node = g, delay = 0, send = this.acoustics.wet * (o.send ?? 1), echo = this.acoustics.echo * 0.8 * (o.echo ?? 1);
     if (pos) {
       const d = this.listener.distanceTo(pos);
       const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = clamp(20000 * Math.exp(-d / (o.lpDist || 42)), o.lpMin || 1200, 20000);
@@ -1699,16 +1706,24 @@ class AudioEngine {
     this.voiceList.push({ src, g, end: t + delay + src.buffer.duration / src.playbackRate.value });
   }
 
-  // v33: a recorded shot (the far-perspective recording beyond 30 m: tail and echo of a distant gun, less high end) —
-  // suppressed guns have no recording and keep their procedural bank
+  // v34: near shots (own + within 30 m) = the procedural banks (deep, dry, punchy — the user preferred them to the CC0 recordings,
+  // which sounded thin) plus a live sub-bass kick; beyond 30 m the far-perspective recording (its natural echo is the point there).
+  // Room reverb / echo scale with distance: up close it is almost dry.
   gunshot(sound, pos = null, rate = 1) {
-    const near = this.ctx && this._s('gun_' + sound);
-    if (near) {
-      const d = pos ? this.listener.distanceTo(pos) : 0, far = d > 30 ? this._s('gunfar_' + sound) : null;
-      this._playBuf(far || near, pos, { gain: pos ? (far ? 1.35 : 1.05) : 0.9, rate: (AudioEngine.sampleRate[sound] || 1) * rate, lpDist: far ? 95 : 42, send: far ? 0.75 : 1 });
-      return;
-    }
-    this.playBank(sound, pos, { gain: pos ? 1.1 : 0.95, rate });
+    if (!this.ctx) return;
+    const d = pos ? this.listener.distanceTo(pos) : 0, far = d > 30 && AudioEngine.samplesReady ? this._s('gunfar_' + sound) : null;
+    if (far) { this._playBuf(far, pos, { gain: 1.35, rate: (AudioEngine.sampleRate[sound] || 1) * rate, lpDist: 95, send: 0.75 }); return; }
+    const wet = clamp(d / 30, 0, 1);
+    this.playBank(sound, pos, { gain: pos ? 1.1 : 0.95, rate, send: 0.12 + wet * 0.6, echo: 0.15 + wet * 0.7 });
+    const k = GUN_KICK[sound]; if (k && d < 22) this._kick(pos, k * (pos ? 0.7 : 1));
+  }
+  // sub-bass kick under a close shot: felt more than heard (55 → 32 Hz sine, saturated)
+  _kick(pos, g) {
+    const ctx = this.ctx, t = ctx.currentTime + 0.002, out = pos ? this._bus(pos, 0, 6, 0, 0.9) : this.dry;
+    const o = ctx.createOscillator(), e = ctx.createGain(); o.type = 'sine';
+    o.frequency.setValueAtTime(72, t); o.frequency.exponentialRampToValueAtTime(34, t + 0.11);
+    e.gain.setValueAtTime(0, t); e.gain.linearRampToValueAtTime(0.55 * g, t + 0.003); e.gain.setTargetAtTime(0, t + 0.02, 0.05 + g * 0.03);
+    o.connect(e); e.connect(out); o.start(t); o.stop(t + 0.45);
   }
 
   // Explosions carry across the whole map: large refDistance + an extra sub-bass rumble that barely attenuates.
@@ -1814,6 +1829,11 @@ class AudioEngine {
       case 'boltfwd': click(0, 2100, 4, 0.5, 0.03); click(0.06, 1500, 5, 0.45, 0.035); break;
       case 'dry': this._osc('square', t, 3200, 2800, 0.015, out, 0.12); click(0, 3500, 8, 0.3, 0.02); break;
       case 'draw': { this._nb(t, out, 'bandpass', 1200, 1, 0.12, 0.02, 0.08); click(0.06, 2400, 6, 0.2, 0.02); const c = this._s('cloth'); if (c) this._one(pick(c), out, 0.22, 1.05); break; }
+      // v34: each kind of item has its own switch sound (mouse wheel / number keys)
+      case 'draw_rifle': click(0, 1100, 2, 0.4, 0.04); click(0.05, 2600, 6, 0.35, 0.02); this._osc('sine', t + 0.05, 230, 120, 0.06, out, 0.25); click(0.14, 1700, 4, 0.45, 0.03); break;
+      case 'draw_pistol': this._nb(t, out, 'bandpass', 900, 1.2, 0.18, 0.02, 0.07); click(0.08, 3200, 8, 0.35, 0.015); break;
+      case 'draw_knife': { const f = this._nb(t, out, 'bandpass', 3000, 6, 0.3, 0.01, 0.16); f.frequency.setValueAtTime(2500, t); f.frequency.exponentialRampToValueAtTime(7000, t + 0.16); this._osc('sine', t + 0.02, 6200, 6100, 0.3, out, 0.05); break; }
+      case 'draw_grenade': click(0, 3800, 9, 0.25, 0.015); this._osc('sine', t + 0.01, 4700, 4600, 0.18, out, 0.07); click(0.07, 2900, 7, 0.2, 0.015); break;
       case 'zoom': { // v33: raising the gun to the eye — sleeve rustle + the stock touching the shoulder
         const c = this._s('cloth'), m = this._s('metalclick');
         if (c) { this._one(pick(c), out, 0.2, 1.15 + Math.random() * 0.15); if (m) this._one(m[0], out, 0.07, 1.5, 0.05); } else click(0, 3000, 6, 0.12, 0.02);
@@ -5840,9 +5860,35 @@ class WeaponModels {
    walk / crouch / flinch / killcam / death-limp code drives them unchanged.
    ===================================================================== */
 const TEAM_PALETTE = {
-  alpha: { uniform: 0x7d7152, pants: 0x6a6146, vest: 0x4b5237, pouch: 0x59603f, helmet: 0x6e6a52, glove: 0x2a2a26, boot: 0x3a3228, skin: 0xc49a78, band: 0x2f7fe0, face: 0xc49a78, goggle: 0x111111 },
-  bravo: { uniform: 0x2e2f33, pants: 0x28292c, vest: 0x4a1a17, pouch: 0x2a2a2a, helmet: 0x232323, glove: 0x1a1a1a, boot: 0x1e1e1e, skin: 0xb48868, band: 0xd8382c, face: 0x1b1b1b, goggle: 0x222222 },
+  alpha: { uniform: 0x8a7d5a, pants: 0x7a6e4e, vest: 0x5a5a40, pouch: 0x666448, helmet: 0x7a7258, glove: 0x2a2a26, boot: 0x3a3228, skin: 0xc49a78, band: 0x2f7fe0, face: 0xc49a78, goggle: 0x111111,
+    camo: [0x5e5238, 0x8d7d58, 0xb4a27a, 0x6f6a4c] }, // desert: brown / sand / light khaki / olive drab
+  bravo: { uniform: 0x52603a, pants: 0x4a5634, vest: 0x34362f, pouch: 0x3c3f33, helmet: 0x4d5636, glove: 0x5a5a3c, boot: 0x232220, skin: 0xb48868, band: 0xd8382c, face: 0xb48868, goggle: 0x1c1c1c,
+    camo: [0x2c3520, 0x4f6034, 0x7d8a52, 0x5c4a30] }, // woodland: dark green / mid green / light green / brown (SF2 Polish-style camo)
 };
+// v34 CAMOUFLAGE: parts tagged camo = 1 (uniform, trousers, helmet) get a 4-colour blotch pattern computed in the shader from the
+// bind-pose position, so it sticks to the body through animation and costs no texture. Works on clones (corpses) via userData.camo.
+const CAMO_GLSL = `
+float cH(vec3 p){ return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453); }
+float cN(vec3 p){ vec3 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(mix(cH(i), cH(i + vec3(1,0,0)), f.x), mix(cH(i + vec3(0,1,0)), cH(i + vec3(1,1,0)), f.x), f.y),
+             mix(mix(cH(i + vec3(0,0,1)), cH(i + vec3(1,0,1)), f.x), mix(cH(i + vec3(0,1,1)), cH(i + vec3(1,1,1)), f.x), f.y), f.z); }
+float cF(vec3 p){ return cN(p) * 0.65 + cN(p * 2.3 + 7.1) * 0.35; }`;
+function camoMat(mat) {
+  const pal = mat.userData.camo; if (!pal) return mat;
+  const cols = pal.map((h) => new THREE.Color(h));
+  mat.onBeforeCompile = (sh) => {
+    cols.forEach((c, i) => { sh.uniforms['camo' + i] = { value: c }; });
+    sh.vertexShader = 'attribute float camo; varying float vCamo; varying vec3 vCamoP;\n' +
+      sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\nvCamo = camo; vCamoP = position;');
+    sh.fragmentShader = 'uniform vec3 camo0; uniform vec3 camo1; uniform vec3 camo2; uniform vec3 camo3; varying float vCamo; varying vec3 vCamoP;\n' + CAMO_GLSL + '\n' +
+      sh.fragmentShader.replace('#include <color_fragment>', `#include <color_fragment>
+      if (vCamo > 0.5) { vec3 q = vCamoP * 9.0; float a = cF(q), b = cF(q * 1.3 + 31.0);
+        vec3 c = camo1; if (a > 0.56) c = camo0; if (b > 0.6) c = camo2; if (a < 0.36 && b < 0.5) c = camo3;
+        diffuseColor.rgb = diffuseColor.rgb / max(vColor.rgb, vec3(0.02)) * c; }`); // keep the fabric weave from the map
+  };
+  mat.customProgramCacheKey = () => 'camo' + pal.join(',');
+  return mat;
+}
 // v24: three r160 draws every shadow caster with ONE shared depth material, so skinned soldiers interleaved with static meshes
 // flipped its shader program ~46× per frame (each getProgram allocates a parameter object + key string → GC stutter).
 // One depth material for all skinned meshes keeps both programs stable; on the prototype so SkeletonUtils corpse clones get it too.
@@ -5867,7 +5913,8 @@ class SoldierFactory {
       const col = new THREE.Color(hex), n = g.attributes.position.count, c = new Float32Array(n * 3);
       for (let i = 0; i < n; i++) { c[i * 3] = col.r; c[i * 3 + 1] = col.g; c[i * 3 + 2] = col.b; }
       g.setAttribute('color', new THREE.BufferAttribute(c, 3));
-      for (const k of Object.keys(g.attributes)) if (!['position', 'normal', 'uv', 'color'].includes(k)) g.deleteAttribute(k);
+      g.setAttribute('camo', new THREE.BufferAttribute(new Float32Array(n).fill(hex === P.uniform || hex === P.pants || hex === P.helmet ? 1 : 0), 1));
+      for (const k of Object.keys(g.attributes)) if (!['position', 'normal', 'uv', 'color', 'camo'].includes(k)) g.deleteAttribute(k);
       (parts[part] = parts[part] || []).push(g);
     };
     const RB = (w, h, d, r) => (lod ? new THREE.BoxGeometry(w, h, d) : new RoundedBoxGeometry(w, h, d, 2, r));
@@ -5917,7 +5964,7 @@ class SoldierFactory {
   }
 
   create(team, weaponId) {
-    const G = this._geo(team), G1 = this._geo(team, 1), mat = this.baseMat.clone(); mat.userData.keep = false;
+    const G = this._geo(team), G1 = this._geo(team, 1), mat = this.baseMat.clone(); mat.userData.keep = false; mat.userData.camo = TEAM_PALETTE[team].camo; camoMat(mat);
     const root = new THREE.Group(), legs = [], bones = [], parts = [], parts1 = [];
     const bone = (name, parent, x, y, z) => { const b = new THREE.Bone(); b.name = name; b.position.set(x, y, z); parent.add(b); bones.push(b); return b; };
     [-0.105, 0.105].forEach((sx, i) => { const hip = bone('hip' + i, root, sx, 0.92, 0), knee = bone('knee' + i, hip, 0, -0.42, 0); legs.push({ hip, knee }); parts.push([G.thigh, hip], [G.shin, knee]); parts1.push([G1.thigh, hip], [G1.shin, knee]); });
@@ -6970,8 +7017,9 @@ class Arsenal {
     if (newLevel === this.zoomLevel) return;
     const was = this.ads;
     this.zoomLevel = newLevel; this.ads = newLevel > 0;
-    if (w.scoped) { // the rifle is raised to the eye first (adsT); the 2D scope only counts once it is there — see tick()
-      if (!this.ads && this.scopedIn) { this.scopedIn = false; this.scopeLevel = 0; }
+    if (w.scoped) { // v34 SF2 quick-scope (瞬G): the scope is fully in the instant ADS is pressed — right-click then left-click fires scoped
+      if (this.ads) { this.adsT = 1; this.scopedIn = true; this.scopeLevel = newLevel; }
+      else if (this.scopedIn) { this.scopedIn = false; this.scopeLevel = 0; }
       if (!silent) this.onZoomSound();
     }
     if (this.ads && !was) this.owner.sprinting = false;
@@ -6981,6 +7029,7 @@ class Arsenal {
   grab() {
     const g = this.game, p = this.owner, w = this.current;
     if (!g.canAct() || !p.alive || this.grabT > 0 || this.grabCd > 0 || (w.kind === 'grenade' && w.state !== 'idle')) return;
+    if (w.reloading) { w.reloading = false; w.reloadT = 0; w.reloadFired && w.reloadFired.clear(); } // v34: F cancels a reload (the mag is not refilled)
     this.grabT = 1e-4; this.grabHit = false; this.grabCd = 1.0; this.setAds(false, true); this.trigger = false;
     p.sprinting = false; p.sprintBlock = 0.5; g.audio.knifeSwing(p.isPlayer ? null : p.motor.pos); p.onAttack();
   }
@@ -7039,7 +7088,7 @@ class Arsenal {
     if (w.reloading && this.ads) this.setAds(false, true);
     if (p.sprinting && this.ads) this.setAds(false, true);
     this.adsT = damp(this.adsT, this.ads ? 1 : 0, w.def.adsSpeed || 20, h);
-    if (w.scoped) { const inNow = this.ads && this.adsT > 0.8; this.scopedIn = inNow; this.scopeLevel = inNow ? this.zoomLevel : 0; } // scoped accuracy only once the rifle is at the eye
+    if (w.scoped) { const inNow = this.ads; this.scopedIn = inNow; this.scopeLevel = inNow ? this.zoomLevel : 0; if (inNow) this.adsT = 1; }
     else if (this.scopedIn) { this.scopedIn = false; this.scopeLevel = 0; }
   }
 }
@@ -7086,7 +7135,7 @@ class WeaponSystem extends Arsenal {
   onInventory() { if (this.scene.environment && this.game.applyEnvIntensity) this.game.applyEnvIntensity(); this.game.app.hud.setWeapon(this); }
   onSwitch() {
     this.kickPos.set(0, 0, 0); this.kickVel.set(0, 0, 0); this.kickRot.set(0, 0, 0); this.kickRotVel.set(0, 0, 0);
-    this.game.audio.mech('draw'); this.game.app.hud.setWeapon(this);
+    const k = this.current.kind; this.game.audio.mech(k === 'knife' ? 'draw_knife' : k === 'grenade' ? 'draw_grenade' : k === 'pistol' ? 'draw_pistol' : 'draw_rifle'); this.game.audio.mech('draw'); this.game.app.hud.setWeapon(this);
   }
   onZoomSound() { this.game.audio.mech('zoom'); }
   onFired() { this.game.app.hud.setWeapon(this); }
@@ -7165,7 +7214,7 @@ class WeaponSystem extends Arsenal {
 
     const target = this.ads ? (w.scoped ? (this.scopedIn ? w.def.zoomFovs[this.zoomLevel - 1] : this.baseFov * 0.82) : w.def.adsFov) : this.baseFov;
     this.fov = THREE.MathUtils.lerp(this.fov, target, 1 - Math.exp(-(w.scoped ? 32 : w.def.adsSpeed * 1.4 || 28) * dt));
-    if (Math.abs(this.fov - target) < 0.01) this.fov = target;
+    if (Math.abs(this.fov - target) < 0.01 || (w.scoped && this.scopedIn)) this.fov = target; // scope zoom is instant
     const fovNow = this.fov + p.fovPunch;
     if (Math.abs(cam.fov - fovNow) > 1e-4) { cam.fov = fovNow; cam.updateProjectionMatrix(); }
     this.sprintT = damp(this.sprintT, p.sprinting ? 1 : 0, 12, dt);
@@ -7264,6 +7313,8 @@ class WeaponSystem extends Arsenal {
 
   onResize() { this.camera.aspect = innerWidth / innerHeight; this.camera.updateProjectionMatrix(); }
 }
+const RELOAD_MOVE = 0.8, FALL_SAFE = 3.5, FALL_LETHAL = 11; // metres: below 3.5 m no damage, then linear, 11 m+ = death
+
 /* =====================================================================
    COMBATANT — shared by the player and every bot: motor, 6-zone
    hitboxes (head / chest / stomach / thigh / shin / foot), stats,
@@ -7387,11 +7438,12 @@ class Human extends Combatant {
     const shift = !!(btn & BTN.SPRINT);
     const ws = this.gear(), w = ws.current;
     if (this.sprintBlock > 0) this.sprintBlock -= h;
-    this.sprinting = shift && f > 0 && !m.crouching && !ws.ads && this.sprintBlock <= 0 && !(w.kind === 'grenade' && w.state !== 'idle');
+    this.sprinting = shift && f > 0 && !m.crouching && !ws.ads && !w.reloading && this.sprintBlock <= 0 && !(w.kind === 'grenade' && w.state !== 'idle');
     m.edgeGuard = shift && m.grounded;
     let speed = w.moveSpeed * (this.carrying ? 0.88 : 1);
     if (m.crouching) speed *= P.crouchMult; else if (this.sprinting) speed *= P.sprintMult;
     if (ws.ads) speed *= w.adsMove ?? 1;
+    if (w.reloading) speed *= RELOAD_MOVE; // v34: reloading = slower walk, no sprint
     m.step(h, wx, wz, len > 0 ? speed : 0);
     if (m.climbing) { if (m.climbDist > 0.6) { m.climbDist = 0; this._sfx('step', 'ladder', 0.6); g.emitNoise(m.pos, 9, this.team); } return; }
     const hs = m.horizontalSpeed();
@@ -7400,6 +7452,9 @@ class Human extends Combatant {
       if (this.stepDist > (this.sprinting ? 2.5 : 2.1)) { this.stepDist = 0; this._sfx('step', m.surface, this.sprinting ? 0.7 : 0.55); g.emitNoise(m.pos, this.sprinting ? 17 : 11, this.team); }
     } else if (!m.grounded) this.stepDist = 1.4;
     if (m.landSpeed > 3.5) { this._sfx('land', m.surface, m.landSpeed / 9); this.punchV += Math.min(m.landSpeed, 14) * -0.012; g.emitNoise(m.pos, 14, this.team); }
+    // v34 fall damage (Source / UE-style, fixed HP): drop height h = v² / 2g; safe up to FALL_SAFE m, lethal at FALL_LETHAL m
+    if (m.landSpeed > 11 && this.alive) { const hgt = m.landSpeed * m.landSpeed / (-2 * CFG.gravity), dmg = Math.round((hgt - FALL_SAFE) / (FALL_LETHAL - FALL_SAFE) * 100);
+      if (dmg > 0) { g.applyDamage(this, dmg, 'legs', this, WEAPON_DEFS.fall, null, null, { fall: true }); if (this.isPlayer) g.audio.land(null, m.surface, 1.4); } }
   }
 }
 
@@ -7595,8 +7650,7 @@ function animateSoldier(c, dt, hs, crouching, aimPitch, armsDown) {
     M.torso.rotation.x = fl.x * 0.75; M.torso.rotation.z = fl.z * 0.6; M.head.rotation.x += fl.h * 0.55;
   }
   if (armsDown) M.arms.rotation.x = damp(M.arms.rotation.x, -0.5, 10, dt);
-  if (c.spawnProtect > 0) { const k = 0.35 + 0.25 * Math.sin(c.game.time * 14); M.mat.emissive.setRGB(0.06 * k, 0.18 * k, 0.34 * k); }
-  else if (M.mat.emissive.r > 0 || M.mat.emissive.b > 0) M.mat.emissive.setRGB(0, 0, 0);
+  // v34: no spawn-protection glow on the body (user: no white flashing on enemies) — hits on a protected soldier still show the shield spark
 }
 const PREF_RANGE = { sniper: [30, 75], rifle: [10, 34], lmg: [12, 38], smg: [6, 22], shotgun: [2, 9], pistol: [5, 18], knife: [0, 2] };
 
@@ -7662,7 +7716,7 @@ class Bot extends Combatant {
     this.model.head.visible = true;
     const corpse = SkeletonUtils.clone(this.model.root); // v22: skinned soldier — rebinds the clone to its own bones
     corpse.position.set(0, 0, 0); corpse.rotation.set(0, 0, 0);
-    corpse.traverse((o) => { if (o.isMesh) { o.castShadow = true; if (o.material === this.model.mat) o.material = this.model.mat.clone(); if (o.material.emissive) o.material.emissive.setRGB(0, 0, 0); } });
+    corpse.traverse((o) => { if (o.isMesh) { o.castShadow = true; if (o.material === this.model.mat) o.material = camoMat(this.model.mat.clone()); if (o.material.emissive) o.material.emissive.setRGB(0, 0, 0); } });
     const hd = dir.clone().setY(0); if (hd.lengthSq() < 1e-4) hd.set(Math.sin(this.yaw), 0, Math.cos(this.yaw));
     const N = (n) => corpse.getObjectByName(n), hips = [N('hip0'), N('hip1')], torso = N('torso'), knees = [N('knee0'), N('knee1')], head = N('head'), arms = N('arms');
     const limp = knees[0] && knees[1] && head && arms ? { t: 0, hips, knees, torso, head, arms, h0: hips.map((h) => h.rotation.x), k0: knees.map((n) => n.rotation.x), a0: arms.rotation.x, hd0: head.rotation.x, t0: torso.rotation.x,
@@ -7709,7 +7763,7 @@ class Bot extends Combatant {
     const m = this.motor, M = this.model;
     M.root.position.lerpVectors(m.prevPos, m.pos, alpha); M.root.rotation.y = this.yaw;
     animateSoldier(this, dt, m.horizontalSpeed(), m.crouching, this.aimPitch, this.reloadT > 0 || m.climbing);
-    if (this.def.kind === 'sniper') this._glint();
+    // v34: scope glint removed (it read as a flashing white blob)
     if (this.tag) { this.tag.position.set(M.root.position.x, M.root.position.y + 2.1, M.root.position.z); this.tag.visible = !this.tag.userData.hide && this.tag.position.distanceTo(this.game.camera.position) < 70; }
   }
 }
@@ -9793,7 +9847,7 @@ class Match {
     if (main && !opts.collateral) { hud.announce(main, sub); this.app.speak(main); }
   }
   _killFeed(victim, killer, def, head, valid, opts) {
-    this.app.hud.killfeed(valid ? killer.name : killer === victim ? '' : null, killer ? killer.team : 'bravo', killer === victim ? '自爆' : def, victim.name, victim.team, head, (killer && killer.isPlayer) || victim.isPlayer, opts.collateral);
+    this.app.hud.killfeed(valid ? killer.name : killer === victim ? '' : null, killer ? killer.team : 'bravo', killer === victim && def.kind !== 'fall' ? '自爆' : def, victim.name, victim.team, head, (killer && killer.isPlayer) || victim.isPlayer, opts.collateral);
   }
 
   onKill(victim, killer, def, part, dir, opts) {

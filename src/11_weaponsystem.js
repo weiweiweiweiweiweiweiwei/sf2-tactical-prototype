@@ -83,8 +83,9 @@ class Arsenal {
     if (newLevel === this.zoomLevel) return;
     const was = this.ads;
     this.zoomLevel = newLevel; this.ads = newLevel > 0;
-    if (w.scoped) { // the rifle is raised to the eye first (adsT); the 2D scope only counts once it is there — see tick()
-      if (!this.ads && this.scopedIn) { this.scopedIn = false; this.scopeLevel = 0; }
+    if (w.scoped) { // v34 SF2 quick-scope (瞬G): the scope is fully in the instant ADS is pressed — right-click then left-click fires scoped
+      if (this.ads) { this.adsT = 1; this.scopedIn = true; this.scopeLevel = newLevel; }
+      else if (this.scopedIn) { this.scopedIn = false; this.scopeLevel = 0; }
       if (!silent) this.onZoomSound();
     }
     if (this.ads && !was) this.owner.sprinting = false;
@@ -94,6 +95,7 @@ class Arsenal {
   grab() {
     const g = this.game, p = this.owner, w = this.current;
     if (!g.canAct() || !p.alive || this.grabT > 0 || this.grabCd > 0 || (w.kind === 'grenade' && w.state !== 'idle')) return;
+    if (w.reloading) { w.reloading = false; w.reloadT = 0; w.reloadFired && w.reloadFired.clear(); } // v34: F cancels a reload (the mag is not refilled)
     this.grabT = 1e-4; this.grabHit = false; this.grabCd = 1.0; this.setAds(false, true); this.trigger = false;
     p.sprinting = false; p.sprintBlock = 0.5; g.audio.knifeSwing(p.isPlayer ? null : p.motor.pos); p.onAttack();
   }
@@ -152,7 +154,7 @@ class Arsenal {
     if (w.reloading && this.ads) this.setAds(false, true);
     if (p.sprinting && this.ads) this.setAds(false, true);
     this.adsT = damp(this.adsT, this.ads ? 1 : 0, w.def.adsSpeed || 20, h);
-    if (w.scoped) { const inNow = this.ads && this.adsT > 0.8; this.scopedIn = inNow; this.scopeLevel = inNow ? this.zoomLevel : 0; } // scoped accuracy only once the rifle is at the eye
+    if (w.scoped) { const inNow = this.ads; this.scopedIn = inNow; this.scopeLevel = inNow ? this.zoomLevel : 0; if (inNow) this.adsT = 1; }
     else if (this.scopedIn) { this.scopedIn = false; this.scopeLevel = 0; }
   }
 }
@@ -199,7 +201,7 @@ class WeaponSystem extends Arsenal {
   onInventory() { if (this.scene.environment && this.game.applyEnvIntensity) this.game.applyEnvIntensity(); this.game.app.hud.setWeapon(this); }
   onSwitch() {
     this.kickPos.set(0, 0, 0); this.kickVel.set(0, 0, 0); this.kickRot.set(0, 0, 0); this.kickRotVel.set(0, 0, 0);
-    this.game.audio.mech('draw'); this.game.app.hud.setWeapon(this);
+    const k = this.current.kind; this.game.audio.mech(k === 'knife' ? 'draw_knife' : k === 'grenade' ? 'draw_grenade' : k === 'pistol' ? 'draw_pistol' : 'draw_rifle'); this.game.audio.mech('draw'); this.game.app.hud.setWeapon(this);
   }
   onZoomSound() { this.game.audio.mech('zoom'); }
   onFired() { this.game.app.hud.setWeapon(this); }
@@ -278,7 +280,7 @@ class WeaponSystem extends Arsenal {
 
     const target = this.ads ? (w.scoped ? (this.scopedIn ? w.def.zoomFovs[this.zoomLevel - 1] : this.baseFov * 0.82) : w.def.adsFov) : this.baseFov;
     this.fov = THREE.MathUtils.lerp(this.fov, target, 1 - Math.exp(-(w.scoped ? 32 : w.def.adsSpeed * 1.4 || 28) * dt));
-    if (Math.abs(this.fov - target) < 0.01) this.fov = target;
+    if (Math.abs(this.fov - target) < 0.01 || (w.scoped && this.scopedIn)) this.fov = target; // scope zoom is instant
     const fovNow = this.fov + p.fovPunch;
     if (Math.abs(cam.fov - fovNow) > 1e-4) { cam.fov = fovNow; cam.updateProjectionMatrix(); }
     this.sprintT = damp(this.sprintT, p.sprinting ? 1 : 0, 12, dt);

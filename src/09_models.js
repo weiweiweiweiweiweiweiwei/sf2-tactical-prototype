@@ -607,9 +607,35 @@ class WeaponModels {
    walk / crouch / flinch / killcam / death-limp code drives them unchanged.
    ===================================================================== */
 const TEAM_PALETTE = {
-  alpha: { uniform: 0x7d7152, pants: 0x6a6146, vest: 0x4b5237, pouch: 0x59603f, helmet: 0x6e6a52, glove: 0x2a2a26, boot: 0x3a3228, skin: 0xc49a78, band: 0x2f7fe0, face: 0xc49a78, goggle: 0x111111 },
-  bravo: { uniform: 0x2e2f33, pants: 0x28292c, vest: 0x4a1a17, pouch: 0x2a2a2a, helmet: 0x232323, glove: 0x1a1a1a, boot: 0x1e1e1e, skin: 0xb48868, band: 0xd8382c, face: 0x1b1b1b, goggle: 0x222222 },
+  alpha: { uniform: 0x8a7d5a, pants: 0x7a6e4e, vest: 0x5a5a40, pouch: 0x666448, helmet: 0x7a7258, glove: 0x2a2a26, boot: 0x3a3228, skin: 0xc49a78, band: 0x2f7fe0, face: 0xc49a78, goggle: 0x111111,
+    camo: [0x5e5238, 0x8d7d58, 0xb4a27a, 0x6f6a4c] }, // desert: brown / sand / light khaki / olive drab
+  bravo: { uniform: 0x52603a, pants: 0x4a5634, vest: 0x34362f, pouch: 0x3c3f33, helmet: 0x4d5636, glove: 0x5a5a3c, boot: 0x232220, skin: 0xb48868, band: 0xd8382c, face: 0xb48868, goggle: 0x1c1c1c,
+    camo: [0x2c3520, 0x4f6034, 0x7d8a52, 0x5c4a30] }, // woodland: dark green / mid green / light green / brown (SF2 Polish-style camo)
 };
+// v34 CAMOUFLAGE: parts tagged camo = 1 (uniform, trousers, helmet) get a 4-colour blotch pattern computed in the shader from the
+// bind-pose position, so it sticks to the body through animation and costs no texture. Works on clones (corpses) via userData.camo.
+const CAMO_GLSL = `
+float cH(vec3 p){ return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453); }
+float cN(vec3 p){ vec3 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(mix(cH(i), cH(i + vec3(1,0,0)), f.x), mix(cH(i + vec3(0,1,0)), cH(i + vec3(1,1,0)), f.x), f.y),
+             mix(mix(cH(i + vec3(0,0,1)), cH(i + vec3(1,0,1)), f.x), mix(cH(i + vec3(0,1,1)), cH(i + vec3(1,1,1)), f.x), f.y), f.z); }
+float cF(vec3 p){ return cN(p) * 0.65 + cN(p * 2.3 + 7.1) * 0.35; }`;
+function camoMat(mat) {
+  const pal = mat.userData.camo; if (!pal) return mat;
+  const cols = pal.map((h) => new THREE.Color(h));
+  mat.onBeforeCompile = (sh) => {
+    cols.forEach((c, i) => { sh.uniforms['camo' + i] = { value: c }; });
+    sh.vertexShader = 'attribute float camo; varying float vCamo; varying vec3 vCamoP;\n' +
+      sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\nvCamo = camo; vCamoP = position;');
+    sh.fragmentShader = 'uniform vec3 camo0; uniform vec3 camo1; uniform vec3 camo2; uniform vec3 camo3; varying float vCamo; varying vec3 vCamoP;\n' + CAMO_GLSL + '\n' +
+      sh.fragmentShader.replace('#include <color_fragment>', `#include <color_fragment>
+      if (vCamo > 0.5) { vec3 q = vCamoP * 9.0; float a = cF(q), b = cF(q * 1.3 + 31.0);
+        vec3 c = camo1; if (a > 0.56) c = camo0; if (b > 0.6) c = camo2; if (a < 0.36 && b < 0.5) c = camo3;
+        diffuseColor.rgb = diffuseColor.rgb / max(vColor.rgb, vec3(0.02)) * c; }`); // keep the fabric weave from the map
+  };
+  mat.customProgramCacheKey = () => 'camo' + pal.join(',');
+  return mat;
+}
 // v24: three r160 draws every shadow caster with ONE shared depth material, so skinned soldiers interleaved with static meshes
 // flipped its shader program ~46× per frame (each getProgram allocates a parameter object + key string → GC stutter).
 // One depth material for all skinned meshes keeps both programs stable; on the prototype so SkeletonUtils corpse clones get it too.
@@ -634,7 +660,8 @@ class SoldierFactory {
       const col = new THREE.Color(hex), n = g.attributes.position.count, c = new Float32Array(n * 3);
       for (let i = 0; i < n; i++) { c[i * 3] = col.r; c[i * 3 + 1] = col.g; c[i * 3 + 2] = col.b; }
       g.setAttribute('color', new THREE.BufferAttribute(c, 3));
-      for (const k of Object.keys(g.attributes)) if (!['position', 'normal', 'uv', 'color'].includes(k)) g.deleteAttribute(k);
+      g.setAttribute('camo', new THREE.BufferAttribute(new Float32Array(n).fill(hex === P.uniform || hex === P.pants || hex === P.helmet ? 1 : 0), 1));
+      for (const k of Object.keys(g.attributes)) if (!['position', 'normal', 'uv', 'color', 'camo'].includes(k)) g.deleteAttribute(k);
       (parts[part] = parts[part] || []).push(g);
     };
     const RB = (w, h, d, r) => (lod ? new THREE.BoxGeometry(w, h, d) : new RoundedBoxGeometry(w, h, d, 2, r));
@@ -684,7 +711,7 @@ class SoldierFactory {
   }
 
   create(team, weaponId) {
-    const G = this._geo(team), G1 = this._geo(team, 1), mat = this.baseMat.clone(); mat.userData.keep = false;
+    const G = this._geo(team), G1 = this._geo(team, 1), mat = this.baseMat.clone(); mat.userData.keep = false; mat.userData.camo = TEAM_PALETTE[team].camo; camoMat(mat);
     const root = new THREE.Group(), legs = [], bones = [], parts = [], parts1 = [];
     const bone = (name, parent, x, y, z) => { const b = new THREE.Bone(); b.name = name; b.position.set(x, y, z); parent.add(b); bones.push(b); return b; };
     [-0.105, 0.105].forEach((sx, i) => { const hip = bone('hip' + i, root, sx, 0.92, 0), knee = bone('knee' + i, hip, 0, -0.42, 0); legs.push({ hip, knee }); parts.push([G.thigh, hip], [G.shin, knee]); parts1.push([G1.thigh, hip], [G1.shin, knee]); });

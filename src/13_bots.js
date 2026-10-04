@@ -31,8 +31,7 @@ function animateSoldier(c, dt, hs, crouching, aimPitch, armsDown) {
     M.torso.rotation.x = fl.x * 0.75; M.torso.rotation.z = fl.z * 0.6; M.head.rotation.x += fl.h * 0.55;
   }
   if (armsDown) M.arms.rotation.x = damp(M.arms.rotation.x, -0.5, 10, dt);
-  if (c.spawnProtect > 0) { const k = 0.35 + 0.25 * Math.sin(c.game.time * 14); M.mat.emissive.setRGB(0.06 * k, 0.18 * k, 0.34 * k); }
-  else if (M.mat.emissive.r > 0 || M.mat.emissive.b > 0) M.mat.emissive.setRGB(0, 0, 0);
+  // v34: no spawn-protection glow on the body (user: no white flashing on enemies) — hits on a protected soldier still show the shield spark
 }
 const PREF_RANGE = { sniper: [30, 75], rifle: [10, 34], lmg: [12, 38], smg: [6, 22], shotgun: [2, 9], pistol: [5, 18], knife: [0, 2] };
 
@@ -98,7 +97,7 @@ class Bot extends Combatant {
     this.model.head.visible = true;
     const corpse = SkeletonUtils.clone(this.model.root); // v22: skinned soldier — rebinds the clone to its own bones
     corpse.position.set(0, 0, 0); corpse.rotation.set(0, 0, 0);
-    corpse.traverse((o) => { if (o.isMesh) { o.castShadow = true; if (o.material === this.model.mat) o.material = this.model.mat.clone(); if (o.material.emissive) o.material.emissive.setRGB(0, 0, 0); } });
+    corpse.traverse((o) => { if (o.isMesh) { o.castShadow = true; if (o.material === this.model.mat) o.material = camoMat(this.model.mat.clone()); if (o.material.emissive) o.material.emissive.setRGB(0, 0, 0); } });
     const hd = dir.clone().setY(0); if (hd.lengthSq() < 1e-4) hd.set(Math.sin(this.yaw), 0, Math.cos(this.yaw));
     const N = (n) => corpse.getObjectByName(n), hips = [N('hip0'), N('hip1')], torso = N('torso'), knees = [N('knee0'), N('knee1')], head = N('head'), arms = N('arms');
     const limp = knees[0] && knees[1] && head && arms ? { t: 0, hips, knees, torso, head, arms, h0: hips.map((h) => h.rotation.x), k0: knees.map((n) => n.rotation.x), a0: arms.rotation.x, hd0: head.rotation.x, t0: torso.rotation.x,
@@ -145,7 +144,7 @@ class Bot extends Combatant {
     const m = this.motor, M = this.model;
     M.root.position.lerpVectors(m.prevPos, m.pos, alpha); M.root.rotation.y = this.yaw;
     animateSoldier(this, dt, m.horizontalSpeed(), m.crouching, this.aimPitch, this.reloadT > 0 || m.climbing);
-    if (this.def.kind === 'sniper') this._glint();
+    // v34: scope glint removed (it read as a flashing white blob)
     if (this.tag) { this.tag.position.set(M.root.position.x, M.root.position.y + 2.1, M.root.position.z); this.tag.visible = !this.tag.userData.hide && this.tag.position.distanceTo(this.game.camera.position) < 70; }
   }
 }
