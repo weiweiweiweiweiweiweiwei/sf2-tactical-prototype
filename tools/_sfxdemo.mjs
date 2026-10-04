@@ -1,5 +1,5 @@
 // v33 sound check + listening demo: records the game's real audio output while it plays a scripted sequence
-// (own guns, distant guns, footsteps on several surfaces, ADS, three ambiences) → tools/out/v34_demo_<rec|proc>.webm
+// (own guns, distant guns, footsteps on several surfaces, ADS, three ambiences) → tools/out/v36_demo_<rec|proc>.webm
 // node tools/_sfxdemo.mjs [proc]   (proc = the old procedural sounds, for an A/B)
 import { chromium } from 'playwright'; import http from 'node:http'; import fs from 'node:fs'; import path from 'node:path';
 const ROOT = process.cwd(), T = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript' }, PROC = process.argv[2] === 'proc';
@@ -34,7 +34,7 @@ const res = await p.evaluate(async () => {
     await sleep(700);
   }
   // v34: kill confirm ×2, then switch sounds rifle → pistol → knife → grenade
-  A.gunshot('m4', null); A.hit('kill'); await sleep(1200); A.gunshot('awp', null); await sleep(80); A.hit('kill'); await sleep(1400);
+  for (const k of ['body', 'body', 'head', 'kill']) { A.gunshot('m4', null); await sleep(60); A.hit(k); await sleep(380); } await sleep(600); A.gunshot('awp', null); await sleep(80); A.hit('kill'); await sleep(1400);
   for (const k of ['rifle', 'pistol', 'knife', 'grenade']) { A.mech('draw_' + k); A.mech('draw'); await sleep(800); }
   // 2. an enemy M4 at 15 m (left), then at 60 m (right, far recording)
   for (const [dx, dz] of [[-15, 0], [60, -10]]) { for (let i = 0; i < 5; i++) { A.gunshot('m4', at(dx, dz)); await sleep(110); } await sleep(1100); }
@@ -50,7 +50,7 @@ const res = await p.evaluate(async () => {
   return { b64: btoa(s), maxPeak: Math.max(...peaks), finite: peaks.every(Number.isFinite), silentShare: +(peaks.filter((x) => x < 1e-4).length / peaks.length).toFixed(2), resets: A.busResets };
 });
 fs.mkdirSync('tools/out', { recursive: true });
-const out = `tools/out/v34_demo_${PROC ? 'proc' : 'rec'}.webm`; fs.writeFileSync(out, Buffer.from(res.b64, 'base64'));
+const out = `tools/out/v36_demo_${PROC ? 'proc' : 'rec'}.webm`; fs.writeFileSync(out, Buffer.from(res.b64, 'base64'));
 console.log(out, `${(fs.statSync(out).size / 1024).toFixed(0)} KB`, JSON.stringify({ maxPeak: +res.maxPeak.toFixed(3), finite: res.finite, silentShare: res.silentShare, busResets: res.resets }));
 if (errs.length) console.log('MESSAGES', errs.slice(0, 8));
 await b.close(); srv.close();

@@ -84,7 +84,7 @@ class HUD {
     this._set('fm', this.el.fireMode, 'text', fm); this._set('fmD', this.el.fireMode, 'display', fm ? 'inline-block' : 'none');
     if (w.kind === 'knife') { this._set('mag', this.el.mag, 'text', '∞'); this._set('res', this.el.res, 'text', ''); }
     else if (w.kind === 'grenade') { this._set('mag', this.el.mag, 'text', String(w.count)); this._set('res', this.el.res, 'text', ''); }
-    else { this._set('mag', this.el.mag, 'text', String(w.ammo)); this._set('res', this.el.res, 'text', '/ ' + w.reserveAmmo); }
+    else { this._set('mag', this.el.mag, 'text', String(w.ammo)); this._set('res', this.el.res, 'text', this.el.root.classList.contains('minimal') ? String(w.reserveAmmo) : '/ ' + w.reserveAmmo); }
     this._set('amf', this.el.ammoFill, 'width', (w.mag ? clamp(w.ammo / w.mag, 0, 1) * 100 : 100).toFixed(1) + '%');
     const low = w.mag && w.ammo <= Math.ceil(w.mag * 0.25);
     this._cls('magLow', this.el.mag, 'low', !!low);
@@ -142,8 +142,10 @@ class HUD {
   _embNext() {
     const id = this.embQ.shift(); if (!id) { this.embBusy = false; return; }
     this.embBusy = true; const E = EMBLEMS[id], el = document.getElementById('emb');
-    el.querySelector('.ei').innerHTML = emblemSVG(id); el.querySelector('.en').textContent = E.name; el.querySelector('.ez').textContent = E.zh;
-    el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
+    el.querySelector('.ei').innerHTML = emblemSVG(id); el.querySelector('.t').textContent = el.querySelector('.gh').textContent = E.name; el.querySelector('.ez').textContent = E.zh;
+    // SF2 entrances (frame-stepped from gameplay video): the name slams in from 3× with a ghost trail, the medal flashes white
+    // for a frame, or the medal snaps in from the side; the next emblem cuts in instantly
+    el.classList.remove('show', 'slam', 'flash', 'side'); void el.offsetWidth; el.classList.add('show', E.anim || 'flash');
     clearTimeout(this.embT); this.embT = setTimeout(() => this._embNext(), this.embQ.length ? 650 : 1250);
   }
   // SF2 centre line: 擊殺 [medal] victim name
@@ -154,8 +156,8 @@ class HUD {
   lucky(n) {
     const el = document.getElementById('emb');
     el.querySelector('.ei').innerHTML = '<svg viewBox="0 0 100 100"><rect x="20" y="20" width="60" height="60" rx="8" fill="#3a3220" stroke="#e8b84a" stroke-width="3"/><g fill="#ffd23a" transform="translate(50 50)"><circle cx="0" cy="-11" r="11"/><circle cx="11" cy="0" r="11"/><circle cx="0" cy="11" r="11"/><circle cx="-11" cy="0" r="11"/></g><circle cx="50" cy="50" r="4" fill="#b8892c"/></svg>';
-    el.querySelector('.en').textContent = '幸運！'; el.querySelector('.ez').textContent = `獲得額外積分 +${n}`;
-    el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
+    el.querySelector('.t').textContent = el.querySelector('.gh').textContent = '幸運！'; el.querySelector('.ez').textContent = `獲得額外積分 +${n}`;
+    el.classList.remove('show', 'slam', 'flash', 'side'); void el.offsetWidth; el.classList.add('show', 'side');
   }
   emblemClear() { const row = document.getElementById('embRow'); if (row) row.innerHTML = ''; }
   announce(main, sub = '') { const a = this.el.ann; this.el.annMain.textContent = main; this.el.annSub.textContent = sub; a.classList.remove('show'); void a.offsetWidth; a.classList.add('show'); }
@@ -249,11 +251,52 @@ class HUD {
     this._set('low', this.el.lowhp, 'opacity', lowF.toFixed(2));
     for (const d of this.dd) if (d.t > 0) { d.t -= dt; d.el.style.opacity = clamp(d.t / 0.8, 0, 1).toFixed(2); }
     for (let i = this.feed.length - 1; i >= 0; i--) { const f = this.feed[i]; f.t -= dt; if (f.t < 0.5) f.row.style.opacity = Math.max(0, f.t / 0.5).toFixed(2); if (f.t <= 0) { f.row.remove(); this.feed.splice(i, 1); } }
-    this.radarT -= dt; if (this.radarT <= 0) { this.radarT = 1 / 30; this.drawRadar(m); this.drawCompass(m); }
+    this.radarT -= dt; if (this.radarT <= 0) { this.radarT = 1 / 30; this.drawRadar(m); this.drawCompass(m); this._alive(m); }
     if (this.el.sb.classList.contains('on')) { this.sbT -= dt; if (this.sbT <= 0) { this.sbT = 0.25; this.scoreboard(m); } }
   }
 
+  // v36 top-right: my team / enemy team soldiers still alive (SF2 hearts)
+  _alive(m) {
+    const me = m.player.team; let a = 0, b = 0;
+    for (const c of m.combatants) if (c.alive) { if (c.team === me) a++; else b++; }
+    this._set('alA', document.getElementById('aliveA'), 'text', String(a)); this._set('alB', document.getElementById('aliveB'), 'text', String(b));
+  }
+  // v36 SF2 map (minimal HUD): square, north up, no frame — walkable floor as a light translucent plate, walls left dark,
+  // the player as a pin pointing where he looks, teammates as dots
+  _sfMap(m) {
+    const ctx = this.rctx, S = 368, p = m.player, B = m.def.bounds, range = 26, scale = S / 2 / range; // ≈ 26 m from the centre to the edge, like SF2
+    const center = p.alive ? p.renderPos : (p.spectating && p.spectating.alive ? p.spectating.motor.pos : p.renderPos);
+    const yaw = p.alive ? p.yaw : (p.spectating ? p.spectating.yaw : p.yaw);
+    ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, S, S);
+    const fade = ctx.createRadialGradient(S / 2, S / 2, S * 0.3, S / 2, S / 2, S * 0.72); fade.addColorStop(0, 'rgba(0,0,0,.18)'); fade.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = fade; ctx.fillRect(0, 0, S, S);
+    ctx.save(); ctx.translate(S / 2, S / 2); ctx.scale(scale, scale); ctx.translate(-center.x, -center.z);
+    ctx.fillStyle = 'rgba(225,228,224,.30)'; ctx.fillRect(B.minX, B.minZ, B.maxX - B.minX, B.maxZ - B.minZ);
+    ctx.globalCompositeOperation = 'destination-out'; ctx.fillStyle = 'rgba(0,0,0,.8)';
+    for (const r of m.builder.radar) if (r.kind === 'wall' || r.kind === 'building' || r.kind === 'solid' || r.kind === 'container' || r.kind === 'container2') ctx.fillRect(r.x0, r.z0, r.x1 - r.x0, r.z1 - r.z0);
+    ctx.globalCompositeOperation = 'source-over'; ctx.fillStyle = 'rgba(30,34,36,.35)';
+    for (const r of m.builder.radar) if (r.kind === 'crate' || r.kind === 'sandbag') ctx.fillRect(r.x0, r.z0, r.x1 - r.x0, r.z1 - r.z0);
+    ctx.strokeStyle = 'rgba(235,238,232,.55)'; ctx.lineWidth = 1.2 / scale;
+    for (const r of m.builder.radar) if (r.kind === 'wall' || r.kind === 'building') ctx.strokeRect(r.x0, r.z0, r.x1 - r.x0, r.z1 - r.z0);
+    for (const [team, cc] of [['alpha', 'rgba(70,130,255,.25)'], ['bravo', 'rgba(255,80,70,.25)']]) { const z = m.builder.zones[team]; if (z) { ctx.fillStyle = cc; ctx.fillRect(z.x0, z.z0, z.x1 - z.x0, z.z1 - z.z0); } }
+    for (const b of m.combatants) {
+      if (!b.alive || !b.model || b === p) continue;
+      const pos = b.model.root.position;
+      if (b.team === p.team) ctx.fillStyle = '#4f8dff'; else { if (m.time - b.spottedT > 1.6) continue; ctx.fillStyle = '#ff3b30'; }
+      ctx.beginPath(); ctx.arc(pos.x, pos.z, 5 / scale, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.lineWidth = 1.5 / scale; ctx.stroke();
+    }
+    const RU = m.rules;
+    if (RU.zones) for (const z of RU.zones) { ctx.strokeStyle = TEAM_CSS[z.owner || 'none']; ctx.lineWidth = 2.5 / scale; ctx.beginPath(); ctx.arc(z.pos.x, z.pos.z, z.r, 0, Math.PI * 2); ctx.stroke(); }
+    ctx.restore();
+    // me: white ring + direction wedge (north up, so the wedge turns with the view)
+    ctx.save(); ctx.translate(S / 2, S / 2); ctx.rotate(-yaw);
+    ctx.fillStyle = 'rgba(255,255,255,.18)'; ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, 46, -Math.PI / 2 - 0.5, -Math.PI / 2 + 0.5); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.moveTo(0, -17); ctx.lineTo(8, -6); ctx.lineTo(-8, -6); ctx.closePath(); ctx.fill();
+    ctx.lineWidth = 4; ctx.strokeStyle = '#fff'; ctx.beginPath(); ctx.arc(0, 0, 8, 0, Math.PI * 2); ctx.stroke(); ctx.fillStyle = '#2b2f33'; ctx.beginPath(); ctx.arc(0, 0, 3.5, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+    ctx.font = '600 20px sans-serif'; ctx.fillStyle = 'rgba(230,232,228,.75)'; ctx.textBaseline = 'top'; ctx.fillText(m.def.name, 6, 6);
+  }
   drawRadar(m) {
+    if (this.el.root.classList.contains('minimal')) { this._sfMap(m); return; }
     const range = m.def.radarRange || 28, rk = range / 28, ctx = this.rctx, S = 368, c = S / 2, R = c - 2, scale = R / range, p = m.player;
     const center = p.alive ? p.renderPos : (p.spectating && p.spectating.alive ? p.spectating.motor.pos : p.renderPos);
     const yaw = p.alive ? p.yaw : (p.spectating ? p.spectating.yaw : p.yaw);

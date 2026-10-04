@@ -100,14 +100,25 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
 #emb{position:absolute;left:50%;top:11%;transform:translateX(-50%);text-align:center;opacity:0;pointer-events:none}
 #emb .ei{width:104px;height:104px;margin:0 auto;filter:drop-shadow(0 3px 6px rgba(0,0,0,.7))}
 #emb .ei svg{width:100%;height:100%}
-#emb .en{margin-top:4px;font-size:26px;font-weight:700;color:#fff;letter-spacing:1px;text-shadow:0 0 8px rgba(0,0,0,.9),0 2px 0 #000;white-space:nowrap}
+#emb .en{display:block;margin-top:4px;font-size:26px;font-weight:700;color:#fff;letter-spacing:1px;text-shadow:0 0 8px rgba(0,0,0,.9),0 2px 0 #000;white-space:nowrap}
 #emb .ez{font-size:13px;color:#d8dde3;text-shadow:0 1px 2px #000}
-#emb.show{animation:emb 1.25s ease-out forwards}
+#emb.show{animation:emb 1.25s linear forwards}
+@keyframes emb{0%{opacity:1}80%{opacity:1}100%{opacity:0}}
+#emb .ttl{position:relative;display:inline-block}
+#emb .gh{position:absolute;left:0;top:0;opacity:0;pointer-events:none}
+#emb.slam .ttl{animation:embSlam .2s cubic-bezier(.2,.7,.3,1) both}
+#emb.slam .gh{animation:embGhost .2s ease-out both}
+@keyframes embSlam{0%{transform:scale(3.1) translateX(14%);opacity:.35;filter:blur(1px)}100%{transform:none;opacity:1;filter:none}}
+@keyframes embGhost{0%{transform:scale(3.1) translateX(40%);opacity:.45}100%{transform:scale(1) translateX(0);opacity:0}}
+#emb.flash .ei svg{animation:embFlash .1s steps(1) both}
+@keyframes embFlash{0%{filter:brightness(0) invert(1)}100%{filter:none}}
+#emb.side .ei{animation:embSide .16s cubic-bezier(.15,.8,.3,1) both}
+@keyframes embSide{0%{transform:translateX(-260px) scaleX(1.6);opacity:0}100%{transform:none;opacity:1}}
 @keyframes emb{0%{opacity:0;transform:translateX(-50%) scale(1.9)}12%{opacity:1;transform:translateX(-50%) scale(.94)}20%{transform:translateX(-50%) scale(1)}78%{opacity:1}100%{opacity:0;transform:translateX(-50%) scale(1)}}
 #embRow{position:absolute;left:50%;bottom:62px;transform:translateX(-50%);display:flex;gap:4px;align-items:flex-end;pointer-events:none}
-#embRow svg{width:34px;height:34px;filter:drop-shadow(0 1px 2px rgba(0,0,0,.8));animation:embIn .3s ease-out}
+#embRow svg{width:34px;height:34px;filter:drop-shadow(0 1px 2px rgba(0,0,0,.8));animation:embIn .22s cubic-bezier(.2,.7,.3,1)}
 #embRow .cnt{font:700 12px sans-serif;color:#fff;text-shadow:0 1px 2px #000;margin-left:2px}
-@keyframes embIn{0%{transform:scale(1.8);opacity:0}100%{transform:scale(1);opacity:1}}
+@keyframes embIn{0%{transform:scale(2.6);opacity:.6}100%{transform:scale(1);opacity:1}}
 @keyframes pts{0%{opacity:0;transform:translate(-50%,6px)}15%{opacity:1;transform:translate(-50%,0)}80%{opacity:1}100%{opacity:0;transform:translate(-50%,-10px)}}
 #reload{position:absolute;left:50%;top:calc(50% + 62px);transform:translateX(-50%);width:120px;text-align:center;font-size:13px;font-weight:700;letter-spacing:3px;color:var(--warn);display:none}
 #reload .bar{margin-top:3px;height:3px;background:rgba(255,255,255,.18)}#reload .fill{height:100%;width:0;background:var(--warn)}
@@ -633,6 +644,21 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
 #hud.minimal #radarWrap.panel{box-shadow:0 0 0 1px rgba(238,240,234,.28)!important;background:rgba(0,0,0,.22)!important}
 #hud.minimal #killfeed .kf{background:linear-gradient(90deg,transparent,rgba(0,0,0,.34));clip-path:none;padding:2px 10px;font-size:14px}
 #hud.minimal #killfeed .kf.me{background:linear-gradient(90deg,transparent,rgba(110,75,10,.45))}
+/* v36 SF2 HUD corners: square north-up map without frame, alive counters, plain ammo */
+#alive{display:none}
+#hud.minimal #alive{position:absolute;right:22px;top:12px;display:flex;gap:16px;font:600 17px/1 var(--num);color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.8)}
+#hud.minimal #alive span{display:flex;align-items:center;gap:5px}#hud.minimal #alive i{font-style:normal;font-size:20px}
+#hud.minimal #alive .a i{color:#3d7bff}#hud.minimal #alive .b i{color:#9a9a9a}
+#hud.minimal #killfeed{top:42px}
+#hud.minimal #radarWrap,#hud.minimal #radarWrap.panel{width:230px;height:230px;left:10px;top:10px;padding:0;border-radius:0;box-shadow:none!important;background:none!important;backdrop-filter:none}
+#hud.minimal #radar{width:230px;height:230px;border-radius:0}
+#hud.minimal #ammobox{width:230px;grid-template-areas:"row" "line" "top"}
+#hud.minimal #ammoRow{justify-content:space-between;align-items:flex-end}
+#hud.minimal #ammoMag{font:300 50px/.8 var(--num)}
+#hud.minimal #ammoRes{font:400 15px/1 var(--num);color:var(--ink2);align-self:flex-end}
+#hud.minimal #ammobox .wtop{justify-content:flex-end}
+#hud.minimal #fireMode,#hud.minimal #wIcon,#hud.minimal #slots{display:none!important}
+#hud.minimal #weaponName{font:italic 600 12px var(--font);letter-spacing:1px}
 #hud.minimal #fps{left:auto;right:10px;bottom:4px;transform:none;opacity:.55}
 
 </style>
@@ -663,10 +689,11 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
     <div id="interact"></div><div id="toast"></div>
     <div id="chatbox"><div id="chatlog"></div><div class="ci"><span id="chatMode">全體</span><input type="text" id="chatInput" maxlength="120" autocomplete="off" spellcheck="false" placeholder="Enter 送出 · Tab 切換全體／隊伍 · Esc 取消"></div></div>
     <div id="timerBot"><i></i><b id="timerBotT">15:00</b><i></i></div>
+    <div id="alive"><span class="a"><i>♥</i><b id="aliveA">0</b></span><span class="b"><i>♥</i><b id="aliveB">0</b></span></div>
     <div id="killfeed"></div>
     <div id="announce"><div class="m" id="annMain"></div><div class="s" id="annSub"></div></div>
     <div id="points"></div>
-    <div id="emb"><div class="ei"></div><div class="en"></div><div class="ez"></div></div><div id="embRow"></div><div id="killNote"></div>
+    <div id="emb"><div class="ei"></div><div class="en"><span class="ttl"><span class="t"></span><span class="gh"></span></span></div><div class="ez"></div></div><div id="embRow"></div><div id="killNote"></div>
     <div id="reload">RELOADING<div class="bar"><div class="fill" id="reloadFill"></div></div></div>
     <div id="protect"></div>
     <div id="hint"></div>

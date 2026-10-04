@@ -446,32 +446,23 @@ class AudioEngine {
 
   // COD-style hit confirmation — dry, crisp and WIDE: every layer is doubled into a left and a right voice
   // (slightly detuned and 4 ms apart) so the tick / ding sits across the whole stereo field.
+  // v36 hit confirm (user: no "kill success" sound; SF2 body hits are juicy / wet): a fat flesh thud, a wet splat that
+  // sweeps down, a few squelch bubbles and a slap transient. Headshots add a bone crack; the killing hit is just a heavier hit.
   hit(kind) {
     if (!this.ctx) return;
-    const ctx = this.ctx, t = ctx.currentTime;
-    const side = (pan, dt, fn) => { const p = ctx.createStereoPanner(), g = ctx.createGain(); p.pan.value = pan; g.connect(p); p.connect(this.dry); fn(t + dt, g); };
-    if (kind === 'kill') { this._killSound(t); return; }
-    for (const [pan, dt, det] of [[-0.55, 0, 0.994], [0.55, 0.004, 1.006]]) side(pan, dt, (tt, out) => {
-      if (kind === 'body') { this._nb(tt, out, 'highpass', 4200, 0.7, 0.3, 0.0005, 0.012); this._osc('triangle', tt, 1850 * det, 1500, 0.045, out, 0.26, 0.001); }
-      if (kind === 'head') { this._osc('sine', tt, 2650 * det, 2620, 0.26, out, 0.3, 0.001); this._osc('sine', tt, 3980 * det, 3950, 0.18, out, 0.16, 0.001); this._osc('sine', tt, 5310 * det, 5300, 0.1, out, 0.07, 0.001); this._nb(tt, out, 'highpass', 5000, 0.7, 0.22, 0.0005, 0.01); }
-
-      if (kind === 'shield') { this._osc('sine', tt, 1200 * det, 1800, 0.12, out, 0.16); this._osc('sine', tt, 2400 * det, 3000, 0.1, out, 0.07); }
-    });
+    const ctx = this.ctx, t = ctx.currentTime, out = ctx.createGain(); out.gain.value = 0.85; out.connect(this.dry);
+    if (kind === 'shield') { this._osc('sine', t, 1200, 1800, 0.12, out, 0.16); this._osc('sine', t, 2400, 3000, 0.1, out, 0.07); return; }
+    const k = kind === 'kill' ? 1.25 : kind === 'head' ? 1.1 : 1;
+    this._osc('sine', t, 170, 55, 0.08, out, 0.5 * k, 0.001);                                                     // flesh thud
+    const sp = this._nb(t, out, 'bandpass', 1900, 1.3, 0.42 * k, 0.001, 0.055); sp.frequency.setValueAtTime(2100, t); sp.frequency.exponentialRampToValueAtTime(520, t + 0.07); // wet splat
+    for (let i = 0; i < 3; i++) { const tt = t + 0.014 + i * (0.01 + Math.random() * 0.012); this._nb(tt, out, 'bandpass', 650 + Math.random() * 1100, 7, 0.18 * k, 0.0008, 0.014); } // squelch
+    this._nb(t, out, 'highpass', 2800, 0.7, 0.22, 0.0004, 0.007);                                                  // slap
+    if (kind === 'head') { this._nb(t, out, 'highpass', 5200, 0.9, 0.3, 0.0003, 0.006); this._osc('triangle', t, 1300, 700, 0.028, out, 0.18, 0.0005); } // bone crack
+    if (kind === 'kill') this._nb(t + 0.03, out, 'lowpass', 900, 0.8, 0.3, 0.004, 0.09);                         // spray tail
   }
 
-  // v34 KILL CONFIRM — cinematic: a saturated sub hit + a heavy steel 'clank' (inharmonic bell partials) + a short bright shing,
-  // spread wide so it sits on top of the gunfire without sounding like a UI ping
-  _killSound(t) {
-    const ctx = this.ctx, out = ctx.createGain(); out.gain.value = 0.9; out.connect(this.dry);
-    const sh = ctx.createWaveShaper(); sh.curve = AudioEngine.tanhCurve(2.2); sh.connect(out);
-    this._osc('sine', t, 120, 38, 0.35, sh, 0.85, 0.002);                  // sub body hit
-    this._nb(t, sh, 'lowpass', 520, 0.8, 0.6, 0.001, 0.06);                 // thud
-    for (const [pan, det, dl] of [[-0.6, 0.996, 0], [0.6, 1.004, 0.006]]) {
-      const p = ctx.createStereoPanner(), g = ctx.createGain(); p.pan.value = pan; g.connect(p); p.connect(this.dry);
-      [[620, 0.22, 0.5], [1710, 0.16, 0.38], [2930, 0.11, 0.3], [4470, 0.06, 0.2]].forEach(([f, pk, d]) => this._osc('sine', t + 0.012 + dl, f * det, f * det * 0.995, d, g, pk, 0.001)); // steel clank
-      const f = this._nb(t + 0.03 + dl, g, 'bandpass', 5000, 3, 0.16, 0.004, 0.09); f.frequency.setValueAtTime(3500, t + 0.03); f.frequency.exponentialRampToValueAtTime(9000, t + 0.15); // shing
-    }
-  }
+
+
 
   // Footsteps: dry, strictly positional (HRTF + inverse distance); o.pitch = per-soldier timbre, o.occluded = heard through a wall.
   footstep(pos, surface = 'concrete', loud = 1, o = {}) {

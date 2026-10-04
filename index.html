@@ -100,14 +100,25 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
 #emb{position:absolute;left:50%;top:11%;transform:translateX(-50%);text-align:center;opacity:0;pointer-events:none}
 #emb .ei{width:104px;height:104px;margin:0 auto;filter:drop-shadow(0 3px 6px rgba(0,0,0,.7))}
 #emb .ei svg{width:100%;height:100%}
-#emb .en{margin-top:4px;font-size:26px;font-weight:700;color:#fff;letter-spacing:1px;text-shadow:0 0 8px rgba(0,0,0,.9),0 2px 0 #000;white-space:nowrap}
+#emb .en{display:block;margin-top:4px;font-size:26px;font-weight:700;color:#fff;letter-spacing:1px;text-shadow:0 0 8px rgba(0,0,0,.9),0 2px 0 #000;white-space:nowrap}
 #emb .ez{font-size:13px;color:#d8dde3;text-shadow:0 1px 2px #000}
-#emb.show{animation:emb 1.25s ease-out forwards}
+#emb.show{animation:emb 1.25s linear forwards}
+@keyframes emb{0%{opacity:1}80%{opacity:1}100%{opacity:0}}
+#emb .ttl{position:relative;display:inline-block}
+#emb .gh{position:absolute;left:0;top:0;opacity:0;pointer-events:none}
+#emb.slam .ttl{animation:embSlam .2s cubic-bezier(.2,.7,.3,1) both}
+#emb.slam .gh{animation:embGhost .2s ease-out both}
+@keyframes embSlam{0%{transform:scale(3.1) translateX(14%);opacity:.35;filter:blur(1px)}100%{transform:none;opacity:1;filter:none}}
+@keyframes embGhost{0%{transform:scale(3.1) translateX(40%);opacity:.45}100%{transform:scale(1) translateX(0);opacity:0}}
+#emb.flash .ei svg{animation:embFlash .1s steps(1) both}
+@keyframes embFlash{0%{filter:brightness(0) invert(1)}100%{filter:none}}
+#emb.side .ei{animation:embSide .16s cubic-bezier(.15,.8,.3,1) both}
+@keyframes embSide{0%{transform:translateX(-260px) scaleX(1.6);opacity:0}100%{transform:none;opacity:1}}
 @keyframes emb{0%{opacity:0;transform:translateX(-50%) scale(1.9)}12%{opacity:1;transform:translateX(-50%) scale(.94)}20%{transform:translateX(-50%) scale(1)}78%{opacity:1}100%{opacity:0;transform:translateX(-50%) scale(1)}}
 #embRow{position:absolute;left:50%;bottom:62px;transform:translateX(-50%);display:flex;gap:4px;align-items:flex-end;pointer-events:none}
-#embRow svg{width:34px;height:34px;filter:drop-shadow(0 1px 2px rgba(0,0,0,.8));animation:embIn .3s ease-out}
+#embRow svg{width:34px;height:34px;filter:drop-shadow(0 1px 2px rgba(0,0,0,.8));animation:embIn .22s cubic-bezier(.2,.7,.3,1)}
 #embRow .cnt{font:700 12px sans-serif;color:#fff;text-shadow:0 1px 2px #000;margin-left:2px}
-@keyframes embIn{0%{transform:scale(1.8);opacity:0}100%{transform:scale(1);opacity:1}}
+@keyframes embIn{0%{transform:scale(2.6);opacity:.6}100%{transform:scale(1);opacity:1}}
 @keyframes pts{0%{opacity:0;transform:translate(-50%,6px)}15%{opacity:1;transform:translate(-50%,0)}80%{opacity:1}100%{opacity:0;transform:translate(-50%,-10px)}}
 #reload{position:absolute;left:50%;top:calc(50% + 62px);transform:translateX(-50%);width:120px;text-align:center;font-size:13px;font-weight:700;letter-spacing:3px;color:var(--warn);display:none}
 #reload .bar{margin-top:3px;height:3px;background:rgba(255,255,255,.18)}#reload .fill{height:100%;width:0;background:var(--warn)}
@@ -633,6 +644,21 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
 #hud.minimal #radarWrap.panel{box-shadow:0 0 0 1px rgba(238,240,234,.28)!important;background:rgba(0,0,0,.22)!important}
 #hud.minimal #killfeed .kf{background:linear-gradient(90deg,transparent,rgba(0,0,0,.34));clip-path:none;padding:2px 10px;font-size:14px}
 #hud.minimal #killfeed .kf.me{background:linear-gradient(90deg,transparent,rgba(110,75,10,.45))}
+/* v36 SF2 HUD corners: square north-up map without frame, alive counters, plain ammo */
+#alive{display:none}
+#hud.minimal #alive{position:absolute;right:22px;top:12px;display:flex;gap:16px;font:600 17px/1 var(--num);color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.8)}
+#hud.minimal #alive span{display:flex;align-items:center;gap:5px}#hud.minimal #alive i{font-style:normal;font-size:20px}
+#hud.minimal #alive .a i{color:#3d7bff}#hud.minimal #alive .b i{color:#9a9a9a}
+#hud.minimal #killfeed{top:42px}
+#hud.minimal #radarWrap,#hud.minimal #radarWrap.panel{width:230px;height:230px;left:10px;top:10px;padding:0;border-radius:0;box-shadow:none!important;background:none!important;backdrop-filter:none}
+#hud.minimal #radar{width:230px;height:230px;border-radius:0}
+#hud.minimal #ammobox{width:230px;grid-template-areas:"row" "line" "top"}
+#hud.minimal #ammoRow{justify-content:space-between;align-items:flex-end}
+#hud.minimal #ammoMag{font:300 50px/.8 var(--num)}
+#hud.minimal #ammoRes{font:400 15px/1 var(--num);color:var(--ink2);align-self:flex-end}
+#hud.minimal #ammobox .wtop{justify-content:flex-end}
+#hud.minimal #fireMode,#hud.minimal #wIcon,#hud.minimal #slots{display:none!important}
+#hud.minimal #weaponName{font:italic 600 12px var(--font);letter-spacing:1px}
 #hud.minimal #fps{left:auto;right:10px;bottom:4px;transform:none;opacity:.55}
 
 </style>
@@ -663,10 +689,11 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
     <div id="interact"></div><div id="toast"></div>
     <div id="chatbox"><div id="chatlog"></div><div class="ci"><span id="chatMode">全體</span><input type="text" id="chatInput" maxlength="120" autocomplete="off" spellcheck="false" placeholder="Enter 送出 · Tab 切換全體／隊伍 · Esc 取消"></div></div>
     <div id="timerBot"><i></i><b id="timerBotT">15:00</b><i></i></div>
+    <div id="alive"><span class="a"><i>♥</i><b id="aliveA">0</b></span><span class="b"><i>♥</i><b id="aliveB">0</b></span></div>
     <div id="killfeed"></div>
     <div id="announce"><div class="m" id="annMain"></div><div class="s" id="annSub"></div></div>
     <div id="points"></div>
-    <div id="emb"><div class="ei"></div><div class="en"></div><div class="ez"></div></div><div id="embRow"></div><div id="killNote"></div>
+    <div id="emb"><div class="ei"></div><div class="en"><span class="ttl"><span class="t"></span><span class="gh"></span></span></div><div class="ez"></div></div><div id="embRow"></div><div id="killNote"></div>
     <div id="reload">RELOADING<div class="bar"><div class="fill" id="reloadFill"></div></div></div>
     <div id="protect"></div>
     <div id="hint"></div>
@@ -1800,32 +1827,23 @@ class AudioEngine {
 
   // COD-style hit confirmation — dry, crisp and WIDE: every layer is doubled into a left and a right voice
   // (slightly detuned and 4 ms apart) so the tick / ding sits across the whole stereo field.
+  // v36 hit confirm (user: no "kill success" sound; SF2 body hits are juicy / wet): a fat flesh thud, a wet splat that
+  // sweeps down, a few squelch bubbles and a slap transient. Headshots add a bone crack; the killing hit is just a heavier hit.
   hit(kind) {
     if (!this.ctx) return;
-    const ctx = this.ctx, t = ctx.currentTime;
-    const side = (pan, dt, fn) => { const p = ctx.createStereoPanner(), g = ctx.createGain(); p.pan.value = pan; g.connect(p); p.connect(this.dry); fn(t + dt, g); };
-    if (kind === 'kill') { this._killSound(t); return; }
-    for (const [pan, dt, det] of [[-0.55, 0, 0.994], [0.55, 0.004, 1.006]]) side(pan, dt, (tt, out) => {
-      if (kind === 'body') { this._nb(tt, out, 'highpass', 4200, 0.7, 0.3, 0.0005, 0.012); this._osc('triangle', tt, 1850 * det, 1500, 0.045, out, 0.26, 0.001); }
-      if (kind === 'head') { this._osc('sine', tt, 2650 * det, 2620, 0.26, out, 0.3, 0.001); this._osc('sine', tt, 3980 * det, 3950, 0.18, out, 0.16, 0.001); this._osc('sine', tt, 5310 * det, 5300, 0.1, out, 0.07, 0.001); this._nb(tt, out, 'highpass', 5000, 0.7, 0.22, 0.0005, 0.01); }
-
-      if (kind === 'shield') { this._osc('sine', tt, 1200 * det, 1800, 0.12, out, 0.16); this._osc('sine', tt, 2400 * det, 3000, 0.1, out, 0.07); }
-    });
+    const ctx = this.ctx, t = ctx.currentTime, out = ctx.createGain(); out.gain.value = 0.85; out.connect(this.dry);
+    if (kind === 'shield') { this._osc('sine', t, 1200, 1800, 0.12, out, 0.16); this._osc('sine', t, 2400, 3000, 0.1, out, 0.07); return; }
+    const k = kind === 'kill' ? 1.25 : kind === 'head' ? 1.1 : 1;
+    this._osc('sine', t, 170, 55, 0.08, out, 0.5 * k, 0.001);                                                     // flesh thud
+    const sp = this._nb(t, out, 'bandpass', 1900, 1.3, 0.42 * k, 0.001, 0.055); sp.frequency.setValueAtTime(2100, t); sp.frequency.exponentialRampToValueAtTime(520, t + 0.07); // wet splat
+    for (let i = 0; i < 3; i++) { const tt = t + 0.014 + i * (0.01 + Math.random() * 0.012); this._nb(tt, out, 'bandpass', 650 + Math.random() * 1100, 7, 0.18 * k, 0.0008, 0.014); } // squelch
+    this._nb(t, out, 'highpass', 2800, 0.7, 0.22, 0.0004, 0.007);                                                  // slap
+    if (kind === 'head') { this._nb(t, out, 'highpass', 5200, 0.9, 0.3, 0.0003, 0.006); this._osc('triangle', t, 1300, 700, 0.028, out, 0.18, 0.0005); } // bone crack
+    if (kind === 'kill') this._nb(t + 0.03, out, 'lowpass', 900, 0.8, 0.3, 0.004, 0.09);                         // spray tail
   }
 
-  // v34 KILL CONFIRM — cinematic: a saturated sub hit + a heavy steel 'clank' (inharmonic bell partials) + a short bright shing,
-  // spread wide so it sits on top of the gunfire without sounding like a UI ping
-  _killSound(t) {
-    const ctx = this.ctx, out = ctx.createGain(); out.gain.value = 0.9; out.connect(this.dry);
-    const sh = ctx.createWaveShaper(); sh.curve = AudioEngine.tanhCurve(2.2); sh.connect(out);
-    this._osc('sine', t, 120, 38, 0.35, sh, 0.85, 0.002);                  // sub body hit
-    this._nb(t, sh, 'lowpass', 520, 0.8, 0.6, 0.001, 0.06);                 // thud
-    for (const [pan, det, dl] of [[-0.6, 0.996, 0], [0.6, 1.004, 0.006]]) {
-      const p = ctx.createStereoPanner(), g = ctx.createGain(); p.pan.value = pan; g.connect(p); p.connect(this.dry);
-      [[620, 0.22, 0.5], [1710, 0.16, 0.38], [2930, 0.11, 0.3], [4470, 0.06, 0.2]].forEach(([f, pk, d]) => this._osc('sine', t + 0.012 + dl, f * det, f * det * 0.995, d, g, pk, 0.001)); // steel clank
-      const f = this._nb(t + 0.03 + dl, g, 'bandpass', 5000, 3, 0.16, 0.004, 0.09); f.frequency.setValueAtTime(3500, t + 0.03); f.frequency.exponentialRampToValueAtTime(9000, t + 0.15); // shing
-    }
-  }
+
+
 
   // Footsteps: dry, strictly positional (HRTF + inverse distance); o.pitch = per-soldier timbre, o.occluded = heard through a wall.
   footstep(pos, surface = 'concrete', loud = 1, o = {}) {
@@ -8720,7 +8738,7 @@ class HUD {
     this._set('fm', this.el.fireMode, 'text', fm); this._set('fmD', this.el.fireMode, 'display', fm ? 'inline-block' : 'none');
     if (w.kind === 'knife') { this._set('mag', this.el.mag, 'text', '∞'); this._set('res', this.el.res, 'text', ''); }
     else if (w.kind === 'grenade') { this._set('mag', this.el.mag, 'text', String(w.count)); this._set('res', this.el.res, 'text', ''); }
-    else { this._set('mag', this.el.mag, 'text', String(w.ammo)); this._set('res', this.el.res, 'text', '/ ' + w.reserveAmmo); }
+    else { this._set('mag', this.el.mag, 'text', String(w.ammo)); this._set('res', this.el.res, 'text', this.el.root.classList.contains('minimal') ? String(w.reserveAmmo) : '/ ' + w.reserveAmmo); }
     this._set('amf', this.el.ammoFill, 'width', (w.mag ? clamp(w.ammo / w.mag, 0, 1) * 100 : 100).toFixed(1) + '%');
     const low = w.mag && w.ammo <= Math.ceil(w.mag * 0.25);
     this._cls('magLow', this.el.mag, 'low', !!low);
@@ -8778,8 +8796,10 @@ class HUD {
   _embNext() {
     const id = this.embQ.shift(); if (!id) { this.embBusy = false; return; }
     this.embBusy = true; const E = EMBLEMS[id], el = document.getElementById('emb');
-    el.querySelector('.ei').innerHTML = emblemSVG(id); el.querySelector('.en').textContent = E.name; el.querySelector('.ez').textContent = E.zh;
-    el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
+    el.querySelector('.ei').innerHTML = emblemSVG(id); el.querySelector('.t').textContent = el.querySelector('.gh').textContent = E.name; el.querySelector('.ez').textContent = E.zh;
+    // SF2 entrances (frame-stepped from gameplay video): the name slams in from 3× with a ghost trail, the medal flashes white
+    // for a frame, or the medal snaps in from the side; the next emblem cuts in instantly
+    el.classList.remove('show', 'slam', 'flash', 'side'); void el.offsetWidth; el.classList.add('show', E.anim || 'flash');
     clearTimeout(this.embT); this.embT = setTimeout(() => this._embNext(), this.embQ.length ? 650 : 1250);
   }
   // SF2 centre line: 擊殺 [medal] victim name
@@ -8790,8 +8810,8 @@ class HUD {
   lucky(n) {
     const el = document.getElementById('emb');
     el.querySelector('.ei').innerHTML = '<svg viewBox="0 0 100 100"><rect x="20" y="20" width="60" height="60" rx="8" fill="#3a3220" stroke="#e8b84a" stroke-width="3"/><g fill="#ffd23a" transform="translate(50 50)"><circle cx="0" cy="-11" r="11"/><circle cx="11" cy="0" r="11"/><circle cx="0" cy="11" r="11"/><circle cx="-11" cy="0" r="11"/></g><circle cx="50" cy="50" r="4" fill="#b8892c"/></svg>';
-    el.querySelector('.en').textContent = '幸運！'; el.querySelector('.ez').textContent = `獲得額外積分 +${n}`;
-    el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
+    el.querySelector('.t').textContent = el.querySelector('.gh').textContent = '幸運！'; el.querySelector('.ez').textContent = `獲得額外積分 +${n}`;
+    el.classList.remove('show', 'slam', 'flash', 'side'); void el.offsetWidth; el.classList.add('show', 'side');
   }
   emblemClear() { const row = document.getElementById('embRow'); if (row) row.innerHTML = ''; }
   announce(main, sub = '') { const a = this.el.ann; this.el.annMain.textContent = main; this.el.annSub.textContent = sub; a.classList.remove('show'); void a.offsetWidth; a.classList.add('show'); }
@@ -8885,11 +8905,52 @@ class HUD {
     this._set('low', this.el.lowhp, 'opacity', lowF.toFixed(2));
     for (const d of this.dd) if (d.t > 0) { d.t -= dt; d.el.style.opacity = clamp(d.t / 0.8, 0, 1).toFixed(2); }
     for (let i = this.feed.length - 1; i >= 0; i--) { const f = this.feed[i]; f.t -= dt; if (f.t < 0.5) f.row.style.opacity = Math.max(0, f.t / 0.5).toFixed(2); if (f.t <= 0) { f.row.remove(); this.feed.splice(i, 1); } }
-    this.radarT -= dt; if (this.radarT <= 0) { this.radarT = 1 / 30; this.drawRadar(m); this.drawCompass(m); }
+    this.radarT -= dt; if (this.radarT <= 0) { this.radarT = 1 / 30; this.drawRadar(m); this.drawCompass(m); this._alive(m); }
     if (this.el.sb.classList.contains('on')) { this.sbT -= dt; if (this.sbT <= 0) { this.sbT = 0.25; this.scoreboard(m); } }
   }
 
+  // v36 top-right: my team / enemy team soldiers still alive (SF2 hearts)
+  _alive(m) {
+    const me = m.player.team; let a = 0, b = 0;
+    for (const c of m.combatants) if (c.alive) { if (c.team === me) a++; else b++; }
+    this._set('alA', document.getElementById('aliveA'), 'text', String(a)); this._set('alB', document.getElementById('aliveB'), 'text', String(b));
+  }
+  // v36 SF2 map (minimal HUD): square, north up, no frame — walkable floor as a light translucent plate, walls left dark,
+  // the player as a pin pointing where he looks, teammates as dots
+  _sfMap(m) {
+    const ctx = this.rctx, S = 368, p = m.player, B = m.def.bounds, range = 26, scale = S / 2 / range; // ≈ 26 m from the centre to the edge, like SF2
+    const center = p.alive ? p.renderPos : (p.spectating && p.spectating.alive ? p.spectating.motor.pos : p.renderPos);
+    const yaw = p.alive ? p.yaw : (p.spectating ? p.spectating.yaw : p.yaw);
+    ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, S, S);
+    const fade = ctx.createRadialGradient(S / 2, S / 2, S * 0.3, S / 2, S / 2, S * 0.72); fade.addColorStop(0, 'rgba(0,0,0,.18)'); fade.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = fade; ctx.fillRect(0, 0, S, S);
+    ctx.save(); ctx.translate(S / 2, S / 2); ctx.scale(scale, scale); ctx.translate(-center.x, -center.z);
+    ctx.fillStyle = 'rgba(225,228,224,.30)'; ctx.fillRect(B.minX, B.minZ, B.maxX - B.minX, B.maxZ - B.minZ);
+    ctx.globalCompositeOperation = 'destination-out'; ctx.fillStyle = 'rgba(0,0,0,.8)';
+    for (const r of m.builder.radar) if (r.kind === 'wall' || r.kind === 'building' || r.kind === 'solid' || r.kind === 'container' || r.kind === 'container2') ctx.fillRect(r.x0, r.z0, r.x1 - r.x0, r.z1 - r.z0);
+    ctx.globalCompositeOperation = 'source-over'; ctx.fillStyle = 'rgba(30,34,36,.35)';
+    for (const r of m.builder.radar) if (r.kind === 'crate' || r.kind === 'sandbag') ctx.fillRect(r.x0, r.z0, r.x1 - r.x0, r.z1 - r.z0);
+    ctx.strokeStyle = 'rgba(235,238,232,.55)'; ctx.lineWidth = 1.2 / scale;
+    for (const r of m.builder.radar) if (r.kind === 'wall' || r.kind === 'building') ctx.strokeRect(r.x0, r.z0, r.x1 - r.x0, r.z1 - r.z0);
+    for (const [team, cc] of [['alpha', 'rgba(70,130,255,.25)'], ['bravo', 'rgba(255,80,70,.25)']]) { const z = m.builder.zones[team]; if (z) { ctx.fillStyle = cc; ctx.fillRect(z.x0, z.z0, z.x1 - z.x0, z.z1 - z.z0); } }
+    for (const b of m.combatants) {
+      if (!b.alive || !b.model || b === p) continue;
+      const pos = b.model.root.position;
+      if (b.team === p.team) ctx.fillStyle = '#4f8dff'; else { if (m.time - b.spottedT > 1.6) continue; ctx.fillStyle = '#ff3b30'; }
+      ctx.beginPath(); ctx.arc(pos.x, pos.z, 5 / scale, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.lineWidth = 1.5 / scale; ctx.stroke();
+    }
+    const RU = m.rules;
+    if (RU.zones) for (const z of RU.zones) { ctx.strokeStyle = TEAM_CSS[z.owner || 'none']; ctx.lineWidth = 2.5 / scale; ctx.beginPath(); ctx.arc(z.pos.x, z.pos.z, z.r, 0, Math.PI * 2); ctx.stroke(); }
+    ctx.restore();
+    // me: white ring + direction wedge (north up, so the wedge turns with the view)
+    ctx.save(); ctx.translate(S / 2, S / 2); ctx.rotate(-yaw);
+    ctx.fillStyle = 'rgba(255,255,255,.18)'; ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, 46, -Math.PI / 2 - 0.5, -Math.PI / 2 + 0.5); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.moveTo(0, -17); ctx.lineTo(8, -6); ctx.lineTo(-8, -6); ctx.closePath(); ctx.fill();
+    ctx.lineWidth = 4; ctx.strokeStyle = '#fff'; ctx.beginPath(); ctx.arc(0, 0, 8, 0, Math.PI * 2); ctx.stroke(); ctx.fillStyle = '#2b2f33'; ctx.beginPath(); ctx.arc(0, 0, 3.5, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+    ctx.font = '600 20px sans-serif'; ctx.fillStyle = 'rgba(230,232,228,.75)'; ctx.textBaseline = 'top'; ctx.fillText(m.def.name, 6, 6);
+  }
   drawRadar(m) {
+    if (this.el.root.classList.contains('minimal')) { this._sfMap(m); return; }
     const range = m.def.radarRange || 28, rk = range / 28, ctx = this.rctx, S = 368, c = S / 2, R = c - 2, scale = R / range, p = m.player;
     const center = p.alive ? p.renderPos : (p.spectating && p.spectating.alive ? p.spectating.motor.pos : p.renderPos);
     const yaw = p.alive ? p.yaw : (p.spectating ? p.spectating.yaw : p.yaw);
@@ -9036,24 +9097,24 @@ class HUD {
 const EMBLEMS = {
   kill:        { name: 'Kill',          zh: '擊殺',     ray: '#9fb4c8', icon: 'cross' },
   headshot:    { name: 'Headshot',      zh: '爆頭',     ray: '#e04838', icon: 'skull' },
-  first:       { name: 'First Kill',    zh: '首殺',     ray: '#f0b23a', icon: 'one' },
-  revenge:     { name: 'Revenge',       zh: '復仇',     ray: '#e04838', icon: 'fist' },
-  lastshot:    { name: 'Last One Shot', zh: '最後一發', ray: '#f0b23a', icon: 'bullet' },
-  longshot:    { name: 'Long Shot',     zh: '遠距擊殺', ray: '#4aa3ff', icon: 'scope' },
-  grenade:     { name: 'Grenade',       zh: '手榴彈',   ray: '#e07a2a', icon: 'nade' },
-  wall:        { name: 'Wall Shot',     zh: '穿牆',     ray: '#4aa3ff', icon: 'wall' },
-  pierce:      { name: 'Piercing Shot', zh: '貫穿',     ray: '#4aa3ff', icon: 'pierce' },
-  slash:       { name: 'Slash',         zh: '背刺',     ray: '#e04838', icon: 'knife' },
+  first:       { name: 'First Kill',    zh: '首殺',     ray: '#f0b23a', icon: 'one', anim: 'slam' },
+  revenge:     { name: 'Revenge',       zh: '復仇',     ray: '#e04838', icon: 'fist', anim: 'slam' },
+  lastshot:    { name: 'Last One Shot', zh: '最後一發', ray: '#f0b23a', icon: 'bullet', anim: 'slam' },
+  longshot:    { name: 'Long Shot',     zh: '遠距擊殺', ray: '#4aa3ff', icon: 'scope', anim: 'slam' },
+  grenade:     { name: 'Grenade',       zh: '手榴彈',   ray: '#e07a2a', icon: 'nade', anim: 'slam' },
+  wall:        { name: 'Wall Shot',     zh: '穿牆',     ray: '#4aa3ff', icon: 'wall', anim: 'slam' },
+  pierce:      { name: 'Piercing Shot', zh: '貫穿',     ray: '#4aa3ff', icon: 'pierce', anim: 'slam' },
+  slash:       { name: 'Slash',         zh: '背刺',     ray: '#e04838', icon: 'knife', anim: 'slam' },
   knife:       { name: 'Knife',         zh: '刀殺',     ray: '#9fb4c8', icon: 'knife' },
   grab:        { name: 'Takedown',      zh: '擒拿',     ray: '#9fb4c8', icon: 'fist' },
-  fastzoom:    { name: 'Fast Zoom',     zh: '瞬G',      ray: '#4aa3ff', icon: 'zoom' },
-  welcome:     { name: 'Welcome Back',  zh: '重返戰場', ray: '#5fd17a', icon: 'up' },
-  love:        { name: 'Love Shot',     zh: '同歸於盡', ray: '#ff6fa8', icon: 'heart' },
+  fastzoom:    { name: 'Fast Zoom',     zh: '瞬G',      ray: '#4aa3ff', icon: 'zoom', anim: 'slam' },
+  welcome:     { name: 'Welcome Back',  zh: '重返戰場', ray: '#5fd17a', icon: 'up', anim: 'slam' },
+  love:        { name: 'Love Shot',     zh: '同歸於盡', ray: '#ff6fa8', icon: 'heart', anim: 'slam' },
   assist:      { name: 'Assist',        zh: '助攻',     ray: '#9fb4c8', icon: 'plus' },
-  double:      { name: 'Double Kill',   zh: '雙殺',     ray: '#f0b23a', icon: 'n2' },
-  multi:       { name: 'Multi Kill',    zh: '三殺',     ray: '#f0b23a', icon: 'n3' },
-  specialist:  { name: 'Specialist',    zh: '四殺',     ray: '#e04838', icon: 'n4' },
-  specialforce:{ name: 'Special Force', zh: '五殺',     ray: '#ffd23a', icon: 'n5', gold: true },
+  double:      { name: 'Double Kill',   zh: '雙殺',     ray: '#f0b23a', icon: 'n2', anim: 'slam' },
+  multi:       { name: 'Multi Kill',    zh: '三殺',     ray: '#f0b23a', icon: 'n3', anim: 'slam' },
+  specialist:  { name: 'Specialist',    zh: '四殺',     ray: '#e04838', icon: 'n4', anim: 'slam' },
+  specialforce:{ name: 'Special Force', zh: '五殺',     ray: '#ffd23a', icon: 'n5', anim: 'slam', gold: true },
 };
 const EMB_ICON = {
   cross: '<circle cx="50" cy="50" r="15" fill="none" stroke="#fff" stroke-width="4"/><path d="M50 28v14M50 58v14M28 50h14M58 50h14" stroke="#fff" stroke-width="4"/><circle cx="50" cy="50" r="3" fill="#e04838"/>',
