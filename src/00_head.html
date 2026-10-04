@@ -42,7 +42,7 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
 #scope{position:absolute;inset:0;display:none;overflow:hidden}
 #scope.on{display:block;animation:scopeIn .09s ease-out}
 @keyframes scopeIn{from{opacity:0;transform:scale(1.06)}to{opacity:1;transform:none}}
-#scope .lens{position:absolute;left:50%;top:50%;width:96vh;height:96vh;transform:translate(-50%,-50%);border-radius:50%;
+#scope .lens{position:absolute;left:50%;top:50%;width:min(138vh,98vw);height:min(138vh,98vw);transform:translate(-50%,-50%);border-radius:50%;
   box-shadow:0 0 0 200vmax #000,inset 0 0 6vh 2vh rgba(0,0,0,.92);background:radial-gradient(circle,rgba(0,0,0,0) 62%,rgba(10,20,40,.22) 100%)}
 #scope .lh,#scope .lv{position:absolute;background:#000}
 #scope .lh{left:0;right:0;top:50%;height:1.5px;margin-top:-0.75px}

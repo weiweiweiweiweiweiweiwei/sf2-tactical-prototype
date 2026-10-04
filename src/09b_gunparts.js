@@ -158,10 +158,16 @@ const GP = {
   // Round rifle scope on two rings; returns the optical axis height.
   scope(gb, u0, len, r, baseY, o = {}) {
     const M = gb.M, m = GP.m(gb, o.mat), y = baseY + r + (o.lift ?? 0.012), x = o.x ?? 0;
-    gb.cyl(r * 0.78, r * 0.78, len, x, y, u0 + len / 2, m, 'body', 24);
-    gb.lathe([[0, u0 + len], [r * 0.78, u0 + len], [r * 1.25, u0 + len + 0.05], [r * 1.25, u0 + len + 0.08], [0, u0 + len + 0.08]], x, y, m);
-    gb.lathe([[0, u0 - 0.06], [r * 1.05, u0 - 0.06], [r * 1.05, u0 - 0.03], [r * 0.78, u0], [0, u0]], x, y, m);
-    const lens = new THREE.CircleGeometry(r * 1.2, 24); lens.translate(x, y, -(u0 + len + 0.0805)); gb.add(lens, M.lensDark);
+    if (!o.open) gb.cyl(r * 0.78, r * 0.78, len, x, y, u0 + len / 2, m, 'body', 24);
+    else for (const f of [0, 0.5, 1]) gb.torus(r * 0.8, 0.003, x, y, u0 + len * f, 'z', m); // open tube: just rings
+    if (o.open) { // v34: a see-through optic (AUG 1.5×): rings only, no solid end caps / dark lens — you look THROUGH it when aiming
+      gb.lathe([[r * 0.78, u0 + len], [r * 1.25, u0 + len + 0.05], [r * 1.25, u0 + len + 0.08], [r * 1.12, u0 + len + 0.08]], x, y, m);
+      gb.lathe([[r * 0.9, u0 - 0.06], [r * 1.05, u0 - 0.06], [r * 1.05, u0 - 0.03], [r * 0.78, u0]], x, y, m);
+    } else {
+      gb.lathe([[0, u0 + len], [r * 0.78, u0 + len], [r * 1.25, u0 + len + 0.05], [r * 1.25, u0 + len + 0.08], [0, u0 + len + 0.08]], x, y, m);
+      gb.lathe([[0, u0 - 0.06], [r * 1.05, u0 - 0.06], [r * 1.05, u0 - 0.03], [r * 0.78, u0], [0, u0]], x, y, m);
+      const lens = new THREE.CircleGeometry(r * 1.2, 24); lens.translate(x, y, -(u0 + len + 0.0805)); gb.add(lens, M.lensDark);
+    }
     gb.cylAxis(r * 0.5, 0.03, x, y + r * 0.9, -(u0 + len * 0.45), 'y', m); gb.cylAxis(r * 0.45, 0.03, x + r * 0.9, y, -(u0 + len * 0.45), 'x', m);
     for (const f of [0.18, 0.72]) { gb.torus(r * 0.8, 0.0035, x, y, u0 + len * f, 'z', m); gb.box(0.02, y - baseY - r * 0.7, 0.016, x, (baseY + y - r * 0.7) / 2, -(u0 + len * f), m, 'body', 0.002); }
     return y;
@@ -233,7 +239,7 @@ Object.assign(WeaponModels.prototype, {
     const sightY = GP.iron(gb, -0.2, 0.1, 0.066, { base: 0.05, frontBase: 0.05, hood: false });
     this.arm(gb, [0.02, -0.12, 0.0], [0.19, -0.3, 0.36], 0.034); this.gripHand(gb, 0.001, -0.09, 0.028, -0.36);
     this.arm(gb, [-0.036, -0.06, -0.18], [-0.3, -0.3, 0.06], 0.033); this.supportHand(gb, 0, -0.012, 0.16, 0.05);
-    return this._fin(gb, { muzzleU: mz, sightY, hipPos: [0.12, -0.15, -0.31], adsZ: -0.16, flash: 0.18, magMove: [0, -0.26, 0.04] });
+    return this._fin(gb, { muzzleU: mz, sightY, hipPos: [0.12, -0.15, -0.31], adsPos: [0, -(sightY + 0.052), -0.32], flash: 0.18, magMove: [0, -0.26, 0.04] }); // v34: eye further back so the handle does not fill the view
   },
   aug() { // olive bullpup shell, integrated 1.5× optic handle, folding vertical grip, translucent mag
     const M = this.M, gb = new GunBuilder(M);
@@ -243,12 +249,12 @@ Object.assign(WeaponModels.prototype, {
     gb.prof([[-0.08, -0.045], [0.14, -0.045], [0.12, -0.14], [0.09, -0.14], [0.1, -0.06], [-0.05, -0.06]], 0.03, M.odGreen, 'body', { bevel: 0.006, holes: [[[-0.03, -0.055], [0.08, -0.055], [0.08, -0.12], [0.05, -0.12]]] });
     GP.mag(gb, 'stanag', { mat: 'magClear', u: -0.18, len: 0.14, vb: -0.045 });
     gb.box(0.03, 0.06, 0.03, 0, 0.055, -0.0, M.odGreen, 'body', 0.006); gb.box(0.03, 0.06, 0.03, 0, 0.055, -0.14, M.odGreen, 'body', 0.006);
-    const sightY = GP.scope(gb, -0.07, 0.19, 0.017, 0.08, { mat: 'black', lift: 0.0 });
+    const sightY = GP.scope(gb, -0.07, 0.19, 0.017, 0.08, { mat: 'black', lift: 0.0, open: true });
     GP.barrel(gb, 0.16, 0.34, 0.0095); const mz = GP.muzzle(gb, 'bird', 0.34, 0.011);
     gb.box(0.022, 0.07, 0.028, 0, -0.06, -0.22, M.polymer, 'body', 0.008); // vertical foregrip
     this.arm(gb, [0.02, -0.12, 0.02], [0.19, -0.3, 0.36], 0.034); this.gripHand(gb, 0.001, -0.1, 0.01, -0.3);
     this.arm(gb, [-0.03, -0.12, -0.2], [-0.3, -0.34, 0.05], 0.033); this.gripHand(gb, -0.004, -0.085, 0.215, -0.08, false);
-    return this._fin(gb, { muzzleU: mz, sightY, hipPos: [0.125, -0.15, -0.31], adsZ: -0.14, flash: 0.18, reticle: 'dot', magMove: [0, -0.24, 0.04] });
+    return this._fin(gb, { muzzleU: mz, sightY, hipPos: [0.125, -0.15, -0.31], adsZ: -0.2, flash: 0.18, reticle: 'dot', magMove: [0, -0.24, 0.04] });
   },
 
   /* ------------------------------ SMGs ------------------------------ */
@@ -346,7 +352,7 @@ Object.assign(WeaponModels.prototype, {
     const sightY = GP.iron(gb, 0.12, 0.7, 0.05, { mat: 'steelBlue', base: 0.04 });
     this.arm(gb, [0.02, -0.13, 0.1], [0.19, -0.31, 0.42], 0.034); this.gripHand(gb, 0.001, -0.095, -0.078, -0.36);
     this.arm(gb, [-0.036, -0.06, -0.2], [-0.3, -0.3, 0.06], 0.033); this.supportHand(gb, 0, -0.01, 0.22, 0.05);
-    return this._fin(gb, { muzzleU: mz, sightY, hipPos: [0.135, -0.155, -0.35], flash: 0.28, cover: true, magMove: [-0.04, -0.26, 0.02] });
+    return this._fin(gb, { muzzleU: mz, sightY, hipPos: [0.135, -0.155, -0.35], adsPos: [0, -(sightY + 0.03), -0.3], flash: 0.28, cover: true, magMove: [-0.04, -0.26, 0.02] });
   },
   mg42() { // stamped receiver, perforated cooling jacket, muzzle booster, 50-round drum on the left, wood stock
     const M = this.M, gb = new GunBuilder(M);
@@ -362,7 +368,7 @@ Object.assign(WeaponModels.prototype, {
     const sightY = GP.iron(gb, 0.1, 0.56, 0.056, { base: 0.036, frontBase: 0.028 });
     this.arm(gb, [0.02, -0.13, 0.1], [0.19, -0.31, 0.42], 0.034); this.gripHand(gb, 0.001, -0.093, -0.078, -0.4);
     this.arm(gb, [-0.036, -0.07, -0.18], [-0.3, -0.3, 0.06], 0.033); this.supportHand(gb, 0, -0.012, 0.2, 0.056);
-    return this._fin(gb, { muzzleU: mz, sightY, hipPos: [0.135, -0.15, -0.35], flash: 0.3, cover: true, magMove: [-0.08, -0.12, 0.02] });
+    return this._fin(gb, { muzzleU: mz, sightY, hipPos: [0.135, -0.15, -0.35], adsPos: [0, -(sightY + 0.028), -0.3], flash: 0.3, cover: true, magMove: [-0.08, -0.12, 0.02] });
   },
 
   /* ------------------------------ shotguns ------------------------------ */

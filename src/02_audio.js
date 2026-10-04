@@ -10,6 +10,7 @@
    delay, per-map convolution reverb and outdoor slap-back echo.
    ===================================================================== */
 // v34 per-gun weight of the live sub kick (0 = none: suppressed guns)
+const AMB_LEVEL = 0.55; // v34 master level of the recorded ambience (user: too loud)
 const GUN_KICK = { m4: 0.7, scar: 0.75, ak: 0.85, mp5: 0.5, ump: 0.55, vector: 0.45, mp7: 0.4, p90: 0.45, m249: 0.85, pkm: 0.95, mg42: 0.8,
   m870: 1.15, saiga: 1.05, awp: 1.2, m200: 1.25, barrett: 1.4, kar98: 1.1, svd: 1.0, p226: 0.5, m1911: 0.6, deagle: 0.85 };
 const GUN_PROFILES = {
@@ -449,12 +450,27 @@ class AudioEngine {
     if (!this.ctx) return;
     const ctx = this.ctx, t = ctx.currentTime;
     const side = (pan, dt, fn) => { const p = ctx.createStereoPanner(), g = ctx.createGain(); p.pan.value = pan; g.connect(p); p.connect(this.dry); fn(t + dt, g); };
+    if (kind === 'kill') { this._killSound(t); return; }
     for (const [pan, dt, det] of [[-0.55, 0, 0.994], [0.55, 0.004, 1.006]]) side(pan, dt, (tt, out) => {
       if (kind === 'body') { this._nb(tt, out, 'highpass', 4200, 0.7, 0.3, 0.0005, 0.012); this._osc('triangle', tt, 1850 * det, 1500, 0.045, out, 0.26, 0.001); }
-      if (kind === 'head' || kind === 'kill') { this._osc('sine', tt, 2650 * det, 2620, 0.26, out, 0.3, 0.001); this._osc('sine', tt, 3980 * det, 3950, 0.18, out, 0.16, 0.001); this._osc('sine', tt, 5310 * det, 5300, 0.1, out, 0.07, 0.001); this._nb(tt, out, 'highpass', 5000, 0.7, 0.22, 0.0005, 0.01); }
-      if (kind === 'kill') { this._osc('sine', tt, 190, 70, 0.16, out, 0.45, 0.002); this._nb(tt, out, 'bandpass', 1400, 1.2, 0.35, 0.002, 0.05); this._osc('sine', tt + 0.07, 3200 * det, 3180, 0.22, out, 0.18, 0.002); }
+      if (kind === 'head') { this._osc('sine', tt, 2650 * det, 2620, 0.26, out, 0.3, 0.001); this._osc('sine', tt, 3980 * det, 3950, 0.18, out, 0.16, 0.001); this._osc('sine', tt, 5310 * det, 5300, 0.1, out, 0.07, 0.001); this._nb(tt, out, 'highpass', 5000, 0.7, 0.22, 0.0005, 0.01); }
+
       if (kind === 'shield') { this._osc('sine', tt, 1200 * det, 1800, 0.12, out, 0.16); this._osc('sine', tt, 2400 * det, 3000, 0.1, out, 0.07); }
     });
+  }
+
+  // v34 KILL CONFIRM — cinematic: a saturated sub hit + a heavy steel 'clank' (inharmonic bell partials) + a short bright shing,
+  // spread wide so it sits on top of the gunfire without sounding like a UI ping
+  _killSound(t) {
+    const ctx = this.ctx, out = ctx.createGain(); out.gain.value = 0.9; out.connect(this.dry);
+    const sh = ctx.createWaveShaper(); sh.curve = AudioEngine.tanhCurve(2.2); sh.connect(out);
+    this._osc('sine', t, 120, 38, 0.35, sh, 0.85, 0.002);                  // sub body hit
+    this._nb(t, sh, 'lowpass', 520, 0.8, 0.6, 0.001, 0.06);                 // thud
+    for (const [pan, det, dl] of [[-0.6, 0.996, 0], [0.6, 1.004, 0.006]]) {
+      const p = ctx.createStereoPanner(), g = ctx.createGain(); p.pan.value = pan; g.connect(p); p.connect(this.dry);
+      [[620, 0.22, 0.5], [1710, 0.16, 0.38], [2930, 0.11, 0.3], [4470, 0.06, 0.2]].forEach(([f, pk, d]) => this._osc('sine', t + 0.012 + dl, f * det, f * det * 0.995, d, g, pk, 0.001)); // steel clank
+      const f = this._nb(t + 0.03 + dl, g, 'bandpass', 5000, 3, 0.16, 0.004, 0.09); f.frequency.setValueAtTime(3500, t + 0.03); f.frequency.exponentialRampToValueAtTime(9000, t + 0.15); // shing
+    }
   }
 
   // Footsteps: dry, strictly positional (HRTF + inverse distance); o.pitch = per-soldier timbre, o.occluded = heard through a wall.
@@ -646,7 +662,7 @@ class AudioEngine {
 
   // v33 recorded ambience: looping beds (stereo, faded in) + one-shots at random times and places
   _ambienceRec(kind) {
-    const ctx = this.ctx, bus = ctx.createGain(); bus.connect(this.master);
+    const ctx = this.ctx, bus = ctx.createGain(); bus.gain.value = AMB_LEVEL; bus.connect(this.master); // v34: whole bed quieter
     const bed = (name, gain, lp = 0, rate = 1) => {
       const l = this._s(name); if (!l) return;
       const s = ctx.createBufferSource(), g = ctx.createGain(); s.buffer = l[0]; s.loop = true; s.playbackRate.value = rate;
@@ -664,10 +680,11 @@ class AudioEngine {
       case 'warehouse': hum(60, 0.006); hum(120, 0.002); bed('amb_traffic', 0.14, 420); bed('amb_wind', 0.05, 600); every('creak', 9, 22, 0.12, 0.8); break; // a big shed: mains hum, city through the walls, roof creaks
       case 'office': hum(120, 0.004); bed('amb_traffic', 0.2, 1000); bed('amb_wind', 0.03, 900); break;
       case 'desert': bed('amb_wind', 0.32); every('amb_gust', 7, 16, 0.24); break;
-      case 'harbor': bed('amb_wind', 0.13); every('amb_wave', 2.5, 5.5, 0.34); every('amb_gull', 6, 15, 0.2); break;
+      case 'harbor': bed('amb_wind', 0.13); every('amb_wave', 2.5, 5.5, 0.34); every('amb_gull', 14, 30, 0.12); break;
       case 'snow': bed('amb_wind', 0.46, 0, 0.9); every('amb_gust', 4, 10, 0.34, 0.85); break;
-      case 'hill': bed(Math.random() < 0.5 ? 'amb_birds' : 'amb_park', 0.28); bed('amb_wind', 0.15); every('amb_gust', 10, 20, 0.16); break;
-      default: bed('amb_birds', 0.22); bed('amb_wind', 0.16);
+      // v34: the 'morning' bed (rooster / dense birdsong) is gone; the park bed sits low and dulled under the wind
+      case 'hill': bed('amb_park', 0.12, 2500); bed('amb_wind', 0.15); every('amb_gust', 10, 20, 0.16); break;
+      default: bed('amb_park', 0.08, 2500); bed('amb_wind', 0.16);
     }
     const old = this.ambBus; this.ambBus = bus;
     if (old) setTimeout(() => { try { old.disconnect(); } catch (e) { /* gone */ } }, 100);

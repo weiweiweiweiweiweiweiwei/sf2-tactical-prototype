@@ -126,7 +126,7 @@ def main():
         pack[name] = [base64.b64encode(opus(a, kbps, ch)).decode() for a in arrs]
         sizes[name] = sum(len(x) * 3 // 4 for x in pack[name])
     for key, (near, far, length, rate) in GUNS.items():
-        put('gun_' + key, shots(near, 4, length), 80)
+        # v34: near shots are procedural again (user preferred them) — only the far-perspective recording ships
         put('gunfar_' + key, shots(far, 2, length * 1.3, rel=0.35), 56)
     # footsteps (Kenney Impact Sounds) + dirt/gravel (RPG Audio) + metal / ladder (light plate / metal impacts)
     for surf, (folder, prefix) in {'concrete': (K_IMP, 'footstep_concrete'), 'grass': (K_IMP, 'footstep_grass'), 'snow': (K_IMP, 'footstep_snow'),
@@ -146,7 +146,7 @@ def main():
     put('punch', kenney(K_IMP, 'impactPunch_medium', 5, trim=0.3), 48)
     # ambience loops (stereo) + one-shots
     A = os.path.join(SRC, 'amb')
-    put('amb_birds', [loop(os.path.join(A, 'amb_morning_0.ogg'), 40, 4)], 48, 2)
+    # v34: 'amb_birds' (morning bed with a rooster) dropped
     put('amb_park', [loop(os.path.join(A, 'park_ambience_birds.wav'), 40, 60)], 48, 2)
     put('amb_river', [loop(os.path.join(A, 'park_ambience_river.wav'), 30, 90)], 48, 2)
     put('amb_wind', [loop(os.path.join(A, 'park_ambience_wind.wav'), 40, 30)], 48, 2)

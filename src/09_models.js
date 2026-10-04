@@ -475,7 +475,7 @@ class WeaponModels {
     this.arm(gb, [0.02, -0.13, 0.1], [0.19, -0.31, 0.42], 0.034); this.gripHand(gb, 0.001, -0.095, -0.075, -0.36);
     this.arm(gb, [-0.036, -0.075, -0.3], [-0.3, -0.32, 0.04], 0.033); this.supportHand(gb, 0, -0.012, 0.3, 0.064);
     const b = gb.build();
-    return this._finish(b, { muzzleU: 0.78, sightY: 0.086, hipPos: [0.135, -0.15, -0.35], adsPos: [0, -0.086, -0.14], flash: 0.28, cover: true, magMove: [-0.04, -0.26, 0.02], magRot: 0.15 });
+    return this._finish(b, { muzzleU: 0.78, sightY: 0.086, hipPos: [0.135, -0.15, -0.35], adsPos: [0, -0.086, -0.28], flash: 0.28, cover: true, magMove: [-0.04, -0.26, 0.02], magRot: 0.15 });
   }
 
   deagle() { // .50 AE: brushed-steel slide with the triangular bore, heavy frame, rubber grip
