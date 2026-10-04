@@ -435,6 +435,7 @@ class Match {
     if (opts.wall) E.push('wall');
     if (opts.pierce || opts.collateral) E.push('pierce');
     p.deathRun = 0;
+    if (!this.isClient && Math.random() < 0.06) { p.score += 100; setTimeout(() => hud.lucky(100), 900); } // SF2 'Lucky Point': a random bonus on a kill
     for (const id of E.slice(0, 4)) hud.emblem(id);
     if (victim) hud.killNote(victim.name, E.find((x) => x === 'headshot' || x === 'grenade' || x === 'slash' || x === 'knife' || x === 'grab') || 'kill');
     p.emblems = p.emblems || {}; for (const id of E) p.emblems[id] = (p.emblems[id] || 0) + 1;

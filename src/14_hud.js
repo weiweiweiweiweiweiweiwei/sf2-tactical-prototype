@@ -151,6 +151,12 @@ class HUD {
     const el = document.getElementById('killNote'); el.innerHTML = `<span class="k">擊殺</span>${emblemSVG(id)}<span class="n"></span>`; el.querySelector('.n').textContent = name;
     el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
   }
+  lucky(n) {
+    const el = document.getElementById('emb');
+    el.querySelector('.ei').innerHTML = '<svg viewBox="0 0 100 100"><rect x="20" y="20" width="60" height="60" rx="8" fill="#3a3220" stroke="#e8b84a" stroke-width="3"/><g fill="#ffd23a" transform="translate(50 50)"><circle cx="0" cy="-11" r="11"/><circle cx="11" cy="0" r="11"/><circle cx="0" cy="11" r="11"/><circle cx="-11" cy="0" r="11"/></g><circle cx="50" cy="50" r="4" fill="#b8892c"/></svg>';
+    el.querySelector('.en').textContent = '幸運！'; el.querySelector('.ez').textContent = `獲得額外積分 +${n}`;
+    el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
+  }
   emblemClear() { const row = document.getElementById('embRow'); if (row) row.innerHTML = ''; }
   announce(main, sub = '') { const a = this.el.ann; this.el.annMain.textContent = main; this.el.annSub.textContent = sub; a.classList.remove('show'); void a.offsetWidth; a.classList.add('show'); }
 
