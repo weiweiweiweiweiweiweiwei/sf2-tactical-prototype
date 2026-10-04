@@ -894,6 +894,79 @@ const MAPS = [
       b.spawnZone('alpha', -44, -7, -38, 7, -Math.PI / 2); b.spawnZone('bravo', 38, -7, 44, 7, Math.PI / 2);
     },
   },
+  {
+    // v39 DAM (after SF2 'Dam'): a rocky gorge cut in two by an 8 m concrete dam. Two galleries run through the dam (A north,
+    // C south), long stairs climb to the crest walkway (B, the high ground with parapets). Irregular cliff-lined gorge, point-symmetric.
+    id: 'dam', name: '水壩', en: 'DAM', desc: '戶外 · 峽谷、8 m 高壩頂、壩體隧道、控制室 · 92×60', slogan: 'SPILLWAY · 搶下壩頂制高點，或從隧道突破',
+    look: { desat: 0.38, contrast: 1.1, pivot: 0.4, highlights: 1.04 },
+    bounds: { minX: -46, maxX: 46, minZ: -30, maxZ: 30 }, indoor: false, navLevels: [0, 3.2, 8],
+    hdri: 'kloofendal_48d_partly_cloudy_puresky', hdriBackground: true, envIntensity: 0.8, sky: { turbidity: 6, rayleigh: 1.4, elevation: 45, azimuth: 160 },
+    sun: { pos: [20, 60, -30], color: 0xfff1dc, intensity: 2.8, auto: true }, hemi: [0xdbe6f5, 0x77705c, 1.0], exposure: 0.9,
+    fog: { color: 0xc6cfd6, near: 60, far: 200 }, acoustics: 'outdoor', ambience: 'hill',
+    shot: { pos: [-20, 12, 22], target: [0, 4, 0] },
+    objectives: { dom: [[0, 0, 15], [0, 8, 0], [0, 0, -15]], relic: [0, 8, 0], domRadius: 3.6 },
+    build(b) {
+      const B = { x0: -46, z0: -30, x1: 46, z1: 30 }, W = B.x1 - B.x0, D = B.z1 - B.z0, CREST = 8;
+      b.box(B.x0 - 6, -1, B.z0 - 6, B.x1 + 6, 0, B.z1 + 6, 'dirt', { cast: false, radar: false });
+      // ---- gorge outline (alpha half + point mirror), edged by a cliff ring ----
+      const open = new Uint8Array(W * D), set = (x0, z0, x1, z1, v) => {
+        for (const s of [1, -1]) {
+          const ax = Math.min(x0 * s, x1 * s), bx = Math.max(x0 * s, x1 * s), az = Math.min(z0 * s, z1 * s), bz = Math.max(z0 * s, z1 * s);
+          for (let x = ax; x < bx; x++) for (let z = az; z < bz; z++) open[(z - B.z0) * W + (x - B.x0)] = v;
+        }
+      };
+      set(-45, -9, -36, 9, 1);    // spawn hollow
+      set(-36, -22, 0, 22, 1);    // west gorge floor (mirror = east)
+      set(-30, 22, -8, 29, 1);    // north-west bay (control house)
+      set(-22, -27, -6, -22, 1);  // south-west bay (pipes)
+      set(-36, 16, -31, 22, 0); set(-36, -22, -32, -15, 0); set(-12, 22, -8, 29, 0); // bite the corners
+      set(-40, -13, -36, -9, 1); set(-40, 9, -36, 13, 1);
+      const ring = new Uint8Array(W * D), isOpen = (x, z) => x >= 0 && z >= 0 && x < W && z < D && open[z * W + x];
+      for (let z = 0; z < D; z++) for (let x = 0; x < W; x++) if (!open[z * W + x]) for (const [dx, dz] of [[-1, 0], [1, 0], [0, -1], [0, 1], [-1, -1], [1, 1], [-1, 1], [1, -1]]) if (isOpen(x + dx, z + dz)) { ring[z * W + x] = 1; break; }
+      const used = new Uint8Array(W * D), cliff = (x, z) => ring[z * W + x] && !used[z * W + x];
+      for (let z = 0; z < D; z++) for (let x = 0; x < W; x++) {
+        if (!cliff(x, z)) continue;
+        let x1 = x; while (x1 + 1 < W && cliff(x1 + 1, z)) x1++;
+        let z1 = z; while (z1 + 1 < D) { let ok = true; for (let k = x; k <= x1; k++) if (!cliff(k, z1 + 1)) { ok = false; break; } if (!ok) break; z1++; }
+        for (let zz = z; zz <= z1; zz++) for (let k = x; k <= x1; k++) used[zz * W + k] = 1;
+        b.box(B.x0 + x, 0, B.z0 + z, B.x0 + x1 + 1, 9 + ((x * 3 + z) % 4), B.z0 + z1 + 1, 'rock', { radar: 'wall' });
+      }
+      for (let z = 0; z < D; z += 4) for (let x = 0; x < W; x += 4) if (ring[z * W + x] && ((x * 5 + z * 7) % 9) < 4) b.boulder(B.x0 + x + 0.5, B.z0 + z + 0.5, 2.2 + ((x + z) % 3));
+      // ---- the dam: solid concrete with two 3 m galleries, crest walkway at 8 m with parapets ----
+      const T0 = 12, T1 = 18; // gallery z span (north; mirrored south)
+      b.box(-4, 0, -T0, 4, CREST, T0, 'concreteWall', { radar: 'building' });
+      b.box(-4, 0, T1, 4, CREST, 30, 'concreteWall', { radar: 'building' }); b.box(-4, 0, -30, 4, CREST, -T1, 'concreteWall', { radar: 'building' });
+      for (const s of [1, -1]) b.box(-4, 3.2, Math.min(s * T0, s * T1), 4, CREST, Math.max(s * T0, s * T1), 'concreteWall', { radar: false });
+      for (const s of [1, -1]) { b.light(0, 2.8, s * 15, 0xffe2b8, 18, 9); b.box(-4, 0, s > 0 ? T0 : -T1, 4, 0.02, s > 0 ? T1 : -T0, 'concrete', { radar: false, cast: false }); }
+      b.plane(-4, -30, 4, 30, CREST + 0.003, 'concrete');
+      b.sym((s) => {
+        const X = (x) => x * s, Z = (z) => z * s, bx = (x0, y0, z0, x1, y1, z1, m, o) => b.box(Math.min(X(x0), X(x1)), y0, Math.min(Z(z0), Z(z1)), Math.max(X(x0), X(x1)), y1, Math.max(Z(z0), Z(z1)), m, o);
+        // crest parapets on the west face (mirror = east), gap where the stairs arrive
+        bx(-4, CREST, -30, -3.7, CREST + 1.05, -14.4, 'concreteWall', { radar: false }); bx(-4, CREST, -11.4, -3.7, CREST + 1.05, 30, 'concreteWall', { radar: false });
+        // long stair up the west face: from z = -2 (ground) south to z = -14 (crest)
+        b.stairs({ axis: 'z', from: Z(-0.5), dir: -s, a0: Math.min(X(-5.8), X(-4)), a1: Math.max(X(-5.8), X(-4)), steps: 27, rise: CREST / 27, run: 0.42, mat: 'concrete', nosing: 'yellowSteel' });
+        bx(-5.8, CREST - 0.3, -14.4, -4, CREST, -11.8, 'concrete', { radar: 'catwalk' }); // top landing → step east onto the crest
+        bx(-6, CREST, -14.4, -5.8, CREST + 1.0, -11.8, 'yellowSteel', { radar: false }); bx(-6, CREST, -14.6, -4, CREST + 1.0, -14.4, 'yellowSteel', { radar: false });
+        // gallery mouths: blast doors pushed open + sandbags
+        b.sandbags(Math.min(X(-9), X(-7)), Math.min(Z(13), Z(17)), Math.max(X(-9), X(-7)), Math.max(Z(13), Z(17)), 1.05);
+        // control house (two floors, roof reachable by its stairs) in the north-west bay
+        b.building({ x0: Math.min(X(-27), X(-18)), z0: Math.min(Z(22.5), Z(28.5)), x1: Math.max(X(-27), X(-18)), z1: Math.max(Z(22.5), Z(28.5)), y0: 0, floors: 2, fh: 3.2, mat: 'concreteWall', slab: 'concrete',
+          doors: s > 0 ? { s: [X(-22.5)] } : { n: [X(-22.5)] } });
+        // penstock pipes in the south-west bay (cover, run east-west)
+        for (const z of [-24.5, -21]) { if (!b.dry) { const c = new THREE.CylinderGeometry(0.9, 0.9, 14, 18); c.rotateZ(Math.PI / 2); c.translate(X(-14), 0.9, Z(z)); b.geo(c, 'darkSteel'); } bx(-21, 0, z - 0.9, -7, 1.8, z + 0.9, null, { radar: 'crate', material: 'metal' }); }
+        // gorge cover: boulders, crates, a transformer box, a fallen spillway slab
+        for (const [x, z, r] of [[-28, -6, 2.0], [-20, 8, 1.6], [-14, -12, 1.8], [-24, 16, 1.4], [-10, 4, 1.3]]) b.boulder(X(x), Z(z), r);
+        for (const [x, z, sz] of [[-17, -2, 1.1], [-17.2, -0.8, 0.9], [-31, 4, 1.1], [-12, 18, 1.0]]) b.crate(X(x), Z(z), sz);
+        bx(-24, 0, -1.5, -21.5, 2.2, 1.5, 'darkSteel', { material: 'metal', radar: 'crate' });
+        bx(-34, 0, -7.5, -33.4, 2.4, -2.5, 'concreteWall', { radar: 'wall' }); bx(-34, 0, 2.5, -33.4, 2.4, 7.5, 'concreteWall', { radar: 'wall' }); // spawn blast walls
+        bx(-30.5, 0, -1.6, -29.9, 2.6, 1.6, 'concreteWall', { radar: 'wall' });
+        b.lamp(X(-6.5), Z(-1), 6.5);
+        b.sign(s > 0 ? 'ALPHA' : 'BRAVO', s > 0 ? '#6fb6ff' : '#ff6a5f', X(-44.6), 2.6, 0, s > 0 ? Math.PI / 2 : -Math.PI / 2, 3.2, 0.8);
+      });
+      b.sign('DAM 07', '#e8e2d0', -4.02, 5.6, 0, -Math.PI / 2, 5, 1.2); b.sign('DAM 07', '#e8e2d0', 4.02, 5.6, 0, Math.PI / 2, 5, 1.2);
+      b.spawnZone('alpha', -44, -7, -38, 7, -Math.PI / 2); b.spawnZone('bravo', 38, -7, 44, 7, Math.PI / 2);
+    },
+  },
 ];
 
 // Radar/thumbnail rendering from the builder's footprint list.

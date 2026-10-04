@@ -9,7 +9,7 @@ await p.goto(`http://127.0.0.1:${srv.address().port}/index.html`); await p.waitF
 const r = await p.evaluate(async ([map, sec]) => {
   const S = SF2.Settings.data; S.quality = 'low'; Object.assign(S.lobby, { map, rule: 'tdm', allies: 5, enemies: 5 });
   await app.startMatch(); app.state = 'playing'; app.input.locked = true; const m = app.match;
-  await new Promise((r) => setTimeout(r, sec * 1000));
+  const tk = setInterval(() => { for (const c of m.combatants) c.maxY = Math.max(c.maxY || 0, c.motor.pos.y); }, 200); await new Promise((r) => setTimeout(r, sec * 1000)); clearInterval(tk);
   const cv = document.createElement('canvas'); cv.width = cv.height = 900; const H = app.hud, team = m.player.team;
   H._overview(m, cv); const ctx = cv.getContext('2d'); // add enemies too
   const B = m.def.bounds, w = B.maxX - B.minX, d = B.maxZ - B.minZ, k = (900 - 16) / Math.max(w, d);
@@ -17,7 +17,7 @@ const r = await p.evaluate(async ([map, sec]) => {
   for (const c of m.combatants) if (c.alive && c.team !== team) { const q = c.model.root.position; ctx.fillStyle = '#ff5d52'; ctx.beginPath(); ctx.arc(q.x, q.z, 3.5 / k, 0, 7); ctx.fill(); }
   for (const z of m.rules.zones || []) { ctx.strokeStyle = '#ffd23a'; ctx.lineWidth = 2 / k; ctx.beginPath(); ctx.arc(z.pos.x, z.pos.z, z.r, 0, 7); ctx.stroke(); }
   const kills = m.combatants.reduce((n, c) => n + c.kills, 0);
-  return { url: cv.toDataURL(), kills, nav: m.nav ? m.nav.nodes.length : 0 };
+  return { url: cv.toDataURL(), kills, nav: m.nav ? m.nav.nodes.length : 0, high: m.nav ? m.nav.nodes.filter((n) => n.p.y > 6).length : 0, maxBotY: Math.max(...m.combatants.map((c) => c.maxY || 0)) };
 }, [MAP, SEC]);
 fs.writeFileSync(`tools/out/mapview_${MAP}.png`, Buffer.from(r.url.split(',')[1], 'base64'));
-console.log({ kills: r.kills, nav: r.nav, errs: errs.slice(0, 3) }); await b.close(); srv.close();
+console.log({ kills: r.kills, nav: r.nav, high: r.high, maxBotY: +r.maxBotY.toFixed(2), errs: errs.slice(0, 3) }); await b.close(); srv.close();
