@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SF2 Tactical Prototype v32</title>
+<title>SF2 Tactical Prototype v33</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Teko:wght@300;400;500;600&family=Rajdhani:wght@500;600;700&family=Noto+Sans+TC:wght@500;700&display=swap" rel="stylesheet">
@@ -668,7 +668,7 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
 <!-- HUB (v27 大廳): create a room, or join one -->
 <div id="hub" class="screen on"><div class="hbz">
   <div class="lb-top">
-    <div class="lb-brand">SPECIAL FORCE <span>2</span><small>TACTICAL PROTOTYPE · v32</small></div>
+    <div class="lb-brand">SPECIAL FORCE <span>2</span><small>TACTICAL PROTOTYPE · v33</small></div>
     <div class="lb-room"><span class="rmk">LOBBY</span><b>大廳</b> · 配對伺服器 <span id="hubNet">連線中…</span></div>
     <label class="hub-nick">暱稱<input type="text" id="hubNick" maxlength="12" placeholder="你的名字" autocomplete="off" spellcheck="false"></label>
     <button class="btn ghost" id="hubFriends" title="好友名單、加好友">👥 好友</button>
@@ -709,7 +709,7 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
 <!-- ROOM (the room you created or joined) -->
 <div id="lobby" class="screen"><div class="lbz">
   <div class="lb-top">
-    <div class="lb-brand">SPECIAL FORCE <span>2</span><small>TACTICAL PROTOTYPE · v32</small></div>
+    <div class="lb-brand">SPECIAL FORCE <span>2</span><small>TACTICAL PROTOTYPE · v33</small></div>
     <div class="lb-room"><span class="rmk">ROOM</span><span id="lbCodeTxt">——— ———</span> · <b id="lbRoomName">單機練習房</b> · <span id="lbStatus">等待中</span></div>
     <div class="inv"><button class="btn" id="lbInvite" title="邀請朋友加入這個房間">＋ 邀請朋友</button>
       <div class="inv-pop" id="lbInvPop">
@@ -1316,7 +1316,10 @@ function loadoutDefs(mode, loadout) {
 }
 
 /* =====================================================================
-   AUDIO ENGINE — 100% procedural.
+   AUDIO ENGINE — v33: real CC0 recordings (assets/sfx.js: gunshots near + far, footsteps per surface, cloth / gear
+   foley, impacts, ambience loops — built by tools/sfx_build.py) played through the same 3D chain below; every sound
+   falls back to its procedural version until the pack is decoded (or when it is missing / undecodable).
+   Procedural part:
    Gunshots/explosions are pre-rendered with OfflineAudioContext into
    layered stereo banks (supersonic crack · driven blast body · sub
    thump · mechanical action · baked early reflections · room tail),
@@ -1414,6 +1417,34 @@ const ACOUSTICS = {
 class AudioEngine {
   static banks = {};
   static banksReady = false;
+  static samples = {}; static sampleRate = {}; static samplesReady = false; static onSamples = null;
+
+  // v33: the recorded sound pack — a <script> (works from file:// too), decoded off the realtime context, then dropped
+  static loadSamples() {
+    if (AudioEngine.samplesP) return AudioEngine.samplesP;
+    return (AudioEngine.samplesP = new Promise((res) => {
+      if (window.SF2_SFX) { res(); return; }
+      const s = document.createElement('script'); s.src = 'assets/sfx.js'; s.async = true; s.onload = () => res(); s.onerror = () => res();
+      document.head.appendChild(s);
+    }).then(async () => {
+      const pack = window.SF2_SFX;
+      if (!pack || !window.OfflineAudioContext) { console.warn('[audio] recorded sound pack not available — procedural sounds'); return false; }
+      const oc = new OfflineAudioContext(1, 1, 48000), jobs = [];
+      AudioEngine.sampleRate = pack._rate || {};
+      const bytes = (b64) => { const s = atob(b64), u = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) u[i] = s.charCodeAt(i); return u.buffer; };
+      for (const [name, list] of Object.entries(pack)) {
+        if (name[0] === '_' || !Array.isArray(list)) continue;
+        const out = AudioEngine.samples[name] = [];
+        for (const b of list) jobs.push(oc.decodeAudioData(bytes(b)).then((buf) => out.push(buf), () => {}));
+      }
+      await Promise.all(jobs);
+      for (const k of Object.keys(AudioEngine.samples)) if (!AudioEngine.samples[k].length) delete AudioEngine.samples[k];
+      delete window.SF2_SFX;
+      AudioEngine.samplesReady = Object.keys(AudioEngine.samples).length > 0;
+      if (AudioEngine.samplesReady && AudioEngine.onSamples) AudioEngine.onSamples();
+      return AudioEngine.samplesReady;
+    }));
+  }
 
   static tanhCurve(k) {
     const n = 2048, c = new Float32Array(n), d = Math.tanh(k);
@@ -1498,7 +1529,14 @@ class AudioEngine {
 
   constructor() {
     this.ctx = null; this.volume = Settings.data.volume; this.voiceList = []; this.lastCasing = 0; this.lastBounce = 0; // v24: active bank voices {src, g, end} in start order (voice stealing)
-    this.listener = new THREE.Vector3(); this.acoustics = ACOUSTICS.warehouse; this.ambNodes = [];
+    this.listener = new THREE.Vector3(); this.acoustics = ACOUSTICS.warehouse; this.ambNodes = []; this.ambTimers = []; this.ambKind = 'none';
+  }
+  _s(name) { const l = AudioEngine.samples[name]; return l && l.length ? l : null; }
+  // one recorded clip into a bus (rate also shifts pitch; delay in seconds)
+  _one(buf, out, gain, rate = 1, delay = 0) {
+    const ctx = this.ctx, s = ctx.createBufferSource(), g = ctx.createGain();
+    s.buffer = buf; s.playbackRate.value = rate; g.gain.value = gain; s.connect(g); g.connect(out); s.start(ctx.currentTime + delay);
+    return s;
   }
 
   init() {
@@ -1637,7 +1675,9 @@ class AudioEngine {
   playBank(name, pos = null, o = {}) {
     if (!this.ctx || !AudioEngine.banksReady) return;
     const bank = AudioEngine.banks[name];
-    if (!bank) return;
+    if (bank) this._playBuf(bank, pos, o);
+  }
+  _playBuf(bank, pos = null, o = {}) {
     this._steal(40);
     const ctx = this.ctx, t = ctx.currentTime;
     const src = ctx.createBufferSource(); src.buffer = pick(bank); src.playbackRate.value = rand(0.965, 1.035) * (o.rate || 1);
@@ -1659,7 +1699,17 @@ class AudioEngine {
     this.voiceList.push({ src, g, end: t + delay + src.buffer.duration / src.playbackRate.value });
   }
 
-  gunshot(sound, pos = null, rate = 1) { this.playBank(sound, pos, { gain: pos ? 1.1 : 0.95, rate }); }
+  // v33: a recorded shot (the far-perspective recording beyond 30 m: tail and echo of a distant gun, less high end) —
+  // suppressed guns have no recording and keep their procedural bank
+  gunshot(sound, pos = null, rate = 1) {
+    const near = this.ctx && this._s('gun_' + sound);
+    if (near) {
+      const d = pos ? this.listener.distanceTo(pos) : 0, far = d > 30 ? this._s('gunfar_' + sound) : null;
+      this._playBuf(far || near, pos, { gain: pos ? (far ? 1.35 : 1.05) : 0.9, rate: (AudioEngine.sampleRate[sound] || 1) * rate, lpDist: far ? 95 : 42, send: far ? 0.75 : 1 });
+      return;
+    }
+    this.playBank(sound, pos, { gain: pos ? 1.1 : 0.95, rate });
+  }
 
   // Explosions carry across the whole map: large refDistance + an extra sub-bass rumble that barely attenuates.
   explosion(kind, pos) {
@@ -1715,6 +1765,16 @@ class AudioEngine {
     if (!this.ctx) return;
     const t = this.ctx.currentTime, k = o.pitch || 1, out = this._bus(pos, 0.03, 3, o.occluded ? 720 : 0, 1.1, true);
     if (o.occluded) loud *= 0.6;
+    const rec = this._s('step_' + surface) || this._s('step_concrete');
+    if (rec) { // v33: recorded step + cloth rustle on every step, the gear rattles when running (within earshot only)
+      this._one(pick(rec), out, 0.85 * loud, k * (0.94 + Math.random() * 0.12));
+      if (!pos || this.listener.distanceTo(pos) < 12) {
+        const c = this._s('cloth'), g = this._s('gear'), run = loud > 0.65;
+        if (c) this._one(pick(c), out, (run ? 0.3 : 0.18) * loud, 0.9 + Math.random() * 0.25, 0.01);
+        if (g && run && Math.random() < 0.45) this._one(pick(g), out, 0.16 * loud, 0.9 + Math.random() * 0.2, 0.02 + Math.random() * 0.06);
+      }
+      return;
+    }
     const rand = (a, b) => (a + Math.random() * (b - a)) * k;
     switch (surface) {
       case 'metal': this._nb(t, out, 'bandpass', rand(1800, 2400), 5, 0.35 * loud, 0.002, 0.09); this._osc('triangle', t, rand(420, 520), 300, 0.12, out, 0.12 * loud); break;
@@ -1731,6 +1791,8 @@ class AudioEngine {
   land(pos, surface, strength) {
     if (!this.ctx) return;
     const t = this.ctx.currentTime, out = this._bus(pos, 0.15, 3), s = clamp(strength, 0.3, 1.4);
+    const rec = this._s('step_' + surface) || this._s('step_concrete'), c = this._s('cloth');
+    if (rec) { this._one(pick(rec), out, 0.9 * s, 0.8); this._one(pick(rec), out, 0.5 * s, 0.9, 0.035); if (c) this._one(pick(c), out, 0.3 * s, 0.85); }
     this._nb(t, out, 'lowpass', surface === 'metal' ? 1500 : 700, 0.8, 0.5 * s, 0.003, 0.12);
     this._osc('sine', t, 110, 50, 0.12, out, 0.5 * s);
     if (surface === 'metal') this._nb(t, out, 'bandpass', 2200, 6, 0.3 * s, 0.002, 0.25);
@@ -1751,8 +1813,12 @@ class AudioEngine {
       case 'boltback': click(0, 1300, 3, 0.45, 0.04); click(0.05, 2400, 6, 0.3, 0.03); break;
       case 'boltfwd': click(0, 2100, 4, 0.5, 0.03); click(0.06, 1500, 5, 0.45, 0.035); break;
       case 'dry': this._osc('square', t, 3200, 2800, 0.015, out, 0.12); click(0, 3500, 8, 0.3, 0.02); break;
-      case 'draw': this._nb(t, out, 'bandpass', 1200, 1, 0.12, 0.02, 0.08); click(0.06, 2400, 6, 0.2, 0.02); break;
-      case 'zoom': click(0, 3000, 6, 0.12, 0.02); break;
+      case 'draw': { this._nb(t, out, 'bandpass', 1200, 1, 0.12, 0.02, 0.08); click(0.06, 2400, 6, 0.2, 0.02); const c = this._s('cloth'); if (c) this._one(pick(c), out, 0.22, 1.05); break; }
+      case 'zoom': { // v33: raising the gun to the eye — sleeve rustle + the stock touching the shoulder
+        const c = this._s('cloth'), m = this._s('metalclick');
+        if (c) { this._one(pick(c), out, 0.2, 1.15 + Math.random() * 0.15); if (m) this._one(m[0], out, 0.07, 1.5, 0.05); } else click(0, 3000, 6, 0.12, 0.02);
+        break;
+      }
       case 'pin': click(0, 3600, 7, 0.35, 0.02); this._osc('sine', t + 0.02, 5200, 4800, 0.12, out, 0.08); click(0.12, 2500, 5, 0.25, 0.03); break;
       case 'pump': click(0, 900, 2, 0.5, 0.05); this._nb(t + 0.02, out, 'bandpass', 1800, 1.5, 0.25, 0.01, 0.08); click(0.17, 1300, 3, 0.65, 0.04); this._osc('sine', t + 0.17, 220, 120, 0.07, out, 0.3); break;
       case 'shell': click(0, 2400, 5, 0.3, 0.02); click(0.05, 700, 2, 0.45, 0.04); this._osc('sine', t + 0.05, 180, 110, 0.05, out, 0.25); break;
@@ -1811,6 +1877,9 @@ class AudioEngine {
   knifeHit(flesh, pos = null) {
     if (!this.ctx) return;
     const t = this.ctx.currentTime, out = this._bus(pos, 0.08);
+    const p = this._s('punch'), sft = this._s('hitsoft'), mt = this._s('hitmetal');
+    if (flesh && p) { this._one(pick(p), out, 0.45, 0.95 + Math.random() * 0.1); if (sft) this._one(pick(sft), out, 0.3, 1.1); }
+    if (!flesh && mt) this._one(pick(mt), out, 0.35, 1.3);
     if (flesh) { this._nb(t, out, 'lowpass', 600, 1, 0.8, 0.002, 0.1); this._osc('sine', t, 160, 60, 0.1, out, 0.6); }
     else { this._nb(t, out, 'bandpass', 3200, 8, 0.5, 0.001, 0.12); this._osc('triangle', t, 2400, 2100, 0.15, out, 0.15); }
   }
@@ -1818,6 +1887,8 @@ class AudioEngine {
   impact(pos, material) {
     if (!this.ctx) return;
     const t = this.ctx.currentTime, out = this._bus(pos, 0.2, 2);
+    const rec = this._s(material === 'metal' ? 'hitmetal' : material === 'wood' ? 'hitwood' : material === 'glass' ? 'hitglass' : '');
+    if (rec) this._one(pick(rec), out, material === 'glass' ? 0.32 : 0.24, (material === 'metal' ? 1.35 : 1.15) + Math.random() * 0.25); // recorded layer under the crack
     if (material === 'metal') {
       this._nb(t, out, 'bandpass', rand(2500, 4000), 6, 0.35, 0.001, 0.06);
       if (Math.random() < 0.2) this._osc('sine', t + 0.01, rand(3200, 4200), rand(1200, 1800), 0.35, out, 0.08, 0.01);
@@ -1848,9 +1919,13 @@ class AudioEngine {
   uiClick() { if (!this.ctx) return; const t = this.ctx.currentTime, out = this._bus(null, 0); this._osc('square', t, 1400, 1300, 0.03, out, 0.05); }
 
   setAmbience(kind) {
+    this.ambKind = kind;
     if (!this.ctx) return;
     for (const n of this.ambNodes) { try { n.stop(); } catch (e) { /* already stopped */ } }
-    this.ambNodes = [];
+    for (const id of this.ambTimers) clearTimeout(id);
+    this.ambNodes = []; this.ambTimers = [];
+    if (kind === 'none') return;
+    if (AudioEngine.samplesReady) { this._ambienceRec(kind); return; }
     const ctx = this.ctx;
     const noiseLoop = (type, freq, gain, lfoF, lfoA) => {
       const s = ctx.createBufferSource(); s.buffer = this.noise; s.loop = true;
@@ -1865,6 +1940,35 @@ class AudioEngine {
     else if (kind === 'hill') { noiseLoop('bandpass', 600, 0.045, 0.07, 0.03); noiseLoop('lowpass', 170, 0.045, 0.04, 0.02); noiseLoop('highpass', 5200, 0.006, 0.3, 0.004); }
     else if (kind === 'snow') { noiseLoop('bandpass', 700, 0.05, 0.09, 0.035); noiseLoop('lowpass', 180, 0.05, 0.04, 0.02); }
     else { noiseLoop('bandpass', 900, 0.03, 0.08, 0.02); noiseLoop('lowpass', 160, 0.04, 0.05, 0.02); }
+  }
+
+  // v33 recorded ambience: looping beds (stereo, faded in) + one-shots at random times and places
+  _ambienceRec(kind) {
+    const ctx = this.ctx, bus = ctx.createGain(); bus.connect(this.master);
+    const bed = (name, gain, lp = 0, rate = 1) => {
+      const l = this._s(name); if (!l) return;
+      const s = ctx.createBufferSource(), g = ctx.createGain(); s.buffer = l[0]; s.loop = true; s.playbackRate.value = rate;
+      g.gain.setValueAtTime(0, ctx.currentTime); g.gain.setTargetAtTime(gain, ctx.currentTime, 1.5);
+      if (lp) { const f = this._filter('lowpass', lp, 0.6); s.connect(f); f.connect(g); } else s.connect(g);
+      g.connect(bus); s.start(0, Math.random() * s.buffer.duration); this.ambNodes.push(s);
+    };
+    const now = (name, gain, rate = 1) => { const l = this._s(name); if (!l) return; const p = ctx.createStereoPanner(); p.pan.value = Math.random() * 1.6 - 0.8; p.connect(bus); this._one(pick(l), p, gain * (0.55 + Math.random() * 0.45), rate * (0.92 + Math.random() * 0.16)); }; // one-shots end by themselves
+    const every = (name, min, max, gain, rate = 1) => {
+      const tick = () => { if (this.ambKind !== kind) return; now(name, gain, rate); this.ambTimers.push(setTimeout(tick, (min + Math.random() * (max - min)) * 1000)); };
+      this.ambTimers.push(setTimeout(tick, (0.3 + Math.random() * 0.7) * min * 1000));
+    };
+    const hum = (f, gain) => { const o = ctx.createOscillator(), g = ctx.createGain(); o.frequency.value = f; g.gain.value = gain; o.connect(g); g.connect(bus); o.start(); this.ambNodes.push(o); };
+    switch (kind) {
+      case 'warehouse': hum(60, 0.006); hum(120, 0.002); bed('amb_traffic', 0.14, 420); bed('amb_wind', 0.05, 600); every('creak', 9, 22, 0.12, 0.8); break; // a big shed: mains hum, city through the walls, roof creaks
+      case 'office': hum(120, 0.004); bed('amb_traffic', 0.2, 1000); bed('amb_wind', 0.03, 900); break;
+      case 'desert': bed('amb_wind', 0.32); every('amb_gust', 7, 16, 0.24); break;
+      case 'harbor': bed('amb_wind', 0.13); every('amb_wave', 2.5, 5.5, 0.34); every('amb_gull', 6, 15, 0.2); break;
+      case 'snow': bed('amb_wind', 0.46, 0, 0.9); every('amb_gust', 4, 10, 0.34, 0.85); break;
+      case 'hill': bed(Math.random() < 0.5 ? 'amb_birds' : 'amb_park', 0.28); bed('amb_wind', 0.15); every('amb_gust', 10, 20, 0.16); break;
+      default: bed('amb_birds', 0.22); bed('amb_wind', 0.16);
+    }
+    const old = this.ambBus; this.ambBus = bus;
+    if (old) setTimeout(() => { try { old.disconnect(); } catch (e) { /* gone */ } }, 100);
   }
 }
 
@@ -11042,6 +11146,9 @@ class App {
     addEventListener('resize', () => this.onResize());
     addEventListener('beforeunload', (e) => { if (this.match && (this.state === 'playing' || this.state === 'paused')) { e.preventDefault(); e.returnValue = ''; } });
     AudioEngine.prepareBanks().catch((e) => console.warn('audio banks', e));
+    // v33 recorded sounds load in the background (procedural ones play until then); a match already running swaps its ambience
+    AudioEngine.onSamples = () => { if (this.audio.ambKind && this.audio.ambKind !== 'none') this.audio.setAmbience(this.audio.ambKind); };
+    setTimeout(() => AudioEngine.loadSamples(), 1200);
     setTimeout(() => { try { this.makeIcons(); } catch (e) { console.warn('weapon icons', e); } }, 400);
     this.thumbStart = performance.now() + 1500; this._queueThumbs([...PRIMARY_IDS, ...SECONDARY_IDS]); // v20 armory card renders, built in the lobby's idle frames
     requestAnimationFrame((t) => this.loop(t));

@@ -36,6 +36,9 @@ class App {
     addEventListener('resize', () => this.onResize());
     addEventListener('beforeunload', (e) => { if (this.match && (this.state === 'playing' || this.state === 'paused')) { e.preventDefault(); e.returnValue = ''; } });
     AudioEngine.prepareBanks().catch((e) => console.warn('audio banks', e));
+    // v33 recorded sounds load in the background (procedural ones play until then); a match already running swaps its ambience
+    AudioEngine.onSamples = () => { if (this.audio.ambKind && this.audio.ambKind !== 'none') this.audio.setAmbience(this.audio.ambKind); };
+    setTimeout(() => AudioEngine.loadSamples(), 1200);
     setTimeout(() => { try { this.makeIcons(); } catch (e) { console.warn('weapon icons', e); } }, 400);
     this.thumbStart = performance.now() + 1500; this._queueThumbs([...PRIMARY_IDS, ...SECONDARY_IDS]); // v20 armory card renders, built in the lobby's idle frames
     requestAnimationFrame((t) => this.loop(t));
