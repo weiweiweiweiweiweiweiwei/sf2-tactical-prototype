@@ -5510,6 +5510,86 @@ const MAPS = [
       b.spawnZone('alpha', -44, -7, -38, 7, -Math.PI / 2); b.spawnZone('bravo', 38, -7, 44, 7, Math.PI / 2);
     },
   },
+  {
+    // v42 HANGAR (after SF2 'Hangar'): a steel-walled hangar (bullets do not go through) with a transport plane raised on its gear
+    // in the middle — you can walk under it. North and south of the hangar run two outdoor alleys for snipers / flankers, overlooked by
+    // catwalk windows inside. Irregular apron outline, point-symmetric.
+    id: 'hangar', name: '機庫', en: 'HANGAR', desc: '室內外 · 鋼板機庫、架高運輸機、兩側小路、二樓窗口 · 96×60', slogan: 'AIRFIELD · 機腹下穿越，小路繞後',
+    look: { desat: 0.36, contrast: 1.1, pivot: 0.38, highlights: 1.04 },
+    bounds: { minX: -48, maxX: 48, minZ: -30, maxZ: 30 }, indoor: false, navLevels: [0, 4],
+    hdri: 'kloofendal_48d_partly_cloudy_puresky', hdriBackground: true, envIntensity: 0.8, sky: { turbidity: 5, rayleigh: 1.3, elevation: 38, azimuth: 120 },
+    sun: { pos: [-25, 50, 30], color: 0xfff0dc, intensity: 2.8, auto: true }, hemi: [0xdbe6f5, 0x6f6c60, 1.0], exposure: 0.9,
+    fog: { color: 0xc6cfd6, near: 70, far: 210 }, acoustics: 'warehouse', ambience: 'harbor',
+    shot: { pos: [-17, 3, -8], target: [4, 2.4, 2] },
+    objectives: { dom: [[0, 0, 20], [0, 0, 0], [0, 0, -20]], relic: [0, 0, 0], domRadius: 3.6 },
+    build(b) {
+      const B = { x0: -48, z0: -30, x1: 48, z1: 30 }, W = B.x1 - B.x0, D = B.z1 - B.z0, HX = 20, HZ = 12, HH = 10;
+      b.box(B.x0 - 6, -1, B.z0 - 6, B.x1 + 6, 0, B.z1 + 6, 'asphalt', { cast: false, radar: false });
+      // ---- apron outline with a perimeter wall ring (alpha half + point mirror) ----
+      const open = new Uint8Array(W * D), set = (x0, z0, x1, z1, v) => {
+        for (const s of [1, -1]) {
+          const ax = Math.min(x0 * s, x1 * s), bx = Math.max(x0 * s, x1 * s), az = Math.min(z0 * s, z1 * s), bz = Math.max(z0 * s, z1 * s);
+          for (let x = ax; x < bx; x++) for (let z = az; z < bz; z++) open[(z - B.z0) * W + (x - B.x0)] = v;
+        }
+      };
+      set(-47, -10, -32, 10, 1);   // spawn yard
+      set(-32, -27, 0, 27, 1);     // apron + alleys (mirror = east)
+      set(-32, 20, -26, 27, 0); set(-32, -27, -27, -19, 0); set(-10, 25, 0, 27, 0); // bite corners
+      set(-36, 10, -32, 15, 1); set(-36, -15, -32, -10, 1);
+      const ring = new Uint8Array(W * D), isOpen = (x, z) => x >= 0 && z >= 0 && x < W && z < D && open[z * W + x];
+      for (let z = 0; z < D; z++) for (let x = 0; x < W; x++) if (!open[z * W + x]) for (const [dx, dz] of [[-1, 0], [1, 0], [0, -1], [0, 1], [-1, -1], [1, 1], [-1, 1], [1, -1]]) if (isOpen(x + dx, z + dz)) { ring[z * W + x] = 1; break; }
+      const used = new Uint8Array(W * D), wall = (x, z) => ring[z * W + x] && !used[z * W + x];
+      for (let z = 0; z < D; z++) for (let x = 0; x < W; x++) {
+        if (!wall(x, z)) continue;
+        let x1 = x; while (x1 + 1 < W && wall(x1 + 1, z)) x1++;
+        let z1 = z; while (z1 + 1 < D) { let ok = true; for (let k = x; k <= x1; k++) if (!wall(k, z1 + 1)) { ok = false; break; } if (!ok) break; z1++; }
+        for (let zz = z; zz <= z1; zz++) for (let k = x; k <= x1; k++) used[zz * W + k] = 1;
+        b.box(B.x0 + x, 0, B.z0 + z, B.x0 + x1 + 1, 5, B.z0 + z1 + 1, 'concreteWall', { radar: 'wall' });
+      }
+      // ---- hangar shell: steel walls, big end doors (half open), side doors, catwalk windows ----
+      b.plane(-HX, -HZ, HX, HZ, 0.003, 'polished');
+      const win = (lo, hi) => { const o = []; for (let a = lo; a + 2 <= hi; a += 5) o.push({ a, b: a + 2, y0: 5, y1: 6.3 }); return o; };
+      for (const s of [1, -1]) {
+        b.wallX(s * HZ, -HX, HX, 0, HH, 0.4, 'siding', [{ a: -13.5, b: -11.5 }, { a: 11.5, b: 13.5 }, ...win(-15, 10).map((o) => (s > 0 ? o : Object.assign({}, o, { a: -o.b, b: -o.a })))], { radar: 'wall' });
+        b.wallZ(s * HX, -HZ, HZ, 0, HH, 0.4, 'siding', [{ a: -6, b: 6, y1: 6 }], { radar: 'wall' });
+      }
+      b.box(-HX - 0.3, HH, -HZ - 0.3, HX + 0.3, HH + 0.4, HZ + 0.3, 'roof', { radar: false });
+      for (let x = -16; x <= 16; x += 8) for (const z of [-6, 6]) b.panel(x, z, HH - 0.3, 2.4, 0.8);
+      for (let x = -18; x <= 18; x += 6) b.box(x - 0.15, HH - 0.8, -HZ, x + 0.15, HH - 0.5, HZ, 'darkSteel', { radar: false, physics: false }); // roof trusses
+      // ---- transport plane on its gear (walk under the fuselage and wings) ----
+      if (!b.dry) {
+        const f = new THREE.CylinderGeometry(1.9, 1.9, 22, 20); f.rotateZ(Math.PI / 2); f.translate(0, 3.5, 0); b.geo(f, 'whiteSteel');
+        for (const sx of [-1, 1]) { const c = new THREE.SphereGeometry(1.9, 18, 12, 0, Math.PI * 2, 0, Math.PI / 2); c.rotateZ(sx * -Math.PI / 2); c.translate(sx * 11, 3.5, 0); b.geo(c, 'whiteSteel'); }
+      }
+      b.box(-11, 1.7, -1.6, 11, 5.3, 1.6, null, { radar: 'crate', material: 'metal' }); // fuselage collider (bottom at 1.7 m: walk under, crouch to be safe)
+      b.box(-3, 4.2, -9, 3, 4.6, 9, 'whiteSteel', { radar: false }); // wings
+      b.box(9, 4.6, -0.2, 11.5, 8.2, 0.2, 'whiteSteel', { radar: false }); // tail fin
+      for (const [x, z] of [[-6, -1.4], [-6, 1.4], [6, -1.4], [6, 1.4], [0, -4], [0, 4]]) b.cyl(x, z, 0.32, 0, 1.7, 'darkSteel', { seg: 10, radar: 'crate' }); // gear legs
+      b.sym((s) => {
+        const X = (x) => x * s, Z = (z) => z * s, bx = (x0, y0, z0, x1, y1, z1, m, o) => b.box(Math.min(X(x0), X(x1)), y0, Math.min(Z(z0), Z(z1)), Math.max(X(x0), X(x1)), y1, Math.max(Z(z0), Z(z1)), m, o);
+        // big-door blocker: tool cabinets across the doorway centre (breaks the spawn-to-spawn line)
+        bx(-17.5, 0, -1.6, -16.6, 2.6, 1.6, 'darkSteel', { material: 'metal', radar: 'crate' });
+        for (const [x, z, sz] of [[-15, 6.5, 1.2], [-15, 8, 1.0], [-13, -7, 1.2], [-8, 9.5, 1.1], [-4, -9, 1.0]]) b.crate(X(x), Z(z), sz);
+        bx(-15, 0, -3, -13.2, 1.1, -1.2, 'yellowSteel', { material: 'metal', radar: 'crate' }); // tug
+        // north catwalk at 4 m along the inside of the wall, stairs from the west end; windows look into the alley
+        bx(-16, 3.75, 9.4, 8, 4, HZ - 0.2, 'plate', { radar: 'catwalk' });
+        b.railing(Math.min(X(-15.6), X(8)), Z(9.4), Math.max(X(-15.6), X(8)), Z(9.4), 4, 'yellowSteel');
+        b.stairs({ axis: 'x', from: X(-19.6), dir: s, a0: Math.min(Z(10), Z(11.6)), a1: Math.max(Z(10), Z(11.6)), steps: 13, rise: 4 / 13, run: 0.3, mat: 'plate', nosing: 'yellowSteel' });
+        // alleys: containers, pallets, a fuel bowser — long sightlines broken into lanes
+        b.container(X(-22), Z(19), 'x', 1, 0x3b6a8c); b.container(X(-8), Z(22), 'x', 1, 0x8c3b30); b.container(X(-14), Z(16.5), 'z', 2, 0x5a6b3a);
+        for (const [x, z] of [[-27, 15], [-3, 16], [-18, 24]]) b.pallet(X(x), Z(z), 0, 1);
+        b.barrel(X(-25), Z(-14), true); b.barrel(X(-24.2), Z(-14.6), false);
+        bx(-31, 0, -3, -30.3, 2.4, 3, 'concreteWall', { radar: 'wall' }); // spawn screen
+        bx(-37, 0, -8, -36.3, 2.2, -4, 'concreteWall', { radar: 'wall' }); bx(-37, 0, 4, -36.3, 2.2, 8, 'concreteWall', { radar: 'wall' });
+        b.lamp(X(-26), Z(11), 7); b.lamp(X(-26), Z(-11), 7);
+        b.sign(s > 0 ? 'ALPHA' : 'BRAVO', s > 0 ? '#6fb6ff' : '#ff6a5f', X(-46.6), 2.6, 0, s > 0 ? Math.PI / 2 : -Math.PI / 2, 3.2, 0.8);
+        b.sign(s > 0 ? 'HANGAR 2' : 'HANGAR 2', '#e8e2d0', X(-HX - 0.22), 7.6, 0, s > 0 ? -Math.PI / 2 : Math.PI / 2, 6, 1.4);
+        b.light(X(-10), 8.5, Z(-6), 0xfff2de, 28, 20);
+      });
+      b.paint(-HX + 1, -0.15, HX - 1, 0.15, 0xd9b01c);
+      b.spawnZone('alpha', -46, -8, -40, 8, -Math.PI / 2); b.spawnZone('bravo', 40, -8, 46, 8, Math.PI / 2);
+    },
+  },
 ];
 
 // Radar/thumbnail rendering from the builder's footprint list.
