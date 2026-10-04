@@ -235,7 +235,7 @@ class NetHost {
   onRemoteDamaged(np, amount, from) { this.t.send(np.peer, { k: 'dmg', amt: Math.round(amount), hp: Math.max(0, Math.round(np.hp)), from: v3arr(from) }); }
   onFlash(np, s) { this.t.send(np.peer, { k: 'flash', s: +s.toFixed(3) }); }
   onKill(victim, killer, def, head, dir, opts) {
-    const e = { k: 'kill', v: victim.netId, kr: killer ? killer.netId : 0, w: def.id, head: !!head, col: !!opts.collateral, dir: [+dir.x.toFixed(3), +dir.z.toFixed(3)] };
+    const e = { k: 'kill', v: victim.netId, kr: killer ? killer.netId : 0, w: def.id, head: !!head, col: !!opts.collateral, wall: !!opts.wall, pr: !!opts.pierce, dir: [+dir.x.toFixed(3), +dir.z.toFixed(3)] };
     for (const [peer] of this.peers) this.t.send(peer, e);
   }
   onEnd(winner) { for (const [peer] of this.peers) this.t.send(peer, { k: 'end', winner: winner || null }); }
@@ -357,7 +357,7 @@ class NetClient {
     const m = this.m, victim = this.byId(d.v), killer = d.kr ? this.byId(d.kr) : null, def = WEAPON_DEFS[d.w] || WEAPON_DEFS.m4a1;
     if (!victim) return;
     const dir = new THREE.Vector3(d.dir[0], 0, d.dir[1]); if (dir.lengthSq() < 1e-4) dir.set(0, 0, 1);
-    m.remoteKill(victim, killer, def, d.head, dir.normalize(), { collateral: d.col });
+    m.remoteKill(victim, killer, def, d.head, dir.normalize(), { collateral: d.col, wall: d.wall, pierce: d.pr });
   }
   // per frame: draw everyone at host time − 100 ms
   frame(dt) {

@@ -84,7 +84,7 @@ class Arsenal {
     const was = this.ads;
     this.zoomLevel = newLevel; this.ads = newLevel > 0;
     if (w.scoped) { // v34 SF2 quick-scope (瞬G): the scope is fully in the instant ADS is pressed — right-click then left-click fires scoped
-      if (this.ads) { this.adsT = 1; this.scopedIn = true; this.scopeLevel = newLevel; }
+      if (this.ads) { if (!was) this.scopeAt = this.clock; this.adsT = 1; this.scopedIn = true; this.scopeLevel = newLevel; } // scopeAt: Fast Zoom emblem
       else if (this.scopedIn) { this.scopedIn = false; this.scopeLevel = 0; }
       if (!silent) this.onZoomSound();
     }

@@ -43,7 +43,7 @@ class HUD {
   show(on) { this.el.root.classList.toggle('hidden', !on); if (!on) { this.showDeath(false); this.scoreboard(null); } }
   reset() {
     this.el.kf.innerHTML = ''; this.feed.length = 0; this.cache = {}; this.vignette = 0; this.white = 0;
-    this.setScope(false, 0); this.showDeath(false); this.freeze(false); this.roundBanner(null); this.spectate(null); this.killcam(false); this.el.root.classList.remove('kcHide');
+    this.emblemClear(); this.embQ = []; this.setScope(false, 0); this.showDeath(false); this.freeze(false); this.roundBanner(null); this.spectate(null); this.killcam(false); this.el.root.classList.remove('kcHide');
     this.el.obj.innerHTML = ''; this.setAimName('', false); this.setCharge(-1); this.interact(''); for (const m of this.mk) m.el.style.display = 'none';
     for (const d of this.dd) { d.t = 0; d.el.style.opacity = 0; }
   }
@@ -132,6 +132,21 @@ class HUD {
     this.el.kf.prepend(row); this.feed.push({ row, t: 6 });
     while (this.el.kf.children.length > 7) this.el.kf.lastChild.remove();
   }
+  // v34 kill emblems: queued big medal (top centre) + a small one appended to the bottom row for this life
+  emblem(id) {
+    const q = this.embQ || (this.embQ = []); if (q.length < 4) q.push(id);
+    const row = document.getElementById('embRow'), s = document.createElement('span'); s.innerHTML = emblemSVG(id); row.append(s.firstChild);
+    const icons = row.querySelectorAll('svg'); if (icons.length > 12) icons[0].remove();
+    if (!this.embBusy) this._embNext();
+  }
+  _embNext() {
+    const id = this.embQ.shift(); if (!id) { this.embBusy = false; return; }
+    this.embBusy = true; const E = EMBLEMS[id], el = document.getElementById('emb');
+    el.querySelector('.ei').innerHTML = emblemSVG(id); el.querySelector('.en').textContent = E.name; el.querySelector('.ez').textContent = E.zh;
+    el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
+    clearTimeout(this.embT); this.embT = setTimeout(() => this._embNext(), this.embQ.length ? 650 : 1250);
+  }
+  emblemClear() { const row = document.getElementById('embRow'); if (row) row.innerHTML = ''; }
   announce(main, sub = '') { const a = this.el.ann; this.el.annMain.textContent = main; this.el.annSub.textContent = sub; a.classList.remove('show'); void a.offsetWidth; a.classList.add('show'); }
 
   showDeath(on, killer = '', weapon = '', headshot = false, rounds = false) {

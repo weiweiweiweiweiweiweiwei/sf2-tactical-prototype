@@ -268,14 +268,14 @@ class Match {
     if (rew) this.net.restore(rew);
     hits.sort((a, b) => a.t - b.t);
     if (shooter.isPlayer && (!pellet || opts.pellet === 0)) this.stats.shots++;
-    let power = Math.max(1, def.penetration || 0), bodies = def.kind === 'sniper' ? 2 : def.kind === 'lmg' ? 1 : 0, mult = 1, endT = range, hitPlayer = false, kills = 0;
+    let power = Math.max(1, def.penetration || 0), bodies = def.kind === 'sniper' ? 2 : def.kind === 'lmg' ? 1 : 0, mult = 1, endT = range, hitPlayer = false, kills = 0; let walls = 0, passed = 0;
     const cam = this.camera.position, loudShooter = shooter.isPlayer || origin.distanceTo(cam) < 45, fx = !pellet || opts.pellet < 3;
     for (const h of hits) {
       if (h.type === 'world') {
         const near = loudShooter || h.point.distanceTo(cam) < 30;
         if (near && fx) this.effects.impact(h, !pellet || opts.pellet === 0);
         if (h.material === 'glass') { mult *= 0.92; continue; }
-        if (h.penetrable && power > 0) { power--; mult *= 0.5; continue; } // §4.2: thin walls (wood, partitions) ×0.5; concrete / rock / containers stop the round
+        if (h.penetrable && power > 0) { power--; mult *= 0.5; walls++; continue; } // §4.2: thin walls (wood, partitions) ×0.5; concrete / rock / containers stop the round
         endT = h.t; break;
       }
       const point = origin.clone().addScaledVector(dir, h.t);
@@ -285,10 +285,10 @@ class Match {
         endT = h.t; break;
       }
       const wasAlive = h.target.alive;
-      this.applyDamage(h.target, calcDamage(def, h.part, h.t, mult), h.part, shooter, def, dir, point, { collateral: kills > 0 });
+      this.applyDamage(h.target, calcDamage(def, h.part, h.t, mult), h.part, shooter, def, dir, point, { collateral: kills > 0, wall: walls > 0, pierce: passed > 0 });
       if (h.target.isPlayer) hitPlayer = true;
       if (wasAlive && !h.target.alive) kills++;
-      if (bodies > 0) { bodies--; mult *= 0.5; continue; } // bullet keeps going with half its damage
+      if (bodies > 0) { bodies--; mult *= 0.5; passed++; continue; } // bullet keeps going with half its damage
       endT = h.t; break;
     }
     if (kills >= 2 && shooter.isPlayer) { this.app.hud.announce('COLLATERAL', '一槍雙殺'); this.app.speak('collateral'); }
@@ -414,21 +414,38 @@ class Match {
   _killPoints(def, head) { return def.kind === 'knife' || def.kind === 'grab' ? POINTS.knife : def.kind === 'grenade' ? POINTS.grenade : head ? POINTS.head : POINTS.body; }
   _die(victim, killer, def, dir) { if (victim.isPlayer) victim.die(killer); else victim.die(dir, def.kind === 'sniper' ? 5.5 : def.kind === 'grenade' ? 7 : def.kind === 'knife' ? 1.5 : def.kind === 'shotgun' ? 4 : 2.6); }
   // your kill: points popup, multi-kill / streak / headshot announcer
-  _killAnnounce(def, head, pts, opts) {
-    const hud = this.app.hud, p = this.player;
-    p.streak++; p.multi = this.time - p.lastKillT < 4 ? p.multi + 1 : 1; p.lastKillT = this.time;
+  _killAnnounce(def, head, pts, opts, victim) {
+    const hud = this.app.hud, p = this.player, ws = this.weapons;
+    p.streak++; p.multi = this.time - p.lastKillT < 4 ? p.multi + 1 : 1; p.lastKillT = this.time; p.lastVictim = victim;
     hud.points(`+${pts}  ${def.kind === 'knife' ? '刀殺' : def.kind === 'grab' ? '擒拿擊殺' : def.kind === 'grenade' ? '手榴彈擊殺' : head ? '爆頭' : '擊殺'}${opts.collateral ? ' · 穿透' : ''}`);
-    let main = '', sub = '';
-    if (p.multi >= 2) main = ['DOUBLE KILL', 'TRIPLE KILL', 'MULTI KILL', 'ULTRA KILL'][Math.min(p.multi - 2, 3)];
-    else if (this.firstBlood) main = 'FIRST BLOOD';
-    else if (def.kind === 'grenade') main = 'GRENADE KILL';
-    else if (head) main = 'HEADSHOT';
-    else if (def.kind === 'knife') main = 'KNIFE KILL';
-    else if (def.kind === 'grab') main = 'MELEE KILL';
+    // v34 SF2 kill emblems — the strongest one first, then the extras
+    const E = [], d = victim ? Math.hypot(victim.motor.pos.x - p.motor.pos.x, victim.motor.pos.z - p.motor.pos.z) : 0, gun = def.kind !== 'knife' && def.kind !== 'grab' && def.kind !== 'grenade';
+    if (p.multi >= 2) E.push(['double', 'multi', 'specialist', 'specialforce'][Math.min(p.multi - 2, 3)]);
+    if (def.kind === 'grenade') E.push('grenade');
+    else if (def.kind === 'knife') { const f = victim ? TMP_V1.set(-Math.sin(victim.yaw), 0, -Math.cos(victim.yaw)) : null, b = victim ? TMP_V2.set(p.motor.pos.x - victim.motor.pos.x, 0, p.motor.pos.z - victim.motor.pos.z).normalize() : null; E.push(f && f.dot(b) < -0.707 ? 'slash' : 'knife'); }
+    else if (def.kind === 'grab') E.push('grab');
+    else E.push(head ? 'headshot' : 'kill');
+    if (this.firstBlood) E.push('first');
+    if (victim && p.lastKiller === victim) { E.push('revenge'); p.lastKiller = null; }
+    if ((p.deathRun || 0) >= 3) E.push('welcome');
+    if (gun && ws.current.def === def && ws.current.ammo === 0) E.push('lastshot');
+    if (gun && def.kind === 'sniper' && ws.scopedIn && ws.clock - (ws.scopeAt ?? -9) < 0.4) E.push('fastzoom');
+    if (gun && d > (def.kind === 'sniper' ? 60 : 40)) E.push('longshot');
+    if (opts.wall) E.push('wall');
+    if (opts.pierce || opts.collateral) E.push('pierce');
+    p.deathRun = 0;
+    for (const id of E.slice(0, 4)) hud.emblem(id);
+    p.emblems = p.emblems || {}; for (const id of E) p.emblems[id] = (p.emblems[id] || 0) + 1;
     const streaks = { 5: 'KILLING SPREE', 8: 'RAMPAGE', 12: 'UNSTOPPABLE', 16: 'GODLIKE' };
-    if (streaks[p.streak]) { if (main) sub = streaks[p.streak]; else main = streaks[p.streak]; }
-    if (head && main !== 'HEADSHOT') sub = sub ? sub + ' · HEADSHOT' : 'HEADSHOT';
-    if (main && !opts.collateral) { hud.announce(main, sub); this.app.speak(main); }
+    if (streaks[p.streak]) { hud.announce(streaks[p.streak], ''); this.app.speak(streaks[p.streak]); }
+    else if (!opts.collateral) { const v = { double: 'DOUBLE KILL', multi: 'TRIPLE KILL', specialist: 'MULTI KILL', specialforce: 'ULTRA KILL', first: 'FIRST BLOOD', headshot: 'HEADSHOT', grenade: 'GRENADE KILL' }; const k = E.find((x) => v[x]); if (k) this.app.speak(v[k]); }
+  }
+  // the local player died: Revenge / Welcome Back bookkeeping + Love Shot (both died within 0.4 s)
+  _playerDied(killer) {
+    const p = this.player, hud = this.app.hud;
+    p.deathRun = (p.deathRun || 0) + 1;
+    if (killer && killer !== p) { if (p.lastVictim === killer && this.time - p.lastKillT < 0.4) hud.emblem('love'); p.lastKiller = killer; }
+    p.multi = 0; setTimeout(() => hud.emblemClear(), 1500);
   }
   _killFeed(victim, killer, def, head, valid, opts) {
     this.app.hud.killfeed(valid ? killer.name : killer === victim ? '' : null, killer ? killer.team : 'bravo', killer === victim && def.kind !== 'fall' ? '自爆' : def, victim.name, victim.team, head, (killer && killer.isPlayer) || victim.isPlayer, opts.collateral);
@@ -446,16 +463,16 @@ class Match {
       const pts = this._killPoints(def, head);
       killer.kills++; if (head) killer.headshots++; killer.score += pts;
       this.addTeam(killer.team, this.rules.killTeamPoints(pts));
-      if (killer.isPlayer) this._killAnnounce(def, head, pts, opts);
+      if (killer.isPlayer) this._killAnnounce(def, head, pts, opts, victim);
       this.firstBlood = false;
     }
     for (const [c, rec] of victim.damageLog) {
       if (c === killer || c.team === victim.team || this.time - rec.t > CFG.assistWindow || rec.amt < 20) continue;
       c.assists++; c.score += POINTS.assist; this.addTeam(c.team, this.rules.killTeamPoints(POINTS.assist) > 5 ? POINTS.assist : 0);
-      if (c.isPlayer) hud.points(`+${POINTS.assist}  助攻`);
+      if (c.isPlayer) { hud.points(`+${POINTS.assist}  助攻`); hud.emblem('assist'); }
     }
     victim.damageLog.clear();
-    if (victim.isPlayer) p.streak = 0;
+    if (victim.isPlayer) { p.streak = 0; this._playerDied(killer); }
     this._killFeed(victim, killer, def, head, valid, opts);
     if (victim.isPlayer) {
       hud.showDeath(true, valid ? killer.name : '', def.name, head, this.rules.roundBased);
@@ -469,8 +486,8 @@ class Match {
     const p = this.player, valid = killer && killer !== victim && killer.team !== victim.team;
     victim.deaths++;
     if (victim.alive || victim.isPlayer) this._die(victim, killer, def, dir);
-    if (valid) { const pts = this._killPoints(def, head); killer.kills++; if (head) killer.headshots++; killer.score += pts; if (killer.isPlayer) this._killAnnounce(def, head, pts, opts); this.firstBlood = false; }
-    if (victim.isPlayer) p.streak = 0;
+    if (valid) { const pts = this._killPoints(def, head); killer.kills++; if (head) killer.headshots++; killer.score += pts; if (killer.isPlayer) this._killAnnounce(def, head, pts, opts, victim); this.firstBlood = false; }
+    if (victim.isPlayer) { p.streak = 0; this._playerDied(killer); }
     this._killFeed(victim, killer, def, head, valid, opts);
     if (victim.isPlayer) { this.app.hud.showDeath(true, valid ? killer.name : '', def.name, head, this.rules.roundBased); if (this.rules.roundBased) this.nextSpectate(); } // v29: round modes — watch a teammate
   }
