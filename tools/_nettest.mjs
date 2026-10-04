@@ -22,7 +22,7 @@ let code = null;
 if (RTC) { // v27: the host opens a room, the friend joins the room (team bravo), then the host starts the match for both
   await H.evaluate(() => app.createRoom()); await H.waitForFunction(() => app.room && app.room.online, null, { timeout: 30000 }).catch(() => {});
   code = await H.evaluate(() => app.room.code); log('room code', code);
-  await C.goto(`${base}?x=2`); await C.waitForFunction(() => window.app && window.SF2 && app.dir); await C.evaluate(setup, 'Tester');
+  await C.goto(`${base}?x=2${process.env.RELAY ? '&relay=1' : ''}`); await C.waitForFunction(() => window.app && window.SF2 && app.dir); await C.evaluate(setup, 'Tester');
   const t0 = Date.now(); await C.evaluate((code) => app.joinRoom(code), code);
   await C.waitForFunction(() => app.room && app.room.entered, null, { timeout: 30000 }).catch(() => {}); log('in the room after', Date.now() - t0, 'ms');
   await C.evaluate(() => app.room.setTeam('bravo')); await sleep(600);

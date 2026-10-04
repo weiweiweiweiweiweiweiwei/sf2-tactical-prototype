@@ -1,7 +1,7 @@
 # PROGRESS — Web 戰術 FPS
 
 > 依 `CLAUDE.md.md` §0 / §3.1 維護：每輪開工前先讀，完成後更新（完成項、數值變更、下一步）。
-> 目前版本：**v31（2026-10-03）**。`versions/` 只保存重大改版的可遊玩單檔（使用者 09-25 指示），其餘版本在 git 歷史裡。
+> 目前版本：**v32（2026-10-04）**。`versions/` 只保存重大改版的可遊玩單檔（使用者 09-25 指示），其餘版本在 git 歷史裡。
 > `CLAUDE.md` 已在 v18 的 commit 中刪除，下表的「CLAUDE.md 要求」是當時的紀錄。
 
 ## 架構現況（和新版 CLAUDE.md 的差異，**待使用者決定**要不要遷移）
@@ -58,7 +58,8 @@
    - ~~**v29 延遲補償 + 所有模式連線**~~ ✅（見下）。還沒做：客戶端完整回溯重播修正、房主端遠端玩家的平滑顯示、房主驗證速度與射速。
    - ~~**v30 手榴彈 / 掉槍 / 拾取同步**~~ ✅（見下）。
    - ~~**v31 文字聊天**~~ ✅（見下）。
-   - **之後**：TURN 中繼、客戶端完整回溯重播修正、房主驗證速度與射速。
+   - ~~**v32 TURN 中繼**~~ ✅（見下）。
+   - **之後**：客戶端完整回溯重播修正、房主驗證速度與射速。
 
 ## 已知問題
 
@@ -349,14 +350,23 @@
 - **相容**：協定版本沒有變（30），v30 的朋友可以進同一個房間，只是看不到聊天。
 - **驗證**：`tools/_chat.mjs`（真實 Supabase + WebRTC，兩個獨立瀏覽器環境）13 項全過，涵蓋晚進房看到之前的訊息、雙向聊天、HTML 只顯示成文字、紅藍兩隊的隊伍訊息互相看不到、對戰中 Enter 開框、打字不會移動、送出後房主畫面出現、框自動關閉。`_room`、`_gear`、`_nettest`、單機 `_feel` 不變。
 
-## v32 進行中（2026-10-03）：TURN 中繼
+## v32 完成項（2026-10-04）：TURN 中繼（Metered）
 
-- **方案**：Cloudflare TURN，每月前 1,000 GB 免費（和他們的 SFU 共用額度），超過每 GB 0.05 美元。長期金鑰只能放在伺服器上，所以由 Supabase Edge Function `turn`（`supabase/functions/turn/index.ts`，已部署，verify_jwt 關閉）發放 2 小時有效的短期憑證。
-  - 函式只接受遊戲網址的請求（GitHub Pages、localhost、本機雙擊開啟的檔案）。
-  - 同一個執行個體 30 分鐘內重用同一組憑證，並過濾掉瀏覽器不允許的 53 埠。
-- **遊戲端**：開房和加入時一起取得中繼設定（`iceServers()`，3.5 秒逾時就退回原本只用 STUN 的設定，5 分鐘後再試），每條連線都帶上中繼伺服器。連上後從 `getStats()` 判斷這條連線是直連還是經中繼，顯示在暫停選單與 FPS 列。網址加上 `?relay=1` 會強制只走中繼，用來測試。
-- **待使用者**：申請 Cloudflare 帳號、建立 TURN 金鑰，把 `CF_TURN_KEY_ID`、`CF_TURN_TOKEN` 設成 Supabase Edge Function 的 Secrets。沒設定前，函式回應 `configured: false`，遊戲行為和 v31 相同。
-- **驗證**：函式可以從遊戲網址呼叫，其他網址被拒（403）。`_room` 26 項通過（直連）；`_samebrowser` 顯示「direct」。中繼測試指令是 `node tools/_samebrowser.mjs relay`。
+- **為什麼需要**：手機熱點、公司或學校網路常會擋掉點對點直連。TURN 伺服器幫兩邊轉送資料，連不上直連的人也能玩。
+- **方案**：使用者選 **Metered**（免綁卡，每月 500 MB；Cloudflare 每月 1,000 GB 但要綁卡）。實際上只有連不上直連的人才會用到中繼，對戰流量每人每小時約 30–50 MB。
+- **Edge Function `turn`**（`supabase/functions/turn/index.ts`，verify_jwt 關閉）：
+  - 金鑰存在 Supabase Secrets（`METERED_APP`、`METERED_API_KEY`），不會出現在網頁裡。函式向 Metered 取得 ICE servers 給遊戲，只接受遊戲網址的請求，同一個執行個體 30 分鐘內重用結果。
+  - 也支援 Cloudflare（`CF_TURN_KEY_ID`、`CF_TURN_TOKEN`），以後要換只需改 Secrets。
+  - 除錯紀錄：第一次填了錯的 Key（Metered 回 401），換成憑證網址裡 `apiKey=` 後面的值才成功。
+- **遊戲端**：開房和加入時一起取得中繼設定（3.5 秒逾時就退回只用 STUN）。連線會優先直連，直連不通才走中繼。暫停選單顯示「直連／經中繼伺服器」（房主看到「N 人經中繼伺服器」），FPS 列加上「中繼」。網址加 `?relay=1` 會強制只走中繼，用來測試。
+- **驗證**：
+  - `node tools/_samebrowser.mjs relay`：強制只走中繼，約 6.5 秒進房，一起開打。朋友端顯示 relay，房主顯示 1 人經中繼。不強制時照常 direct。
+  - `RELAY=1 node tools/_nettest.mjs rtc`：全程走中繼，移動後位置差 2.4 cm，命中、擊殺、重生同步。
+- **另外查了「卡頓、GPU 很吃」**（`tools/_perfver.mjs`、`_gpuuse.mjs`、`_cpuprof.mjs`、`_pacetest.mjs`、`_gpuab2.mjs`）：
+  - 現在的版本和 v24 在 Intel UHD 1080p 上都是約 33 FPS，GPU 用量相同，選單都是 0%。
+  - NVIDIA GTX 1650 Ti 上是 60 FPS、高畫質。
+  - 結論：遊戲沒有變慢，是 Chrome 改用了 Intel 內顯。已請使用者在 Windows 圖形設定把 Chrome 設成高效能。
+  - 內顯上關陰影、降解析度、關 HUD、拿掉 CSS 濾鏡都只差 1–4 FPS。GPU 跳幀機制少 4 FPS，但能避免多 50–100 ms 的延遲，所以保留。
 
 ## 數值調整紀錄
 
