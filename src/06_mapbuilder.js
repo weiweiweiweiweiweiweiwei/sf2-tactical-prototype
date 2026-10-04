@@ -608,7 +608,7 @@ class MapBuilder {
       const bb = new THREE.Box3(new THREE.Vector3(T.x0 + ci * T.s, lo, T.z0 + cj * T.s), new THREE.Vector3(T.x0 + i1 * T.s, hi, T.z0 + j1 * T.s));
       g.boundingBox = bb; g.boundingSphere = bb.getBoundingSphere(new THREE.Sphere()); chunks.push(g);
     }
-    const G = this.lib.get('grass'), R = this.lib.get('rock'), D = this.lib.get('dirt');
+    const G = this.lib.get(this.def.ground || 'grass'), R = this.lib.get('rock'), D = this.lib.get(this.def.groundDirt || 'dirt'); // v43: snow / sand ground per map
     const mat = new THREE.MeshStandardMaterial({ map: G.map, normalMap: G.normalMap, roughness: 0.96, metalness: 0 });
     mat.normalScale.set(0.85, 0.85); mat.userData.keep = true;
     mat.onBeforeCompile = (sh) => {

@@ -1305,6 +1305,70 @@ const MAPS = [
       b.spawnZone('alpha', -68, 32, -60, 40, Math.atan2(-64, 36)); b.spawnZone('bravo', 60, -40, 68, -32, Math.atan2(64, -36));
     },
   },
+  {
+    // v43 POLAR STATION (after SF2 'Polar Research Institute' / 'Construction Site' plans): a research compound on a central
+    // plateau (B, 6 m). One flank is a maze of narrow snow trenches with many crossings; the other drops to two frozen lakes
+    // (A / C, -1 m) reached by long switchbacks. Diagonal spawns, point-symmetric.
+    id: 'polar', name: '雪嶺研究站', en: 'POLAR STATION', desc: '戶外雪地地形 · 對角出生、壕溝迷宮、中央研究站台地、結冰湖 · 150×110', slogan: 'WHITEOUT · 壕溝裡近戰，冰湖上狙擊',
+    look: { desat: 0.4, contrast: 1.08, pivot: 0.45, highlights: 1.02 },
+    bounds: { minX: -75, maxX: 75, minZ: -55, maxZ: 55 }, indoor: false, navLevels: [6, 9.4], navStep: 2, viewMult: 1.15, radarRange: 34,
+    ground: 'snow', groundDirt: 'snow',
+    hdri: 'snow_field_puresky', hdriBackground: true, envIntensity: 0.55, sky: { turbidity: 10, rayleigh: 0.6, elevation: 22, azimuth: 200 },
+    sun: { pos: [40, 30, -50], color: 0xfff4e6, intensity: 2.5, auto: true }, hemi: [0xdfe8f5, 0x8a9098, 0.95], exposure: 0.92,
+    fog: { color: 0xdde4ea, near: 40, far: 190 }, acoustics: 'canyon', ambience: 'snow', shadowFollow: 60, snow: true,
+    shot: { pos: [-34, 16, -20], target: [0, 6, 0] },
+    objectives: { dom: [[18, -1, -30], [0, 6, 0], [-18, -1, 30]], relic: [0, 6, 0], domRadius: 5 },
+    build(b) {
+      const LT = b.def._lanes || (b.def._lanes = makeLaneTerrain({
+        top: 16, wall: 2.6, dirt: 0.6,
+        lanes: [
+          { w: 7, pts: [[-60, -36, 8], [-48, -24, 8], [-36, -22, 7.2], [-26, -12, 6.6], [-12, -5, 6]] },                // main road up to the compound
+          { w: 4, pts: [[-60, -36, 8], [-64, -18, 7.5], [-58, 2, 6.5], [-46, 14, 5], [-32, 24, 3], [-18, 30, -1]] },     // outer trench → north lake (C)
+          { w: 3.6, pts: [[-58, 2, 6.5], [-44, 0, 6.5], [-32, -6, 6.8], [-26, -12, 6.6]] },                            // trench crossover 1
+          { w: 3.6, pts: [[-46, 14, 5], [-36, 10, 5.5], [-24, 8, 6], [-12, 6, 6]] },                                    // trench crossover 2 → compound NW gate
+          { w: 3.6, pts: [[-44, 0, 6.5], [-40, 10, 6], [-36, 10, 5.5]] },                                               // short link (maze)
+          { w: 3.6, pts: [[-32, 24, 3], [-24, 16, 4.5], [-24, 8, 6]] },                                                 // lake ← trench climb
+          { w: 6, pts: [[-60, -36, 8], [-46, -50, 6], [-26, -52, 3.5], [-6, -46, 1], [10, -38, -1], [18, -30, -1]] },     // south switchback → south lake (A)
+          { w: 4.5, pts: [[-26, -52, 3.5], [-18, -36, 5], [-8, -18, 6], [-4, -8, 6]] },                                 // climb from the south road to the compound
+        ],
+        arenas: [[-60, -36, 10, 8, 8], [0, 0, 12, 9, 6], [18, -30, 10, 7, -1], [-40, 6, 5, 5, 6.2]],
+      }));
+      b.terrain({ minX: -96, maxX: 96, minZ: -76, maxZ: 76, step: 1.5, sample: (x, z) => LT.sample(x, z) });
+      for (const [x0, z0, x1, z1] of [[-77, -57, 77, -55], [-77, 55, 77, 57], [-77, -55, -75, 55], [75, -55, 77, 55]]) b.box(x0, -20, z0, x1, 60, z1, null, { blocksShot: false, radar: false });
+      if (!b.dry) { // frozen lakes: a pale ice sheet just above the lake floor
+        const im = b.lib.basic('lakeIce', () => new THREE.MeshPhysicalMaterial({ color: 0xb9d4e2, roughness: 0.18, metalness: 0, clearcoat: 0.6 }));
+        for (const s of [1, -1]) { const g = new THREE.CircleGeometry(1, 40); g.rotateX(-Math.PI / 2); g.scale(10.5, 1, 7.5); g.translate(18 * s, -0.94, -30 * s); const ms = new THREE.Mesh(g, im); ms.receiveShadow = true; b.scene.add(ms); }
+      }
+      // research compound on the plateau: main lab (2 floors, roof reachable), a dome, radio mast, crates
+      b.building({ x0: -4.5, z0: -3.5, x1: 4.5, z1: 3.5, y0: b.gyMin(-5, -4, 5, 4) + 0.05, floors: 2, fh: 3.2, mat: 'concreteWall', doors: { w: [0], e: [0], n: [-2], s: [2] }, ladder: { side: 'n', at: 2.5 } });
+      b.snowfall(-75, -55, 75, 55, 900);
+      b.sym((s) => {
+        const X = (x) => x * s, Z = (z) => z * s, G = (x, z) => b.gy(X(x), Z(z));
+        const footMin = (x, z, r) => b.gyMin(Math.min(X(x - r), X(x + r)), Math.min(Z(z - r), Z(z + r)), Math.max(X(x - r), X(x + r)), Math.max(Z(z - r), Z(z + r)));
+        const ROCK = (x, z, r) => b.boulder(X(x), Z(z), r, { y0: footMin(x, z, r * 0.6) - r * 0.2, sy: 0.7 });
+        const CRATE = (x, z, sz) => b.crate(X(x), Z(z), sz, footMin(x, z, sz / 2) - 0.03);
+        const BAGS = (x0, z0, x1, z1, h = 1.05) => b.sandbags(X(x0), Z(z0), X(x1), Z(z1), h + 0.12, b.gyMin(Math.min(X(x0), X(x1)), Math.min(Z(z0), Z(z1)), Math.max(X(x0), X(x1)), Math.max(Z(z0), Z(z1))) - 0.12);
+        const PINE = (x, z, h = 8) => b.tree(X(x), Z(z), 'pine', h, G(x, z) - 0.25);
+        // compound yard: generator shed, fuel tanks, crates, a parked snowcat (car)
+        b.box(Math.min(X(-11), X(-7.5)), G(-9, 6) - 0.1, Math.min(Z(4.5), Z(7.5)), Math.max(X(-11), X(-7.5)), G(-9, 6) + 2.6, Math.max(Z(4.5), Z(7.5)), 'siding', { radar: 'building' });
+        b.cyl(X(8), Z(-6.5), 1.1, G(8, -6.5) - 0.1, G(8, -6.5) + 2.2, 'whiteSteel', { seg: 16, radar: 'crate' });
+        CRATE(-8, -5, 1.2); CRATE(-6.8, -5.3, 0.9); BAGS(-11, -2, -10.2, 1); b.car(X(6), Z(6.8), Math.PI / 2, 'yellowSteel', footMin(6, 6.8, 2) - 0.05);
+        // trench maze: sandbag lips, crates at the corners
+        BAGS(-50, 3, -48, 3.8); BAGS(-37, 8.6, -35, 9.4); CRATE(-44, 1, 1.0); CRATE(-26, 9, 1.0); CRATE(-34, 21, 1.0); BAGS(-62, -10, -61.2, -7);
+        // south switchback & lake: rocks and ice-fishing huts on the lake edge
+        ROCK(-38, -52, 1.8); ROCK(-16, -48, 1.5); ROCK(-14, -30, 1.4); ROCK(4, -40, 1.6);
+        b.box(Math.min(X(22), X(25)), G(23.5, -24) - 0.1, Math.min(Z(-25.5), Z(-22.5)), Math.max(X(22), X(25)), G(23.5, -24) + 2.4, Math.max(Z(-25.5), Z(-22.5)), 'wood', { radar: 'building', material: 'wood', penetrable: true });
+        CRATE(12, -27, 1.0); ROCK(24, -35, 1.3);
+        PINE(-52, -46, 9); PINE(-68, -2, 8.5); PINE(-30, -40, 8); PINE(-20, 36, 8);
+        // spawn camp
+        const tint = s > 0 ? 'canvasBlue' : 'canvasRed';
+        b.box(Math.min(X(-68), X(-64)), G(-66, -42) - 0.1, Math.min(Z(-44), Z(-40)), Math.max(X(-68), X(-64)), G(-66, -42) + 2.6, Math.max(Z(-44), Z(-40)), tint, { radar: 'building', material: 'sandbag' });
+        CRATE(-54, -40, 1.2); CRATE(-53, -39, 0.9); BAGS(-52, -32, -50, -31.2);
+        b.sign(s > 0 ? 'ALPHA' : 'BRAVO', s > 0 ? '#6fb6ff' : '#ff6a5f', X(-69.5), G(-69, -36) + 2.6, Z(-36), s > 0 ? Math.PI / 2 : -Math.PI / 2, 3.2, 0.8);
+      });
+      b.spawnZone('alpha', -64, -40, -56, -32, Math.atan2(-60, -36)); b.spawnZone('bravo', 56, 32, 64, 40, Math.atan2(60, 36));
+    },
+  },
 ];
 
 // Radar/thumbnail rendering from the builder's footprint list.
