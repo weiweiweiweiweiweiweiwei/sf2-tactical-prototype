@@ -1230,6 +1230,42 @@ const WEAPON_DATABASE = {
     hipSpread: 0.036, adsSpread: 0.0042, adsFov: 58, adsType: '3d_sight', mobility: 1.02, maxAmmo: 5, reloadTime: 2.4, modelUrl: null,
     model: 'deagle', sound: 'deagle', rate: 1.14, range: 170, tp: { len: 0.18, body: 'steel', pistol: true }, desc: '.38 左輪：5 發，身體 3 發、爆頭 1 發。',
   },
+  // ---------------- v40 batch 2 ----------------
+  m14ebr: {
+    name: 'M14 EBR', type: 'sniper', slot: 'primary', damageNear: 58, damageFar: 48, falloffStart: 45, falloffEnd: 160, fireRate: 0.26, recoilPitch: 0.04, recoilYaw: 0.012, recoilRecovery: 8,
+    hipSpread: 0.09, adsSpread: 0.001, adsFov: 30, adsType: '2d_scope_overlay', mobility: 0.89, maxAmmo: 20, reloadTime: 2.8, modelUrl: null,
+    model: 'svd', sound: 'svd', rate: 1.02, bolt: false, zoomFovs: [30, 15], penetration: 2, range: 380, adsSpeed: 18, tracerEvery: 1, tp: { len: 1.05, body: 'dark', mag: 'box', scope: true }, desc: '半自動精確射手步槍，射速最快的狙擊選項。',
+  },
+  type89: {
+    name: 'Howa Type 89', type: 'assault', slot: 'primary', damageNear: 26, damageFar: 20, falloffStart: 25, falloffEnd: 65, fireRate: 0.08, recoilPitch: 0.0098, recoilYaw: 0.0078, recoilRecovery: 11,
+    hipSpread: 0.07, adsSpread: 0.0019, adsFov: 54, adsType: '3d_sight', mobility: 0.95, maxAmmo: 30, reloadTime: 2.3, modelUrl: null,
+    model: 'm4', sound: 'm4', rate: 1.06, penetration: 1, tp: { len: 0.92, body: 'dark', mag: 'box' }, desc: '日本自衛隊步槍，後座低、連射穩定。',
+  },
+  l86a1: {
+    name: 'L86A1 LSW', type: 'lmg', slot: 'primary', damageNear: 27, damageFar: 22, falloffStart: 35, falloffEnd: 85, fireRate: 0.085, recoilPitch: 0.009, recoilYaw: 0.008, recoilRecovery: 10,
+    hipSpread: 0.085, adsSpread: 0.0016, adsFov: 42, adsType: 'red_dot', mobility: 0.86, maxAmmo: 30, reloadTime: 2.8, modelUrl: null,
+    model: 'aug', sound: 'm4', rate: 0.97, penetration: 2, range: 300, adsSpeed: 13, tracerEvery: 2, tp: { len: 0.9, body: 'dark', mag: 'box', bull: true }, desc: '英軍無托輕機槍：彈匣只有 30 發，但精準度是機槍裡最高的。',
+  },
+  hk23e: {
+    name: 'HK23E', type: 'lmg', slot: 'primary', damageNear: 28, damageFar: 22, falloffStart: 30, falloffEnd: 80, fireRate: 0.072, recoilPitch: 0.0115, recoilYaw: 0.014, recoilRecovery: 8,
+    hipSpread: 0.09, adsSpread: 0.004, adsFov: 55, adsType: '3d_sight', mobility: 0.8, maxAmmo: 100, reloadTime: 5.4, modelUrl: null,
+    model: 'm249', sound: 'm249', rate: 1.02, penetration: 2, range: 300, adsSpeed: 10, reserveMult: 2, tracerEvery: 2, tp: { len: 1.04, body: 'dark', mag: 'box' }, desc: 'HK 彈鏈機槍，100 發，射速與 M249 相近。',
+  },
+  frf2: {
+    name: 'FR-F2', type: 'sniper', slot: 'primary', damageNear: 112, damageFar: 98, falloffStart: 60, falloffEnd: 200, fireRate: 1.4, recoilPitch: 0.066, recoilYaw: 0.01, recoilRecovery: 6,
+    hipSpread: 0.14, adsSpread: 0.0, adsFov: 19, adsType: '2d_scope_overlay', mobility: 0.8, maxAmmo: 10, reloadTime: 3.5, modelUrl: null,
+    model: 'awp', sound: 'awp', rate: 1.06, zoomFovs: [19, 8], penetration: 2, range: 450, adsSpeed: 16, tracerEvery: 1, tp: { len: 1.14, body: 'dark', mag: 'box', scope: true }, desc: '法軍栓動狙擊槍，10 發，身體 1 發。',
+  },
+  cz700: {
+    name: 'CZ 700', type: 'sniper', slot: 'primary', damageNear: 108, damageFar: 94, falloffStart: 60, falloffEnd: 200, fireRate: 1.3, recoilPitch: 0.062, recoilYaw: 0.01, recoilRecovery: 6,
+    hipSpread: 0.13, adsSpread: 0.0, adsFov: 20, adsType: '2d_scope_overlay', mobility: 0.84, maxAmmo: 10, reloadTime: 3.2, modelUrl: null,
+    model: 'kar98k', sound: 'kar98', rate: 1.08, zoomFovs: [20, 9], penetration: 2, range: 420, adsSpeed: 18, tracerEvery: 1, tp: { len: 1.1, body: 'dark', mag: 'box', scope: true }, desc: '捷克栓動狙擊槍，拉栓快、移動靈活。',
+  },
+  infinity: {
+    name: 'Infinity', type: 'pistol', slot: 'secondary', damageNear: 29, damageFar: 19, falloffStart: 10, falloffEnd: 35, fireRate: 0.13, recoilPitch: 0.024, recoilYaw: 0.005, recoilRecovery: 14,
+    hipSpread: 0.026, adsSpread: 0.0032, adsFov: 60, adsType: '3d_sight', mobility: 1.01, maxAmmo: 17, reloadTime: 1.5, modelUrl: null,
+    model: 'p226', sound: 'm1911', rate: 1.06, range: 170, tp: { len: 0.24, body: 'steel', pistol: true }, desc: '競賽級手槍，射速快、精準度高、後座小。',
+  },
 };
 
 const TYPE_TUNING = { // spread growth / movement penalties per weapon family
@@ -1338,6 +1374,13 @@ const WEAPON_BLURBS = {
   cz75: '射速快的 16 發手槍。',
   jericho: '單發較重的 9mm 手槍。',
   sw60: '5 發左輪，單發威力大。',
+  m14ebr: '射速最快的半自動狙擊。',
+  type89: '後座低的日本步槍。',
+  l86a1: '最精準的機槍，30 發彈匣。',
+  hk23e: '100 發彈鏈機槍。',
+  frf2: '10 發栓動狙擊槍。',
+  cz700: '拉栓快的輕巧狙擊槍。',
+  infinity: '競賽級高精度手槍。',
 };
 const TYPE_LABEL = { assault: '突擊步槍', smg: '衝鋒槍', lmg: '輕機槍', shotgun: '散彈槍', sniper: '狙擊槍', pistol: '手槍' };
 
@@ -1372,9 +1415,9 @@ const MODES = {
   knife: { name: '小刀戰', desc: '全員只能拿刀，貼身肉搏', slots: ['knife'] },
 };
 const BOT_POOLS = {
-  general: ['m4a1', 'ak47', 'g36c', 'scarl', 'famas', 'aug', 'mp5', 'p90', 'ump45', 'vector', 'mp7', 'remington870', 'benelli_m4', 'saiga12', 'm249', 'rpk', 'negev', 'pkm', 'cheytac_m200', 'awp', 'svd', 'kar98k', 'm16a3', 'k2', 'xm8', 'galil', 'sg551', 'hk417', 'scarh', 'qbz97', 'pp2000', 'vz61', 'aa12', 'mg4', 'k3', 'm40a1', 'sr25', 'psg1'],
-  rifle: ['m4a1', 'ak47', 'g36c', 'scarl', 'famas', 'aug', 'mp5', 'p90', 'ump45', 'vector', 'mp7', 'm249', 'rpk', 'negev', 'pkm', 'mg42', 'm16a3', 'k2', 'xm8', 'galil', 'sg551', 'hk417', 'scarh', 'qbz97', 'pp2000', 'vz61', 'mg4', 'k3'],
-  sniper: ['cheytac_m200', 'awp', 'barrett', 'kar98k', 'svd', 'm40a1', 'sr25', 'psg1'], pistol: ['p226', 'deagle', 'glock18', 'usp', 'm1911', 'm92fs', 'cz75', 'jericho', 'sw60'], knife: ['knife'],
+  general: ['m4a1', 'ak47', 'g36c', 'scarl', 'famas', 'aug', 'mp5', 'p90', 'ump45', 'vector', 'mp7', 'remington870', 'benelli_m4', 'saiga12', 'm249', 'rpk', 'negev', 'pkm', 'cheytac_m200', 'awp', 'svd', 'kar98k', 'm16a3', 'k2', 'xm8', 'galil', 'sg551', 'hk417', 'scarh', 'qbz97', 'pp2000', 'vz61', 'aa12', 'mg4', 'k3', 'm40a1', 'sr25', 'psg1', 'm14ebr', 'type89', 'l86a1', 'hk23e', 'frf2', 'cz700'],
+  rifle: ['m4a1', 'ak47', 'g36c', 'scarl', 'famas', 'aug', 'mp5', 'p90', 'ump45', 'vector', 'mp7', 'm249', 'rpk', 'negev', 'pkm', 'mg42', 'm16a3', 'k2', 'xm8', 'galil', 'sg551', 'hk417', 'scarh', 'qbz97', 'pp2000', 'vz61', 'mg4', 'k3', 'type89', 'l86a1', 'hk23e'],
+  sniper: ['cheytac_m200', 'awp', 'barrett', 'kar98k', 'svd', 'm40a1', 'sr25', 'psg1', 'm14ebr', 'frf2', 'cz700'], pistol: ['p226', 'deagle', 'glock18', 'usp', 'm1911', 'm92fs', 'cz75', 'jericho', 'sw60', 'infinity'], knife: ['knife'],
 };
 
 // Match rules (state-machine classes live in the match module).
