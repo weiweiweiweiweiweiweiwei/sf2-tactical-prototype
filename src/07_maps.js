@@ -746,14 +746,15 @@ const MAPS = [
     // carved out of solid rock on a 1 m grid, point-symmetric. Each team has three routes: north (machine room → security
     // A), middle (zig-zag corridor → octagonal control room B) and south (generator room → security C).
     id: 'satellite', name: '衛星基地', en: 'SATELLITE BASE', desc: '室內 · 彎曲走廊、機房、八角控制室、雙保全室 · 84×52', slogan: 'RELAY STATION · 走廊轉角與房間攻防',
-    look: { exposure: 0.66, desat: 0.3, contrast: 1.14, pivot: 0.3, midtones: 1.04 },
+    look: { exposure: 0.9, desat: 0.25, contrast: 1.08, pivot: 0.3, midtones: 1.1 },
     bounds: { minX: -42, maxX: 42, minZ: -26, maxZ: 26 }, indoor: true, navLevels: [0],
     hdri: 'empty_warehouse_01', hdriBackground: false, background: 0x101317, envIntensity: 0.25,
-    sun: { pos: [-16, 42, 10], color: 0xeef4ff, intensity: 0.4 }, hemi: [0xb9c4d0, 0x30343a, 0.32], exposure: 1.0,
+    sun: { pos: [-16, 42, 10], color: 0xeef4ff, intensity: 0.4 }, hemi: [0xc9d2dc, 0x4a4e54, 0.9], exposure: 1.3,
     fog: { color: 0x14181c, near: 30, far: 100 }, acoustics: 'office', ambience: 'warehouse',
     shot: { pos: [-6, 2.6, -6], target: [6, 1.2, 6] },
     objectives: { dom: [[0, 0, 20.5], [0, 0, 0], [0, 0, -20.5]], relic: [0, 0, 0], domRadius: 3.2 },
     build(b) {
+      const L = (x, y, z, c, i, d) => b.light(x, y, z, c, i * 1.8, d * 1.4); // v37: brighter rooms — soldiers must read against concrete
       const H = 3.6, B = { x0: -42, z0: -26, x1: 42, z1: 26 }, W = B.x1 - B.x0, D = B.z1 - B.z0;
       // ---- carve the walkable space (alpha half; every rect is also carved point-mirrored) ----
       const open = new Uint8Array(W * D), carve = (x0, z0, x1, z1) => {
@@ -806,14 +807,14 @@ const MAPS = [
         // control room: consoles in a ring around the dish pedestal
         bx(-6.5, 0, -1.2, -5.7, 1.1, 1.2, 'darkSteel', { material: 'metal', radar: 'crate' }); bx(-1.2, 0, 5.7, 1.2, 1.1, 6.5, 'darkSteel', { material: 'metal', radar: 'crate' });
         // lights
-        b.light(X(-36), 3.2, 0, 0xdfe8ff, 30, 14); b.light(X(-14), 3.2, Z(18), 0xcfe0ff, 26, 13); b.light(X(-14), 3.2, Z(-18), 0xffe2c0, 26, 13);
-        b.light(0, 3.2, Z(20.5), 0xfff0dc, 24, 12); b.light(X(-25.5), 3.2, Z(9), 0xdfe8ff, 14, 9); b.light(X(-20), 3.2, 0, 0xdfe8ff, 14, 9); b.light(X(-25.5), 3.2, Z(-9), 0xdfe8ff, 14, 9);
+        L(X(-36), 3.2, 0, 0xdfe8ff, 30, 14); L(X(-14), 3.2, Z(18), 0xcfe0ff, 26, 13); L(X(-14), 3.2, Z(-18), 0xffe2c0, 26, 13);
+        L(0, 3.2, Z(20.5), 0xfff0dc, 24, 12); L(X(-25.5), 3.2, Z(9), 0xdfe8ff, 14, 9); L(X(-20), 3.2, 0, 0xdfe8ff, 14, 9); L(X(-25.5), 3.2, Z(-9), 0xdfe8ff, 14, 9);
         b.sign(s > 0 ? 'ALPHA' : 'BRAVO', s > 0 ? '#6fb6ff' : '#ff6a5f', X(-40.8), 2.6, 0, s > 0 ? Math.PI / 2 : -Math.PI / 2, 3.2, 0.8);
         b.paint(Math.min(X(-41), X(-40.6)), -7, Math.max(X(-41), X(-40.6)), 7, s > 0 ? 0x3a7fd0 : 0xd0453a);
       });
       b.cyl(0, 0, 1.3, 0, 0.9, 'whiteSteel', { seg: 20, radar: 'crate' }); // dish pedestal (B)
       for (let x = -40; x <= 40; x += 4) for (let z = -24; z <= 24; z += 4) { const i = (z - B.z0) * W + (x - B.x0); if (open[i]) b.panel(x, z, H, 1.1, 0.5); }
-      b.light(0, 3.3, 0, 0xcfe6ff, 40, 16);
+      L(0, 3.3, 0, 0xcfe6ff, 40, 16);
       b.spawnZone('alpha', -40.4, -6, -35.5, 6, -Math.PI / 2); b.spawnZone('bravo', 35.5, -6, 40.4, 6, Math.PI / 2);
     },
   },
@@ -824,8 +825,8 @@ const MAPS = [
     id: 'farmhouse', name: '農莊', en: 'FARMHOUSE', desc: '戶外 · 不規則田野、農舍、乾草倉狙擊點、中央火箭車殘骸 · 92×64', slogan: 'HARVEST · 木牆與乾草可穿射，開闊地形',
     look: { desat: 0.36, contrast: 1.1, pivot: 0.4, highlights: 1.04 },
     bounds: { minX: -46, maxX: 46, minZ: -32, maxZ: 32 }, indoor: false, navLevels: [0, 3.2, 4.4, 6.4],
-    hdri: 'kloofendal_48d_partly_cloudy_puresky', hdriBackground: true, envIntensity: 0.5, sky: { turbidity: 5, rayleigh: 1.4, elevation: 40, azimuth: 210 },
-    sun: { pos: [-30, 55, 25], color: 0xfff0dc, intensity: 2.8, auto: true }, hemi: [0xdbe6f5, 0x5c5a3a, 0.5], exposure: 0.9,
+    hdri: 'kloofendal_48d_partly_cloudy_puresky', hdriBackground: true, envIntensity: 0.8, sky: { turbidity: 5, rayleigh: 1.4, elevation: 40, azimuth: 210 },
+    sun: { pos: [-30, 55, 25], color: 0xfff0dc, intensity: 2.8, auto: true }, hemi: [0xdbe6f5, 0x7a7658, 1.0], exposure: 0.9,
     fog: { color: 0xc9d3d8, near: 60, far: 200 }, acoustics: 'outdoor', ambience: 'hill',
     shot: { pos: [-14, 9, 20], target: [2, 1, -2] },
     objectives: { dom: [[0, 0, 16], [0, 0, 0], [0, 0, -16]], relic: [0, 0, 7], domRadius: 4 },

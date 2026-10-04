@@ -498,7 +498,7 @@ const MAT_PRESETS = {
   ruinDark:     { s: 'ruinStone', arg: '#8f8470', rough: 0.95, metal: 0, tile: 3 },
   olive:        { s: 'fabric', rough: 0.85, metal: 0, tile: 1, color: 0x7d9148 },
   foliageDark:  { s: 'fabric', rough: 0.92, metal: 0, tile: 1, color: 0x34492a, side: THREE.DoubleSide },
-  hedge:        { s: 'grass', rough: 1, metal: 0, tile: 1.5, color: 0x6f8f45 }, // v35 farm hedges
+  hedge:        { s: 'grass', rough: 1, metal: 0, tile: 1.5, color: 0x8fb35a }, // v35 farm hedges
   relicGold:    { s: 'metal', rough: 0.25, metal: 1, tile: 1, color: 0xe2b24c, env: 1.4 },
 };
 const CONTAINER_COLORS = ['#7a4a3f', '#3f5669', '#4a5c45', '#8f6d48', '#666a6d', '#6a4450', '#9c8d52', '#3f6363']; // v17: weathered, sun-faded paint

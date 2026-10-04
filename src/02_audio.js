@@ -446,20 +446,21 @@ class AudioEngine {
 
   // COD-style hit confirmation — dry, crisp and WIDE: every layer is doubled into a left and a right voice
   // (slightly detuned and 4 ms apart) so the tick / ding sits across the whole stereo field.
-  // v36 hit confirm (user: no "kill success" sound; SF2 body hits are juicy / wet): a fat flesh thud, a wet splat that
-  // sweeps down, a few squelch bubbles and a slap transient. Headshots add a bone crack; the killing hit is just a heavier hit.
+  // v37 hit confirm (user: SF2 body hits are juicy): a real CC0 wet squish on every body hit, a wet splat on the killing hit,
+  // under a short meaty thud + slap; headshots add a bone crack. No separate "kill success" jingle.
   hit(kind) {
     if (!this.ctx) return;
     const ctx = this.ctx, t = ctx.currentTime, out = ctx.createGain(); out.gain.value = 0.85; out.connect(this.dry);
     if (kind === 'shield') { this._osc('sine', t, 1200, 1800, 0.12, out, 0.16); this._osc('sine', t, 2400, 3000, 0.1, out, 0.07); return; }
-    const k = kind === 'kill' ? 1.25 : kind === 'head' ? 1.1 : 1;
-    this._osc('sine', t, 170, 55, 0.08, out, 0.5 * k, 0.001);                                                     // flesh thud
-    const sp = this._nb(t, out, 'bandpass', 1900, 1.3, 0.42 * k, 0.001, 0.055); sp.frequency.setValueAtTime(2100, t); sp.frequency.exponentialRampToValueAtTime(520, t + 0.07); // wet splat
-    for (let i = 0; i < 3; i++) { const tt = t + 0.014 + i * (0.01 + Math.random() * 0.012); this._nb(tt, out, 'bandpass', 650 + Math.random() * 1100, 7, 0.18 * k, 0.0008, 0.014); } // squelch
-    this._nb(t, out, 'highpass', 2800, 0.7, 0.22, 0.0004, 0.007);                                                  // slap
-    if (kind === 'head') { this._nb(t, out, 'highpass', 5200, 0.9, 0.3, 0.0003, 0.006); this._osc('triangle', t, 1300, 700, 0.028, out, 0.18, 0.0005); } // bone crack
-    if (kind === 'kill') this._nb(t + 0.03, out, 'lowpass', 900, 0.8, 0.3, 0.004, 0.09);                         // spray tail
+    const k = kind === 'kill' ? 1.25 : kind === 'head' ? 1.1 : 1, wet = this._s('hit_wet'), splat = this._s('hit_splat');
+    if (wet) this._one(pick(wet), out, 1.1 * k, 0.92 + Math.random() * 0.2);
+    if (splat && kind === 'kill') this._one(pick(splat), out, 0.9, 0.95 + Math.random() * 0.12);
+    this._osc('sine', t, 170, 55, 0.07, out, (wet ? 0.35 : 0.5) * k, 0.001);                                       // flesh thud
+    this._nb(t, out, 'highpass', 2800, 0.7, 0.18, 0.0004, 0.006);                                                   // slap
+    if (!wet) { const sp = this._nb(t, out, 'bandpass', 1900, 1.3, 0.42 * k, 0.001, 0.055); sp.frequency.setValueAtTime(2100, t); sp.frequency.exponentialRampToValueAtTime(520, t + 0.07); } // synth fallback until the pack loads
+    if (kind === 'head') { this._nb(t, out, 'highpass', 5200, 0.9, 0.28, 0.0003, 0.006); this._osc('triangle', t, 1300, 700, 0.028, out, 0.16, 0.0005); } // bone crack
   }
+
 
 
 

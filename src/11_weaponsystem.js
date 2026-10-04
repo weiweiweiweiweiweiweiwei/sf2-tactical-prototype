@@ -201,7 +201,7 @@ class WeaponSystem extends Arsenal {
   onInventory() { if (this.scene.environment && this.game.applyEnvIntensity) this.game.applyEnvIntensity(); this.game.app.hud.setWeapon(this); }
   onSwitch() {
     this.kickPos.set(0, 0, 0); this.kickVel.set(0, 0, 0); this.kickRot.set(0, 0, 0); this.kickRotVel.set(0, 0, 0);
-    const k = this.current.kind; this.game.audio.mech(k === 'knife' ? 'draw_knife' : k === 'grenade' ? 'draw_grenade' : k === 'pistol' ? 'draw_pistol' : 'draw_rifle'); this.game.audio.mech('draw'); this.game.app.hud.setWeapon(this);
+    this.game.audio.mech('draw_rifle'); this.game.audio.mech('draw'); // v37 (user): one switch sound for every item — the primary-gun one this.game.app.hud.setWeapon(this);
   }
   onZoomSound() { this.game.audio.mech('zoom'); }
   onFired() { this.game.app.hud.setWeapon(this); }

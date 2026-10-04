@@ -631,9 +631,14 @@ function camoMat(mat) {
       sh.fragmentShader.replace('#include <color_fragment>', `#include <color_fragment>
       if (vCamo > 0.5) { vec3 q = vCamoP * 9.0; float a = cF(q), b = cF(q * 1.3 + 31.0);
         vec3 c = camo1; if (a > 0.56) c = camo0; if (b > 0.6) c = camo2; if (a < 0.36 && b < 0.5) c = camo3;
-        diffuseColor.rgb = diffuseColor.rgb / max(vColor.rgb, vec3(0.02)) * c; }`); // keep the fabric weave from the map
+        diffuseColor.rgb = diffuseColor.rgb / max(vColor.rgb, vec3(0.02)) * c; }`) // keep the fabric weave from the map
+      // v37 VISIBILITY (user: soldiers vanish against dark walls): a steady cool rim on the silhouette edge + a small self-light
+      // lift so the shadow side never goes black. Constant — no blinking.
+      .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
+      { float fr = 1.0 - clamp(dot(normal, normalize(vViewPosition)), 0.0, 1.0);
+        totalEmissiveRadiance += vec3(0.62, 0.68, 0.72) * pow(fr, 2.6) * 0.55 + diffuseColor.rgb * 0.2; }`);
   };
-  mat.customProgramCacheKey = () => 'camo' + pal.join(',');
+  mat.customProgramCacheKey = () => 'camo2' + pal.join(',');
   return mat;
 }
 // v24: three r160 draws every shadow caster with ONE shared depth material, so skinned soldiers interleaved with static meshes

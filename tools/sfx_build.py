@@ -120,6 +120,14 @@ def loop(path, seconds, start=0.0, stereo=True, xf=2.0):
     seg = seg[:n]; seg[:x] = head * w + tail * (1 - w)
     rms = np.sqrt(np.mean(seg ** 2)); return seg * (0.18 / rms) if rms > 0 else seg  # all loops at the same loudness; the game sets levels
 
+def wet(paths, length):
+    """v37 wet flesh hits: cut from the onset (10 % of the peak envelope) so the squelch lands on the hit frame"""
+    out = []
+    for f in paths:
+        a = load(f); e = envelope(a, 2); on = int(np.argmax(e > e.max() * 0.1))
+        out.append(cut(a, on, length, fade=0.5))
+    return out
+
 def main():
     pack, sizes = {}, {}
     def put(name, arrs, kbps, ch=1):
@@ -144,6 +152,10 @@ def main():
     put('hitglass', kenney(K_IMP, 'impactGlass_light', 5, trim=0.5), 48)
     put('hitsoft', kenney(K_IMP, 'impactSoft_medium', 5, trim=0.3), 48)
     put('punch', kenney(K_IMP, 'impactPunch_medium', 5, trim=0.3), 48)
+    # v37 juicy body hits: 'Squish Sounds Effects' (CC0) + Independent.nu 'wet squish, slurp impacts' (CC0)
+    WET = os.path.join(SRC, 'dl', 'wet')
+    put('hit_wet', wet([os.path.join(WET, f + '.mp3') for f in ['squish_01_0', 'squish_02', 'squish_03', 'squish_04', 'squish_05', 'squish_06', 'squishsplat_impact']], 0.28), 56)
+    put('hit_splat', wet([os.path.join(WET, 'x', 'impsplat', 'impactsplat0%d.mp3.flac' % i) for i in (1, 3, 6, 7)], 0.45), 56)
     # ambience loops (stereo) + one-shots
     A = os.path.join(SRC, 'amb')
     # v34: 'amb_birds' (morning bed with a rooster) dropped

@@ -13,6 +13,8 @@
 | 海浪 | [Beach Ocean Waves](https://opengameart.org/content/beach-ocean-waves) | jasinski | CC0 |
 | 遠方車流 | [High traffic road sounds](https://opengameart.org/content/high-traffic-road-sounds) | OpenGameArt | CC0 |
 | 蟲鳴 | [Crickets Ambient Noise](https://opengameart.org/content/crickets-ambient-noise-loopable) | OpenGameArt | CC0 |
+| 命中肉體的濕潤擠壓聲 | [Squish Sounds Effects](https://opengameart.org/content/squish-sounds-effects) | OpenGameArt | CC0 |
+| 致命一擊的噴濺聲 | [8 wet squish, slurp impacts](https://opengameart.org/content/8-wet-squish-slurp-impacts) | Independent.nu（Johannes Pinter） | CC0 |
 | 海鷗 | [Solo Seagull Sound Effects](https://opengameart.org/content/solo-seagull-sound-effects) | OpenGameArt | CC0 |
 
 遊戲裡沒有使用任何《特種部隊 2》的原始音效檔。
