@@ -30,4 +30,5 @@ const r2 = await p.evaluate(async () => {
   m.applyDamage(foe, 999, 'chest', P, m.weapons.current.def, new V(0, 0, -1), null); await sleep(100);
   return { lastKillerSet: lk, deathRun: dr, emblems: P.emblems };
 });
+await p.waitForTimeout(3500); await p.keyboard.down('Tab'); await p.waitForTimeout(500); await p.screenshot({ path: 'tools/out/scoreboard.png' });
 console.log(JSON.stringify(r), JSON.stringify(r2), errs.slice(0, 5)); await b.close(); srv.close();

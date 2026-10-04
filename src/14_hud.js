@@ -146,6 +146,11 @@ class HUD {
     el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
     clearTimeout(this.embT); this.embT = setTimeout(() => this._embNext(), this.embQ.length ? 650 : 1250);
   }
+  // SF2 centre line: 擊殺 [medal] victim name
+  killNote(name, id) {
+    const el = document.getElementById('killNote'); el.innerHTML = `<span class="k">擊殺</span>${emblemSVG(id)}<span class="n"></span>`; el.querySelector('.n').textContent = name;
+    el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
+  }
   emblemClear() { const row = document.getElementById('embRow'); if (row) row.innerHTML = ''; }
   announce(main, sub = '') { const a = this.el.ann; this.el.annMain.textContent = main; this.el.annSub.textContent = sub; a.classList.remove('show'); void a.offsetWidth; a.classList.add('show'); }
 
@@ -184,16 +189,41 @@ class HUD {
   }
   spectate(text) { this._cls('spOn', this.el.spec, 'on', !!text); if (text) this._set('spT', this.el.spec, 'text', text); }
 
+  // v34 SF2-style Tab board: objective + whole-map overview | own team on top, enemy below (score, K/A/D, ping) | my damage per enemy + this match's emblems
   scoreboard(m) {
     const on = !!m; this._cls('sbOn', this.el.sb, 'on', on);
     if (!on) return;
+    const p = m.player, net = m.net, $ = (id) => document.getElementById(id), esc = (t) => String(t).replace(/[&<>"]/g, (ch) => `&#${ch.charCodeAt(0)};`); // names are player-chosen
+    const ping = (c) => c.isBot ? '<small>BOT</small>' : c.isPlayer && net && net.role === 'client' ? `${Math.round(net.rtt || 0)}` : '<span class="dot"></span>';
     const rows = (team) => m.combatants.filter((c) => c.team === team).sort((a, b) => b.score - a.score || b.kills - a.kills)
-      .map((c) => `<tr class="${c.isPlayer ? 'me' : ''}${c.alive ? '' : ' dead'}"><td>${c.isPlayer ? '★ ' : ''}${c.name}${c.isBot ? ' <small style="opacity:.5">BOT</small>' : ''}</td><td>${c.score}</td><td>${c.kills}</td><td>${c.assists}</td><td>${c.deaths}</td></tr>`).join('');
+      .map((c) => `<tr class="${c.isPlayer ? 'me' : ''}${c.alive ? '' : ' dead'}"><td>${esc(c.name)}</td><td>${c.score}</td><td>${c.kills} / ${c.assists} / ${c.deaths}</td><td>${ping(c)}</td></tr>`).join('');
     this.el.sbA.innerHTML = rows('alpha'); this.el.sbB.innerHTML = rows('bravo');
+    $('sbC').classList.toggle('rev', p.team === 'bravo');
     const rounds = m.rules.roundBased;
-    this.el.sbScoreA.textContent = rounds ? `${m.roundWins.alpha} 勝 · ${m.score.alpha} 分` : `${m.score.alpha} 分`;
-    this.el.sbScoreB.textContent = rounds ? `${m.roundWins.bravo} 勝 · ${m.score.bravo} 分` : `${m.score.bravo} 分`;
-    this.el.sbInfo.textContent = `${m.def.name} · ${MODES[m.mode].name} · ${RULES[m.rule].name} · ${DIFFICULTY[m.config.difficulty].name}`;
+    this.el.sbScoreA.textContent = rounds ? m.roundWins.alpha : m.score.alpha; this.el.sbScoreB.textContent = rounds ? m.roundWins.bravo : m.score.bravo;
+    this.el.sbInfo.textContent = `${MODES[m.mode].name} · ${RULES[m.rule].name} · ${DIFFICULTY[m.config.difficulty].name}`;
+    $('sbObj').textContent = this.el.target.textContent || RULES[m.rule].name; $('sbMap').textContent = m.def.name;
+    $('sbKad').innerHTML = `擊殺 <b>${p.kills}</b> / 助攻 <b>${p.assists}</b> / 死亡 <b>${p.deaths}</b>`;
+    const dm = p.dmgDone || new Map(); let tot = 0, h = '';
+    for (const [c, v] of [...dm].sort((a, b) => b[1] - a[1])) { tot += v; h += `<div class="${c.team === 'alpha' ? 'a' : 'b'}"><span>${esc(c.name)}</span><b>${Math.round(v)}</b></div>`; }
+    $('sbDmg').innerHTML = h || '<div><span style="opacity:.5">—</span></div>'; $('sbDmgT').textContent = Math.round(tot);
+    const em = p.emblems || {}; $('sbEmb').innerHTML = Object.keys(EMBLEMS).filter((k) => em[k]).map((k) => `<span title="${EMBLEMS[k].name}">${emblemSVG(k)}<i>${em[k]}</i></span>`).join('') || '<span style="opacity:.5">—</span>';
+    this._overview(m, $('sbMini'));
+  }
+  // whole map, north up, fitted to the canvas: walls / buildings, spawn zones, teammates, me
+  _overview(m, cv) {
+    const ctx = cv.getContext('2d'), S = cv.width, B = m.def.bounds, w = B.maxX - B.minX, d = B.maxZ - B.minZ, k = (S - 16) / Math.max(w, d), p = m.player;
+    ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, S, S);
+    ctx.translate(S / 2, S / 2); ctx.scale(k, k); ctx.translate(-(B.minX + w / 2), -(B.minZ + d / 2));
+    ctx.fillStyle = 'rgba(60,110,80,.25)'; ctx.fillRect(B.minX, B.minZ, w, d);
+    for (const [team, cc] of [['alpha', 'rgba(99,179,255,.3)'], ['bravo', 'rgba(255,93,82,.3)']]) { const z = m.builder.zones[team]; if (z) { ctx.fillStyle = cc; ctx.fillRect(z.x0, z.z0, z.x1 - z.x0, z.z1 - z.z0); } }
+    ctx.fillStyle = 'rgba(190,225,205,.55)';
+    for (const r of m.builder.radar) if (r.kind !== 'ladder' && r.kind !== 'ramp') ctx.fillRect(r.x0, r.z0, r.x1 - r.x0, r.z1 - r.z0);
+    for (const c of m.combatants) {
+      if (!c.alive || c.team !== p.team) continue;
+      const pos = c.isPlayer ? c.renderPos : c.model ? c.model.root.position : c.motor.pos;
+      ctx.fillStyle = c.isPlayer ? '#ffd27a' : '#63b3ff'; ctx.beginPath(); ctx.arc(pos.x, pos.z, (c.isPlayer ? 5 : 3.5) / k, 0, Math.PI * 2); ctx.fill();
+    }
   }
 
   nadeWarnings(list) {

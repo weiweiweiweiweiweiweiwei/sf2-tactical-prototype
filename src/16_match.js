@@ -331,6 +331,7 @@ class Match {
     if (!victim.alive || this.phase !== 'live') return false;
     if (attacker && attacker !== victim && attacker.team === victim.team) return false; // friendly fire off
     if (victim.spawnProtect > 0) { if (point) this.effects.shield(point); if (attacker && attacker.isPlayer) { this.app.hud.hitmarker('shield'); this.audio.hit('shield'); } if (attacker && this.net) this.net.onHit(attacker, victim, 'shield', point); return false; }
+    if (attacker && attacker.isPlayer && attacker.team !== victim.team) { const dd = attacker.dmgDone || (attacker.dmgDone = new Map()); dd.set(victim, (dd.get(victim) || 0) + Math.min(dmg, Math.max(0, victim.hp))); } // v34 Tab board: damage per enemy
     victim.hp -= dmg; victim.lastPart = part;
     if (attacker && attacker !== victim && this.net) this.net.onHit(attacker, victim, victim.hp <= 0 ? 'kill' : part === 'head' ? 'head' : 'body', point);
     if (attacker && attacker !== victim) { const rec = victim.damageLog.get(attacker) || { amt: 0, t: 0 }; rec.amt += dmg; rec.t = this.time; victim.damageLog.set(attacker, rec); }
@@ -435,6 +436,7 @@ class Match {
     if (opts.pierce || opts.collateral) E.push('pierce');
     p.deathRun = 0;
     for (const id of E.slice(0, 4)) hud.emblem(id);
+    if (victim) hud.killNote(victim.name, E.find((x) => x === 'headshot' || x === 'grenade' || x === 'slash' || x === 'knife' || x === 'grab') || 'kill');
     p.emblems = p.emblems || {}; for (const id of E) p.emblems[id] = (p.emblems[id] || 0) + 1;
     const streaks = { 5: 'KILLING SPREE', 8: 'RAMPAGE', 12: 'UNSTOPPABLE', 16: 'GODLIKE' };
     if (streaks[p.streak]) { hud.announce(streaks[p.streak], ''); this.app.speak(streaks[p.streak]); }
