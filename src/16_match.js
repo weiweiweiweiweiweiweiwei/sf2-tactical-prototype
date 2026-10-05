@@ -41,6 +41,7 @@ class Match {
     this.collision = new CollisionWorld(); this.physics = new PhysicsWorld(this.scene, this.audio);
     this.builder = new MapBuilder(this, def);
     progress(0.12, '建構地圖幾何'); await nextFrame();
+    if (def.preload) await def.preload(); // v44: maps with Blender visuals (GLB) load them before building the colliders
     def.build(this.builder); this.builder.flush(); this.builder.bakeContactAO();
     progress(0.38, '載入 HDRI 環境光'); await nextFrame();
     this.setupLighting();

@@ -500,6 +500,18 @@ const MAT_PRESETS = {
   foliageDark:  { s: 'fabric', rough: 0.92, metal: 0, tile: 1, color: 0x34492a, side: THREE.DoubleSide },
   hedge:        { s: 'grass', rough: 1, metal: 0, tile: 1.5, color: 0x8fb35a }, // v35 farm hedges
   relicGold:    { s: 'metal', rough: 0.25, metal: 1, tile: 1, color: 0xe2b24c, env: 1.4 },
+  // v44 Sakura Inn (fallback look until the Blender GLB loads; the GLB maps its own materials)
+  stonePave:    { s: 'pavers', rough: 1, metal: 0, tile: 3, color: 0xb9b5ad },
+  darkWood:     { s: 'wood', rough: 0.9, metal: 0, tile: 1.4, color: 0x5b4636 },
+  floorWood:    { s: 'wood', rough: 0.7, metal: 0, tile: 1.6, color: 0x8a6a4a },
+  ceilingWood:  { s: 'wood', rough: 0.9, metal: 0, tile: 1.6, color: 0x6e5440 },
+  shoji:        { s: 'plaster', rough: 1, metal: 0, tile: 1.2, color: 0xf3efe2 },
+  kawara:       { s: 'roof', rough: 0.7, metal: 0.1, tile: 1.2, color: 0x5d6166, side: THREE.DoubleSide },
+  stoneBlock:   { s: 'ruinStone', arg: '#9a968e', rough: 0.95, metal: 0, tile: 1.5 },
+  bronze:       { s: 'metal', rough: 0.45, metal: 0.9, tile: 1, color: 0x6d5a3a },
+  toriiRed:     { s: 'plaster', rough: 0.7, metal: 0, tile: 2, color: 0xc0392b },
+  sakuraBloom:  { s: 'fabric', rough: 0.9, metal: 0, tile: 1, color: 0xf3c5d0 },
+  vending:      { s: 'metal', rough: 0.5, metal: 0.2, tile: 2, color: 0xd9dde0 },
 };
 const CONTAINER_COLORS = ['#7a4a3f', '#3f5669', '#4a5c45', '#8f6d48', '#666a6d', '#6a4450', '#9c8d52', '#3f6363']; // v17: weathered, sun-faded paint
 
