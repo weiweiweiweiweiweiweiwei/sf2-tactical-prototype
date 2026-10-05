@@ -88,7 +88,7 @@ class Arsenal {
       else if (this.scopedIn) { this.scopedIn = false; this.scopeLevel = 0; }
       if (!silent) this.onZoomSound();
     }
-    if (this.ads && !was) this.owner.sprinting = false;
+    if (this.ads && !was) { this.owner.sprinting = false; this.owner.adsSprintLock = true; } // v45: aiming while sprinting stops the sprint until W+Shift is pressed again
   }
 
   // F — left-hand grab (SF2 style): usable any time, even while aiming. Within killRange = instant kill, otherwise heavy damage.

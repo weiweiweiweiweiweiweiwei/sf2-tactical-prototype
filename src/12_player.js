@@ -123,7 +123,8 @@ class Human extends Combatant {
     const shift = !!(btn & BTN.SPRINT);
     const ws = this.gear(), w = ws.current;
     if (this.sprintBlock > 0) this.sprintBlock -= h;
-    this.sprinting = shift && f > 0 && !m.crouching && !w.reloading && this.sprintBlock <= 0 && !(w.kind === 'grenade' && w.state !== 'idle'); // v45: W+Shift while aimed drops the sight and sprints (any gun)
+    const intent = shift && f > 0; if (!intent) this.adsSprintLock = false;
+    this.sprinting = intent && !this.adsSprintLock && !m.crouching && !w.reloading && this.sprintBlock <= 0 && !(w.kind === 'grenade' && w.state !== 'idle'); // v45: W+Shift while aimed drops the sight and sprints (any gun)
     m.edgeGuard = shift && m.grounded;
     let speed = w.moveSpeed * (this.carrying ? 0.88 : 1);
     if (m.crouching) speed *= P.crouchMult; else if (this.sprinting) speed *= P.sprintMult;
