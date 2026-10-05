@@ -105,9 +105,9 @@ def pine(x, z, h=5.5, seed=0):
 
 def shrub(x, z, r=0.7):
     rng = random.Random(int(x * 7 + z * 3))
-    for q in range(5):
-        o = (rng.uniform(-0.35, 0.35) * r, rng.uniform(0.3, 0.65) * r, rng.uniform(-0.35, 0.35) * r)
-        blob('veg', 'hedge', (x + o[0], o[1], z + o[2]), r * rng.uniform(0.55, 0.8), r * rng.uniform(0.45, 0.6), r * rng.uniform(0.55, 0.8), seg=8, rings=4, jit=0.16, rng=rng)
+    for q in range(10):
+        o = (rng.uniform(-0.5, 0.5) * r, rng.uniform(0.25, 0.75) * r, rng.uniform(-0.5, 0.5) * r)
+        blob('veg', 'hedge', (x + o[0], o[1], z + o[2]), r * rng.uniform(0.35, 0.52), r * rng.uniform(0.3, 0.42), r * rng.uniform(0.35, 0.52), seg=7, rings=4, jit=0.2, rng=rng)
 
 
 # ---------------------------------------------------------------------------- structures
@@ -246,8 +246,6 @@ def onsen(x, z):
         if a == 9: continue
         r = 0.65 + ((a * 37) % 5) * 0.08
         blob(g, 'rock', (x + math.cos(t) * rx, r * 0.45, z + math.sin(t) * rz), r * 1.15, r * 0.62, r * 1.0, seg=8, rings=4, jit=0.22, rng=rng)
-    for (dx, dz, r) in ((3.6, -2.4, 1.0), (3.2, 2.6, 0.8), (-3.4, -3.2, 0.7)):
-        blob(g, 'rock', (x + dx, r * 0.5, z + dz), r * 1.2, r * 0.85, r, seg=8, rings=4, jit=0.25, rng=rng)
     # bamboo spout (kakehi) from the rock edge
     sx, sz = x + rx + 0.4, z - 1.2
     box(g, 'bamboo', sx - 0.04, 0, sz - 0.04, sx + 0.04, 1.4, sz + 0.04)
@@ -278,8 +276,9 @@ def tub(x, z):  # big wooden rain-water tub (the Tab-map box under the east eave
     for y in (0.25, 1.05): box('props', 'bamboo', x - 1.13, y, z - 1.13, x + 1.13, y + 0.07, z + 1.13, skip=('t', 'b'))
 
 
-def rock(x, z, r, sy=0.75):
-    blob('props', 'rock', (x, r * sy * 0.55, z), r, r * sy, r * 0.9, seg=9, rings=5, jit=0.25)
+def rock(x, z, r, sy=0.75):  # garden boulder: the collider is the inscribed box of r (see buildRyokan 'rock')
+    rng = random.Random(int(x * 17 + z * 29))
+    blob('props', 'rock', (x, r * sy * 0.55, z), r * 1.05, r * sy, r * 0.95, seg=12, rings=7, jit=0.12, rng=rng)
 
 
 # ---------------------------------------------------------------------------- dressing the facades
@@ -316,7 +315,7 @@ def castle(cx, cz, s=1.0, y0=0.0):
     for tier in range(5):
         hgt = (5.2 if tier == 0 else 4.2) * s
         box(g, 'castleWall', cx - w / 2, y, cz - d / 2, cx + w / 2, y + hgt, cz + d / 2)
-        box(g, 'shikkui', cx - w / 2 - 0.05, y + hgt * 0.78, cz - d / 2 - 0.05, cx + w / 2 + 0.05, y + hgt, cz + d / 2 + 0.05, skip=('t', 'b'))
+        box(g, 'shikkui', cx - w / 2 - 0.05, y + hgt * 0.86, cz - d / 2 - 0.05, cx + w / 2 + 0.05, y + hgt, cz + d / 2 + 0.05, skip=('t', 'b'))
         for k in range(int(w / (2.2 * s))):  # dark window slits
             xx = cx - w / 2 + (k + 0.5) * w / int(w / (2.2 * s))
             box(g, 'kuroita', xx - 0.35 * s, y + hgt * 0.45, cz - d / 2 - 0.05, xx + 0.35 * s, y + hgt * 0.75, cz + d / 2 + 0.05)
@@ -358,8 +357,59 @@ def backdrop():
     for i in range(18):  # hills
         a = 2 * math.pi * i / 18; rr = 175 + rng.uniform(-20, 30)
         blob('backdrop', 'hill', (math.cos(a) * rr, -6, math.sin(a) * rr), rng.uniform(40, 70), rng.uniform(18, 34), rng.uniform(40, 70), seg=10, rings=5, jit=0.12, rng=rng)
-    castle(-48, -118, 1.45, 8.0)
-    blob('backdrop', 'hill', (-48, -4, -118), 48, 13, 42, seg=12, rings=5, jit=0.08, rng=rng)
+    castle(-40, -112, 1.8, 8.0)
+    blob('backdrop', 'hill', (-40, -4, -112), 56, 13, 48, seg=12, rings=5, jit=0.08, rng=rng)
+
+
+def karahafu(cx, cz, width, y, out, axis='x', depth=1.6, rise=1.25, g='props'):
+    """undulating cusped gable (kara-hafu) projecting from a facade: plaster tympanum with a timber grid,
+    a curved tiled roof and the white-edged bargeboard. axis = facade direction, out = ±1 outward."""
+    N = 16; hw = width / 2
+    prof = []
+    for i in range(N + 1):
+        t = -1 + 2 * i / N; a = abs(t)
+        yy = rise * (math.cos(a * math.pi / 2) ** 1.25) - 0.22 * max(0.0, a - 0.72) * 3.2  # arched crown, flicked-up ends
+        prof.append((t * (hw + 0.35), yy))
+    P_ = lambda along, h, d: (cx + along, y + h, cz + out * d) if axis == 'x' else (cx + out * d, y + h, cz + along)
+    for i in range(N):
+        (a0, h0), (a1, h1) = prof[i], prof[i + 1]
+        poly(g, 'kawara', [P_(a0, h0 + 0.12, 0), P_(a1, h1 + 0.12, 0), P_(a1, h1 + 0.12 - 0.15, depth), P_(a0, h0 + 0.12 - 0.15, depth)],
+             [(i / N * 3, 0), ((i + 1) / N * 3, 0), ((i + 1) / N * 3, 1.2), (i / N * 3, 1.2)], want=(0, 1, 0))
+        poly(g, 'hashira', [P_(a0, h0 - 0.06, 0), P_(a1, h1 - 0.06, 0), P_(a1, h1 - 0.21, depth), P_(a0, h0 - 0.21, depth)], want=(0, -1, 0))
+        poly(g, 'shikkui', [P_(a0, h0 - 0.21, depth + 0.02), P_(a1, h1 - 0.21, depth + 0.02), P_(a1, h1 + 0.0, depth + 0.02), P_(a0, h0 + 0.0, depth + 0.02)],
+             want=(0, 0, out) if axis == 'x' else (out, 0, 0))                                                # white-edged bargeboard
+    tymp = [P_(prof[i][0] * 0.82, prof[i][1] * 0.9 - 0.25, depth - 0.25) for i in range(N + 1)]
+    for i in range(N):  # plaster tympanum (fan of triangles down to the beam)
+        a0, a1 = prof[i][0] * 0.82, prof[i + 1][0] * 0.82
+        poly(g, 'shikkui', [P_(a0, 0, depth - 0.25), P_(a1, 0, depth - 0.25), tymp[i + 1], tymp[i]], want=(0, 0, out) if axis == 'x' else (out, 0, 0))
+    for k in range(-3, 4):  # timber grid on the tympanum
+        aa = k * hw * 0.82 / 3.5; hh = rise * (math.cos(min(1, abs(aa) / (hw + 0.35)) * math.pi / 2) ** 1.25) * 0.9 - 0.3
+        if hh > 0.15: beam(g, 'hashira', P_(aa, 0, depth - 0.22), P_(aa, hh, depth - 0.22), 0.06, 0.06)
+    beam(g, 'hashira', P_(-hw - 0.2, 0, depth - 0.2), P_(hw + 0.2, 0, depth - 0.2), 0.18, 0.22)
+    beam(g, 'hashira', P_(-hw * 0.82, rise * 0.45, depth - 0.22), P_(hw * 0.82, rise * 0.45, depth - 0.22), 0.06, 0.08)
+    beam(g, 'kawara', P_(0, rise + 0.2, 0), P_(0, rise + 0.08, depth + 0.1), 0.3, 0.22)                    # crest ridge
+
+
+def nobori(x, z, h=4.2, text_side=1):
+    """red festival banner on a bamboo pole."""
+    g = 'props'
+    cyl(g, 'bamboo', x, z, 0.035, 0, h, seg=6)
+    box(g, 'bamboo', x - 0.02, h - 0.1, z - 0.01, x + 0.62, h - 0.06, z + 0.01)
+    poly(g, 'nobori', [(x + 0.04, h - 0.1, z), (x + 0.6, h - 0.1, z), (x + 0.6, h - 2.7, z), (x + 0.04, h - 2.7, z)], [(0, 1), (1, 1), (1, 0), (0, 0)], want=(0, 0, text_side))
+    poly(g, 'nobori', [(x + 0.04, h - 0.1, z), (x + 0.04, h - 2.7, z), (x + 0.6, h - 2.7, z), (x + 0.6, h - 0.1, z)], [(1, 1), (1, 0), (0, 0), (0, 1)], want=(0, 0, -text_side))
+
+
+def bench(x, z, along_x=True, umbrella=False):
+    g = 'props'; L, W = (1.8, 0.55)
+    x0, x1, z0, z1 = (x - L / 2, x + L / 2, z - W / 2, z + W / 2) if along_x else (x - W / 2, x + W / 2, z - L / 2, z + L / 2)
+    box(g, 'koshi', x0, 0.4, z0, x1, 0.46, z1, mats={'t': 'mosen'})
+    for (a, b) in ((x0 + 0.08, z0 + 0.06), (x1 - 0.14, z0 + 0.06), (x0 + 0.08, z1 - 0.12), (x1 - 0.14, z1 - 0.12)): box(g, 'hashira', a, 0, b, a + 0.06, 0.4, b + 0.06)
+    if umbrella:
+        cyl(g, 'bamboo', x, z, 0.035, 0, 2.5, seg=6)
+        for k in range(16):
+            a0, a1 = 2 * math.pi * k / 16, 2 * math.pi * (k + 1) / 16
+            poly(g, 'akai', [(x, 2.62, z), (x + math.cos(a1) * 1.4, 2.12, z + math.sin(a1) * 1.4), (x + math.cos(a0) * 1.4, 2.12, z + math.sin(a0) * 1.4)], want=(0, 1, 0))
+            poly(g, 'akai', [(x, 2.6, z), (x + math.cos(a0) * 1.4, 2.1, z + math.sin(a0) * 1.4), (x + math.cos(a1) * 1.4, 2.1, z + math.sin(a1) * 1.4)], want=(0, -1, 0))
 
 
 def props_main():
@@ -385,3 +435,10 @@ def props_main():
     for (u, v) in ((10, 120), (10, 140), (20, 196), (104, 30), (150, 14), (182, 30), (66, 300), (124, 312)):
         shrub((u - 112) * 0.4, (v - 166) * 0.3, 0.7)
     facade_dressing(); backdrop()
+    U_ = lambda u: (u - 112) * 0.4; V_ = lambda v: (v - 166) * 0.3
+    # kara-hafu gables: 本館 east front over the defender landing, A棟 north front over the bell plaza, B棟 south front
+    karahafu(U_(128), V_(96), 4.4, F2 + 0.15, 1, axis='z', g='honkan')
+    karahafu(U_(180), V_(159), 6.0, F2 + 0.15, -1, axis='x', g='abld')
+    karahafu(U_(116), V_(250), 4.8, F2 + 0.15, 1, axis='x', g='bbld')
+    for (u, v, s) in ((92, 304, 1), (100, 304, 1), (128, 152, 1), (140, 152, 1), (60, 186, -1), (186, 104, -1)): nobori(U_(u), V_(v), 4.2, s)
+    bench(U_(46), V_(240), True, True); bench(U_(140), V_(132), True, False); bench(U_(30), V_(110), False, False)

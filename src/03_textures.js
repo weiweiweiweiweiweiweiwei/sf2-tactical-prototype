@@ -465,7 +465,7 @@ class TextureFactory {
         T.N(H, S, 24, 3, 573, 'overlay', 0.35); fill(R, '#dadada', S); T.N(R, S, 6, 3, 574, 'overlay', 0.4);
       },
       tatami(A, H, R, S, rnd) { // one mat (u = 0.91 m across, v = 1.82 m long): woven rush + dark green heri cloth on the long edges
-        fill(A, '#b59d63', S);
+        fill(A, '#a98e4c', S);
         for (let y = 0; y < S; y += 2) { const v = rand(-14, 10); A.fillStyle = `rgba(${v > 0 ? '235,230,170' : '80,78,40'},${Math.abs(v) / 90})`; A.fillRect(0, y, S, 1); H.fillStyle = y % 4 ? '#9a9a9a' : '#6a6a6a'; H.fillRect(0, y, S, 1); }
         for (let x = 0; x < S; x += S / 14) { A.fillStyle = 'rgba(90,85,40,.18)'; A.fillRect(x, 0, 1.5, S); }
         T.N(A, S, 3, 4, 581, 'overlay', 0.25);
@@ -693,7 +693,7 @@ const MAT_PRESETS = {
   ry_ishigaki:  { s: 'ishigaki', rough: 0.95, metal: 0, tile: 1.5 },
   ry_akai:      { s: 'akai', rough: 0.5, metal: 0, tile: 1 },
   ry_bronze:    { s: 'metal', rough: 0.45, metal: 0.9, tile: 1, color: 0x6d5a3a },
-  ry_rock:      { s: 'rock', rough: 0.95, metal: 0, tile: 3 },
+  ry_rock:      { s: 'rock', rough: 0.9, metal: 0, tile: 3, color: 0xd8d4cc },
   ry_bark:      { s: 'sakuraBark', rough: 0.95, metal: 0, tile: 1 },
   ry_metal:     { s: 'metal', rough: 0.5, metal: 0.2, tile: 1, color: 0xd9dde0 },
   ry_pine:      { s: 'pineNeedle', rough: 0.95, metal: 0, tile: 1.2 },
@@ -704,7 +704,7 @@ const MAT_PRESETS = {
   ry_lacquer:   { s: 'akai', rough: 0.35, metal: 0, tile: 1, color: 0x8a3a2a, clearcoat: 0.4, clearcoatRoughness: 0.3 },
   ry_scrollRod: { s: 'hashira', rough: 0.5, metal: 0, tile: 1, color: 0x6a3a22 },
   ry_tansu:     { s: 'kuroita', rough: 0.6, metal: 0, tile: 0.9, color: 0xb08a6a },
-  ry_castleWall:{ s: 'kuroita', rough: 0.95, metal: 0, tile: 2, color: 0x5a5a58 },
+  ry_castleWall:{ s: 'kuroita', rough: 0.95, metal: 0, tile: 2, color: 0x3c3c3c },
   ry_hedge:     { s: 'grass', rough: 1, metal: 0, tile: 1.2, color: 0x9ab56a },
   ry_sakuraFar: { s: 'fabric', rough: 1, metal: 0, tile: 4, color: 0xf0c6cf },
 };

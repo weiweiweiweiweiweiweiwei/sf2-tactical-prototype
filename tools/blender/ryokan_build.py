@@ -22,7 +22,7 @@ TILE = {
     'metal': (1.0, 1.0), 'water': (6.0, 6.0), 'sakura': (1.0, 1.0), 'pine': (1.2, 1.2), 'moss': (2.0, 2.0), 'bamboo': (1.0, 1.0),
     'hedge': (1.2, 1.2), 'paperRed': (1.0, 1.0), 'mosen': (1.0, 1.0), 'vend': (1.0, 1.85), 'gold': (1.0, 1.0), 'hill': (12.0, 12.0), 'sakuraFar': (4.0, 4.0),
     'lacquer': (1.0, 1.0), 'scrollRod': (1.0, 1.0), 'blueprint': (1.0, 1.0), 'papers': (1.0, 1.0), 'kakejiku': (1.0, 1.0), 'tansu': (0.9, 0.9),
-    'lampPaper': (0.5, 0.5), 'sign': (1.0, 1.0), 'castleWall': (2.0, 2.0),
+    'lampPaper': (0.5, 0.5), 'sign': (1.0, 1.0), 'castleWall': (2.0, 2.0), 'nobori': (1.0, 1.0),
 }
 TILE['kawara'] = (1.4, 1.2)
 TILE['ishidatami'] = (2.6, 2.6)
@@ -264,9 +264,9 @@ def eave_on(w):
     return None
 
 
-def ground_facade(w):
-    """level-1 building wall seen from the street."""
-    b = BLD[w['bld']]; g = b['id']; style = b['style']; ax, fixed, lo, hi, sign = facade_frame(w)
+def ground_facade(w, b=None, g=None):
+    """level-1 building wall seen from the street (b: a pseudo building for the perimeter row houses)."""
+    b = b or BLD[w['bld']]; g = g or b['id']; style = b['style']; ax, fixed, lo, hi, sign = facade_frame(w)
     y1 = w['y1']; full = y1 > F2 + 0.5
     wall_core(g, w, 'shikkui', 'shikkui')
     fbox(g, 'ishi', ax, fixed, sign, lo, hi, 0, 0.42, 0, 0.07)                       # stone plinth
@@ -289,7 +289,7 @@ def ground_facade(w):
         for i in range(len(bx) - 1):
             if i % 2 == 1 and bx[i + 1] - bx[i] > 1.2: lattice(g, ax, fixed, sign, bx[i] + 0.25, bx[i + 1] - 0.25, 1.45, 2.2)
     posts_and_beams(g, ax, fixed, sign, lo, hi, 0.42, top1, beams=[(top1 - 0.32, 0.22)])
-    e = eave_on(w)
+    e = eave_on(w) if w.get('kind') == 'bld' else None
     if e: hisashi(g, ax, fixed, sign, e[0], e[1], EAVE + 0.02 + 0.33, e[2] + 0.05, drop=0.33)
     elif b['storeys'] == 2 and style != 'kura' and hi - lo > 2.5: hisashi(g, ax, fixed, sign, lo, hi, F2 - 0.08, 0.95, drop=0.36)
     if full:  # closed building: dress the upper storey too
@@ -340,7 +340,28 @@ def upper_facade(w):
         fbox(g, 'hashira', ax, fixed, sign, lo, hi, y1 - 0.24, y1, 0, 0.06)
 
 
+ROW_STYLES = ('shop', 'inn', 'shop', 'kura', 'inn')
+
+
 def bound_wall(w):
+    """the map edge: mostly the closed street front of row houses (2 storeys, roof running back over the outside),
+    otherwise a tsuiji-bei wall. The collider stays the 4.2 m wall + invisible blocker; the houses only add visuals."""
+    ax, fixed, lo, hi, sign = facade_frame(w); L = hi - lo
+    h = abs(hash((round(lo, 1), round(fixed, 1)))) % 10
+    if L >= 3.0 and h < 7:
+        th = (w['z1'] - w['z0']) if ax == 'x' else (w['x1'] - w['x0']); D = 6.0
+        pb = {'id': 'bound', 'style': ROW_STYLES[h % len(ROW_STYLES)], 'storeys': 2}
+        ground_facade(dict(w, y1=TOP2), pb, 'bound')
+        fbox('bound', 'shikkui', ax, fixed, sign, lo, hi, 0, TOP2, -D, -th, skip=())         # the house body behind the front
+        if ax == 'x':
+            z0_, z1_ = sorted((fixed, fixed - sign * D)); roof('bound', lo, z0_, hi, z1_, TOP2 + 0.12 - 0.9 * 0.5, 'kirizuma', pitch=0.5, over=0.9, ridge_axis='x')
+        else:
+            x0_, x1_ = sorted((fixed, fixed - sign * D)); roof('bound', x0_, lo, x1_, hi, TOP2 + 0.12 - 0.9 * 0.5, 'kirizuma', pitch=0.5, over=0.9, ridge_axis='z')
+        return
+    tsuiji(w)
+
+
+def tsuiji(w):
     """perimeter wall (tsuiji-bei): stone base, white plaster, dark board skirt, tiled coping."""
     g = 'bound'; ax, fixed, lo, hi, sign = facade_frame(w); y1 = w['y1']
     wall_core(g, w, 'shikkui', 'shikkui', top='kawara')

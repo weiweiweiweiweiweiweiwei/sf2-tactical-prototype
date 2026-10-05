@@ -9,7 +9,7 @@
    the GLB visuals and the game colliders cannot drift apart.
    ===================================================================== */
 const RYOKAN_SPEC = {
-  F2: 3.4, TOP2: 6.3, TOP1: 3.6, EAVE: 2.6, BOUND: 4.2, BLOCK: 14,
+  F2: 3.4, TOP2: 6.3, TOP1: 3.6, EAVE: 2.25, BOUND: 4.2, BLOCK: 14,
   walk1: [
     [100, 11, 186, 38], [124, 38, 128, 41], [128, 38, 190, 59], [186, 15, 190, 38],           // 守方家 defender yard
     [172, 59, 193, 107], [193, 62, 196, 100],                                                   // 東側 east street
@@ -94,10 +94,10 @@ const RYOKAN_SPEC = {
   props: [
     ['belfry', 150.5, 150.5],                                   // 鐘樓 (base 146–155 × 145–156)
     ['well', 110, 132], ['rock', 48, 169, 1.5], ['lantern', 111.5, 155.5], ['basin', 107, 267, 1.3],
-    ['tank', 177, 118], ['barrels', 177.5, 66], ['crates', 146, 52], ['crates', 163, 186],         // eave climbing aids
+    ['tank', 177, 118], ['barrels', 176.1, 66], ['crates', 146, 52.8], ['crates', 163, 186],         // eave climbing aids
     ['cart', 66.5, 289], ['crates', 120, 302],                                                  // 逃脫點 cover (Tab boxes)
     ['torii', 95, 314], ['gate', 95, 322],                                                      // 正門 village gate (escape point)
-    ['onsen', 202, 126], ['sakura', 190, 113], ['sakura', 206, 141],
+    ['onsen', 202, 126], ['rock', 211, 118, 1.6], ['rock', 210, 135, 1.25], ['rock', 193.5, 115.5, 1.1],          // big onsen boulders ['sakura', 190, 113], ['sakura', 206, 141],
     ['sakura', 14, 104], ['sakura', 14, 160], ['sakura', 33, 200], ['sakura', 104, 20], ['sakura', 176, 22],
     ['sakura', 92, 286], ['sakura', 47, 248], ['sakura', 186, 98], ['pine', 160, 27], ['pine', 30, 182],
     ['streetlamp', 176, 75], ['streetlamp', 190, 128], ['streetlamp', 66, 200], ['streetlamp', 98, 240], ['streetlamp', 155, 240],
@@ -249,7 +249,11 @@ function buildRyokan(b) {
   for (const c of PL.canopies) b.box(c.x0, c.h, c.z0, c.x1, c.h + 0.25, c.z1, vis('ceilingWood'), { material: 'wood', penetrable: true, radar: false });
   for (const e of PL.eaves) b.box(e.x0, e.y - 0.22, e.z0, e.x1, e.y, e.z1, vis('kawara'), { material: 'wood', penetrable: true, radar: false });
   if (!glb && !b.dry) ryokanFallbackRoofs(b, PL);
-  ryokanProps(b, PL, glb);
+  ryokanProps(b, PL, glb); ryokanAtmosphere(b, PL);
+  if (!b.dry) { // warm lantern light in the objective hall (one of the 3 per-pixel lights) + soft light pools on the tatami
+    const [ox, oz] = PL.objective, F2 = RYOKAN_SPEC.F2;
+    b.light(ox, F2 + 1.5, oz, 0xffc27a, 26, 13); b.lightPool(ox, oz, 5.5, F2 + 0.02, 0.07, 0xffc890);
+  }
   const sp = PL.spawns; b.spawnZone('alpha', sp.alpha.x0, sp.alpha.z0, sp.alpha.x1, sp.alpha.z1, 0); b.spawnZone('bravo', sp.bravo.x0, sp.bravo.z0, sp.bravo.x1, sp.bravo.z1, Math.PI);
   for (const r of PL.ground) if ((r.x1 - r.x0) * (r.z1 - r.z0) > 30) b.waypoint((r.x0 + r.x1) / 2, (r.z0 + r.z1) / 2, 0);
   if (glb) { // Blender visuals: swap the placeholder 'ry:<name>' materials for the game's procedural PBR presets
@@ -308,6 +312,52 @@ function ryokanProps(b, PL, glb) {
   }
 }
 
+// Atmosphere: sakura petals drifting around the camera (thicker under the trees) and steam over the onsen.
+function ryokanAtmosphere(b, PL) {
+  if (b.dry || activeQuality() === 'low') return;
+  const trees = PL.props.filter((p) => p.kind === 'sakura'), N = activeQuality() === 'medium' ? 380 : 700, R = 22;
+  const geo = new THREE.PlaneGeometry(0.055, 0.04); geo.translate(0, 0, 0);
+  const mat = new THREE.MeshStandardMaterial({ color: 0xf7c9d4, emissive: 0xf2a9bb, emissiveIntensity: 0.18, roughness: 0.8, side: THREE.DoubleSide });
+  const mesh = new THREE.InstancedMesh(geo, mat, N); mesh.frustumCulled = false; mesh.castShadow = false; mesh.receiveShadow = false; mesh.userData.noAO = true; b.scene.add(mesh);
+  const P = new Float32Array(N * 3), V = new Float32Array(N * 4), Q = new THREE.Quaternion(), E = new THREE.Euler(), M4 = new THREE.Matrix4(), S1 = new THREE.Vector3(1, 1, 1), T = new THREE.Vector3();
+  const spawn = (i, cam, top) => {
+    let x, z, y;
+    if (trees.length && Math.random() < 0.6) { const t = trees[(Math.random() * trees.length) | 0]; x = t.x + (Math.random() - 0.5) * 7; z = t.z + (Math.random() - 0.5) * 7; y = top ? 3.5 + Math.random() * 3.5 : Math.random() * 7; }
+    else { const a = Math.random() * 6.283, d = Math.sqrt(Math.random()) * R; x = cam.x + Math.cos(a) * d; z = cam.z + Math.sin(a) * d; y = top ? 6 + Math.random() * 4 : Math.random() * 10; }
+    P[i * 3] = x; P[i * 3 + 1] = y; P[i * 3 + 2] = z; V[i * 4] = 0.45 + Math.random() * 0.55; V[i * 4 + 1] = Math.random() * 6.28; V[i * 4 + 2] = 1.5 + Math.random() * 2.5; V[i * 4 + 3] = Math.random() * 6.28;
+  };
+  let init = false;
+  b.animated.push((dt, t) => {
+    const cam = b.game.camera.position;
+    if (!init) { for (let i = 0; i < N; i++) spawn(i, cam, false); init = true; }
+    for (let i = 0; i < N; i++) {
+      const k = i * 3, s = V[i * 4], ph = V[i * 4 + 1], fl = V[i * 4 + 2];
+      P[k + 1] -= s * dt; P[k] += (Math.sin(t * 0.9 + ph) * 0.35 + 0.25) * dt; P[k + 2] += Math.cos(t * 0.7 + ph * 1.3) * 0.3 * dt; // gentle wind toward +x
+      const dx = P[k] - cam.x, dz = P[k + 2] - cam.z;
+      if (P[k + 1] < 0.02 || dx * dx + dz * dz > R * R * 1.4) spawn(i, cam, true);
+      E.set(t * fl + ph, t * fl * 0.7 + V[i * 4 + 3], Math.sin(t * 2 + ph)); Q.setFromEuler(E); T.set(P[k], P[k + 1], P[k + 2]);
+      mesh.setMatrixAt(i, M4.compose(T, Q, S1));
+    }
+    mesh.instanceMatrix.needsUpdate = true;
+  });
+  // onsen steam: soft sprites rising and fading over the water
+  const onsen = PL.props.find((p) => p.kind === 'onsen');
+  if (onsen) {
+    const tex = b.tf.smoke(), sprites = [];
+    for (let i = 0; i < 14; i++) {
+      const sm = new THREE.SpriteMaterial({ map: tex, color: 0xffffff, transparent: true, opacity: 0, depthWrite: false }); const s = new THREE.Sprite(sm);
+      s.userData = { t: Math.random() * 6, x: onsen.x + (Math.random() - 0.5) * 4, z: onsen.z + (Math.random() - 0.5) * 6, noAO: true }; b.scene.add(s); sprites.push(s);
+    }
+    b.animated.push((dt) => {
+      for (const s of sprites) {
+        const u = s.userData; u.t += dt; const life = 6, f = (u.t % life) / life;
+        if (u.t % life < dt) { u.x = onsen.x + (Math.random() - 0.5) * 4; u.z = onsen.z + (Math.random() - 0.5) * 6; }
+        s.position.set(u.x + f * 0.8, 0.45 + f * 2.6, u.z); const sc = 1.2 + f * 2.6; s.scale.set(sc, sc, 1); s.material.opacity = 0.16 * Math.sin(f * Math.PI);
+      }
+    });
+  }
+}
+
 // GLB materials that are not plain PBR presets: alpha blossom cards, water, glowing paper, printed cloth, the vending front
 function ryokanSpecialMat(b, name) {
   const tf = b.tf, lib = b.lib;
@@ -328,6 +378,13 @@ function ryokanSpecialMat(b, name) {
       }, true, true); // repeat: the GLB V is negated (glTF flip) — clamping would sample the transparent edge
       const m = new THREE.MeshStandardMaterial({ map, alphaTest: 0.42, roughness: 0.85, metalness: 0, emissive: 0xf2b8c6, emissiveIntensity: 0.12, side: THREE.FrontSide });
       return m;
+    });
+    case 'nobori': return lib.basic('ry:nobori', () => { // red banner with a vertical line of white kanji
+      const map = tf.simple('ryNobori', 256, (ctx, S) => {
+        ctx.fillStyle = '#b8261c'; ctx.fillRect(0, 0, S, S); ctx.fillStyle = '#f4ecd8'; ctx.fillRect(0, 0, S * 0.08, S);
+        ctx.font = `bold ${S * 0.2}px serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ['櫻', '花', '祭', '湯'].forEach((t, i) => ctx.fillText(t, S * 0.55, S * (0.13 + i * 0.24)));
+      }, true, true);
+      return new THREE.MeshStandardMaterial({ map, roughness: 0.95, side: THREE.DoubleSide });
     });
     case 'tileEnds': return lib.basic('ry:tileEnds', () => { // round eave-tile ends (one disc per 0.28 m of the strip)
       const map = tf.simple('ryTileEnds', 128, (ctx, S) => {
@@ -439,7 +496,7 @@ MAPS.push({
   indoor: false, navLevels: [0, RYOKAN_SPEC.F2], navStep: 2, viewMult: 1.0, radarRange: 30,
   hdri: 'kloofendal_48d_partly_cloudy_puresky', hdriBackground: true, envIntensity: 0.62, sky: { turbidity: 5, rayleigh: 1.5, elevation: 34, azimuth: 230 },
   sun: { pos: [-35, 50, 30], color: 0xfff1e0, intensity: 2.7, auto: true }, hemi: [0xe6ecf7, 0x8a8078, 0.95], exposure: 0.92,
-  fog: { color: 0xdde3ea, near: 55, far: 220 }, acoustics: 'outdoor', ambience: 'hill', shadowFollow: 0,
+  fog: { color: 0xc9d2dc, near: 70, far: 330 }, acoustics: 'outdoor', ambience: 'hill', shadowFollow: 0,
   shot: { pos: [-22, 15, 34], target: [4, 2, -6] },
   get objectives() { const P = this._plan || (this._plan = ryokanPlan()); return { dom: P.dom.map(([x, z]) => [x, 0, z]), relic: [P.objective[0], RYOKAN_SPEC.F2, P.objective[1]], domRadius: 4.5 }; },
   // the Blender visuals ship as a JS file (window.RYOKAN_GLB = base64 GLB) so file:// play works like assets/sfx.js
