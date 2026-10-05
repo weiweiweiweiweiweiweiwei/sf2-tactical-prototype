@@ -426,23 +426,26 @@ class App {
     MAPS.forEach((def, i) => {
       const bt = document.createElement('button'); const cv = document.createElement('canvas'); cv.width = 176; cv.height = 88;
       drawMapPreview(cv, def, this.dry[i], { labels: false }); bt.append(cv, document.createTextNode(`${i + 1}. ${def.name}`));
-      bt.onclick = () => { if (this.isGuest()) return; L.map = i; this.audio.init(); this.audio.uiClick(); this.refreshLobby(); this.warm(i); };
+      bt.onclick = () => { if (this.isGuest()) return; L.map = i; this.audio.init(); this.audio.uiClick(); $('lbMapModal').classList.remove('on'); this.refreshLobby(); this.warm(i); };
       maps.appendChild(bt);
     });
     const pills = (id, items, key, after) => {
       const el = $(id); el.innerHTML = '';
       for (const [val, label] of items) { const b = document.createElement('button'); b.textContent = label; b.dataset.v = val; b.onclick = () => { if (key !== 'loadout' && this.isGuest()) return; L[key] = typeof L[key] === 'number' ? Number(val) : val; if (after) after(); this.audio.init(); this.audio.uiClick(); this.refreshLobby(); }; el.appendChild(b); }
     };
-    pills('lbModes', Object.entries(MODES).map(([k, m]) => [k, m.name]), 'mode');
-    pills('lbRule', Object.entries(RULES).map(([k, r]) => [k, r.name]), 'rule', () => { if (!L.ruleCfg[L.rule]) L.ruleCfg[L.rule] = Object.assign({}, RULES[L.rule].def); });
     pills('lbDiff', DIFFICULTY.map((d, i) => [i, d.name]), 'difficulty');
+    // v45 SF2 待機室: map picker pop-up, room 設置 pop-up (pickup / killcam / friendly fire / bot difficulty), dropdowns close on any outside click
+    const modal = (id, on) => { $(id).classList.toggle('on', on); if (on) { this.audio.init(); this.audio.uiClick(); } };
+    $('lbMapOpen').onclick = () => { if (!this.isGuest()) modal('lbMapModal', true); };
+    $('lbMapClose').onclick = () => modal('lbMapModal', false); $('lbOptClose').onclick = () => modal('lbOptModal', false);
+    for (const id of ['lbMapModal', 'lbOptModal']) $(id).onclick = (e) => { if (e.target === $(id)) modal(id, false); };
+    for (const [id, k] of [['optPickup', 'pickup'], ['optKillcam', 'killcam'], ['optFF', 'ff']]) $(id).onchange = () => { if (this.isGuest()) return; L.opts[k] = $(id).checked; this.audio.uiClick(); this.refreshLobby(); };
+    document.addEventListener('click', () => document.querySelectorAll('#lobby .dd.open').forEach((d) => d.classList.remove('open')));
+    // F5 = 開始 (the browser refresh is swallowed while the room is open)
+    addEventListener('keydown', (e) => { if (e.code === 'F5' && (this.state === 'lobby' || this.state === 'countdown')) { e.preventDefault(); if (this.state === 'lobby' && !$('lbMapModal').classList.contains('on')) this.beginCountdown(); } });
     pills('lbLoadout', Settings.data.loadouts.map((l, i) => [i, LOADOUT_KEYS[i]]), 'loadout');
     $('lbWarehouse').onclick = () => this.openWarehouse(); $('lbWh').onclick = () => this.openWarehouse();
     $('whClose').onclick = () => this.closeWarehouse();
-    document.querySelectorAll('.stepper button').forEach((b) => b.onclick = () => {
-      if (this.isGuest()) return;
-      const k = b.dataset.step; L[k] = clamp(L[k] + Number(b.dataset.d), 1, 12); this.audio.init(); this.audio.uiClick(); this.refreshLobby();
-    });
     // v27 room bar: ＋ 邀請朋友 opens the invite pop-up (link / code / public), 離開房間 goes back to the hub
     $('lbInvite').onclick = (e) => { e.stopPropagation(); this.audio.init(); this.audio.uiClick(); this.invite(); };
     $('lbInvPop').onclick = (e) => e.stopPropagation();
@@ -482,22 +485,74 @@ class App {
     $('lbMapName').textContent = `${def.name} · ${def.en}`; $('lbMapDesc').textContent = def.desc;
     [...$('lbMaps').children].forEach((b, i) => b.classList.toggle('on', i === L.map));
     const mark = (id, val) => [...$(id).children].forEach((b) => b.classList.toggle('on', String(b.dataset.v) === String(val)));
-    mark('lbModes', L.mode); mark('lbRule', L.rule); mark('lbDiff', L.difficulty); mark('lbLoadout', L.loadout);
-    $('lbModeDesc').textContent = MODES[L.mode].desc + ' · ' + R.desc;
+    mark('lbDiff', L.difficulty); mark('lbLoadout', L.loadout);
     const rc = L.ruleCfg[L.rule] || (L.ruleCfg[L.rule] = Object.assign({}, R.def)), roundsLike = R.timeUnit === 'sec';
-    $('lbTargetLbl').textContent = roundsLike ? '勝利回合數' : '勝利分數';
-    $('lbTimeLbl').textContent = roundsLike ? '每回合時間' : '時間限制';
-    const tg = $('lbTarget'); tg.innerHTML = '';
-    for (const v of R.targets) { const b = document.createElement('button'); b.textContent = roundsLike ? `搶 ${v} 勝` : `${v}`; b.classList.toggle('on', rc.target === v); b.onclick = () => { if (this.isGuest()) return; rc.target = v; this.audio.uiClick(); this.refreshLobby(); }; tg.appendChild(b); }
-    const tm = $('lbTime'); tm.innerHTML = '';
-    for (const v of R.times) { const b = document.createElement('button'); b.textContent = roundsLike ? `${Math.floor(v / 60)}:${String(v % 60).padStart(2, '0')}` : `${v} 分`; b.classList.toggle('on', rc.time === v); b.onclick = () => { if (this.isGuest()) return; rc.time = v; this.audio.uiClick(); this.refreshLobby(); }; tm.appendChild(b); }
+    if (!R.targets.includes(rc.target)) rc.target = R.def.target;
+    rc.time = R.def.time; // v45: no time option — score modes are untimed, round modes cap each round at 10 minutes
+    $('lbTitle').textContent = `${R.name} - ${def.name}`;
+    $('lbModeDesc').textContent = `${MODES[L.mode].desc} · ${R.desc}${roundsLike ? ' · 每回合上限 10 分鐘' : ' · 無時間限制'}`;
+    const opts = L.opts || (L.opts = { pickup: true, killcam: true, ff: false });
+    $('optPickup').checked = opts.pickup !== false; $('optKillcam').checked = opts.killcam !== false; $('optFF').checked = !!opts.ff;
+    // the six SF2 room settings: map · win condition · weapon mode | game mode · N vs N · 設置
+    const host = () => !this.isGuest();
+    this._dd('ddMap', '地圖', def.name, null, () => { if (host()) { $('lbMapModal').classList.add('on'); this.audio.uiClick(); } });
+    this._dd('ddTarget', roundsLike ? '勝負局數' : '勝利分數', roundsLike ? `${rc.target}先勝` : `${rc.target} 分`,
+      R.targets.map((v) => [v, roundsLike ? `${v}先勝` : `${v} 分`]), (v) => { if (host()) { rc.target = +v; this.refreshLobby(); } }, rc.target);
+    this._dd('ddMode', '武器限制', MODES[L.mode].name, Object.entries(MODES).map(([k, m]) => [k, m.name]), (v) => { if (host()) { L.mode = v; this.refreshLobby(); } }, L.mode);
+    this._dd('ddRule', '模式', R.name, Object.entries(RULES).map(([k, r]) => [k, r.name]), (v) => {
+      if (!host()) return; L.rule = v; if (!L.ruleCfg[v]) L.ruleCfg[v] = Object.assign({}, RULES[v].def); this.refreshLobby();
+    }, L.rule);
+    this._dd('ddSize', '人數', `${L.allies} vs ${L.allies}`, Array.from({ length: 12 }, (_, i) => [i + 1, `${i + 1} vs ${i + 1}`]), (v) => { if (host()) { L.allies = L.enemies = +v; this.refreshLobby(); } }, L.allies);
+    this._dd('ddOpts', '進階', '設置', null, () => { if (host()) { $('lbOptModal').classList.add('on'); this.audio.uiClick(); } });
     const lo = Settings.data.loadouts[L.loadout];
     $('lbLoadoutInfo').textContent = `配裝 ${LOADOUT_KEYS[L.loadout]}：${WEAPON_DEFS[lo.primary].name} + ${WEAPON_DEFS[lo.secondary].name}`;
     [...$('lbLoadout').children].forEach((b, i) => { b.title = `配裝 ${LOADOUT_KEYS[i]} · 對戰中按 F${i + 1}`; });
-    $('lbAllies').textContent = L.allies; $('lbEnemies').textContent = L.enemies;
+    $('lbMeName').textContent = Settings.data.nick || 'YOU'; $('lbMeGun').textContent = `配裝 ${LOADOUT_KEYS[L.loadout]} · ${WEAPON_DEFS[lo.primary].name}`;
+    this._lbStage();
     this.renderTeams(L); this.renderRoomBar(L); this.renderChat();
     if (!guest) Settings.save();
     if (r && r.role === 'host') r.broadcast();
+  }
+  // v45 SF2-style dropdown: a labelled button with ▲; items = [[value, label]] (null = the button opens a pop-up instead)
+  _dd(id, label, value, items, pick, cur) {
+    const el = this.$(id);
+    el.innerHTML = `<button><small>${label}</small><span>${esc(String(value))}</span><i>▲</i></button>${items ? `<div class="ddl">${items.map(([v, t]) => `<button data-v="${v}" class="${String(v) === String(cur) ? 'on' : ''}">${esc(String(t))}</button>`).join('')}</div>` : ''}`;
+    el.firstChild.onclick = (e) => {
+      e.stopPropagation(); this.audio.init(); this.audio.uiClick();
+      if (!items) { pick(); return; }
+      if (this.isGuest()) return;
+      const was = el.classList.contains('open'); document.querySelectorAll('#lobby .dd.open').forEach((d) => d.classList.remove('open')); el.classList.toggle('open', !was);
+    };
+    if (items) el.querySelectorAll('.ddl button').forEach((b) => { b.onclick = (e) => { e.stopPropagation(); el.classList.remove('open'); this.audio.uiClick(); pick(b.dataset.v); }; });
+  }
+  // v45 left panel: your soldier (same model as in a match) holding the chosen set's primary, slowly turning
+  _lbStage() {
+    const cv = this.$('lbCharCv');
+    if (!this.lbR) {
+      try {
+        const r = this.lbR = new THREE.WebGLRenderer({ canvas: cv, antialias: true, alpha: true, powerPreference: 'low-power' });
+        r.setPixelRatio(Math.min(devicePixelRatio, 1.5)); r.toneMapping = THREE.ACESFilmicToneMapping; r.toneMappingExposure = 1.3; r.outputColorSpace = THREE.SRGBColorSpace;
+        const sc = this.lbScene = new THREE.Scene(), pm = new THREE.PMREMGenerator(r);
+        sc.environment = pm.fromScene(new RoomEnvironment(), 0.04).texture; pm.dispose();
+        const key = new THREE.DirectionalLight(0xfff0dc, 2.4); key.position.set(2, 3, 4); sc.add(key);
+        const rim = new THREE.DirectionalLight(0x9fc4ff, 2.0); rim.position.set(-3, 2, -3); sc.add(rim); sc.add(new THREE.HemisphereLight(0xdfe8f2, 0x302c28, 0.8));
+        this.lbCam = new THREE.PerspectiveCamera(26, 1, 0.05, 30); this.lbT = 0;
+      } catch (e) { console.warn('room preview unavailable', e); this.lbR = false; }
+    }
+    if (!this.lbR) return;
+    const L = Settings.data.lobby, id = Settings.data.loadouts[L.loadout].primary, model = WEAPON_DEFS[id].model || id;
+    const team = this.room && this.room.team === 'bravo' ? 'bravo' : 'alpha';
+    if (!this.lbSoldier || this.lbTeam !== team) { if (this.lbSoldier) this.lbScene.remove(this.lbSoldier.root); this.lbSoldier = this.soldiers.create(team, model); this.lbScene.add(this.lbSoldier.root); this.lbTeam = team; this.lbGun = model; }
+    else if (this.lbGun !== model) { this.soldiers.setWeapon(this.lbSoldier, model); this.lbGun = model; }
+  }
+  _renderLobbyStage(dt) {
+    if (!this.lbR || !this.lbSoldier || !this.$('lobby').classList.contains('on')) return;
+    const r = this.lbR, cam = this.lbCam, cv = this.$('lbCharCv'), w = cv.clientWidth, h = cv.clientHeight;
+    if (!w || !h) return;
+    if (cv.width !== Math.round(w * r.getPixelRatio()) || cv.height !== Math.round(h * r.getPixelRatio())) r.setSize(w, h, false);
+    cam.aspect = w / h; cam.position.set(0, 0.9, 7.1); cam.lookAt(0, 0.38, 0); cam.updateProjectionMatrix(); // feet clear of the chat panel
+    this.lbT += dt; this.lbSoldier.root.rotation.y = Math.PI + 0.55 + Math.sin(this.lbT * 0.4) * 0.35;
+    r.render(this.lbScene, cam);
   }
   // v27: real players first (their room status on the right), bots fill each team up to its size, then empty slots
   renderTeams(L) {
@@ -535,8 +590,8 @@ class App {
     $('lbInvite').disabled = !(r && r.online && code);
     $('lbInvCode').textContent = code; $('lbInvLinkTxt').value = r ? inviteLink(r.code) : '';
     $('lbPub').checked = !!(r && r.pub); $('lbPubRow').style.display = r && r.role === 'host' ? '' : 'none';
-    const sb = $('lbStart'); let txt = '出 發 · GO', off = false, msg = '';
-    if (guest) { if (r.phase === 'playing' && r.mcfg) txt = '加入對戰 · JOIN'; else { txt = '等待房主出發'; off = true; msg = r.entered ? '地圖和模式由房主設定 · 你可以選擇隊伍和配裝' : ''; } }
+    const sb = $('lbStart'); let txt = '開始 (F5)', off = false, msg = '';
+    if (guest) { if (r.phase === 'playing' && r.mcfg) txt = '加入對戰 (F5)'; else { txt = '等待房主開始'; off = true; msg = r.entered ? '地圖和模式由房主設定 · 你可以選擇隊伍和配裝' : ''; } }
     sb.textContent = txt; sb.disabled = off; sb.classList.toggle('wait', off); $('lbMsg').textContent = msg;
     this.renderFriends(); // invite buttons depend on our room
   }
@@ -945,11 +1000,17 @@ class App {
     for (let k = 0; k < PER; k++) {
       const id = page[k], c = document.createElement('button');
       if (!id) { c.className = 'whGun empty'; c.disabled = true; list.appendChild(c); continue; }
-      c.className = 'whGun' + (LO[W.slot][W.cat] === id ? ' eq' : '') + (W.sel === id ? ' sel' : ''); c.dataset.id = id;
+      const inSet = LO.findIndex((l) => l[W.cat] === id); // v45: a primary shows 裝備中 whichever set (A–E) carries it
+      c.className = 'whGun' + (inSet >= 0 && (W.cat === 'primary' || inSet === W.slot) ? ' eq' : '') + (W.sel === id ? ' sel' : ''); c.dataset.id = id;
+      if (inSet >= 0) c.dataset.eq = LOADOUT_KEYS[inSet];
       const th = this.thumbs && this.thumbs[id] ? `<img src="${this.thumbs[id]}" alt="">` : WEAPON_ICONS[id] ? `<img class="ln" src="${WEAPON_ICONS[id]}" alt="">` : '';
       c.innerHTML = `<div class="nm">${WEAPON_DEFS[id].name}</div><div class="th">${th}</div><span class="cls">${TYPE_LABEL[WEAPON_DATABASE[id].type]}</span>`;
       c.onmouseenter = () => { if (W.sel !== id) { W.sel = id; this._whInfo(); } };
-      c.onclick = () => { LO[W.slot][W.cat] = id; W.sel = id; Settings.save(); this.audio.uiClick(); this.renderWarehouse(); };
+      c.onclick = () => {
+        const other = W.cat === 'primary' ? LO.findIndex((l, i) => i !== W.slot && l.primary === id) : -1; // one primary belongs to one set only
+        if (other >= 0) { this.roomToast(`${WEAPON_DEFS[id].name} 已裝備在 ${LOADOUT_KEYS[other]} 配裝`); this.audio.uiClick(); return; }
+        LO[W.slot][W.cat] = id; W.sel = id; Settings.save(); this.audio.uiClick(); this.renderWarehouse();
+      };
       list.appendChild(c);
     }
     list.onmouseleave = () => { const eq = LO[W.slot][W.cat]; if (W.sel !== eq) { W.sel = eq; this._whInfo(); } };
@@ -981,7 +1042,7 @@ class App {
     this.pacer.skips = 0;
     let dt = clamp((now - this.last) / 1000, 0, 0.1); this.last = now;
     this.input.gameActive = this.state === 'playing' || this.state === 'paused';
-    if (this.state === 'lobby' || this.state === 'hub') { this._renderPreview(dt); if (this.thumbQ && this.thumbQ.length && performance.now() > this.thumbStart) this._pumpThumb(); }
+    if (this.state === 'lobby' || this.state === 'hub') { this._renderPreview(dt); if (this.state === "lobby") this._renderLobbyStage(dt); if (this.thumbQ && this.thumbQ.length && performance.now() > this.thumbStart) this._pumpThumb(); }
     this.fpsAcc += dt; this.fpsFrames++;
     if (this.fpsAcc >= 0.5) { this.fpsText = `${Math.round(this.fpsFrames / this.fpsAcc)} FPS`; this.fpsAcc = 0; this.fpsFrames = 0; }
     const mouse = this.input.consumeMouse(this._mouse);

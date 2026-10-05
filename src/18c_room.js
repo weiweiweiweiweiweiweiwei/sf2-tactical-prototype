@@ -19,13 +19,13 @@ const ROOM_ST = { room: 'READY', loading: '載入中', playing: '對戰中', end
 // the room's settings as the host sends them, and as a member accepts them (a broken or hostile value can never reach Match)
 function roomCfgOut() {
   const L = Settings.data.lobby;
-  return { map: L.map, mode: L.mode, rule: L.rule, difficulty: L.difficulty, allies: L.allies, enemies: L.enemies, ruleCfg: { [L.rule]: L.ruleCfg[L.rule] || RULES[L.rule].def } };
+  return { map: L.map, mode: L.mode, rule: L.rule, difficulty: L.difficulty, allies: L.allies, enemies: L.enemies, opts: L.opts, ruleCfg: { [L.rule]: L.ruleCfg[L.rule] || RULES[L.rule].def } };
 }
 function roomCfgSafe(c) {
   c = c && typeof c === 'object' ? c : {};
   const rule = Object.prototype.hasOwnProperty.call(RULES, c.rule) ? c.rule : 'tdm', R = RULES[rule], rc = (c.ruleCfg && c.ruleCfg[rule]) || {};
   return { map: clamp(c.map | 0, 0, MAPS.length - 1), mode: Object.prototype.hasOwnProperty.call(MODES, c.mode) ? c.mode : 'general', rule, difficulty: clamp(c.difficulty | 0, 0, DIFFICULTY.length - 1),
-    allies: clamp(c.allies | 0, 1, 12), enemies: clamp(c.enemies | 0, 1, 12),
+    allies: clamp(c.allies | 0, 1, 12), enemies: clamp(c.enemies | 0, 1, 12), opts: { pickup: !(c.opts && c.opts.pickup === false), killcam: !(c.opts && c.opts.killcam === false), ff: !!(c.opts && c.opts.ff) },
     ruleCfg: { [rule]: { target: R.targets.includes(rc.target) ? rc.target : R.def.target, time: R.times.includes(rc.time) ? rc.time : R.def.time } } };
 }
 

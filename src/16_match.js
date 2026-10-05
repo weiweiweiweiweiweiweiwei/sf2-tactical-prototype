@@ -10,7 +10,8 @@ class Match {
     this.rules = createRule(config.rule, this);
     const rc = (config.ruleCfg && config.ruleCfg[config.rule]) || RULES[config.rule].def;
     this.target = rc.target; this.roundTime = RULES[config.rule].timeUnit === 'sec' ? rc.time : 0;
-    this.timeLeft = RULES[config.rule].timeUnit === 'sec' ? rc.time : rc.time * 60;
+    this.timeLeft = RULES[config.rule].timeUnit === 'sec' ? rc.time : rc.time ? rc.time * 60 : Infinity; // v45: score modes have no time limit
+    this.opts = Object.assign({ pickup: true, killcam: true, ff: false }, config.opts); // room 設置: weapon pickup, killcam, friendly fire
     this.score = { alpha: 0, bravo: 0 }; this.roundWins = { alpha: 0, bravo: 0 }; this.round = 0;
     this.stats = { shots: 0, hits: 0 }; this.firstBlood = true; this.acc = 0; this.spotT = 0; this.freezeT = 0; this.roundEndT = 0;
     this.grenades = []; this.combatants = []; this.bots = []; this.timers = [];
@@ -257,7 +258,7 @@ class Match {
     for (const h of hits) h.type = 'world';
     const rew = shooter.isNet && this.net && this.net.rewind ? this.net.rewind(shooter) : null; // v29: a friend's shot sees what he saw
     for (const c of this.combatants) {
-      if (!c.alive || c === shooter || c.team === shooter.team) continue;
+      if (!c.alive || c === shooter || (c.team === shooter.team && !this.opts.ff)) continue;
       const to = TMP_V1.subVectors(c.motor.pos, origin), t = to.dot(dir);
       if (t < 0 || t > range + 2) continue;
       const cx = origin.x + dir.x * t - c.motor.pos.x, cz = origin.z + dir.z * t - c.motor.pos.z;
@@ -319,7 +320,7 @@ class Match {
     let best = w ? Object.assign(w, { world: true }) : null;
     const rew = shooter.isNet && this.net && this.net.rewind ? this.net.rewind(shooter) : null;
     for (const c of this.combatants) {
-      if (!c.alive || c === shooter || c.team === shooter.team) continue;
+      if (!c.alive || c === shooter || (c.team === shooter.team && !this.opts.ff)) continue;
       if (c.motor.pos.distanceTo(origin) > range + 1.5) continue;
       c.updateHitboxes();
       for (const hb of c.hitboxes) { const h = CollisionWorld.rayBox(origin, dir, hb, range); if (h && (!best || h.t < best.t)) best = { t: h.t, target: c, part: hb.part, point: origin.clone().addScaledVector(dir, h.t) }; }
@@ -331,7 +332,7 @@ class Match {
   applyDamage(victim, dmg, part, attacker, def, dir, point, opts = {}) {
     if (this.isClient) return false; // v25: the host decides every hit and reports back hit markers / damage
     if (!victim.alive || this.phase !== 'live') return false;
-    if (attacker && attacker !== victim && attacker.team === victim.team) return false; // friendly fire off
+    if (attacker && attacker !== victim && attacker.team === victim.team && !this.opts.ff) return false; // friendly fire (room option, off by default)
     if (victim.spawnProtect > 0) { if (point) this.effects.shield(point); if (attacker && attacker.isPlayer) { this.app.hud.hitmarker('shield'); this.audio.hit('shield'); } if (attacker && this.net) this.net.onHit(attacker, victim, 'shield', point); return false; }
     if (attacker && attacker.isPlayer && attacker.team !== victim.team) { const dd = attacker.dmgDone || (attacker.dmgDone = new Map()); dd.set(victim, (dd.get(victim) || 0) + Math.min(dmg, Math.max(0, victim.hp))); } // v34 Tab board: damage per enemy
     victim.hp -= dmg; victim.lastPart = part;
@@ -481,7 +482,7 @@ class Match {
     this._killFeed(victim, killer, def, head, valid, opts);
     if (victim.isPlayer) {
       hud.showDeath(true, valid ? killer.name : '', def.name, head, this.rules.roundBased);
-      if (this.rules.roundBased) this.nextSpectate(); else if (valid) this._startKillcam(killer, def);
+      if (this.rules.roundBased) this.nextSpectate(); else if (valid && this.opts.killcam) this._startKillcam(killer, def);
     }
     this.checkEnd();
   }
@@ -544,7 +545,7 @@ class Match {
   static isGun(def) { return !!def && !!def.mag && def.kind !== 'knife' && def.kind !== 'grenade'; }
   // A dropped gun: physics body (it tumbles and settles), low-poly mesh, pulsing ground glow; remembers its ammo.
   dropWeapon(def, ammo, reserve, pos, vel, netId = 0) {
-    if (!Match.isGun(def)) return null;
+    if (!Match.isGun(def) || !this.opts.pickup) return null; // room option: no weapon drops / pickups
     const holder = new THREE.Group(), gun = new THREE.Mesh(this.app.models.tp(def.model), this.app.soldiers.gunMat);
     gun.scale.setScalar(1.25); gun.castShadow = true; holder.add(gun);
     const len = ((WEAPON_DATABASE[def.id] && WEAPON_DATABASE[def.id].tp && WEAPON_DATABASE[def.id].tp.len) || (def.kind === 'pistol' ? 0.22 : 0.9)) * 0.62;

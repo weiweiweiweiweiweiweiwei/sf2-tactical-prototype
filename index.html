@@ -223,9 +223,36 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
 .lb-brand small{display:block;font-size:11px;letter-spacing:5px;color:var(--dim);margin-top:-4px}
 .lb-room{flex:1;font-size:16px;color:var(--dim);letter-spacing:2px}
 .lb-room b{color:var(--hud)}
-.lb-main{display:grid;grid-template-columns:1fr 470px;gap:18px;height:760px;padding-top:16px;align-items:start} /* v26: 860-high design (right column ~750) */
+.lb-main{display:grid;grid-template-columns:470px 1fr;gap:16px;height:782px;padding-top:14px} /* v45 SF2 待機室 */
+.lb-char{position:relative;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:radial-gradient(ellipse at 50% 35%,rgba(90,110,130,.35),rgba(0,0,0,.5) 70%),linear-gradient(180deg,#1b232b,#0c1014)}
+.lb-char canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.lb-me{position:absolute;left:14px;top:12px;text-shadow:0 1px 3px #000}.lb-me b{display:block;font-size:20px;color:var(--gold);letter-spacing:1px}.lb-me span{font-size:13px;color:var(--dim)}
+.lb-char .lb-chat{position:absolute;left:0;right:0;bottom:0;height:300px;background:rgba(6,10,14,.55);backdrop-filter:blur(3px);border:0;border-top:1px solid rgba(255,255,255,.08);border-radius:0}
+.lb-right{display:flex;flex-direction:column;gap:10px;min-width:0;height:782px}
+.lb-roomhd{display:flex;align-items:baseline;gap:14px;padding:8px 14px;background:linear-gradient(90deg,rgba(255,200,80,.18),transparent 70%);border-left:3px solid var(--gold);border-radius:3px}
+.lb-roomhd b{font-size:19px;letter-spacing:2px;color:#ffe7a0;white-space:nowrap}.lb-roomhd span{font-size:13px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lb-cfg{display:grid;grid-template-columns:300px 1fr;gap:14px;height:170px}
+.lb-cfg .mapPrev{height:170px;cursor:pointer}.lb-cfg .mapPrev:hover{border-color:var(--accent)}
+.lb-dds{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:repeat(3,1fr);gap:8px 12px}
+.dd{position:relative}.dd>button{position:relative;width:100%;height:100%;display:flex;align-items:center;justify-content:center;cursor:pointer;background:linear-gradient(180deg,rgba(255,255,255,.07),rgba(0,0,0,.35));border:1px solid rgba(255,255,255,.2);border-radius:3px;color:#fff;font-size:17px;font-weight:700;letter-spacing:1px}
+.dd>button small{position:absolute;left:10px;font-size:11px;color:var(--faint);letter-spacing:2px;font-weight:600}.dd>button i{position:absolute;right:12px;font-style:normal;font-size:12px;color:#fff}
+.dd>button:hover{border-color:var(--accent)}.dd.open>button{border-color:var(--accent);background:rgba(125,255,166,.12)}
+.dd .ddl{display:none;position:absolute;left:0;right:0;top:calc(100% + 3px);z-index:30;background:#10161c;border:1px solid var(--accent);border-radius:3px;max-height:330px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,.6)}
+.dd.open .ddl{display:block}.dd .ddl button{display:block;width:100%;text-align:center;padding:7px 10px;background:none;border:0;border-bottom:1px solid rgba(255,255,255,.05);color:var(--hud);font-size:15px;font-weight:600;cursor:pointer}
+.dd .ddl button:hover{background:rgba(125,255,166,.14);color:#fff}.dd .ddl button.on{color:var(--accent)}
+.lb-bottom{display:flex;align-items:center;gap:16px;height:96px;margin-top:auto}
+.lb-lo{flex:1;display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px}.lb-lo h3{font-size:13px;letter-spacing:4px;color:var(--accent);margin:0}
+.lb-lo #lbWarehouse{font-size:13px;padding:5px 10px}.lb-lo #lbLoadoutInfo{width:100%;font-size:13px;color:var(--dim)}.lb-lo #lbMsg{width:100%}
+#lobby .btn.start{width:300px;height:84px;font-size:34px;letter-spacing:4px;background:linear-gradient(180deg,#ffd257,#f39a12);color:#2a1700;border:2px solid #ffe08a;box-shadow:0 0 22px rgba(255,180,40,.35)}
+#lobby .btn.start.wait{background:linear-gradient(180deg,#5a6a7a,#2c3946);color:#cfd8e0;border-color:#7d8d9d;box-shadow:none;font-size:24px}
+.lb-modal{position:absolute;inset:0;z-index:40;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.6);backdrop-filter:blur(4px)}.lb-modal.on{display:flex}
+.lb-modal .mz{display:block;zoom:1;width:1040px;max-height:720px;overflow-y:auto;background:#0f151b;border:1px solid var(--accent);border-radius:6px;padding:14px 18px 18px}
+.lb-modal header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}.lb-modal header b{font-size:20px;letter-spacing:4px;color:var(--accent)}
+.lb-modal .maps{grid-template-columns:repeat(4,1fr);gap:10px}.lb-modal .maps button{font-size:14px;padding:5px}.lb-modal .maps button canvas{height:120px}
+.lb-modal .mz.opt{width:520px;overflow:visible}.lb-modal .mz.opt .pills{display:flex;flex-direction:row}.lb-modal .tg{display:flex;align-items:center;gap:12px;padding:10px 6px;font-size:17px;border-bottom:1px solid rgba(255,255,255,.06);cursor:pointer}
+.lb-modal .tg input{width:20px;height:20px;accent-color:var(--accent)}.lb-modal h3{font-size:13px;letter-spacing:4px;color:var(--accent);margin:14px 0 8px}
 /* v27 room bar: code, room name, ＋ 邀請朋友 pop-up, 離開房間 */
-.lb-left{height:744px;display:flex;flex-direction:column;gap:12px}.lb-left .lb-teams{flex:none}
+
 /* v31 chat — room panel under the team lists, and the in-match box (bottom left, above the health) */
 .lb-chat{flex:1;min-height:0;display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:8px 10px 10px}
 #lbChatLog{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:2px;padding:2px 4px 6px}
@@ -357,20 +384,20 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
 #hubRooms .empty{margin:auto;max-width:430px;text-align:center;color:var(--dim);font-size:15px;line-height:1.7}
 #hubRooms .empty b{display:block;font-size:20px;color:var(--hud);letter-spacing:3px;margin-bottom:8px}
 #pOnline{margin:8px 0 2px;font-size:14px;color:var(--hud);display:flex;align-items:center;gap:10px;flex-wrap:wrap}#pOnline code{color:var(--accent);font-size:16px;letter-spacing:3px}#pOnline .btn{padding:3px 12px;font-size:13px}
-.lb-teams{display:grid;grid-template-columns:1fr 56px 1fr;gap:0;align-items:start}
+.lb-teams{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start}
 .team-col{background:var(--panel);border:1px solid var(--line);border-radius:6px;overflow:hidden}
-.team-col header{display:flex;align-items:center;gap:10px;padding:10px 14px}
+.team-col header{display:flex;align-items:center;gap:10px;padding:7px 14px}
 .team-col.a header{background:linear-gradient(90deg,rgba(50,120,210,.4),rgba(50,120,210,.06))}
 .team-col.b header{background:linear-gradient(90deg,rgba(210,60,50,.4),rgba(210,60,50,.06))}
-.team-col header b{font-size:24px;letter-spacing:4px}
+.team-col header b{font-size:20px;letter-spacing:4px}
 .team-col.a header b{color:var(--blue)}.team-col.b header b{color:var(--red)}
 .team-col header span{color:var(--dim);font-size:14px;flex:1;white-space:nowrap}
 .stepper{display:flex;align-items:center;gap:6px}
 .stepper button{width:30px;height:30px;border-radius:3px;border:1px solid rgba(255,255,255,.25);background:rgba(0,0,0,.35);color:#fff;font-size:18px;cursor:pointer}
 .stepper button:hover{border-color:var(--accent);color:var(--accent)}
 .stepper b{min-width:28px;text-align:center;font-size:20px!important;color:#fff!important;letter-spacing:0!important}
-.team-col ol{list-style:none;padding:5px 6px;max-height:440px;overflow-y:auto}
-.team-col li{display:flex;align-items:center;gap:10px;height:33px;padding:0 10px;margin:2px 0;border-radius:3px;background:rgba(255,255,255,.035);font-size:16px;font-weight:600}
+.team-col ol{list-style:none;padding:4px 6px}
+.team-col li{display:flex;align-items:center;gap:10px;height:27px;padding:0 10px;margin:2px 0;border-radius:3px;background:rgba(255,255,255,.035);font-size:16px;font-weight:600}
 .team-col li .n{width:22px;color:var(--faint);font-size:14px}
 .team-col li .rank{width:24px;height:24px;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700}
 .team-col.a li .rank{background:rgba(99,179,255,.2);color:var(--blue)}.team-col.b li .rank{background:rgba(255,93,82,.2);color:var(--red)}
@@ -546,7 +573,7 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
 .whGun .cls{position:absolute;right:7px;bottom:4px;font-size:10px;letter-spacing:1px;color:var(--dim)}
 .whGun:hover{border-color:rgba(255,255,255,.35)}.whGun.sel{border-color:rgba(125,255,166,.7)}
 .whGun.eq .nm{border-top-color:var(--red);color:#fff}
-.whGun.eq::after{content:'裝備中';position:absolute;left:6px;bottom:4px;font-size:11px;font-weight:700;color:#1a1305;background:var(--gold);padding:0 6px;border-radius:2px}
+.whGun.eq::after{content:'裝備中 ' attr(data-eq);position:absolute;left:6px;bottom:4px;font-size:11px;font-weight:700;color:#1a1305;background:var(--gold);padding:0 6px;border-radius:2px}
 .whGun.empty{visibility:hidden}
 #whPager{display:flex;justify-content:center;align-items:center;gap:6px;height:28px;flex-shrink:0}
 #whPager button{min-width:30px;height:26px;cursor:pointer;font-family:inherit;font-size:14px;color:var(--hud);background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.14);border-radius:3px}
@@ -789,30 +816,38 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
     <button class="btn ghost" id="lbLeave" title="回到大廳">離開房間</button>
   </div>
   <div class="lb-main">
-    <div class="lb-left"><section class="lb-teams">
-      <div class="team-col a"><header><b>藍隊 ALPHA</b><span id="lbAllyLbl"></span><button class="btn ghost tsw" id="lbJoinA" style="display:none">換到藍隊</button>
-        <div class="stepper"><button data-step="allies" data-d="-1">−</button><b id="lbAllies">6</b><button data-step="allies" data-d="1">+</button></div></header>
-        <ol id="lbListA"></ol></div>
-      <div class="vs">VS</div>
-      <div class="team-col b"><header><b>紅隊 BRAVO</b><span id="lbEnemyLbl"></span><button class="btn ghost tsw" id="lbJoinB" style="display:none">換到紅隊</button>
-        <div class="stepper"><button data-step="enemies" data-d="-1">−</button><b id="lbEnemies">6</b><button data-step="enemies" data-d="1">+</button></div></header>
-        <ol id="lbListB"></ol></div>
+    <!-- v45 SF2 待機室: left = your soldier + translucent chat; right = map + 6 settings, red/blue slots, loadout + 開始(F5) -->
+    <section class="lb-char"><canvas id="lbCharCv"></canvas>
+      <div class="lb-me"><b id="lbMeName">YOU</b><span id="lbMeGun"></span></div>
+      <div class="lb-chat"><div id="lbChatLog"></div>
+        <div class="ci"><button class="btn ghost" id="lbChatMode" title="Tab：切換全體／隊伍">全體</button><input type="text" id="lbChatIn" maxlength="120" autocomplete="off" spellcheck="false" placeholder="輸入訊息，Enter 送出"><button class="btn" id="lbChatSend">送出</button></div></div>
     </section>
-    <section class="lb-chat"><div id="lbChatLog"></div>
-      <div class="ci"><button class="btn ghost" id="lbChatMode" title="Tab：切換全體／隊伍">全體</button><input type="text" id="lbChatIn" maxlength="120" autocomplete="off" spellcheck="false" placeholder="輸入訊息，Enter 送出"><button class="btn" id="lbChatSend">送出</button></div></section></div>
-    <aside class="lb-side">
-      <div class="hostonly"><h3>地圖 MAP</h3>
-        <div class="mapPrev"><canvas id="lbMapBig" width="880" height="330"></canvas><div class="info"><b id="lbMapName"></b><span id="lbMapDesc"></span></div></div>
-        <div class="maps" id="lbMaps"></div></div>
-      <div class="hostonly"><h3>賽制 MODE</h3><div class="pills" id="lbRule"></div></div>
-      <div class="hostonly"><h3>武器模式</h3><div class="pills" id="lbModes"></div><div class="modeDesc" id="lbModeDesc"></div></div>
-      <div class="row2 hostonly"><div><h3 id="lbTargetLbl">勝利分數</h3><div class="pills" id="lbTarget"></div></div><div><h3 id="lbTimeLbl">時間限制</h3><div class="pills" id="lbTime"></div></div></div>
-      <div class="row2"><div class="hostonly"><h3>難度</h3><div class="pills" id="lbDiff"></div></div>
-        <div><h3>出場配裝</h3><div class="pills" id="lbLoadout"></div><button class="btn ghost" id="lbWarehouse" style="margin-top:6px;font-size:13px;padding:5px 10px">編輯配裝 · 倉庫</button><div id="lbLoadoutInfo"></div></div></div>
-      <div id="lbMsg"></div>
-      <button class="btn start" id="lbStart">出 發 · GO</button>
-    </aside>
+    <section class="lb-right">
+      <div class="lb-roomhd"><b id="lbTitle"></b><span id="lbModeDesc"></span></div>
+      <div class="lb-cfg">
+        <div class="mapPrev hostonly" id="lbMapOpen" title="點擊選擇地圖"><canvas id="lbMapBig" width="600" height="340"></canvas><div class="info"><b id="lbMapName"></b><span id="lbMapDesc"></span></div></div>
+        <div class="lb-dds">
+          <div class="dd hostonly" id="ddMap"></div><div class="dd hostonly" id="ddRule"></div>
+          <div class="dd hostonly" id="ddTarget"></div><div class="dd hostonly" id="ddSize"></div>
+          <div class="dd hostonly" id="ddMode"></div><div class="dd hostonly" id="ddOpts"></div>
+        </div>
+      </div>
+      <section class="lb-teams">
+        <div class="team-col a"><header><b>藍隊 ALPHA</b><span id="lbAllyLbl"></span><button class="btn ghost tsw" id="lbJoinA" style="display:none">換到藍隊</button></header><ol id="lbListA"></ol></div>
+        <div class="team-col b"><header><b>紅隊 BRAVO</b><span id="lbEnemyLbl"></span><button class="btn ghost tsw" id="lbJoinB" style="display:none">換到紅隊</button></header><ol id="lbListB"></ol></div>
+      </section>
+      <div class="lb-bottom">
+        <div class="lb-lo"><h3>出場配裝</h3><div class="pills" id="lbLoadout"></div><button class="btn ghost" id="lbWarehouse">編輯配裝 · 倉庫</button><div id="lbLoadoutInfo"></div><div id="lbMsg"></div></div>
+        <button class="btn start" id="lbStart">開始 (F5)</button>
+      </div>
+    </section>
   </div>
+  <div class="lb-modal" id="lbMapModal"><div class="mz"><header><b>選擇地圖 MAP</b><button class="btn ghost" id="lbMapClose">✕</button></header><div class="maps" id="lbMaps"></div></div></div>
+  <div class="lb-modal" id="lbOptModal"><div class="mz opt"><header><b>房間設置</b><button class="btn ghost" id="lbOptClose">✕</button></header>
+    <label class="tg"><input type="checkbox" id="optPickup"><span>可以撿取地上的槍械</span></label>
+    <label class="tg"><input type="checkbox" id="optKillcam"><span>陣亡時播放擊殺回放（Killcam）</span></label>
+    <label class="tg"><input type="checkbox" id="optFF"><span>友軍傷害（打得到隊友）</span></label>
+    <h3>電腦難度</h3><div class="pills" id="lbDiff"></div></div></div>
   <div class="lb-foot">WASD 移動 · SHIFT 衝刺(不會掉下邊緣) · C 蹲(無腳步聲，衝刺中按 = 滑鏟) · SPACE 跳(對矮牆 = 攀爬翻越) · 右鍵 開鏡 · 1-6 武器 · F 擒拿 · E 互動/佔領 · F1–F5 預約配裝 · 梯子 W/S · Q 快速切換 · R 換彈 · TAB 計分板</div>
 </div>
   <div id="lbCount"><div class="cz"><div class="cl">即將出發</div><div class="cn" id="lbCountNum">3</div><div class="cm" id="lbCountMap"></div>
@@ -1430,10 +1465,10 @@ const BOT_POOLS = {
 
 // Match rules (state-machine classes live in the match module).
 const RULES = {
-  tdm: { name: '團隊死鬥', desc: '陣亡 3 秒復活 · 先達到目標分數獲勝（爆頭 50 · 擊殺 30）', unit: '分', targets: [500, 1000, 1500, 2500], times: [10, 15, 20], timeUnit: 'min', def: { target: 1000, time: 15 } },
-  rounds: { name: '回合殲滅', desc: '陣亡本回合不復活 · 先贏得指定回合數', unit: '勝', targets: [3, 5, 7, 10], times: [90, 150, 240], timeUnit: 'sec', def: { target: 10, time: 150 } },
-  relic: { name: '奪取戰', desc: '藍隊進攻奪取山丘聖物並運回撤離點 · 紅隊防守 · 回合制', unit: '勝', targets: [3, 5, 7], times: [120, 180, 240], timeUnit: 'sec', def: { target: 5, time: 180 } },
-  dom: { name: '佔領戰', desc: '按住 E 6 秒佔領 A/B/C · 佔點隨時間得分 · 全佔封鎖對手得分', unit: '分', targets: [150, 250, 400], times: [10, 15, 20], timeUnit: 'min', def: { target: 250, time: 15 } },
+  tdm: { name: '團隊死鬥', desc: '陣亡 3 秒復活 · 先達到目標分數獲勝（爆頭 50 · 擊殺 30）', unit: '分', targets: [500, 1000, 1500, 2500], times: [0], timeUnit: 'min', def: { target: 1000, time: 0 } }, // v45: no time limit
+  rounds: { name: '回合殲滅', desc: '陣亡本回合不復活 · 先贏得指定回合數', unit: '勝', targets: [5, 6, 7, 8, 9], times: [600], timeUnit: 'sec', def: { target: 6, time: 600 } }, // v45: SF2 先勝 rounds, 10 min a round
+  relic: { name: '奪取戰', desc: '藍隊進攻奪取山丘聖物並運回撤離點 · 紅隊防守 · 回合制', unit: '勝', targets: [5, 6, 7, 8, 9], times: [600], timeUnit: 'sec', def: { target: 6, time: 600 } },
+  dom: { name: '佔領戰', desc: '按住 E 6 秒佔領 A/B/C · 佔點隨時間得分 · 全佔封鎖對手得分', unit: '分', targets: [150, 250, 400], times: [0], timeUnit: 'min', def: { target: 250, time: 0 } },
 };
 const FREEZE_TIME = 5;
 
@@ -1521,7 +1556,7 @@ const Settings = {
     hitSound: 'flesh', // v38 ESC → 命中音效 (audition list, HIT_SOUNDS)
     hudStyle: 'minimal', // v19: 'minimal' (SF2) | 'panel' (v5)
     loadouts: DEFAULT_LOADOUTS.map((l) => Object.assign({}, l)),
-    lobby: { map: 5, mode: 'general', rule: 'dom', difficulty: 1, allies: 6, enemies: 6, loadout: 0,
+    lobby: { map: 5, mode: 'general', rule: 'dom', difficulty: 1, allies: 6, enemies: 6, loadout: 0, opts: { pickup: true, killcam: true, ff: false },
       ruleCfg: Object.fromEntries(Object.entries(RULES).map(([k, r]) => [k, Object.assign({}, r.def)])) },
   },
   load() {
@@ -1530,11 +1565,14 @@ const Settings = {
       if (s) {
         const lobby = Object.assign({}, this.data.lobby, s.lobby || {});
         lobby.ruleCfg = Object.assign({}, this.data.lobby.ruleCfg, (s.lobby && s.lobby.ruleCfg) || {});
+        lobby.opts = Object.assign({ pickup: true, killcam: true, ff: false }, lobby.opts); lobby.enemies = lobby.allies = Math.max(lobby.allies | 0, 1); // v45 room: N vs N
         if (!RULES[lobby.rule]) lobby.rule = 'tdm';
         for (const [k, r] of Object.entries(RULES)) { const c = lobby.ruleCfg[k]; if (!c || !r.targets.includes(c.target) || !r.times.includes(c.time)) lobby.ruleCfg[k] = Object.assign({}, r.def); }
         const loadouts = Array.isArray(s.loadouts) && s.loadouts.length === 5 ? s.loadouts : this.data.loadouts;
         Object.assign(this.data, s); this.data.lobby = lobby; this.data.loadouts = loadouts;
         for (const l of this.data.loadouts) { if (!WEAPON_DATABASE[l.primary] || WEAPON_DATABASE[l.primary].slot !== 'primary') l.primary = 'm4a1'; if (!WEAPON_DATABASE[l.secondary] || WEAPON_DATABASE[l.secondary].slot !== 'secondary') l.secondary = 'p226'; }
+        const used = new Set(); // v45: a primary can sit in one set only — later duplicates take the first free gun
+        for (const l of this.data.loadouts) { if (used.has(l.primary)) l.primary = PRIMARY_IDS.find((k) => !used.has(k) && !this.data.loadouts.some((o) => o.primary === k)); used.add(l.primary); }
       }
     } catch (e) { /* storage unavailable */ }
     return this.data;
@@ -10606,7 +10644,7 @@ class HUD {
     const rounds = m.rules.roundBased;
     const a = rounds ? m.roundWins.alpha : m.score.alpha, b = rounds ? m.roundWins.bravo : m.score.bravo;
     this._set('sa', this.el.scoreA, 'text', String(a)); this._set('sb', this.el.scoreB, 'text', String(b));
-    const s = Math.max(0, Math.ceil(m.timeLeft));
+    const s = isFinite(m.timeLeft) ? Math.max(0, Math.ceil(m.timeLeft)) : Math.floor(m.time); // no time limit: the clock counts up
     const tt = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; this._set('tm', this.el.timer, 'text', tt); this._set('tmB', this.el.timerBot, 'text', tt.padStart(5, '0'));
     this._set('tg', this.el.target, 'text', rounds ? `第 ${m.round} 回合 · 搶 ${m.target} 勝` : `${RULES[m.rule].name} · 目標 ${m.target} 分`);
     this._set('md', this.el.mode, 'text', rounds ? `存活 ${m.aliveCount('alpha')} vs ${m.aliveCount('bravo')}${m.rule === 'relic' ? (m.player.team === 'alpha' ? ' · 進攻' : ' · 防守') : ''}` : MODES[m.mode].name);
@@ -11656,7 +11694,8 @@ class Match {
     this.rules = createRule(config.rule, this);
     const rc = (config.ruleCfg && config.ruleCfg[config.rule]) || RULES[config.rule].def;
     this.target = rc.target; this.roundTime = RULES[config.rule].timeUnit === 'sec' ? rc.time : 0;
-    this.timeLeft = RULES[config.rule].timeUnit === 'sec' ? rc.time : rc.time * 60;
+    this.timeLeft = RULES[config.rule].timeUnit === 'sec' ? rc.time : rc.time ? rc.time * 60 : Infinity; // v45: score modes have no time limit
+    this.opts = Object.assign({ pickup: true, killcam: true, ff: false }, config.opts); // room 設置: weapon pickup, killcam, friendly fire
     this.score = { alpha: 0, bravo: 0 }; this.roundWins = { alpha: 0, bravo: 0 }; this.round = 0;
     this.stats = { shots: 0, hits: 0 }; this.firstBlood = true; this.acc = 0; this.spotT = 0; this.freezeT = 0; this.roundEndT = 0;
     this.grenades = []; this.combatants = []; this.bots = []; this.timers = [];
@@ -11903,7 +11942,7 @@ class Match {
     for (const h of hits) h.type = 'world';
     const rew = shooter.isNet && this.net && this.net.rewind ? this.net.rewind(shooter) : null; // v29: a friend's shot sees what he saw
     for (const c of this.combatants) {
-      if (!c.alive || c === shooter || c.team === shooter.team) continue;
+      if (!c.alive || c === shooter || (c.team === shooter.team && !this.opts.ff)) continue;
       const to = TMP_V1.subVectors(c.motor.pos, origin), t = to.dot(dir);
       if (t < 0 || t > range + 2) continue;
       const cx = origin.x + dir.x * t - c.motor.pos.x, cz = origin.z + dir.z * t - c.motor.pos.z;
@@ -11965,7 +12004,7 @@ class Match {
     let best = w ? Object.assign(w, { world: true }) : null;
     const rew = shooter.isNet && this.net && this.net.rewind ? this.net.rewind(shooter) : null;
     for (const c of this.combatants) {
-      if (!c.alive || c === shooter || c.team === shooter.team) continue;
+      if (!c.alive || c === shooter || (c.team === shooter.team && !this.opts.ff)) continue;
       if (c.motor.pos.distanceTo(origin) > range + 1.5) continue;
       c.updateHitboxes();
       for (const hb of c.hitboxes) { const h = CollisionWorld.rayBox(origin, dir, hb, range); if (h && (!best || h.t < best.t)) best = { t: h.t, target: c, part: hb.part, point: origin.clone().addScaledVector(dir, h.t) }; }
@@ -11977,7 +12016,7 @@ class Match {
   applyDamage(victim, dmg, part, attacker, def, dir, point, opts = {}) {
     if (this.isClient) return false; // v25: the host decides every hit and reports back hit markers / damage
     if (!victim.alive || this.phase !== 'live') return false;
-    if (attacker && attacker !== victim && attacker.team === victim.team) return false; // friendly fire off
+    if (attacker && attacker !== victim && attacker.team === victim.team && !this.opts.ff) return false; // friendly fire (room option, off by default)
     if (victim.spawnProtect > 0) { if (point) this.effects.shield(point); if (attacker && attacker.isPlayer) { this.app.hud.hitmarker('shield'); this.audio.hit('shield'); } if (attacker && this.net) this.net.onHit(attacker, victim, 'shield', point); return false; }
     if (attacker && attacker.isPlayer && attacker.team !== victim.team) { const dd = attacker.dmgDone || (attacker.dmgDone = new Map()); dd.set(victim, (dd.get(victim) || 0) + Math.min(dmg, Math.max(0, victim.hp))); } // v34 Tab board: damage per enemy
     victim.hp -= dmg; victim.lastPart = part;
@@ -12127,7 +12166,7 @@ class Match {
     this._killFeed(victim, killer, def, head, valid, opts);
     if (victim.isPlayer) {
       hud.showDeath(true, valid ? killer.name : '', def.name, head, this.rules.roundBased);
-      if (this.rules.roundBased) this.nextSpectate(); else if (valid) this._startKillcam(killer, def);
+      if (this.rules.roundBased) this.nextSpectate(); else if (valid && this.opts.killcam) this._startKillcam(killer, def);
     }
     this.checkEnd();
   }
@@ -12190,7 +12229,7 @@ class Match {
   static isGun(def) { return !!def && !!def.mag && def.kind !== 'knife' && def.kind !== 'grenade'; }
   // A dropped gun: physics body (it tumbles and settles), low-poly mesh, pulsing ground glow; remembers its ammo.
   dropWeapon(def, ammo, reserve, pos, vel, netId = 0) {
-    if (!Match.isGun(def)) return null;
+    if (!Match.isGun(def) || !this.opts.pickup) return null; // room option: no weapon drops / pickups
     const holder = new THREE.Group(), gun = new THREE.Mesh(this.app.models.tp(def.model), this.app.soldiers.gunMat);
     gun.scale.setScalar(1.25); gun.castShadow = true; holder.add(gun);
     const len = ((WEAPON_DATABASE[def.id] && WEAPON_DATABASE[def.id].tp && WEAPON_DATABASE[def.id].tp.len) || (def.kind === 'pistol' ? 0.22 : 0.9)) * 0.62;
@@ -13144,13 +13183,13 @@ const ROOM_ST = { room: 'READY', loading: '載入中', playing: '對戰中', end
 // the room's settings as the host sends them, and as a member accepts them (a broken or hostile value can never reach Match)
 function roomCfgOut() {
   const L = Settings.data.lobby;
-  return { map: L.map, mode: L.mode, rule: L.rule, difficulty: L.difficulty, allies: L.allies, enemies: L.enemies, ruleCfg: { [L.rule]: L.ruleCfg[L.rule] || RULES[L.rule].def } };
+  return { map: L.map, mode: L.mode, rule: L.rule, difficulty: L.difficulty, allies: L.allies, enemies: L.enemies, opts: L.opts, ruleCfg: { [L.rule]: L.ruleCfg[L.rule] || RULES[L.rule].def } };
 }
 function roomCfgSafe(c) {
   c = c && typeof c === 'object' ? c : {};
   const rule = Object.prototype.hasOwnProperty.call(RULES, c.rule) ? c.rule : 'tdm', R = RULES[rule], rc = (c.ruleCfg && c.ruleCfg[rule]) || {};
   return { map: clamp(c.map | 0, 0, MAPS.length - 1), mode: Object.prototype.hasOwnProperty.call(MODES, c.mode) ? c.mode : 'general', rule, difficulty: clamp(c.difficulty | 0, 0, DIFFICULTY.length - 1),
-    allies: clamp(c.allies | 0, 1, 12), enemies: clamp(c.enemies | 0, 1, 12),
+    allies: clamp(c.allies | 0, 1, 12), enemies: clamp(c.enemies | 0, 1, 12), opts: { pickup: !(c.opts && c.opts.pickup === false), killcam: !(c.opts && c.opts.killcam === false), ff: !!(c.opts && c.opts.ff) },
     ruleCfg: { [rule]: { target: R.targets.includes(rc.target) ? rc.target : R.def.target, time: R.times.includes(rc.time) ? rc.time : R.def.time } } };
 }
 
@@ -13842,23 +13881,26 @@ class App {
     MAPS.forEach((def, i) => {
       const bt = document.createElement('button'); const cv = document.createElement('canvas'); cv.width = 176; cv.height = 88;
       drawMapPreview(cv, def, this.dry[i], { labels: false }); bt.append(cv, document.createTextNode(`${i + 1}. ${def.name}`));
-      bt.onclick = () => { if (this.isGuest()) return; L.map = i; this.audio.init(); this.audio.uiClick(); this.refreshLobby(); this.warm(i); };
+      bt.onclick = () => { if (this.isGuest()) return; L.map = i; this.audio.init(); this.audio.uiClick(); $('lbMapModal').classList.remove('on'); this.refreshLobby(); this.warm(i); };
       maps.appendChild(bt);
     });
     const pills = (id, items, key, after) => {
       const el = $(id); el.innerHTML = '';
       for (const [val, label] of items) { const b = document.createElement('button'); b.textContent = label; b.dataset.v = val; b.onclick = () => { if (key !== 'loadout' && this.isGuest()) return; L[key] = typeof L[key] === 'number' ? Number(val) : val; if (after) after(); this.audio.init(); this.audio.uiClick(); this.refreshLobby(); }; el.appendChild(b); }
     };
-    pills('lbModes', Object.entries(MODES).map(([k, m]) => [k, m.name]), 'mode');
-    pills('lbRule', Object.entries(RULES).map(([k, r]) => [k, r.name]), 'rule', () => { if (!L.ruleCfg[L.rule]) L.ruleCfg[L.rule] = Object.assign({}, RULES[L.rule].def); });
     pills('lbDiff', DIFFICULTY.map((d, i) => [i, d.name]), 'difficulty');
+    // v45 SF2 待機室: map picker pop-up, room 設置 pop-up (pickup / killcam / friendly fire / bot difficulty), dropdowns close on any outside click
+    const modal = (id, on) => { $(id).classList.toggle('on', on); if (on) { this.audio.init(); this.audio.uiClick(); } };
+    $('lbMapOpen').onclick = () => { if (!this.isGuest()) modal('lbMapModal', true); };
+    $('lbMapClose').onclick = () => modal('lbMapModal', false); $('lbOptClose').onclick = () => modal('lbOptModal', false);
+    for (const id of ['lbMapModal', 'lbOptModal']) $(id).onclick = (e) => { if (e.target === $(id)) modal(id, false); };
+    for (const [id, k] of [['optPickup', 'pickup'], ['optKillcam', 'killcam'], ['optFF', 'ff']]) $(id).onchange = () => { if (this.isGuest()) return; L.opts[k] = $(id).checked; this.audio.uiClick(); this.refreshLobby(); };
+    document.addEventListener('click', () => document.querySelectorAll('#lobby .dd.open').forEach((d) => d.classList.remove('open')));
+    // F5 = 開始 (the browser refresh is swallowed while the room is open)
+    addEventListener('keydown', (e) => { if (e.code === 'F5' && (this.state === 'lobby' || this.state === 'countdown')) { e.preventDefault(); if (this.state === 'lobby' && !$('lbMapModal').classList.contains('on')) this.beginCountdown(); } });
     pills('lbLoadout', Settings.data.loadouts.map((l, i) => [i, LOADOUT_KEYS[i]]), 'loadout');
     $('lbWarehouse').onclick = () => this.openWarehouse(); $('lbWh').onclick = () => this.openWarehouse();
     $('whClose').onclick = () => this.closeWarehouse();
-    document.querySelectorAll('.stepper button').forEach((b) => b.onclick = () => {
-      if (this.isGuest()) return;
-      const k = b.dataset.step; L[k] = clamp(L[k] + Number(b.dataset.d), 1, 12); this.audio.init(); this.audio.uiClick(); this.refreshLobby();
-    });
     // v27 room bar: ＋ 邀請朋友 opens the invite pop-up (link / code / public), 離開房間 goes back to the hub
     $('lbInvite').onclick = (e) => { e.stopPropagation(); this.audio.init(); this.audio.uiClick(); this.invite(); };
     $('lbInvPop').onclick = (e) => e.stopPropagation();
@@ -13898,22 +13940,74 @@ class App {
     $('lbMapName').textContent = `${def.name} · ${def.en}`; $('lbMapDesc').textContent = def.desc;
     [...$('lbMaps').children].forEach((b, i) => b.classList.toggle('on', i === L.map));
     const mark = (id, val) => [...$(id).children].forEach((b) => b.classList.toggle('on', String(b.dataset.v) === String(val)));
-    mark('lbModes', L.mode); mark('lbRule', L.rule); mark('lbDiff', L.difficulty); mark('lbLoadout', L.loadout);
-    $('lbModeDesc').textContent = MODES[L.mode].desc + ' · ' + R.desc;
+    mark('lbDiff', L.difficulty); mark('lbLoadout', L.loadout);
     const rc = L.ruleCfg[L.rule] || (L.ruleCfg[L.rule] = Object.assign({}, R.def)), roundsLike = R.timeUnit === 'sec';
-    $('lbTargetLbl').textContent = roundsLike ? '勝利回合數' : '勝利分數';
-    $('lbTimeLbl').textContent = roundsLike ? '每回合時間' : '時間限制';
-    const tg = $('lbTarget'); tg.innerHTML = '';
-    for (const v of R.targets) { const b = document.createElement('button'); b.textContent = roundsLike ? `搶 ${v} 勝` : `${v}`; b.classList.toggle('on', rc.target === v); b.onclick = () => { if (this.isGuest()) return; rc.target = v; this.audio.uiClick(); this.refreshLobby(); }; tg.appendChild(b); }
-    const tm = $('lbTime'); tm.innerHTML = '';
-    for (const v of R.times) { const b = document.createElement('button'); b.textContent = roundsLike ? `${Math.floor(v / 60)}:${String(v % 60).padStart(2, '0')}` : `${v} 分`; b.classList.toggle('on', rc.time === v); b.onclick = () => { if (this.isGuest()) return; rc.time = v; this.audio.uiClick(); this.refreshLobby(); }; tm.appendChild(b); }
+    if (!R.targets.includes(rc.target)) rc.target = R.def.target;
+    rc.time = R.def.time; // v45: no time option — score modes are untimed, round modes cap each round at 10 minutes
+    $('lbTitle').textContent = `${R.name} - ${def.name}`;
+    $('lbModeDesc').textContent = `${MODES[L.mode].desc} · ${R.desc}${roundsLike ? ' · 每回合上限 10 分鐘' : ' · 無時間限制'}`;
+    const opts = L.opts || (L.opts = { pickup: true, killcam: true, ff: false });
+    $('optPickup').checked = opts.pickup !== false; $('optKillcam').checked = opts.killcam !== false; $('optFF').checked = !!opts.ff;
+    // the six SF2 room settings: map · win condition · weapon mode | game mode · N vs N · 設置
+    const host = () => !this.isGuest();
+    this._dd('ddMap', '地圖', def.name, null, () => { if (host()) { $('lbMapModal').classList.add('on'); this.audio.uiClick(); } });
+    this._dd('ddTarget', roundsLike ? '勝負局數' : '勝利分數', roundsLike ? `${rc.target}先勝` : `${rc.target} 分`,
+      R.targets.map((v) => [v, roundsLike ? `${v}先勝` : `${v} 分`]), (v) => { if (host()) { rc.target = +v; this.refreshLobby(); } }, rc.target);
+    this._dd('ddMode', '武器限制', MODES[L.mode].name, Object.entries(MODES).map(([k, m]) => [k, m.name]), (v) => { if (host()) { L.mode = v; this.refreshLobby(); } }, L.mode);
+    this._dd('ddRule', '模式', R.name, Object.entries(RULES).map(([k, r]) => [k, r.name]), (v) => {
+      if (!host()) return; L.rule = v; if (!L.ruleCfg[v]) L.ruleCfg[v] = Object.assign({}, RULES[v].def); this.refreshLobby();
+    }, L.rule);
+    this._dd('ddSize', '人數', `${L.allies} vs ${L.allies}`, Array.from({ length: 12 }, (_, i) => [i + 1, `${i + 1} vs ${i + 1}`]), (v) => { if (host()) { L.allies = L.enemies = +v; this.refreshLobby(); } }, L.allies);
+    this._dd('ddOpts', '進階', '設置', null, () => { if (host()) { $('lbOptModal').classList.add('on'); this.audio.uiClick(); } });
     const lo = Settings.data.loadouts[L.loadout];
     $('lbLoadoutInfo').textContent = `配裝 ${LOADOUT_KEYS[L.loadout]}：${WEAPON_DEFS[lo.primary].name} + ${WEAPON_DEFS[lo.secondary].name}`;
     [...$('lbLoadout').children].forEach((b, i) => { b.title = `配裝 ${LOADOUT_KEYS[i]} · 對戰中按 F${i + 1}`; });
-    $('lbAllies').textContent = L.allies; $('lbEnemies').textContent = L.enemies;
+    $('lbMeName').textContent = Settings.data.nick || 'YOU'; $('lbMeGun').textContent = `配裝 ${LOADOUT_KEYS[L.loadout]} · ${WEAPON_DEFS[lo.primary].name}`;
+    this._lbStage();
     this.renderTeams(L); this.renderRoomBar(L); this.renderChat();
     if (!guest) Settings.save();
     if (r && r.role === 'host') r.broadcast();
+  }
+  // v45 SF2-style dropdown: a labelled button with ▲; items = [[value, label]] (null = the button opens a pop-up instead)
+  _dd(id, label, value, items, pick, cur) {
+    const el = this.$(id);
+    el.innerHTML = `<button><small>${label}</small><span>${esc(String(value))}</span><i>▲</i></button>${items ? `<div class="ddl">${items.map(([v, t]) => `<button data-v="${v}" class="${String(v) === String(cur) ? 'on' : ''}">${esc(String(t))}</button>`).join('')}</div>` : ''}`;
+    el.firstChild.onclick = (e) => {
+      e.stopPropagation(); this.audio.init(); this.audio.uiClick();
+      if (!items) { pick(); return; }
+      if (this.isGuest()) return;
+      const was = el.classList.contains('open'); document.querySelectorAll('#lobby .dd.open').forEach((d) => d.classList.remove('open')); el.classList.toggle('open', !was);
+    };
+    if (items) el.querySelectorAll('.ddl button').forEach((b) => { b.onclick = (e) => { e.stopPropagation(); el.classList.remove('open'); this.audio.uiClick(); pick(b.dataset.v); }; });
+  }
+  // v45 left panel: your soldier (same model as in a match) holding the chosen set's primary, slowly turning
+  _lbStage() {
+    const cv = this.$('lbCharCv');
+    if (!this.lbR) {
+      try {
+        const r = this.lbR = new THREE.WebGLRenderer({ canvas: cv, antialias: true, alpha: true, powerPreference: 'low-power' });
+        r.setPixelRatio(Math.min(devicePixelRatio, 1.5)); r.toneMapping = THREE.ACESFilmicToneMapping; r.toneMappingExposure = 1.3; r.outputColorSpace = THREE.SRGBColorSpace;
+        const sc = this.lbScene = new THREE.Scene(), pm = new THREE.PMREMGenerator(r);
+        sc.environment = pm.fromScene(new RoomEnvironment(), 0.04).texture; pm.dispose();
+        const key = new THREE.DirectionalLight(0xfff0dc, 2.4); key.position.set(2, 3, 4); sc.add(key);
+        const rim = new THREE.DirectionalLight(0x9fc4ff, 2.0); rim.position.set(-3, 2, -3); sc.add(rim); sc.add(new THREE.HemisphereLight(0xdfe8f2, 0x302c28, 0.8));
+        this.lbCam = new THREE.PerspectiveCamera(26, 1, 0.05, 30); this.lbT = 0;
+      } catch (e) { console.warn('room preview unavailable', e); this.lbR = false; }
+    }
+    if (!this.lbR) return;
+    const L = Settings.data.lobby, id = Settings.data.loadouts[L.loadout].primary, model = WEAPON_DEFS[id].model || id;
+    const team = this.room && this.room.team === 'bravo' ? 'bravo' : 'alpha';
+    if (!this.lbSoldier || this.lbTeam !== team) { if (this.lbSoldier) this.lbScene.remove(this.lbSoldier.root); this.lbSoldier = this.soldiers.create(team, model); this.lbScene.add(this.lbSoldier.root); this.lbTeam = team; this.lbGun = model; }
+    else if (this.lbGun !== model) { this.soldiers.setWeapon(this.lbSoldier, model); this.lbGun = model; }
+  }
+  _renderLobbyStage(dt) {
+    if (!this.lbR || !this.lbSoldier || !this.$('lobby').classList.contains('on')) return;
+    const r = this.lbR, cam = this.lbCam, cv = this.$('lbCharCv'), w = cv.clientWidth, h = cv.clientHeight;
+    if (!w || !h) return;
+    if (cv.width !== Math.round(w * r.getPixelRatio()) || cv.height !== Math.round(h * r.getPixelRatio())) r.setSize(w, h, false);
+    cam.aspect = w / h; cam.position.set(0, 0.9, 7.1); cam.lookAt(0, 0.38, 0); cam.updateProjectionMatrix(); // feet clear of the chat panel
+    this.lbT += dt; this.lbSoldier.root.rotation.y = Math.PI + 0.55 + Math.sin(this.lbT * 0.4) * 0.35;
+    r.render(this.lbScene, cam);
   }
   // v27: real players first (their room status on the right), bots fill each team up to its size, then empty slots
   renderTeams(L) {
@@ -13951,8 +14045,8 @@ class App {
     $('lbInvite').disabled = !(r && r.online && code);
     $('lbInvCode').textContent = code; $('lbInvLinkTxt').value = r ? inviteLink(r.code) : '';
     $('lbPub').checked = !!(r && r.pub); $('lbPubRow').style.display = r && r.role === 'host' ? '' : 'none';
-    const sb = $('lbStart'); let txt = '出 發 · GO', off = false, msg = '';
-    if (guest) { if (r.phase === 'playing' && r.mcfg) txt = '加入對戰 · JOIN'; else { txt = '等待房主出發'; off = true; msg = r.entered ? '地圖和模式由房主設定 · 你可以選擇隊伍和配裝' : ''; } }
+    const sb = $('lbStart'); let txt = '開始 (F5)', off = false, msg = '';
+    if (guest) { if (r.phase === 'playing' && r.mcfg) txt = '加入對戰 (F5)'; else { txt = '等待房主開始'; off = true; msg = r.entered ? '地圖和模式由房主設定 · 你可以選擇隊伍和配裝' : ''; } }
     sb.textContent = txt; sb.disabled = off; sb.classList.toggle('wait', off); $('lbMsg').textContent = msg;
     this.renderFriends(); // invite buttons depend on our room
   }
@@ -14361,11 +14455,17 @@ class App {
     for (let k = 0; k < PER; k++) {
       const id = page[k], c = document.createElement('button');
       if (!id) { c.className = 'whGun empty'; c.disabled = true; list.appendChild(c); continue; }
-      c.className = 'whGun' + (LO[W.slot][W.cat] === id ? ' eq' : '') + (W.sel === id ? ' sel' : ''); c.dataset.id = id;
+      const inSet = LO.findIndex((l) => l[W.cat] === id); // v45: a primary shows 裝備中 whichever set (A–E) carries it
+      c.className = 'whGun' + (inSet >= 0 && (W.cat === 'primary' || inSet === W.slot) ? ' eq' : '') + (W.sel === id ? ' sel' : ''); c.dataset.id = id;
+      if (inSet >= 0) c.dataset.eq = LOADOUT_KEYS[inSet];
       const th = this.thumbs && this.thumbs[id] ? `<img src="${this.thumbs[id]}" alt="">` : WEAPON_ICONS[id] ? `<img class="ln" src="${WEAPON_ICONS[id]}" alt="">` : '';
       c.innerHTML = `<div class="nm">${WEAPON_DEFS[id].name}</div><div class="th">${th}</div><span class="cls">${TYPE_LABEL[WEAPON_DATABASE[id].type]}</span>`;
       c.onmouseenter = () => { if (W.sel !== id) { W.sel = id; this._whInfo(); } };
-      c.onclick = () => { LO[W.slot][W.cat] = id; W.sel = id; Settings.save(); this.audio.uiClick(); this.renderWarehouse(); };
+      c.onclick = () => {
+        const other = W.cat === 'primary' ? LO.findIndex((l, i) => i !== W.slot && l.primary === id) : -1; // one primary belongs to one set only
+        if (other >= 0) { this.roomToast(`${WEAPON_DEFS[id].name} 已裝備在 ${LOADOUT_KEYS[other]} 配裝`); this.audio.uiClick(); return; }
+        LO[W.slot][W.cat] = id; W.sel = id; Settings.save(); this.audio.uiClick(); this.renderWarehouse();
+      };
       list.appendChild(c);
     }
     list.onmouseleave = () => { const eq = LO[W.slot][W.cat]; if (W.sel !== eq) { W.sel = eq; this._whInfo(); } };
@@ -14397,7 +14497,7 @@ class App {
     this.pacer.skips = 0;
     let dt = clamp((now - this.last) / 1000, 0, 0.1); this.last = now;
     this.input.gameActive = this.state === 'playing' || this.state === 'paused';
-    if (this.state === 'lobby' || this.state === 'hub') { this._renderPreview(dt); if (this.thumbQ && this.thumbQ.length && performance.now() > this.thumbStart) this._pumpThumb(); }
+    if (this.state === 'lobby' || this.state === 'hub') { this._renderPreview(dt); if (this.state === "lobby") this._renderLobbyStage(dt); if (this.thumbQ && this.thumbQ.length && performance.now() > this.thumbStart) this._pumpThumb(); }
     this.fpsAcc += dt; this.fpsFrames++;
     if (this.fpsAcc >= 0.5) { this.fpsText = `${Math.round(this.fpsFrames / this.fpsAcc)} FPS`; this.fpsAcc = 0; this.fpsFrames = 0; }
     const mouse = this.input.consumeMouse(this._mouse);

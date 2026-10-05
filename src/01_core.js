@@ -518,10 +518,10 @@ const BOT_POOLS = {
 
 // Match rules (state-machine classes live in the match module).
 const RULES = {
-  tdm: { name: '團隊死鬥', desc: '陣亡 3 秒復活 · 先達到目標分數獲勝（爆頭 50 · 擊殺 30）', unit: '分', targets: [500, 1000, 1500, 2500], times: [10, 15, 20], timeUnit: 'min', def: { target: 1000, time: 15 } },
-  rounds: { name: '回合殲滅', desc: '陣亡本回合不復活 · 先贏得指定回合數', unit: '勝', targets: [3, 5, 7, 10], times: [90, 150, 240], timeUnit: 'sec', def: { target: 10, time: 150 } },
-  relic: { name: '奪取戰', desc: '藍隊進攻奪取山丘聖物並運回撤離點 · 紅隊防守 · 回合制', unit: '勝', targets: [3, 5, 7], times: [120, 180, 240], timeUnit: 'sec', def: { target: 5, time: 180 } },
-  dom: { name: '佔領戰', desc: '按住 E 6 秒佔領 A/B/C · 佔點隨時間得分 · 全佔封鎖對手得分', unit: '分', targets: [150, 250, 400], times: [10, 15, 20], timeUnit: 'min', def: { target: 250, time: 15 } },
+  tdm: { name: '團隊死鬥', desc: '陣亡 3 秒復活 · 先達到目標分數獲勝（爆頭 50 · 擊殺 30）', unit: '分', targets: [500, 1000, 1500, 2500], times: [0], timeUnit: 'min', def: { target: 1000, time: 0 } }, // v45: no time limit
+  rounds: { name: '回合殲滅', desc: '陣亡本回合不復活 · 先贏得指定回合數', unit: '勝', targets: [5, 6, 7, 8, 9], times: [600], timeUnit: 'sec', def: { target: 6, time: 600 } }, // v45: SF2 先勝 rounds, 10 min a round
+  relic: { name: '奪取戰', desc: '藍隊進攻奪取山丘聖物並運回撤離點 · 紅隊防守 · 回合制', unit: '勝', targets: [5, 6, 7, 8, 9], times: [600], timeUnit: 'sec', def: { target: 6, time: 600 } },
+  dom: { name: '佔領戰', desc: '按住 E 6 秒佔領 A/B/C · 佔點隨時間得分 · 全佔封鎖對手得分', unit: '分', targets: [150, 250, 400], times: [0], timeUnit: 'min', def: { target: 250, time: 0 } },
 };
 const FREEZE_TIME = 5;
 
@@ -609,7 +609,7 @@ const Settings = {
     hitSound: 'flesh', // v38 ESC → 命中音效 (audition list, HIT_SOUNDS)
     hudStyle: 'minimal', // v19: 'minimal' (SF2) | 'panel' (v5)
     loadouts: DEFAULT_LOADOUTS.map((l) => Object.assign({}, l)),
-    lobby: { map: 5, mode: 'general', rule: 'dom', difficulty: 1, allies: 6, enemies: 6, loadout: 0,
+    lobby: { map: 5, mode: 'general', rule: 'dom', difficulty: 1, allies: 6, enemies: 6, loadout: 0, opts: { pickup: true, killcam: true, ff: false },
       ruleCfg: Object.fromEntries(Object.entries(RULES).map(([k, r]) => [k, Object.assign({}, r.def)])) },
   },
   load() {
@@ -618,11 +618,14 @@ const Settings = {
       if (s) {
         const lobby = Object.assign({}, this.data.lobby, s.lobby || {});
         lobby.ruleCfg = Object.assign({}, this.data.lobby.ruleCfg, (s.lobby && s.lobby.ruleCfg) || {});
+        lobby.opts = Object.assign({ pickup: true, killcam: true, ff: false }, lobby.opts); lobby.enemies = lobby.allies = Math.max(lobby.allies | 0, 1); // v45 room: N vs N
         if (!RULES[lobby.rule]) lobby.rule = 'tdm';
         for (const [k, r] of Object.entries(RULES)) { const c = lobby.ruleCfg[k]; if (!c || !r.targets.includes(c.target) || !r.times.includes(c.time)) lobby.ruleCfg[k] = Object.assign({}, r.def); }
         const loadouts = Array.isArray(s.loadouts) && s.loadouts.length === 5 ? s.loadouts : this.data.loadouts;
         Object.assign(this.data, s); this.data.lobby = lobby; this.data.loadouts = loadouts;
         for (const l of this.data.loadouts) { if (!WEAPON_DATABASE[l.primary] || WEAPON_DATABASE[l.primary].slot !== 'primary') l.primary = 'm4a1'; if (!WEAPON_DATABASE[l.secondary] || WEAPON_DATABASE[l.secondary].slot !== 'secondary') l.secondary = 'p226'; }
+        const used = new Set(); // v45: a primary can sit in one set only — later duplicates take the first free gun
+        for (const l of this.data.loadouts) { if (used.has(l.primary)) l.primary = PRIMARY_IDS.find((k) => !used.has(k) && !this.data.loadouts.some((o) => o.primary === k)); used.add(l.primary); }
       }
     } catch (e) { /* storage unavailable */ }
     return this.data;

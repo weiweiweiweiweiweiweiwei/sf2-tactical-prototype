@@ -497,6 +497,27 @@
 - v42 失落神殿：泥磚牆幾乎都能穿射，硬掩體只有石柱和出生點裝甲車，中央帆布卡車。
   - 出生點視線一開始有漏，用 `tools/_losprobe.mjs <地圖>` 列出漏的視線，再補上石牆。
 
+## v45b（2026-10-05）：SF2 待機室、倉庫唯一裝備、G36C 照真槍重建
+- 房間（00_head.html、17_app.js）：
+  - 版面是 `.lb-char`（WebGL 角色舞台 `_lbStage`／`_renderLobbyStage`，左下半透明聊天室）加上 `.lb-right`（地圖縮圖、`_dd()` 下拉選單 ×6、隊伍 12+12 格、配裝和「開始 (F5)」）。
+  - 地圖和設置用 `.lb-modal` 彈出視窗。F5 在房間時等於按開始。
+- 房間選項存在 `lobby.opts {pickup, killcam, ff}`，會一起傳給房間內的朋友（`roomCfgOut`／`roomCfgSafe`）：
+  - `Match.opts.pickup`：關掉時不掉槍。
+  - `killcam`：關掉時不播擊殺回放。
+  - `ff`：子彈判定和傷害都算隊友。
+- RULES：
+  - tdm／dom 的 `times: [0]`，`timeLeft = Infinity`，HUD 計時器往上數。
+  - rounds／relic 的 `times: [600]`，`targets` 是 5～9 先勝。
+  - 人數改成 N vs N（`allies = enemies`）。
+- 倉庫：`.whGun.eq` 帶 `data-eq`（配裝字母），會在每組有用到這把主槍的配裝上顯示。點已被其他配裝使用的主槍會跳出提示。`Settings.load` 會把重複的主槍換掉。
+- G36C（`tools/blender/g36c_build.py`）：
+  - 照真槍 ×1.1 比例：鉸鏈到槍口 500 mm，槍托 220 mm。
+  - 空物件 HOOD／SUPPORT／GRIP 決定開鏡位置和雙手位置。開鏡時眼睛在護罩後 7 cm，`vmAdsFov: 20`。
+- 開鏡手感：
+  - `adsVertical: 0.075`：開鏡連射只垂直上跳，累積上限 0.075 rad。開鏡散布為 0，槍模也不左右晃。
+  - 蹲下的槍模偏移在開鏡時歸零。
+- 測試：`node tools/_lobbyshot.mjs` 輸出三種解析度的房間截圖。
+
 ## v45（2026-10-05）：黃金 G36C（Blender 模型）
 - 模型腳本是 `tools/blender/g36c_build.py`，輸出 `tools/guns/g36c.glb`。用 `node tools/guns/pack.mjs` 打包成 `assets/guns/guns.js`（base64，本機雙擊開啟也能玩）。
 - 遊戲端在 `loadGunModels()`（09_models.js）載入模型。網格命名為 `<node>__<mat>`，並用空物件 SIGHT／MUZZLE／MUZZLE_S 標出瞄準線和兩種槍口位置。如果模型載不到，就退回程式生成的舊版 G36C（`g36cProc`）。

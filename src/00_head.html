@@ -223,9 +223,36 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
 .lb-brand small{display:block;font-size:11px;letter-spacing:5px;color:var(--dim);margin-top:-4px}
 .lb-room{flex:1;font-size:16px;color:var(--dim);letter-spacing:2px}
 .lb-room b{color:var(--hud)}
-.lb-main{display:grid;grid-template-columns:1fr 470px;gap:18px;height:760px;padding-top:16px;align-items:start} /* v26: 860-high design (right column ~750) */
+.lb-main{display:grid;grid-template-columns:470px 1fr;gap:16px;height:782px;padding-top:14px} /* v45 SF2 待機室 */
+.lb-char{position:relative;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:radial-gradient(ellipse at 50% 35%,rgba(90,110,130,.35),rgba(0,0,0,.5) 70%),linear-gradient(180deg,#1b232b,#0c1014)}
+.lb-char canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.lb-me{position:absolute;left:14px;top:12px;text-shadow:0 1px 3px #000}.lb-me b{display:block;font-size:20px;color:var(--gold);letter-spacing:1px}.lb-me span{font-size:13px;color:var(--dim)}
+.lb-char .lb-chat{position:absolute;left:0;right:0;bottom:0;height:300px;background:rgba(6,10,14,.55);backdrop-filter:blur(3px);border:0;border-top:1px solid rgba(255,255,255,.08);border-radius:0}
+.lb-right{display:flex;flex-direction:column;gap:10px;min-width:0;height:782px}
+.lb-roomhd{display:flex;align-items:baseline;gap:14px;padding:8px 14px;background:linear-gradient(90deg,rgba(255,200,80,.18),transparent 70%);border-left:3px solid var(--gold);border-radius:3px}
+.lb-roomhd b{font-size:19px;letter-spacing:2px;color:#ffe7a0;white-space:nowrap}.lb-roomhd span{font-size:13px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lb-cfg{display:grid;grid-template-columns:300px 1fr;gap:14px;height:170px}
+.lb-cfg .mapPrev{height:170px;cursor:pointer}.lb-cfg .mapPrev:hover{border-color:var(--accent)}
+.lb-dds{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:repeat(3,1fr);gap:8px 12px}
+.dd{position:relative}.dd>button{position:relative;width:100%;height:100%;display:flex;align-items:center;justify-content:center;cursor:pointer;background:linear-gradient(180deg,rgba(255,255,255,.07),rgba(0,0,0,.35));border:1px solid rgba(255,255,255,.2);border-radius:3px;color:#fff;font-size:17px;font-weight:700;letter-spacing:1px}
+.dd>button small{position:absolute;left:10px;font-size:11px;color:var(--faint);letter-spacing:2px;font-weight:600}.dd>button i{position:absolute;right:12px;font-style:normal;font-size:12px;color:#fff}
+.dd>button:hover{border-color:var(--accent)}.dd.open>button{border-color:var(--accent);background:rgba(125,255,166,.12)}
+.dd .ddl{display:none;position:absolute;left:0;right:0;top:calc(100% + 3px);z-index:30;background:#10161c;border:1px solid var(--accent);border-radius:3px;max-height:330px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,.6)}
+.dd.open .ddl{display:block}.dd .ddl button{display:block;width:100%;text-align:center;padding:7px 10px;background:none;border:0;border-bottom:1px solid rgba(255,255,255,.05);color:var(--hud);font-size:15px;font-weight:600;cursor:pointer}
+.dd .ddl button:hover{background:rgba(125,255,166,.14);color:#fff}.dd .ddl button.on{color:var(--accent)}
+.lb-bottom{display:flex;align-items:center;gap:16px;height:96px;margin-top:auto}
+.lb-lo{flex:1;display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px}.lb-lo h3{font-size:13px;letter-spacing:4px;color:var(--accent);margin:0}
+.lb-lo #lbWarehouse{font-size:13px;padding:5px 10px}.lb-lo #lbLoadoutInfo{width:100%;font-size:13px;color:var(--dim)}.lb-lo #lbMsg{width:100%}
+#lobby .btn.start{width:300px;height:84px;font-size:34px;letter-spacing:4px;background:linear-gradient(180deg,#ffd257,#f39a12);color:#2a1700;border:2px solid #ffe08a;box-shadow:0 0 22px rgba(255,180,40,.35)}
+#lobby .btn.start.wait{background:linear-gradient(180deg,#5a6a7a,#2c3946);color:#cfd8e0;border-color:#7d8d9d;box-shadow:none;font-size:24px}
+.lb-modal{position:absolute;inset:0;z-index:40;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.6);backdrop-filter:blur(4px)}.lb-modal.on{display:flex}
+.lb-modal .mz{display:block;zoom:1;width:1040px;max-height:720px;overflow-y:auto;background:#0f151b;border:1px solid var(--accent);border-radius:6px;padding:14px 18px 18px}
+.lb-modal header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}.lb-modal header b{font-size:20px;letter-spacing:4px;color:var(--accent)}
+.lb-modal .maps{grid-template-columns:repeat(4,1fr);gap:10px}.lb-modal .maps button{font-size:14px;padding:5px}.lb-modal .maps button canvas{height:120px}
+.lb-modal .mz.opt{width:520px;overflow:visible}.lb-modal .mz.opt .pills{display:flex;flex-direction:row}.lb-modal .tg{display:flex;align-items:center;gap:12px;padding:10px 6px;font-size:17px;border-bottom:1px solid rgba(255,255,255,.06);cursor:pointer}
+.lb-modal .tg input{width:20px;height:20px;accent-color:var(--accent)}.lb-modal h3{font-size:13px;letter-spacing:4px;color:var(--accent);margin:14px 0 8px}
 /* v27 room bar: code, room name, ＋ 邀請朋友 pop-up, 離開房間 */
-.lb-left{height:744px;display:flex;flex-direction:column;gap:12px}.lb-left .lb-teams{flex:none}
+
 /* v31 chat — room panel under the team lists, and the in-match box (bottom left, above the health) */
 .lb-chat{flex:1;min-height:0;display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:8px 10px 10px}
 #lbChatLog{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:2px;padding:2px 4px 6px}
@@ -357,20 +384,20 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
 #hubRooms .empty{margin:auto;max-width:430px;text-align:center;color:var(--dim);font-size:15px;line-height:1.7}
 #hubRooms .empty b{display:block;font-size:20px;color:var(--hud);letter-spacing:3px;margin-bottom:8px}
 #pOnline{margin:8px 0 2px;font-size:14px;color:var(--hud);display:flex;align-items:center;gap:10px;flex-wrap:wrap}#pOnline code{color:var(--accent);font-size:16px;letter-spacing:3px}#pOnline .btn{padding:3px 12px;font-size:13px}
-.lb-teams{display:grid;grid-template-columns:1fr 56px 1fr;gap:0;align-items:start}
+.lb-teams{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start}
 .team-col{background:var(--panel);border:1px solid var(--line);border-radius:6px;overflow:hidden}
-.team-col header{display:flex;align-items:center;gap:10px;padding:10px 14px}
+.team-col header{display:flex;align-items:center;gap:10px;padding:7px 14px}
 .team-col.a header{background:linear-gradient(90deg,rgba(50,120,210,.4),rgba(50,120,210,.06))}
 .team-col.b header{background:linear-gradient(90deg,rgba(210,60,50,.4),rgba(210,60,50,.06))}
-.team-col header b{font-size:24px;letter-spacing:4px}
+.team-col header b{font-size:20px;letter-spacing:4px}
 .team-col.a header b{color:var(--blue)}.team-col.b header b{color:var(--red)}
 .team-col header span{color:var(--dim);font-size:14px;flex:1;white-space:nowrap}
 .stepper{display:flex;align-items:center;gap:6px}
 .stepper button{width:30px;height:30px;border-radius:3px;border:1px solid rgba(255,255,255,.25);background:rgba(0,0,0,.35);color:#fff;font-size:18px;cursor:pointer}
 .stepper button:hover{border-color:var(--accent);color:var(--accent)}
 .stepper b{min-width:28px;text-align:center;font-size:20px!important;color:#fff!important;letter-spacing:0!important}
-.team-col ol{list-style:none;padding:5px 6px;max-height:440px;overflow-y:auto}
-.team-col li{display:flex;align-items:center;gap:10px;height:33px;padding:0 10px;margin:2px 0;border-radius:3px;background:rgba(255,255,255,.035);font-size:16px;font-weight:600}
+.team-col ol{list-style:none;padding:4px 6px}
+.team-col li{display:flex;align-items:center;gap:10px;height:27px;padding:0 10px;margin:2px 0;border-radius:3px;background:rgba(255,255,255,.035);font-size:16px;font-weight:600}
 .team-col li .n{width:22px;color:var(--faint);font-size:14px}
 .team-col li .rank{width:24px;height:24px;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700}
 .team-col.a li .rank{background:rgba(99,179,255,.2);color:var(--blue)}.team-col.b li .rank{background:rgba(255,93,82,.2);color:var(--red)}
@@ -546,7 +573,7 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
 .whGun .cls{position:absolute;right:7px;bottom:4px;font-size:10px;letter-spacing:1px;color:var(--dim)}
 .whGun:hover{border-color:rgba(255,255,255,.35)}.whGun.sel{border-color:rgba(125,255,166,.7)}
 .whGun.eq .nm{border-top-color:var(--red);color:#fff}
-.whGun.eq::after{content:'裝備中';position:absolute;left:6px;bottom:4px;font-size:11px;font-weight:700;color:#1a1305;background:var(--gold);padding:0 6px;border-radius:2px}
+.whGun.eq::after{content:'裝備中 ' attr(data-eq);position:absolute;left:6px;bottom:4px;font-size:11px;font-weight:700;color:#1a1305;background:var(--gold);padding:0 6px;border-radius:2px}
 .whGun.empty{visibility:hidden}
 #whPager{display:flex;justify-content:center;align-items:center;gap:6px;height:28px;flex-shrink:0}
 #whPager button{min-width:30px;height:26px;cursor:pointer;font-family:inherit;font-size:14px;color:var(--hud);background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.14);border-radius:3px}
@@ -789,30 +816,38 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
     <button class="btn ghost" id="lbLeave" title="回到大廳">離開房間</button>
   </div>
   <div class="lb-main">
-    <div class="lb-left"><section class="lb-teams">
-      <div class="team-col a"><header><b>藍隊 ALPHA</b><span id="lbAllyLbl"></span><button class="btn ghost tsw" id="lbJoinA" style="display:none">換到藍隊</button>
-        <div class="stepper"><button data-step="allies" data-d="-1">−</button><b id="lbAllies">6</b><button data-step="allies" data-d="1">+</button></div></header>
-        <ol id="lbListA"></ol></div>
-      <div class="vs">VS</div>
-      <div class="team-col b"><header><b>紅隊 BRAVO</b><span id="lbEnemyLbl"></span><button class="btn ghost tsw" id="lbJoinB" style="display:none">換到紅隊</button>
-        <div class="stepper"><button data-step="enemies" data-d="-1">−</button><b id="lbEnemies">6</b><button data-step="enemies" data-d="1">+</button></div></header>
-        <ol id="lbListB"></ol></div>
+    <!-- v45 SF2 待機室: left = your soldier + translucent chat; right = map + 6 settings, red/blue slots, loadout + 開始(F5) -->
+    <section class="lb-char"><canvas id="lbCharCv"></canvas>
+      <div class="lb-me"><b id="lbMeName">YOU</b><span id="lbMeGun"></span></div>
+      <div class="lb-chat"><div id="lbChatLog"></div>
+        <div class="ci"><button class="btn ghost" id="lbChatMode" title="Tab：切換全體／隊伍">全體</button><input type="text" id="lbChatIn" maxlength="120" autocomplete="off" spellcheck="false" placeholder="輸入訊息，Enter 送出"><button class="btn" id="lbChatSend">送出</button></div></div>
     </section>
-    <section class="lb-chat"><div id="lbChatLog"></div>
-      <div class="ci"><button class="btn ghost" id="lbChatMode" title="Tab：切換全體／隊伍">全體</button><input type="text" id="lbChatIn" maxlength="120" autocomplete="off" spellcheck="false" placeholder="輸入訊息，Enter 送出"><button class="btn" id="lbChatSend">送出</button></div></section></div>
-    <aside class="lb-side">
-      <div class="hostonly"><h3>地圖 MAP</h3>
-        <div class="mapPrev"><canvas id="lbMapBig" width="880" height="330"></canvas><div class="info"><b id="lbMapName"></b><span id="lbMapDesc"></span></div></div>
-        <div class="maps" id="lbMaps"></div></div>
-      <div class="hostonly"><h3>賽制 MODE</h3><div class="pills" id="lbRule"></div></div>
-      <div class="hostonly"><h3>武器模式</h3><div class="pills" id="lbModes"></div><div class="modeDesc" id="lbModeDesc"></div></div>
-      <div class="row2 hostonly"><div><h3 id="lbTargetLbl">勝利分數</h3><div class="pills" id="lbTarget"></div></div><div><h3 id="lbTimeLbl">時間限制</h3><div class="pills" id="lbTime"></div></div></div>
-      <div class="row2"><div class="hostonly"><h3>難度</h3><div class="pills" id="lbDiff"></div></div>
-        <div><h3>出場配裝</h3><div class="pills" id="lbLoadout"></div><button class="btn ghost" id="lbWarehouse" style="margin-top:6px;font-size:13px;padding:5px 10px">編輯配裝 · 倉庫</button><div id="lbLoadoutInfo"></div></div></div>
-      <div id="lbMsg"></div>
-      <button class="btn start" id="lbStart">出 發 · GO</button>
-    </aside>
+    <section class="lb-right">
+      <div class="lb-roomhd"><b id="lbTitle"></b><span id="lbModeDesc"></span></div>
+      <div class="lb-cfg">
+        <div class="mapPrev hostonly" id="lbMapOpen" title="點擊選擇地圖"><canvas id="lbMapBig" width="600" height="340"></canvas><div class="info"><b id="lbMapName"></b><span id="lbMapDesc"></span></div></div>
+        <div class="lb-dds">
+          <div class="dd hostonly" id="ddMap"></div><div class="dd hostonly" id="ddRule"></div>
+          <div class="dd hostonly" id="ddTarget"></div><div class="dd hostonly" id="ddSize"></div>
+          <div class="dd hostonly" id="ddMode"></div><div class="dd hostonly" id="ddOpts"></div>
+        </div>
+      </div>
+      <section class="lb-teams">
+        <div class="team-col a"><header><b>藍隊 ALPHA</b><span id="lbAllyLbl"></span><button class="btn ghost tsw" id="lbJoinA" style="display:none">換到藍隊</button></header><ol id="lbListA"></ol></div>
+        <div class="team-col b"><header><b>紅隊 BRAVO</b><span id="lbEnemyLbl"></span><button class="btn ghost tsw" id="lbJoinB" style="display:none">換到紅隊</button></header><ol id="lbListB"></ol></div>
+      </section>
+      <div class="lb-bottom">
+        <div class="lb-lo"><h3>出場配裝</h3><div class="pills" id="lbLoadout"></div><button class="btn ghost" id="lbWarehouse">編輯配裝 · 倉庫</button><div id="lbLoadoutInfo"></div><div id="lbMsg"></div></div>
+        <button class="btn start" id="lbStart">開始 (F5)</button>
+      </div>
+    </section>
   </div>
+  <div class="lb-modal" id="lbMapModal"><div class="mz"><header><b>選擇地圖 MAP</b><button class="btn ghost" id="lbMapClose">✕</button></header><div class="maps" id="lbMaps"></div></div></div>
+  <div class="lb-modal" id="lbOptModal"><div class="mz opt"><header><b>房間設置</b><button class="btn ghost" id="lbOptClose">✕</button></header>
+    <label class="tg"><input type="checkbox" id="optPickup"><span>可以撿取地上的槍械</span></label>
+    <label class="tg"><input type="checkbox" id="optKillcam"><span>陣亡時播放擊殺回放（Killcam）</span></label>
+    <label class="tg"><input type="checkbox" id="optFF"><span>友軍傷害（打得到隊友）</span></label>
+    <h3>電腦難度</h3><div class="pills" id="lbDiff"></div></div></div>
   <div class="lb-foot">WASD 移動 · SHIFT 衝刺(不會掉下邊緣) · C 蹲(無腳步聲，衝刺中按 = 滑鏟) · SPACE 跳(對矮牆 = 攀爬翻越) · 右鍵 開鏡 · 1-6 武器 · F 擒拿 · E 互動/佔領 · F1–F5 預約配裝 · 梯子 W/S · Q 快速切換 · R 換彈 · TAB 計分板</div>
 </div>
   <div id="lbCount"><div class="cz"><div class="cl">即將出發</div><div class="cn" id="lbCountNum">3</div><div class="cm" id="lbCountMap"></div>

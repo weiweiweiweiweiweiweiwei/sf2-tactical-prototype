@@ -109,7 +109,7 @@ class HUD {
     const rounds = m.rules.roundBased;
     const a = rounds ? m.roundWins.alpha : m.score.alpha, b = rounds ? m.roundWins.bravo : m.score.bravo;
     this._set('sa', this.el.scoreA, 'text', String(a)); this._set('sb', this.el.scoreB, 'text', String(b));
-    const s = Math.max(0, Math.ceil(m.timeLeft));
+    const s = isFinite(m.timeLeft) ? Math.max(0, Math.ceil(m.timeLeft)) : Math.floor(m.time); // no time limit: the clock counts up
     const tt = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; this._set('tm', this.el.timer, 'text', tt); this._set('tmB', this.el.timerBot, 'text', tt.padStart(5, '0'));
     this._set('tg', this.el.target, 'text', rounds ? `第 ${m.round} 回合 · 搶 ${m.target} 勝` : `${RULES[m.rule].name} · 目標 ${m.target} 分`);
     this._set('md', this.el.mode, 'text', rounds ? `存活 ${m.aliveCount('alpha')} vs ${m.aliveCount('bravo')}${m.rule === 'relic' ? (m.player.team === 'alpha' ? ' · 進攻' : ' · 防守') : ''}` : MODES[m.mode].name);
