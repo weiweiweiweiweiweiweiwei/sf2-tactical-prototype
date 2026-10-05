@@ -4,3 +4,5 @@ tools/out/
 _v*_test.html
 ref/*.webp
 ref/*.png
+tools/ryokan/plan.json
+tools/ryokan/ryokan.glb

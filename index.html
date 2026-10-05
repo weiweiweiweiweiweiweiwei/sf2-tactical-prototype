@@ -919,6 +919,7 @@ import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.j
 import { Sky } from 'three/addons/objects/Sky.js';
 import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
@@ -2688,7 +2689,170 @@ class TextureFactory {
         const gr = A.createLinearGradient(0, S * 0.7, 0, S); gr.addColorStop(0, 'rgba(60,50,35,0)'); gr.addColorStop(1, 'rgba(60,50,35,.35)'); A.fillStyle = gr; A.fillRect(0, 0, S, S);
         T.speckle(A, S, 18, 1, rnd); fill(R, '#e6e6e6', S); T.N(R, S, 8, 3, 434, 'overlay', 0.35);
       },
+      /* v44 Sakura Inn (Japanese hot-spring village). One canvas = one TILE of tools/blender/ryokan_build.py; the canvas
+         top is "up" on walls and "ridge-ward" on roofs. */
+      shikkui(A, H, R, S, rnd) { // lime plaster: warm white, trowel marks, rain streaks from the eaves, splash grime at the foot
+        fill(A, '#e9e5dc', S); T.N(A, S, 3, 5, 501, 'overlay', 0.22); T.N(A, S, 14, 3, 502, 'multiply', 0.07);
+        for (let i = 0; i < 34; i++) { const x = rnd() * S, l = S * rand(0.1, 0.55), gr = A.createLinearGradient(0, 0, 0, l); gr.addColorStop(0, 'rgba(95,90,80,.16)'); gr.addColorStop(1, 'rgba(95,90,80,0)'); A.fillStyle = gr; A.fillRect(x, 0, rand(2, 9) * S / 1024, l); }
+        const gb = A.createLinearGradient(0, S * 0.82, 0, S); gb.addColorStop(0, 'rgba(110,98,80,0)'); gb.addColorStop(1, 'rgba(110,98,80,.2)'); A.fillStyle = gb; A.fillRect(0, 0, S, S);
+        for (let i = 0; i < 3; i++) T.crack([[A, 'rgba(120,112,100,.28)', 0.8], [H, '#6a6a6a', 1.2]], S, rnd() * S, rnd() * S, 7, S * 0.018, S / 1024, rnd);
+        for (let i = 0; i < 70; i++) { const x = rnd() * S, y = rnd() * S; H.fillStyle = `rgba(${rnd() > 0.5 ? 200 : 60},${rnd() > 0.5 ? 200 : 60},${rnd() > 0.5 ? 200 : 60},.08)`; H.beginPath(); H.ellipse(x, y, S * rand(0.02, 0.07), S * rand(0.005, 0.015), rand(-0.4, 0.4), 0, 7); H.fill(); }
+        T.N(H, S, 40, 3, 503, 'overlay', 0.3); T.speckle(A, S, 7, 1, rnd); fill(R, '#e4e4e4', S);
+      },
+      kabe(A, H, R, S, rnd) { // juraku clay wall of the tatami rooms (the ochre-orange walls in every 2F shot)
+        fill(A, '#c9853f', S); T.N(A, S, 3, 5, 511, 'overlay', 0.3); T.N(A, S, 20, 3, 512, 'multiply', 0.1);
+        for (let i = 0; i < 1800; i++) { const x = rnd() * S, y = rnd() * S, a = rnd() * Math.PI, l = rand(2, 9) * S / 1024; A.strokeStyle = `rgba(${rnd() > 0.5 ? '235,190,120' : '120,70,30'},${rand(0.2, 0.5).toFixed(2)})`; A.lineWidth = Math.max(0.8, S / 900); A.beginPath(); A.moveTo(x, y); A.lineTo(x + Math.cos(a) * l, y + Math.sin(a) * l); A.stroke(); }
+        T.speckle(A, S, 14, 1, rnd); T.N(H, S, 50, 3, 513, 'overlay', 0.55); T.speckle(H, S, 50, 0.6, rnd); fill(R, '#f0f0f0', S);
+      },
+      hashira(A, H, R, S, rnd) { // aged, stained cedar posts & beams: vertical grain
+        fill(A, '#4b3526', S); T.N(A, S, 2, 4, 521, 'overlay', 0.35);
+        for (let i = 0; i < 90; i++) { const x = rnd() * S, w = rand(0.6, 2.4) * S / 1024; A.strokeStyle = `rgba(${rnd() > 0.6 ? '110,80,52' : '28,18,12'},${rand(0.15, 0.4).toFixed(2)})`; A.lineWidth = w; A.beginPath(); A.moveTo(x, 0); A.bezierCurveTo(x + rand(-6, 6), S * 0.33, x + rand(-6, 6), S * 0.66, x, S); A.stroke(); H.strokeStyle = 'rgba(60,60,60,.25)'; H.lineWidth = w; H.beginPath(); H.moveTo(x, 0); H.lineTo(x, S); H.stroke(); }
+        for (let k = 0; k < 3; k++) { const x = rnd() * S, y = rnd() * S; A.fillStyle = 'rgba(25,15,8,.6)'; A.beginPath(); A.ellipse(x, y, S * 0.012, S * 0.028, 0, 0, 7); A.fill(); }
+        T.speckle(A, S, 10, 1, rnd); fill(R, '#c8c8c8', S); T.N(R, S, 6, 3, 522, 'overlay', 0.4);
+      },
+      kuroita(A, H, R, S, rnd) { // charred cedar siding (yakisugi): vertical boards with battens
+        fill(A, '#2a2420', S); fill(H, '#909090', S);
+        const n = 6, w = S / n;
+        for (let i = 0; i < n; i++) {
+          const v = randInt(30, 48); A.fillStyle = `rgb(${v},${v - 6},${v - 10})`; A.fillRect(i * w + 1, 0, w - 2, S);
+          for (let k = 0; k < 10; k++) { const x = i * w + rnd() * w; A.strokeStyle = `rgba(${rnd() > 0.5 ? '80,70,62' : '10,8,6'},.35)`; A.lineWidth = 1; A.beginPath(); A.moveTo(x, 0); A.lineTo(x + rand(-3, 3), S); A.stroke(); }
+          H.fillStyle = '#3a3a3a'; H.fillRect(i * w, 0, S / 300 + 1, S);
+        }
+        for (let i = 0; i < n; i++) { A.fillStyle = 'rgba(55,47,40,.9)'; A.fillRect(i * w - w * 0.06, 0, w * 0.12, S); H.fillStyle = '#e0e0e0'; H.fillRect(i * w - w * 0.06, 0, w * 0.12, S); } // battens
+        T.N(A, S, 6, 4, 531, 'overlay', 0.25); T.N(H, S, 64, 2, 532, 'overlay', 0.35); fill(R, '#e6e6e6', S);
+      },
+      koshi(A, H, R, S, rnd) { // lattice slats & balusters: lighter weathered timber
+        fill(A, '#6a4b31', S); T.N(A, S, 3, 4, 541, 'overlay', 0.3);
+        for (let i = 0; i < 60; i++) { const x = rnd() * S; A.strokeStyle = `rgba(${rnd() > 0.5 ? '140,105,70' : '40,26,15'},.25)`; A.lineWidth = rand(0.6, 2); A.beginPath(); A.moveTo(x, 0); A.lineTo(x + rand(-4, 4), S); A.stroke(); }
+        T.speckle(A, S, 12, 1, rnd); T.N(H, S, 48, 2, 542, 'overlay', 0.3); fill(R, '#c4c4c4', S);
+      },
+      ishi(A, H, R, S, rnd) { // granite plinth blocks (2 per tile)
+        fill(A, '#8e8b85', S); T.N(A, S, 4, 5, 551, 'overlay', 0.4); T.speckle(A, S, 46, 1, rnd);
+        for (let i = 0; i < 400; i++) { const x = rnd() * S, y = rnd() * S; A.fillStyle = rnd() > 0.5 ? 'rgba(40,38,36,.5)' : 'rgba(220,218,210,.45)'; A.fillRect(x, y, 2, 2); }
+        for (const x of [0, S / 2]) { A.fillStyle = 'rgba(40,38,34,.8)'; A.fillRect(x - 2, 0, 4, S); H.fillStyle = '#303030'; H.fillRect(x - 3, 0, 6, S); }
+        T.blobs(A, S, 6, 'rgba(70,78,52,A)', S * 0.03, S * 0.12, 0.35, rnd);
+        T.N(H, S, 10, 4, 552, 'overlay', 0.6); fill(R, '#d8d8d8', S);
+      },
+      kawara(A, H, R, S, rnd) { // fired roof tiles: 4 rounded columns (u) × 4 overlapping courses (v, eave at the bottom)
+        fill(A, '#3c3a39', S);
+        const cols = 4, rows = 4, cw = S / cols, rh = S / rows, hi = H.createImageData(S, S), hd = hi.data;
+        const tint = []; for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) tint.push(rand(-14, 14));
+        const ai = A.getImageData(0, 0, S, S), ad = ai.data;
+        for (let y = 0; y < S; y++) {
+          const r = Math.floor(y / rh), fy = (y % rh) / rh; // fy 0 = top of the course (under the next one), 1 = its exposed lower lip
+          for (let x = 0; x < S; x++) {
+            const c = Math.floor(x / cw), fx = (x % cw) / cw, prof = Math.sin(fx * Math.PI) ** 0.7, lip = fy > 0.9 ? (1 - fy) * 10 : 1;
+            const h = 0.25 + 0.6 * prof * (0.55 + 0.45 * fy) * Math.min(1, lip + 0.2) + fy * 0.15, i = (y * S + x) * 4;
+            hd[i] = hd[i + 1] = hd[i + 2] = Math.max(0, Math.min(255, h * 255)); hd[i + 3] = 255;
+            const sh = (prof - 0.5) * 34 + tint[r * cols + c] - (fy > 0.92 ? 28 : 0) + (fx < 0.06 || fx > 0.94 ? -30 : 0);
+            ad[i] = clamp(ad[i] + sh, 0, 255); ad[i + 1] = clamp(ad[i + 1] + sh, 0, 255); ad[i + 2] = clamp(ad[i + 2] + sh * 1.05, 0, 255);
+          }
+        }
+        H.putImageData(hi, 0, 0); A.putImageData(ai, 0, 0);
+        T.N(A, S, 6, 4, 561, 'overlay', 0.3); T.blobs(A, S, 10, 'rgba(70,82,60,A)', S * 0.02, S * 0.08, 0.3, rnd); T.speckle(A, S, 10, 1, rnd);
+        fill(R, '#8a8a8a', S); T.N(R, S, 5, 3, 562, 'overlay', 0.5);
+      },
+      ishidatami(A, H, R, S, rnd) { // irregular granite paving (tileable Voronoi), mossy joints, a few fallen petals
+        const N = 38, pts = []; for (let i = 0; i < N; i++) pts.push([rnd(), rnd(), rand(-18, 14), rand(-0.12, 0.12)]);
+        const ai = A.createImageData(S, S), hi = H.createImageData(S, S), ad = ai.data, hd = hi.data;
+        for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
+          const u = x / S, v = y / S; let d1 = 9, d2 = 9, k = 0;
+          for (let i = 0; i < N; i++) for (let ox = -1; ox <= 1; ox++) for (let oy = -1; oy <= 1; oy++) { const dx = pts[i][0] + ox - u, dy = pts[i][1] + oy - v, d = dx * dx + dy * dy; if (d < d1) { d2 = d1; d1 = d; k = i; } else if (d < d2) d2 = d; }
+          const edge = Math.sqrt(d2) - Math.sqrt(d1), joint = edge < 0.009 ? 1 : edge < 0.016 ? (0.016 - edge) / 0.007 : 0, i = (y * S + x) * 4, t = pts[k][2];
+          const base = 124 + t; ad[i] = (base + 4) * (1 - joint) + 66 * joint; ad[i + 1] = (base - 2) * (1 - joint) + 66 * joint; ad[i + 2] = (base - 14) * (1 - joint) + 58 * joint; ad[i + 3] = 255;
+          const hh = (1 - joint) * (0.75 + pts[k][3]) + Math.min(edge * 6, 0.1); hd[i] = hd[i + 1] = hd[i + 2] = clamp(hh * 255, 0, 255); hd[i + 3] = 255;
+        }
+        A.putImageData(ai, 0, 0); H.putImageData(hi, 0, 0);
+        T.N(A, S, 5, 5, 571, 'overlay', 0.35); T.N(A, S, 2, 3, 572, 'multiply', 0.12); T.speckle(A, S, 26, 1, rnd);
+        for (let i = 0; i < 70; i++) { const x = rnd() * S, y = rnd() * S, r = S * rand(0.003, 0.006); A.fillStyle = `rgba(${randInt(232, 250)},${randInt(170, 200)},${randInt(185, 210)},.85)`; A.beginPath(); A.ellipse(x, y, r * 1.6, r, rnd() * 3, 0, 7); A.fill(); }
+        T.N(H, S, 24, 3, 573, 'overlay', 0.35); fill(R, '#dadada', S); T.N(R, S, 6, 3, 574, 'overlay', 0.4);
+      },
+      tatami(A, H, R, S, rnd) { // one mat (u = 0.91 m across, v = 1.82 m long): woven rush + dark green heri cloth on the long edges
+        fill(A, '#b59d63', S);
+        for (let y = 0; y < S; y += 2) { const v = rand(-14, 10); A.fillStyle = `rgba(${v > 0 ? '235,230,170' : '80,78,40'},${Math.abs(v) / 90})`; A.fillRect(0, y, S, 1); H.fillStyle = y % 4 ? '#9a9a9a' : '#6a6a6a'; H.fillRect(0, y, S, 1); }
+        for (let x = 0; x < S; x += S / 14) { A.fillStyle = 'rgba(90,85,40,.18)'; A.fillRect(x, 0, 1.5, S); }
+        T.N(A, S, 3, 4, 581, 'overlay', 0.25);
+        const hw = S * 0.04; for (const x of [0, S - hw]) { A.fillStyle = '#26301f'; A.fillRect(x, 0, hw, S); H.fillStyle = '#c0c0c0'; H.fillRect(x, 0, hw, S); for (let y = 0; y < S; y += 6) { A.fillStyle = 'rgba(80,95,60,.25)'; A.fillRect(x, y, hw, 2); } }
+        fill(R, '#d0d0d0', S);
+      },
+      shoji(A, H, R, S, rnd) { // one sliding panel (0.91 × 1.82): rice paper in a kumiko lattice over a low kick board
+        fill(A, '#f1ede2', S); T.N(A, S, 6, 4, 591, 'multiply', 0.08); fill(H, '#707070', S);
+        const fr = S * 0.035, kick = S * 0.16;
+        A.fillStyle = '#7a5838'; H.fillStyle = '#d0d0d0';
+        for (const ctx of [A, H]) { ctx.fillRect(0, 0, fr, S); ctx.fillRect(S - fr, 0, fr, S); ctx.fillRect(0, 0, S, fr); ctx.fillRect(0, S - kick, S, kick); }
+        const bars = S * 0.012;
+        for (let i = 1; i < 3; i++) for (const ctx of [A, H]) ctx.fillRect(i * S / 3 - bars / 2, 0, bars, S - kick);
+        for (let j = 1; j < 6; j++) for (const ctx of [A, H]) ctx.fillRect(0, j * (S - kick) / 6 - bars / 2, S, bars);
+        A.fillStyle = 'rgba(40,26,14,.3)'; A.fillRect(0, S - kick, S, 3);
+        fill(R, '#e8e8e8', S);
+      },
+      fusuma(A, H, R, S, rnd) { // painted sliding door: gold-beige paper, ink-wash hills, lacquered frame, round pull
+        fill(A, '#d8c79a', S); T.N(A, S, 4, 4, 601, 'overlay', 0.25);
+        A.fillStyle = 'rgba(80,90,85,.35)'; A.beginPath(); A.moveTo(0, S * 0.72); for (let x = 0; x <= S; x += S / 10) A.lineTo(x, S * (0.6 + 0.12 * Math.sin(x / S * 7 + 1) + rand(-0.03, 0.03))); A.lineTo(S, S); A.lineTo(0, S); A.fill();
+        const fr = S * 0.03; A.fillStyle = '#2b1d14'; A.fillRect(0, 0, fr, S); A.fillRect(S - fr, 0, fr, S); A.fillRect(0, 0, S, fr); A.fillRect(0, S - fr, S, fr);
+        H.fillStyle = '#c0c0c0'; H.fillRect(0, 0, fr, S); H.fillRect(S - fr, 0, fr, S);
+        A.fillStyle = '#3a2a1c'; A.beginPath(); A.arc(S * 0.86, S * 0.5, S * 0.035, 0, 7); A.fill(); H.fillStyle = '#404040'; H.beginPath(); H.arc(S * 0.86, S * 0.5, S * 0.03, 0, 7); H.fill();
+        fill(R, '#e0e0e0', S);
+      },
+      yuka(A, H, R, S, rnd) { // polished corridor floor boards (u) and stair treads
+        fill(A, '#6e4c31', S); const n = 10, w = S / n;
+        for (let i = 0; i < n; i++) {
+          const v = rand(-14, 14); A.fillStyle = `rgba(${v > 0 ? '150,110,70' : '30,18,10'},${Math.abs(v) / 60})`; A.fillRect(0, i * w, S, w);
+          for (let k = 0; k < 8; k++) { const y = i * w + rnd() * w; A.strokeStyle = 'rgba(40,24,12,.25)'; A.lineWidth = rand(0.6, 1.4); A.beginPath(); A.moveTo(0, y); A.bezierCurveTo(S * 0.3, y + rand(-3, 3), S * 0.7, y + rand(-3, 3), S, y); A.stroke(); }
+          for (const ctx of [A, H]) { ctx.fillStyle = ctx === A ? 'rgba(25,15,8,.7)' : '#404040'; ctx.fillRect(0, i * w, S, Math.max(1, S / 400)); }
+          const jx = rnd() * S; A.fillStyle = 'rgba(25,15,8,.7)'; A.fillRect(jx, i * w, 2, w);
+        }
+        T.speckle(A, S, 8, 1, rnd); fill(R, '#6a6a6a', S); T.N(R, S, 5, 3, 611, 'overlay', 0.5);
+      },
+      tenjo(A, H, R, S, rnd) { // sao-buchi ceiling: pale boards under dark battens every 0.45 m
+        fill(A, '#a98a66', S); for (let y = 0; y < S; y += 3) { A.fillStyle = `rgba(${rnd() > 0.5 ? '200,170,130' : '90,65,40'},.08)`; A.fillRect(0, y, S, 2); }
+        for (let i = 0; i < 4; i++) for (const ctx of [A, H]) { ctx.fillStyle = ctx === A ? '#3c2a1c' : '#e0e0e0'; ctx.fillRect(i * S / 4, 0, S * 0.03, S); }
+        T.N(A, S, 4, 3, 621, 'overlay', 0.25); fill(R, '#d8d8d8', S);
+      },
+      namako(A, H, R, S, rnd) { // namako-kabe: slate tiles set diagonally, raised white plaster joints
+        fill(A, '#3e4246', S); fill(H, '#606060', S); T.N(A, S, 4, 4, 631, 'overlay', 0.3);
+        const n = 4, d = S / n;
+        for (const ctx of [A, H]) { ctx.save(); ctx.strokeStyle = ctx === A ? '#e6e2d8' : '#f0f0f0'; ctx.lineWidth = S * 0.035; ctx.lineCap = 'round';
+          for (let k = -n; k <= 2 * n; k++) { ctx.beginPath(); ctx.moveTo(k * d, 0); ctx.lineTo(k * d + S, S); ctx.moveTo(k * d, 0); ctx.lineTo(k * d - S, S); ctx.stroke(); } ctx.restore(); }
+        T.speckle(A, S, 10, 1, rnd); fill(R, '#bcbcbc', S);
+      },
+      ishigaki(A, H, R, S, rnd) { // dry-laid stone wall: irregular polygonal stones (anisotropic Voronoi), dark deep joints
+        const N = 30, pts = []; for (let i = 0; i < N; i++) pts.push([rnd(), rnd(), rand(-22, 22)]);
+        const ai = A.createImageData(S, S), hi = H.createImageData(S, S), ad = ai.data, hd = hi.data;
+        for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
+          const u = x / S, v = y / S; let d1 = 9, d2 = 9, k = 0;
+          for (let i = 0; i < N; i++) for (let ox = -1; ox <= 1; ox++) for (let oy = -1; oy <= 1; oy++) { const dx = (pts[i][0] + ox - u) * 0.75, dy = (pts[i][1] + oy - v) * 1.25, d = dx * dx + dy * dy; if (d < d1) { d2 = d1; d1 = d; k = i; } else if (d < d2) d2 = d; }
+          const e = Math.sqrt(d2) - Math.sqrt(d1), j = e < 0.012 ? 1 : e < 0.03 ? (0.03 - e) / 0.018 : 0, i = (y * S + x) * 4, b = 128 + pts[k][2];
+          ad[i] = b * (1 - j) + 34 * j; ad[i + 1] = (b - 3) * (1 - j) + 33 * j; ad[i + 2] = (b - 9) * (1 - j) + 30 * j; ad[i + 3] = 255;
+          const hh = (1 - j) * (0.7 + Math.min(e * 3, 0.25)); hd[i] = hd[i + 1] = hd[i + 2] = clamp(hh * 255, 0, 255); hd[i + 3] = 255;
+        }
+        A.putImageData(ai, 0, 0); H.putImageData(hi, 0, 0);
+        T.N(A, S, 6, 4, 641, 'overlay', 0.4); T.blobs(A, S, 10, 'rgba(70,84,48,A)', S * 0.02, S * 0.08, 0.4, rnd); T.speckle(A, S, 20, 1, rnd); T.N(H, S, 16, 4, 642, 'overlay', 0.5); fill(R, '#e0e0e0', S);
+      },
+      akai(A, H, R, S, rnd) { // vermilion lacquer (torii, railings, banners' poles)
+        fill(A, '#b1301f', S); T.N(A, S, 4, 4, 651, 'overlay', 0.2); T.blobs(A, S, 6, 'rgba(70,20,12,A)', S * 0.05, S * 0.2, 0.25, rnd); T.N(H, S, 30, 2, 652, 'overlay', 0.15); fill(R, '#707070', S);
+      },
+      sakuraBark(A, H, R, S, rnd) { // cherry bark: dark grey-brown with horizontal lenticel bands
+        fill(A, '#4a3b34', S); T.N(A, S, 3, 4, 661, 'overlay', 0.4);
+        for (let i = 0; i < 70; i++) { const y = rnd() * S, x = rnd() * S, w = S * rand(0.05, 0.25); A.fillStyle = `rgba(${rnd() > 0.5 ? '120,100,90' : '30,22,18'},.5)`; A.fillRect(x, y, w, S * 0.006); H.fillStyle = '#c0c0c0'; H.fillRect(x, y, w, S * 0.006); }
+        T.N(H, S, 20, 4, 662, 'overlay', 0.6); fill(R, '#e8e8e8', S);
+      },
+      pineNeedle(A, H, R, S, rnd) { // clipped pine pads: dense dark needles
+        fill(A, '#2c3d24', S); T.N(A, S, 4, 4, 671, 'overlay', 0.35);
+        for (let i = 0; i < S * 6; i++) { const x = rnd() * S, y = rnd() * S, a = rnd() * Math.PI, l = rand(4, 12) * S / 512; A.strokeStyle = `rgba(${randInt(40, 95)},${randInt(70, 120)},${randInt(30, 60)},.7)`; A.lineWidth = 1; A.beginPath(); A.moveTo(x, y); A.lineTo(x + Math.cos(a) * l, y + Math.sin(a) * l); A.stroke(); H.strokeStyle = 'rgba(220,220,220,.4)'; H.beginPath(); H.moveTo(x, y); H.lineTo(x + Math.cos(a) * l, y + Math.sin(a) * l); H.stroke(); }
+        fill(R, '#e8e8e8', S);
+      },
+      bamboo(A, H, R, S, rnd) { // aged green-gold bamboo, nodes every quarter
+        fill(A, '#8f8f52', S); T.N(A, S, 3, 3, 681, 'overlay', 0.3);
+        for (let i = 0; i < 40; i++) { const x = rnd() * S; A.fillStyle = `rgba(${rnd() > 0.5 ? '200,190,120' : '60,60,30'},.15)`; A.fillRect(x, 0, 2, S); }
+        for (let k = 0; k < 4; k++) for (const ctx of [A, H]) { ctx.fillStyle = ctx === A ? 'rgba(70,64,34,.8)' : '#e0e0e0'; ctx.fillRect(0, k * S / 4, S, S / 60); }
+        fill(R, '#909090', S);
+      },
     };
+    g.pineNeedle.normal = 3; g.bamboo.normal = 1.5;
+    g.shikkui.normal = 1.2; g.kabe.normal = 1.4; g.hashira.normal = 1.6; g.kuroita.normal = 2.4; g.koshi.normal = 1.4; g.ishi.normal = 2.6; g.kawara.normal = 5;
+    g.ishidatami.normal = 2.6; g.tatami.normal = 1.8; g.shoji.normal = 0.8; g.fusuma.normal = 0.8; g.yuka.normal = 1.2; g.tenjo.normal = 1.2; g.namako.normal = 3; g.ishigaki.normal = 2.6;
+    g.akai.normal = 0.5; g.sakuraBark.normal = 2.6;
     g.grass.normal = 2.2; g.dirt.normal = 2.6; g.rock.normal = 4.5; g.ruinStone.normal = 3.4;
     g.polished.normal = 0.6; g.concrete.normal = 2.2; g.concreteWall.normal = 2; g.siding.normal = 2.2; g.container.normal = 4; g.plate.normal = 4;
     g.wood.normal = 2.5; g.roof.normal = 3; g.asphalt.normal = 2.5; g.sand.normal = 2.5; g.plaster.normal = 3; g.pavers.normal = 3.5;
@@ -2814,6 +2978,38 @@ const MAT_PRESETS = {
   toriiRed:     { s: 'plaster', rough: 0.7, metal: 0, tile: 2, color: 0xc0392b },
   sakuraBloom:  { s: 'fabric', rough: 0.9, metal: 0, tile: 1, color: 0xf3c5d0 },
   vending:      { s: 'metal', rough: 0.5, metal: 0.2, tile: 2, color: 0xd9dde0 },
+  // v44 Sakura Inn GLB materials ('ry:<name>' in the Blender export; tile = TILE in tools/blender/ryokan_build.py)
+  ry_shikkui:   { s: 'shikkui', rough: 1, metal: 0, tile: 2.4 },
+  ry_kabe:      { s: 'kabe', rough: 1, metal: 0, tile: 2 },
+  ry_hashira:   { s: 'hashira', rough: 0.85, metal: 0, tile: 0.9 },
+  ry_kuroita:   { s: 'kuroita', rough: 0.95, metal: 0, tile: 1.2 },
+  ry_koshi:     { s: 'koshi', rough: 0.85, metal: 0, tile: 0.9 },
+  ry_ishi:      { s: 'ishi', rough: 0.9, metal: 0, tile: 1.6 },
+  ry_kawara:    { s: 'kawara', rough: 0.62, metal: 0.05, tile: 1.2, env: 1.2 },
+  ry_ishidatami:{ s: 'ishidatami', rough: 0.92, metal: 0, tile: 4 },
+  ry_tatami:    { s: 'tatami', rough: 0.9, metal: 0, tile: 0.91 },
+  ry_shoji:     { s: 'shoji', rough: 0.95, metal: 0, tile: 0.91 },
+  ry_fusuma:    { s: 'fusuma', rough: 0.9, metal: 0, tile: 0.91 },
+  ry_yuka:      { s: 'yuka', rough: 0.42, metal: 0, tile: 1.6, clearcoat: 0.15, clearcoatRoughness: 0.4 },
+  ry_tenjo:     { s: 'tenjo', rough: 0.85, metal: 0, tile: 1.8 },
+  ry_namako:    { s: 'namako', rough: 0.6, metal: 0, tile: 1.2 },
+  ry_ishigaki:  { s: 'ishigaki', rough: 0.95, metal: 0, tile: 1.5 },
+  ry_akai:      { s: 'akai', rough: 0.5, metal: 0, tile: 1 },
+  ry_bronze:    { s: 'metal', rough: 0.45, metal: 0.9, tile: 1, color: 0x6d5a3a },
+  ry_rock:      { s: 'rock', rough: 0.95, metal: 0, tile: 3 },
+  ry_bark:      { s: 'sakuraBark', rough: 0.95, metal: 0, tile: 1 },
+  ry_metal:     { s: 'metal', rough: 0.5, metal: 0.2, tile: 1, color: 0xd9dde0 },
+  ry_pine:      { s: 'pineNeedle', rough: 0.95, metal: 0, tile: 1.2 },
+  ry_bamboo:    { s: 'bamboo', rough: 0.55, metal: 0, tile: 1 },
+  ry_mosen:     { s: 'fabric', rough: 1, metal: 0, tile: 1, color: 0xb02a22, sheen: 0.4 },
+  ry_gold:      { s: 'metal', rough: 0.3, metal: 1, tile: 1, color: 0xe0b450, env: 1.5 },
+  ry_hill:      { s: 'grass', rough: 1, metal: 0, tile: 12, color: 0x6d7a62 },
+  ry_lacquer:   { s: 'akai', rough: 0.35, metal: 0, tile: 1, color: 0x8a3a2a, clearcoat: 0.4, clearcoatRoughness: 0.3 },
+  ry_scrollRod: { s: 'hashira', rough: 0.5, metal: 0, tile: 1, color: 0x6a3a22 },
+  ry_tansu:     { s: 'kuroita', rough: 0.6, metal: 0, tile: 0.9, color: 0xb08a6a },
+  ry_castleWall:{ s: 'kuroita', rough: 0.95, metal: 0, tile: 2, color: 0x5a5a58 },
+  ry_hedge:     { s: 'grass', rough: 1, metal: 0, tile: 1.2, color: 0x9ab56a },
+  ry_sakuraFar: { s: 'fabric', rough: 1, metal: 0, tile: 4, color: 0xf0c6cf },
 };
 const CONTAINER_COLORS = ['#7a4a3f', '#3f5669', '#4a5c45', '#8f6d48', '#666a6d', '#6a4450', '#9c8d52', '#3f6363']; // v17: weathered, sun-faded paint
 
@@ -6009,9 +6205,9 @@ const RYOKAN_SPEC = {
   part2: [
     { a: [62, 41], b: [62, 92], doors: [[48, 53], [78, 83]] },
     { a: [62, 92], b: [128, 92], doors: [[66, 70], [84, 89], [98, 103], [119, 124]] },
-    { a: [76, 56], b: [108, 56], doors: [[89, 95]] },
-    { a: [76, 56], b: [76, 92], doors: [[70, 76]] },
-    { a: [108, 56], b: [108, 92], doors: [[63, 68]] },
+    { a: [76, 56], b: [108, 56], doors: [[89, 95]], mat: 'kabe' },                                // objective room: ochre clay walls
+    { a: [76, 56], b: [76, 92], doors: [[70, 76]], mat: 'kabe' },
+    { a: [108, 56], b: [108, 92], doors: [[63, 68]], mat: 'kabe' },
     { a: [116, 41], b: [116, 92], doors: [[44, 50], [70, 76]] },
     { a: [55, 100], b: [100, 100], doors: [[60, 64], [78, 82], [93, 99]] },
     { a: [80, 100], b: [80, 121], doors: [[107, 112]] },
@@ -6023,6 +6219,11 @@ const RYOKAN_SPEC = {
     { a: [170, 212], b: [170, 223], doors: [[213.5, 221.5]] },                                  // bridge ↔ A棟
     { a: [151, 212], b: [151, 223], doors: [[213.5, 221.5]] },                                  // bridge ↔ B棟
     { a: [137, 231], b: [151, 231], doors: [[141, 147]] },
+  ],
+  // 2F floor finish (visuals only): tatami rooms; everything else keeps the polished corridor boards
+  floors2: [
+    [76, 56, 108, 92, 'tatami'], [62, 41, 116, 56, 'tatami'], [62, 56, 76, 92, 'tatami'], [108, 56, 116, 92, 'tatami'], [55, 100, 80, 121, 'tatami'],
+    [176, 159, 194, 192, 'tatami'], [194, 159, 212, 192, 'tatami'], [176, 192, 212, 226, 'tatami'], [126, 203, 151, 231, 'tatami'],
   ],
   // free-standing ground-floor walls (inside walkable space): hall walls, the west house front, low fences
   walls1: [
@@ -6050,7 +6251,7 @@ const RYOKAN_SPEC = {
     ['sakura', 14, 104], ['sakura', 14, 160], ['sakura', 33, 200], ['sakura', 104, 20], ['sakura', 176, 22],
     ['sakura', 92, 286], ['sakura', 47, 248], ['sakura', 186, 98], ['pine', 160, 27], ['pine', 30, 182],
     ['streetlamp', 176, 75], ['streetlamp', 190, 128], ['streetlamp', 66, 200], ['streetlamp', 98, 240], ['streetlamp', 155, 240],
-    ['vending', 131, 92],
+    ['vending', 131, 92], ['table', 92, 74],                                                   // the scroll's low table (relic rests on it)
   ],
   spawns: { alpha: [70, 292, 120, 318], bravo: [108, 14, 180, 34] },
   objective: [92, 74],
@@ -6130,7 +6331,7 @@ function ryokanPlan(S = RYOKAN_SPEC) {
       const alongU = p.a[1] === p.b[1], lo = alongU ? Math.min(p.a[0], p.b[0]) : Math.min(p.a[1], p.b[1]), hi = alongU ? Math.max(p.a[0], p.b[0]) : Math.max(p.a[1], p.b[1]);
       const line = alongU ? p.a[1] : p.a[0], h = p.h ?? defH, doors = (p.doors || []).slice().sort((a, b) => a[0] - b[0]);
       const box = (a, b, y0, y1) => (alongU ? { x0: U(a), x1: U(b), z0: V(line) - th / 2, z1: V(line) + th / 2, y0, y1 } : { x0: U(line) - th / 2, x1: U(line) + th / 2, z0: V(a), z1: V(b), y0, y1 });
-      let cur = lo; const seg = { kind: p.kind || kind, o: alongU ? 'h' : 'v', parts: [], doors: [], win: !!p.win };
+      let cur = lo; const seg = { kind: p.kind || kind, o: alongU ? 'h' : 'v', parts: [], doors: [], win: !!p.win, mat: p.mat };
       for (const [d0, d1] of doors) { if (d0 > cur) seg.parts.push(box(cur, d0, y0Base, y0Base + h)); if (h > 2.4) seg.parts.push(Object.assign(box(d0, d1, y0Base + 2.1, y0Base + h), { lintel: true })); seg.doors.push(box(d0, d1, y0Base, y0Base + 2.1)); cur = d1; }
       if (hi > cur) seg.parts.push(box(cur, hi, y0Base, y0Base + h));
       out.push(seg);
@@ -6158,7 +6359,7 @@ function ryokanPlan(S = RYOKAN_SPEC) {
   const P = (u, v) => [U(u), V(v)];
   return {
     S, U, V, P, ground, slabs, outside, walls, rails, parts2, walls1, stairs, buildings,
-    eaves: S.eaves.map((e) => Object.assign({ id: e.id, y: S.EAVE }, M(e.r))),
+    eaves: S.eaves.map((e) => Object.assign({ id: e.id, y: S.EAVE }, M(e.r))), floors2: (S.floors2 || []).map(([u0, v0, u1, v1, type]) => Object.assign({ type }, M([u0, v0, u1, v1]))),
     canopies: S.canopies.map((c) => Object.assign({ id: c.id, name: c.name, h: c.h, roof: c.roof }, M(c.r))),
     props: S.props.map(([kind, u, v, a]) => ({ kind, x: U(u), z: V(v), a })),
     spawns: { alpha: M(S.spawns.alpha), bravo: M(S.spawns.bravo) }, objective: P(...S.objective), dom: S.dom.map((d) => P(...d)),
@@ -6201,7 +6402,17 @@ function buildRyokan(b) {
   ryokanProps(b, PL, glb);
   const sp = PL.spawns; b.spawnZone('alpha', sp.alpha.x0, sp.alpha.z0, sp.alpha.x1, sp.alpha.z1, 0); b.spawnZone('bravo', sp.bravo.x0, sp.bravo.z0, sp.bravo.x1, sp.bravo.z1, Math.PI);
   for (const r of PL.ground) if ((r.x1 - r.x0) * (r.z1 - r.z0) > 30) b.waypoint((r.x0 + r.x1) / 2, (r.z0 + r.z1) / 2, 0);
-  if (glb) { const sc = glb.scene; sc.traverse((o) => { if (o.isMesh) { o.castShadow = !/nocast|petal|water|glass/i.test(o.name); o.receiveShadow = true; o.matrixAutoUpdate = false; o.updateMatrix(); } }); b.scene.add(sc); }
+  if (glb) { // Blender visuals: swap the placeholder 'ry:<name>' materials for the game's procedural PBR presets
+    const sc = glb.scene;
+    sc.traverse((o) => {
+      if (!o.isMesh) return;
+      const nm = (o.material && o.material.name) || '', key = 'ry_' + nm.replace(/^ry:/, '');
+      const sp = ryokanSpecialMat(b, nm.replace(/^ry:/, ''));
+      if (sp) { o.material = sp; if (sp.transparent) { o.renderOrder = 2; o.userData.noAO = true; } } else if (MAT_PRESETS[key]) o.material = b.lib.get(key);
+      o.castShadow = !/nocast|petal|water|glass|tileEnds/i.test(o.name); o.receiveShadow = !/far_nocast/.test(o.name); o.matrixAutoUpdate = false; o.updateMatrix();
+    });
+    sc.updateMatrixWorld(true); b.scene.add(sc);
+  }
 }
 
 // gameplay props: collision + (fallback) visuals. With the GLB they only add colliders — the GLB has the models.
@@ -6242,8 +6453,103 @@ function ryokanProps(b, PL, glb) {
       case 'pine': b.box(x - 0.25, 0, z - 0.25, x + 0.25, 3.0, z + 0.25, null, { material: 'wood', radar: 'crate' }); if (solid) b.tree(x, z, 'pine', 6.5, 0); break;
       case 'streetlamp': b.box(x - 0.12, 0, z - 0.12, x + 0.12, 3.6, z + 0.12, vis('darkSteel'), { material: 'metal', radar: false }); break;
       case 'vending': b.box(x - 0.5, 0, z - 0.45, x + 0.5, 1.85, z + 0.45, vis('vending'), { radar: 'crate', material: 'metal' }); break;
+      case 'table': b.box(x - 1.0, RYOKAN_SPEC.F2, z - 0.55, x + 1.0, RYOKAN_SPEC.F2 + 0.36, z + 0.55, vis('darkWood'), { material: 'wood', penetrable: true, radar: false }); break;
     }
   }
+}
+
+// GLB materials that are not plain PBR presets: alpha blossom cards, water, glowing paper, printed cloth, the vending front
+function ryokanSpecialMat(b, name) {
+  const tf = b.tf, lib = b.lib;
+  switch (name) {
+    case 'sakura': return lib.basic('ry:sakura', () => {
+      const map = tf.simple('rySakuraCards', 512, (ctx, S) => { // 2 × 2 atlas of blossom clusters on transparency
+        ctx.clearRect(0, 0, S, S); const rnd = mulberry32(4402);
+        for (let q = 0; q < 4; q++) {
+          const ox = (q % 2) * S / 2, oy = Math.floor(q / 2) * S / 2, c = S / 4;
+          for (let i = 0; i < 150; i++) {
+            const a = rnd() * 6.283, d = Math.sqrt(rnd()) * c * 0.86, x = ox + c + Math.cos(a) * d, y = oy + c + Math.sin(a) * d, r = S * (0.011 + rnd() * 0.012);
+            const pk = rnd(), col = pk < 0.18 ? '#fbeef2' : pk < 0.7 ? '#f6c9d4' : '#eaa6b8';
+            for (let p = 0; p < 5; p++) { const pa = p * 1.2566 + rnd(); ctx.fillStyle = col; ctx.beginPath(); ctx.ellipse(x + Math.cos(pa) * r * 0.8, y + Math.sin(pa) * r * 0.8, r * 0.75, r * 0.5, pa, 0, 7); ctx.fill(); }
+            ctx.fillStyle = rnd() < 0.5 ? '#c4506a' : '#e7b44a'; ctx.beginPath(); ctx.arc(x, y, r * 0.28, 0, 7); ctx.fill();
+          }
+          for (let i = 0; i < 26; i++) { const a = rnd() * 6.283, d = Math.sqrt(rnd()) * c * 0.8; ctx.strokeStyle = 'rgba(70,45,40,.9)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(ox + c + Math.cos(a) * d, oy + c + Math.sin(a) * d); ctx.lineTo(ox + c + Math.cos(a) * d * 0.6, oy + c + Math.sin(a) * d * 0.6); ctx.stroke(); }
+        }
+      }, true, true); // repeat: the GLB V is negated (glTF flip) — clamping would sample the transparent edge
+      const m = new THREE.MeshStandardMaterial({ map, alphaTest: 0.42, roughness: 0.85, metalness: 0, emissive: 0xf2b8c6, emissiveIntensity: 0.12, side: THREE.FrontSide });
+      return m;
+    });
+    case 'tileEnds': return lib.basic('ry:tileEnds', () => { // round eave-tile ends (one disc per 0.28 m of the strip)
+      const map = tf.simple('ryTileEnds', 128, (ctx, S) => {
+        ctx.clearRect(0, 0, S, S); const g = ctx.createRadialGradient(S * 0.45, S * 0.42, S * 0.05, S / 2, S / 2, S * 0.46);
+        g.addColorStop(0, '#6a6a6a'); g.addColorStop(0.75, '#3c3b3a'); g.addColorStop(1, '#232222'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(S / 2, S / 2, S * 0.46, 0, 7); ctx.fill();
+        ctx.strokeStyle = 'rgba(20,20,20,.8)'; ctx.lineWidth = S * 0.04; ctx.beginPath(); ctx.arc(S / 2, S / 2, S * 0.3, 0, 7); ctx.stroke();
+        for (let k = 0; k < 3; k++) { const a = k * 2.094; ctx.fillStyle = 'rgba(25,25,25,.7)'; ctx.beginPath(); ctx.arc(S / 2 + Math.cos(a) * S * 0.12, S / 2 + Math.sin(a) * S * 0.12, S * 0.07, 0, 7); ctx.fill(); }
+      }, true, true);
+      return new THREE.MeshStandardMaterial({ map, alphaTest: 0.5, roughness: 0.6, metalness: 0.05, side: THREE.DoubleSide });
+    });
+    case 'water': return lib.basic('ry:water', () => new THREE.MeshPhysicalMaterial({ color: 0x5f8f8a, roughness: 0.05, metalness: 0, transparent: true, opacity: 0.8, envMapIntensity: 1.4, depthWrite: false }));
+    case 'paper': case 'paperRed': return lib.basic('ry:' + name, () => {
+      const red = name === 'paperRed', map = tf.simple('ryLantern' + (red ? 'R' : 'W'), 256, (ctx, S) => {
+        ctx.fillStyle = red ? '#c8352a' : '#f2e7cf'; ctx.fillRect(0, 0, S, S);
+        for (let y = 0; y < S; y += S / 12) { ctx.fillStyle = 'rgba(60,30,10,.25)'; ctx.fillRect(0, y, S, 2); }
+        ctx.fillStyle = red ? '#1d1410' : '#9d2a20'; ctx.font = `bold ${S * 0.42}px serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        for (const x of [S * 0.25, S * 0.75]) ctx.fillText(red ? '祭' : '湯', x, S / 2);
+      }, true, true);
+      return new THREE.MeshStandardMaterial({ map, roughness: 0.9, emissive: red ? 0xff5a3a : 0xffd9a0, emissiveMap: map, emissiveIntensity: 0.35 });
+    });
+    case 'noren': return lib.basic('ry:noren', () => {
+      const map = tf.simple('ryNoren', 512, (ctx, S) => {
+        ctx.fillStyle = '#1f2d47'; ctx.fillRect(0, 0, S, S); const g = ctx.createLinearGradient(0, 0, 0, S); g.addColorStop(0, 'rgba(0,0,0,.25)'); g.addColorStop(1, 'rgba(255,255,255,.05)'); ctx.fillStyle = g; ctx.fillRect(0, 0, S, S);
+        ctx.fillStyle = '#f1ece0'; ctx.font = `bold ${S * 0.36}px serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ['ゆ', 'や', 'ど', '♨'].forEach((t, i) => ctx.fillText(t, S * (0.125 + i * 0.25), S * 0.5));
+      }, true, true);
+      return new THREE.MeshStandardMaterial({ map, roughness: 1, side: THREE.DoubleSide });
+    });
+    case 'blueprint': return lib.basic('ry:blueprint', () => { // the Tor-M2 drawings on the table
+      const map = tf.simple('ryBlueprint', 512, (ctx, S) => {
+        ctx.fillStyle = '#1d3b6e'; ctx.fillRect(0, 0, S, S); ctx.strokeStyle = 'rgba(200,220,255,.18)'; ctx.lineWidth = 1;
+        for (let i = 0; i <= S; i += S / 24) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, S); ctx.moveTo(0, i); ctx.lineTo(S, i); ctx.stroke(); }
+        ctx.strokeStyle = '#e8f0ff'; ctx.lineWidth = 3; ctx.strokeRect(S * 0.12, S * 0.5, S * 0.76, S * 0.16);                   // hull
+        for (let k = 0; k < 6; k++) { ctx.beginPath(); ctx.arc(S * (0.2 + k * 0.12), S * 0.7, S * 0.045, 0, 7); ctx.stroke(); }  // road wheels
+        ctx.strokeRect(S * 0.3, S * 0.3, S * 0.4, S * 0.2); ctx.beginPath(); ctx.moveTo(S * 0.5, S * 0.3); ctx.lineTo(S * 0.5, S * 0.14); ctx.stroke(); // turret + mast
+        ctx.strokeRect(S * 0.36, S * 0.08, S * 0.28, S * 0.06);                                                                     // radar
+        ctx.font = `bold ${S * 0.06}px monospace`; ctx.fillStyle = '#e8f0ff'; ctx.fillText('9K331 TOR-M2', S * 0.12, S * 0.86); ctx.font = `${S * 0.03}px monospace`; ctx.fillText('СЕКРЕТНО · 1:25', S * 0.12, S * 0.92);
+      }, true, true);
+      return new THREE.MeshStandardMaterial({ map, roughness: 0.85, emissive: 0x3060a0, emissiveIntensity: 0.15 });
+    });
+    case 'papers': return lib.basic('ry:papers', () => {
+      const map = tf.simple('ryPapers', 128, (ctx, S) => { ctx.fillStyle = '#efeadc'; ctx.fillRect(0, 0, S, S); ctx.fillStyle = 'rgba(30,30,40,.55)'; for (let y = 14; y < S - 10; y += 9) ctx.fillRect(10, y, S * (0.4 + Math.random() * 0.45), 2); }, true, true);
+      return new THREE.MeshStandardMaterial({ map, roughness: 0.95, side: THREE.DoubleSide });
+    });
+    case 'kakejiku': return lib.basic('ry:kakejiku', () => {
+      const map = tf.simple('ryKakejiku', 256, (ctx, S) => {
+        ctx.fillStyle = '#6b4a2e'; ctx.fillRect(0, 0, S, S); ctx.fillStyle = '#e8dfc8'; ctx.fillRect(S * 0.12, S * 0.14, S * 0.76, S * 0.72);
+        ctx.fillStyle = 'rgba(40,40,40,.6)'; ctx.beginPath(); ctx.moveTo(S * 0.12, S * 0.7); for (let x = 0.12; x <= 0.88; x += 0.04) ctx.lineTo(S * x, S * (0.55 + 0.1 * Math.sin(x * 11))); ctx.lineTo(S * 0.88, S * 0.86); ctx.lineTo(S * 0.12, S * 0.86); ctx.fill();
+        ctx.fillStyle = '#b8352a'; ctx.fillRect(S * 0.7, S * 0.2, S * 0.08, S * 0.08); ctx.fillStyle = '#222'; ctx.font = `${S * 0.12}px serif`; ctx.fillText('櫻', S * 0.4, S * 0.35);
+      }, true, true);
+      return new THREE.MeshStandardMaterial({ map, roughness: 0.9 });
+    });
+    case 'lampPaper': return lib.basic('ry:lampPaper', () => new THREE.MeshStandardMaterial({ color: 0xf6e7c6, roughness: 0.9, emissive: 0xffc77a, emissiveIntensity: 0.9 }));
+    case 'sign': return lib.basic('ry:sign', () => { // red plaques on the inn facades (one kanji per board)
+      const map = tf.simple('rySigns', 256, (ctx, S) => {
+        const words = ['湯', '宿', '櫻', '茶', '酒', '福', '旅', '館']; ctx.fillStyle = '#b3291f'; ctx.fillRect(0, 0, S, S);
+        ctx.fillStyle = '#f4ead2'; ctx.font = `bold ${S * 0.18}px serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        for (let i = 0; i < 4; i++) for (let j = 0; j < 2; j++) ctx.fillText(words[i * 2 + j], S * (0.125 + i * 0.25), S * (0.25 + j * 0.5));
+      }, true, true);
+      return new THREE.MeshStandardMaterial({ map, roughness: 0.6, emissive: 0x401008, emissiveIntensity: 0.2 });
+    });
+    case 'vend': return lib.basic('ry:vend', () => {
+      const map = tf.simple('ryVend', 256, (ctx, S) => {
+        ctx.fillStyle = '#e8ecef'; ctx.fillRect(0, 0, S, S); ctx.fillStyle = '#1c2a3a'; ctx.fillRect(S * 0.08, S * 0.06, S * 0.84, S * 0.5);
+        const cols = ['#d2332a', '#2a6fd2', '#2fae4a', '#e8b21c', '#f1f1f1', '#8a4bd2'];
+        for (let r = 0; r < 3; r++) for (let c = 0; c < 6; c++) { const x = S * (0.12 + c * 0.135), y = S * (0.1 + r * 0.155); ctx.fillStyle = cols[(r * 2 + c) % cols.length]; ctx.fillRect(x, y, S * 0.09, S * 0.12); ctx.fillStyle = '#ff4030'; ctx.fillRect(x + S * 0.02, y + S * 0.13, S * 0.05, S * 0.012); }
+        ctx.fillStyle = '#20252a'; ctx.fillRect(S * 0.15, S * 0.82, S * 0.7, S * 0.1);
+      }, true, true);
+      return new THREE.MeshStandardMaterial({ map, roughness: 0.4, emissive: 0xffffff, emissiveMap: map, emissiveIntensity: 0.25 });
+    });
+  }
+  return null;
 }
 
 // fallback roof: a hipped / gabled prism with eaves (until the Blender GLB replaces it)
@@ -6271,7 +6577,7 @@ function ryokanSakura(b, x, z) {
     g.translate(x + Math.cos(a) * d, 4.2 + rnd() * 1.4, z + Math.sin(a) * d); g.computeVertexNormals(); b.geo(g, 'sakuraBloom'); }
 }
 
-const RYOKAN_HAS_GLB = false; // flipped by tools/ryokan/pack_glb.mjs once assets/maps/ryokan.js exists
+const RYOKAN_HAS_GLB = true; // flipped by tools/ryokan/pack_glb.mjs once assets/maps/ryokan.js exists
 const RYOKAN_PLAN_BOUNDS = (() => { const P = ryokanPlan(); return P.bounds; })();
 MAPS.push({
   // v44 SAKURA INN — SF2 'Ryokan' (료칸, 2012): a Hokkaido hot-spring inn village that is really a safehouse holding the
@@ -6293,7 +6599,11 @@ MAPS.push({
     try {
       if (!RYOKAN_HAS_GLB) return;
       if (!window.RYOKAN_GLB) await new Promise((res) => { const s = document.createElement('script'); s.src = 'assets/maps/ryokan.js'; s.async = true; s.onload = res; s.onerror = res; document.head.appendChild(s); });
-      if (window.RYOKAN_GLB) { const bin = Uint8Array.from(atob(window.RYOKAN_GLB), (c) => c.charCodeAt(0)).buffer; this._glb = await new GLTFLoader().parseAsync(bin, ''); }
+      if (window.RYOKAN_GLB) {
+        const bin = Uint8Array.from(atob(window.RYOKAN_GLB), (c) => c.charCodeAt(0)).buffer, L = new GLTFLoader(), D = new DRACOLoader();
+        D.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/libs/draco/gltf/'); L.setDRACOLoader(D);
+        this._glb = await L.parseAsync(bin, ''); D.dispose();
+      }
     } catch (e) { console.warn('Ryokan GLB unavailable, using fallback visuals', e && e.message); this._glb = null; }
   },
   build(b) { buildRyokan(b); },

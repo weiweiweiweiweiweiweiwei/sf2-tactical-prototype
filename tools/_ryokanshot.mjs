@@ -7,7 +7,8 @@ const SHOTS = [
   ['gate', -6, 1.65, 44, 0.05, 0.02], ['crossing', -27, 1.65, 26, -0.35, 0.03], ['west', -36, 1.65, 6, -0.12, 0.08],
   ['hall', -12, 1.65, -5, -1.2, 0.0], ['bell', 18, 1.65, -2, 0.55, 0.05], ['onsen', 26, 1.65, -2, -0.45, 0.02],
   ['eaststreet', 28, 1.65, -40, Math.PI - 0.05, 0.0], ['yard', 0, 1.65, -42, -1.45, 0.03], ['bridge', 23.5, 1.65, 35, 0.0, 0.12],
-  ['obj2f', -14, 5.05, -20, -0.6, -0.05], ['aerial', -30, 42, 62, -0.42, -0.62], ['aerial2', 34, 38, -58, Math.PI - 0.5, -0.6],
+  ['obj2f', -14, 5.05, -20, -0.6, -0.05], ['objroom', -2.6, 5.15, -23.2, 0.88, -0.2], ['objroom2', -13.4, 5.1, -32.2, -2.35, -0.22],
+  ['castleview', -36, 1.65, -2, -0.05, 0.12], ['bridgeup', 16.4, 5.05, 15.4, -1.45, 0.02], ['aerial', -30, 42, 62, -0.42, -0.62], ['aerial2', 34, 38, -58, Math.PI - 0.5, -0.6],
 ];
 const srv = http.createServer((q, s) => { const p = path.join(ROOT, decodeURIComponent(new URL(q.url, 'http://x').pathname)); if (!fs.existsSync(p) || fs.statSync(p).isDirectory()) { s.writeHead(404); s.end(); return; } s.writeHead(200, { 'Content-Type': T[path.extname(p)] || 'application/octet-stream' }); fs.createReadStream(p).pipe(s); });
 await new Promise((r) => srv.listen(0, '127.0.0.1', r));
