@@ -44,7 +44,7 @@ class Weapon {
   spread(ws) {
     if ((this.owner.hipMode || Settings.data.hipMode) === 'shotgun') return this.spreadLegacy(ws);
     const p = this.owner, m = p.motor;
-    let s = this.cur * (ws.ads ? 0.45 : 1);
+    let s = this.cur * (ws.ads ? (this.def.adsVertical ? 0 : 0.45) : 1); // v45 adsVertical: aimed shots go where the dot is
     if (!m.grounded) s += this.spreadAir;
     if (p.sprinting) s += this.spreadSprint * 0.5;
     if (m.crouching && m.grounded) s *= 0.8;
@@ -108,7 +108,8 @@ class Weapon {
     this.cur = Math.min(this.cur + (this.bloomPerShot || 0), this.bloomMax || 0); // applies from the NEXT shot
     const mz = this.muzzleWorld(ray, ws);
     if (this.local) {
-      const [rp, ry] = this.recoilKick(), am = ws.ads ? (this.def.adsRecoilMult ?? 0.8) : 1;
+      let [rp, ry] = this.recoilKick(); const am = ws.ads ? (this.def.adsRecoilMult ?? 0.8) : 1;
+      if (ws.ads && this.def.adsVertical) { ry = 0; rp = Math.min(rp, Math.max(0, this.def.adsVertical - p.recoilTP)); } // v45 SF2 aimed spray: climbs straight up to a cap, no side drift
       p.addRecoil(rp * am, ry * am);
       p.punchV += (this.kick ? this.kick.rx : 0.05) * (ws.ads ? 0.9 : 0.7); // small per-shot camera shudder on top of the recoil
       ws.kick(this.kick);

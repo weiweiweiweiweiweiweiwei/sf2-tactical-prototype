@@ -234,7 +234,8 @@ class WeaponSystem extends Arsenal {
   kick(k) {
     const a = this.ads ? 0.08 : 0.28;
     this.kickVel.z += k.z * 24 * (this.ads ? 0.7 : 1); this.kickVel.y += k.y * 5 * a;
-    this.kickRotVel.x += k.rx * 20 * a; this.kickRotVel.z += rand(-1, 1) * k.rx * 3 * a; this.kickRotVel.y += rand(-1, 1) * k.rx * 1.5 * a;
+    const side = this.ads && this.current.def.adsVertical ? 0 : 1; // the holo window must not wobble sideways under a narrow ADS lens
+    this.kickRotVel.x += k.rx * 20 * a; this.kickRotVel.z += rand(-1, 1) * k.rx * 3 * a * side; this.kickRotVel.y += rand(-1, 1) * k.rx * 1.5 * a * side;
   }
   muzzleLight(strength) { this.flashLightT = 0.04; this.flashLight.intensity = 15 * strength; }
 
@@ -347,7 +348,7 @@ class WeaponSystem extends Arsenal {
     let ex = lerp(vm.hipRot.x, vm.adsRot.x, this.adsT), ey = lerp(vm.hipRot.y, vm.adsRot.y, this.adsT), ez = lerp(vm.hipRot.z, vm.adsRot.z, this.adsT);
     pos.x += bx + this.swayX; pos.y += by + this.swayY + this.landY + this.kickPos.y; pos.z += this.kickPos.z;
     ex += this.kickRot.x + this.swayY * 1.5; ey += this.kickRot.y + this.swayX * 1.6; ez += this.kickRot.z + this.roll;
-    if (m.crouching) { pos.y += 0.008; ez += 0.03 * (1 - this.adsT); }
+    if (m.crouching) { pos.y += 0.008 * (1 - this.adsT); ez += 0.03 * (1 - this.adsT); } // v45: no offset once aimed (it slid the holo window off the axis)
     const mk = this.game.player.mantleK || 0; if (mk > 0.01) { pos.y -= 0.09 * mk; pos.z += 0.04 * mk; ex -= 0.45 * mk; ez += 0.2 * mk; } // v15 mantle: gun dips while the hands grab the ledge
     const sk = this.game.player.slideK || 0; if (sk > 0.01) { pos.x -= 0.025 * sk * (1 - this.adsT); pos.y -= 0.015 * sk; ez += 0.32 * sk * (1 - this.adsT * 0.7); } // v14 slide tilt
     if (this.sprintT > 0.01 && w.kind !== 'knife') { const s = this.sprintT; pos.x -= 0.03 * s; pos.y -= 0.045 * s; pos.z += 0.02 * s; ex -= 0.32 * s; ey += 0.62 * s; ez += 0.28 * s; }

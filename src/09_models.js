@@ -15,7 +15,7 @@ class GunMats {
     this.bright = metal(0x9ea3a9, 0.22, 1, 0.05);
     this.gold = metal(0xe2b24c, 0.2, 1, 0.3);
     this.goldDark = metal(0xa77d2c, 0.32, 1, 0.2);
-    this.goldSatin = metal(0xf0c25a, 0.38, 1, 0.35); // v45 Blender G36C: big flat faces need a satin finish or they mirror the dark room
+    this.goldSatin = metal(0xf0c25a, 0.38, 1, 0.35); this.goldSatin.normalScale.set(0.1, 0.1); // v45 Blender G36C: big flat faces need a satin finish or they mirror the dark room
     this.blade = metal(0xd2d8dd, 0.16, 1, 0.2);
     this.polymer = P({ color: 0x262628, metalness: 0.1, roughness: 0.7, roughnessMap: wear.roughnessMap, normalMap: wear.normalMap, normalScale: new THREE.Vector2(0.5, 0.5) });
     this.rubber = P({ color: 0x131313, metalness: 0, roughness: 0.92 });
@@ -62,7 +62,7 @@ function loadGunModels() {
         gltf.scene.updateMatrixWorld(true);
         gltf.scene.traverse((o) => {
           if (o.isMesh) { const g = o.geometry.clone(); g.applyMatrix4(o.matrixWorld); const nm = o.name.split('__'); parts.push({ node: nm[0], mat: ((o.material && o.material.name) || '').replace('gun:', '') || (nm[1] || '').replace(/_\d+$/, ''), geo: g }); }
-          else if (/^(SIGHT|MUZZLE|MUZZLE_S)$/.test(o.name)) marks[o.name] = o.getWorldPosition(new THREE.Vector3());
+          else if (/^(SIGHT|HOOD|MUZZLE|MUZZLE_S|SUPPORT|GRIP)$/.test(o.name)) marks[o.name] = o.getWorldPosition(new THREE.Vector3());
         });
         GUN_MODELS[id] = { parts, marks };
       }
@@ -308,12 +308,14 @@ class WeaponModels {
       if (p.mat === 'lens') { gb.extra.push({ geo: p.geo.clone(), mat: M.lens, node, noAO: true, order: 3 }); continue; }
       gb.add(p.geo.clone(), MAT[p.mat] || M.gold, node);
     }
-    const sightY = G.marks.SIGHT.y, mz = sup ? G.marks.MUZZLE_S : G.marks.MUZZLE;
-    this.arm(gb, [0.02, -0.115, 0.1], [0.19, -0.3, 0.42]); this.gripHand(gb, 0.001, -0.082, -0.07, -0.36);
-    this.arm(gb, [-0.038, -0.06, -0.2], [-0.3, -0.3, 0.08], 0.033); this.supportHand(gb, 0, 0.0, 0.2, 0.05);
+    const K = G.marks, sightY = K.SIGHT.y, mz = sup ? K.MUZZLE_S : K.MUZZLE, gu = K.GRIP ? -K.GRIP.z : 0.078, su = K.SUPPORT ? -K.SUPPORT.z : 0.3, sv = K.SUPPORT ? K.SUPPORT.y : -0.028;
+    this.arm(gb, [0.02, -0.115, gu + 0.03], [0.19, -0.3, gu + 0.36]); this.gripHand(gb, 0.001, -0.082, -gu, -0.36);
+    this.arm(gb, [-0.038, sv - 0.032, -su], [-0.3, -0.3, -su + 0.3], 0.033); this.supportHand(gb, 0, sv + 0.028, su, 0.046);
     const b = gb.build();
-    const vm = this._finish(b, { muzzleU: -mz.z, sightY, hipPos: [0.14, -0.165, -0.37], adsPos: [0, -sightY, -0.24], flash: sup ? 0.08 : 0.2, reticle: true, reticleScale: 0.55 });
-    vm.eyeRelief = 0.05; return vm; // holo window fills more of the view, like SF2's EOTech ADS
+    // SF2 EOTech ADS: the eye sits a few cm behind the hood so its gold rim frames the view (adsPos.z puts the hood rear at EYE)
+    const EYE = 0.07, hoodU = K.HOOD ? -K.HOOD.z : -K.SIGHT.z - 0.025;
+    const vm = this._finish(b, { muzzleU: -mz.z, sightY, hipPos: [0.14, -0.175, -0.36], adsPos: [0, -sightY, hoodU - EYE], flash: sup ? 0.08 : 0.2, reticle: true, reticleScale: 0.75 });
+    vm.eyeRelief = 0.03; return vm;
   }
   g36cProc() {
     const M = this.M, gb = new GunBuilder(M);

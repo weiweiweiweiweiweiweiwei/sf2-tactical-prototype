@@ -974,13 +974,13 @@ const WEAPON_DATABASE = {
   g36c: {
     name: 'G36C 黃金 消音', type: 'assault', slot: 'primary', damageNear: 25, damageFar: 19, falloffStart: 25, falloffEnd: 60, fireRate: 0.08,
     recoilPitch: 0.011, recoilYaw: 0.012, recoilRecovery: 10,
-    hipSpread: 0.07, adsSpread: 0.0018, adsFov: 42, vmAdsFov: 15, adsType: 'red_dot', mobility: 0.95, maxAmmo: 30, reloadTime: 2.0, modelUrl: null,
+    hipSpread: 0.07, adsSpread: 0.0018, adsFov: 42, vmAdsFov: 20, adsVertical: 0.075, adsType: 'red_dot', mobility: 0.95, maxAmmo: 30, reloadTime: 2.0, modelUrl: null,
     model: 'g36c', sound: 'g36s', suppressed: true, tracerEvery: 0, penetration: 1, desc: 'EOTech 全息瞄具 + 消音器，槍聲小、不暴露雷達。',
   },
   g36c_gold: { // v45: the same gold G36C (Blender model) with the G36 four-prong flash hider instead of the can
     name: 'G36C 黃金', type: 'assault', slot: 'primary', damageNear: 25, damageFar: 19, falloffStart: 25, falloffEnd: 60, fireRate: 0.08,
     recoilPitch: 0.011, recoilYaw: 0.012, recoilRecovery: 10,
-    hipSpread: 0.07, adsSpread: 0.0018, adsFov: 42, vmAdsFov: 15, adsType: 'red_dot', mobility: 0.95, maxAmmo: 30, reloadTime: 2.0, modelUrl: null,
+    hipSpread: 0.07, adsSpread: 0.0018, adsFov: 42, vmAdsFov: 20, adsVertical: 0.075, adsType: 'red_dot', mobility: 0.95, maxAmmo: 30, reloadTime: 2.0, modelUrl: null,
     model: 'g36c', sound: 'm4', rate: 1.07, tracerEvery: 2, penetration: 1, desc: 'EOTech 全息瞄具 + 四叉消焰器，5.56 清脆槍聲，開火會上敵方雷達。',
   },
   mp5: {
@@ -1295,7 +1295,7 @@ function compileWeapon(id, s) {
     pellets: s.pellets || 1, headKill: s.headKill ?? (s.type === 'sniper'), headMult: s.headMult || PART_MULT.head, range: s.range || 260, penetration: s.penetration || 0,
     hipBase: s.hipSpread, adsBase: s.adsSpread, spreadBase: s.hipSpread, spreadCrouch: 0.8,
     recoil: { first: s.recoilPitch * 0.75, climb: s.recoilPitch, climbShots: 10, late: s.recoilPitch * 0.75, h: s.recoilYaw, hStart: 6, jitter: s.recoilYaw * 0.35 },
-    recoilRecovery: s.recoilRecovery, adsFov: s.adsFov, vmAdsFov: s.vmAdsFov, adsType: s.adsType, adsRecoilMult: 1, adsSpeed: s.adsSpeed || (s.type === 'smg' ? 24 : 20),
+    recoilRecovery: s.recoilRecovery, adsFov: s.adsFov, vmAdsFov: s.vmAdsFov, adsVertical: s.adsVertical || 0, adsType: s.adsType, adsRecoilMult: 1, adsSpeed: s.adsSpeed || (s.type === 'smg' ? 24 : 20),
     moveSpeed: CFG.player.baseSpeed * s.mobility, mobility: s.mobility, reloadTime: s.reloadTime, sound: s.sound || id,
     suppressed: !!s.suppressed, tracerEvery: s.tracerEvery ?? 2, shellReload: s.shellReload || 0, zoomFovs: s.zoomFovs || [s.adsFov],
     noise: s.suppressed ? 14 : t.noise, pump, bolt, soundRate: s.rate || 1, tpSpec: s.tp || null,
@@ -6938,7 +6938,7 @@ class GunMats {
     this.bright = metal(0x9ea3a9, 0.22, 1, 0.05);
     this.gold = metal(0xe2b24c, 0.2, 1, 0.3);
     this.goldDark = metal(0xa77d2c, 0.32, 1, 0.2);
-    this.goldSatin = metal(0xf0c25a, 0.38, 1, 0.35); // v45 Blender G36C: big flat faces need a satin finish or they mirror the dark room
+    this.goldSatin = metal(0xf0c25a, 0.38, 1, 0.35); this.goldSatin.normalScale.set(0.1, 0.1); // v45 Blender G36C: big flat faces need a satin finish or they mirror the dark room
     this.blade = metal(0xd2d8dd, 0.16, 1, 0.2);
     this.polymer = P({ color: 0x262628, metalness: 0.1, roughness: 0.7, roughnessMap: wear.roughnessMap, normalMap: wear.normalMap, normalScale: new THREE.Vector2(0.5, 0.5) });
     this.rubber = P({ color: 0x131313, metalness: 0, roughness: 0.92 });
@@ -6985,7 +6985,7 @@ function loadGunModels() {
         gltf.scene.updateMatrixWorld(true);
         gltf.scene.traverse((o) => {
           if (o.isMesh) { const g = o.geometry.clone(); g.applyMatrix4(o.matrixWorld); const nm = o.name.split('__'); parts.push({ node: nm[0], mat: ((o.material && o.material.name) || '').replace('gun:', '') || (nm[1] || '').replace(/_\d+$/, ''), geo: g }); }
-          else if (/^(SIGHT|MUZZLE|MUZZLE_S)$/.test(o.name)) marks[o.name] = o.getWorldPosition(new THREE.Vector3());
+          else if (/^(SIGHT|HOOD|MUZZLE|MUZZLE_S|SUPPORT|GRIP)$/.test(o.name)) marks[o.name] = o.getWorldPosition(new THREE.Vector3());
         });
         GUN_MODELS[id] = { parts, marks };
       }
@@ -7231,12 +7231,14 @@ class WeaponModels {
       if (p.mat === 'lens') { gb.extra.push({ geo: p.geo.clone(), mat: M.lens, node, noAO: true, order: 3 }); continue; }
       gb.add(p.geo.clone(), MAT[p.mat] || M.gold, node);
     }
-    const sightY = G.marks.SIGHT.y, mz = sup ? G.marks.MUZZLE_S : G.marks.MUZZLE;
-    this.arm(gb, [0.02, -0.115, 0.1], [0.19, -0.3, 0.42]); this.gripHand(gb, 0.001, -0.082, -0.07, -0.36);
-    this.arm(gb, [-0.038, -0.06, -0.2], [-0.3, -0.3, 0.08], 0.033); this.supportHand(gb, 0, 0.0, 0.2, 0.05);
+    const K = G.marks, sightY = K.SIGHT.y, mz = sup ? K.MUZZLE_S : K.MUZZLE, gu = K.GRIP ? -K.GRIP.z : 0.078, su = K.SUPPORT ? -K.SUPPORT.z : 0.3, sv = K.SUPPORT ? K.SUPPORT.y : -0.028;
+    this.arm(gb, [0.02, -0.115, gu + 0.03], [0.19, -0.3, gu + 0.36]); this.gripHand(gb, 0.001, -0.082, -gu, -0.36);
+    this.arm(gb, [-0.038, sv - 0.032, -su], [-0.3, -0.3, -su + 0.3], 0.033); this.supportHand(gb, 0, sv + 0.028, su, 0.046);
     const b = gb.build();
-    const vm = this._finish(b, { muzzleU: -mz.z, sightY, hipPos: [0.14, -0.165, -0.37], adsPos: [0, -sightY, -0.24], flash: sup ? 0.08 : 0.2, reticle: true, reticleScale: 0.55 });
-    vm.eyeRelief = 0.05; return vm; // holo window fills more of the view, like SF2's EOTech ADS
+    // SF2 EOTech ADS: the eye sits a few cm behind the hood so its gold rim frames the view (adsPos.z puts the hood rear at EYE)
+    const EYE = 0.07, hoodU = K.HOOD ? -K.HOOD.z : -K.SIGHT.z - 0.025;
+    const vm = this._finish(b, { muzzleU: -mz.z, sightY, hipPos: [0.14, -0.175, -0.36], adsPos: [0, -sightY, hoodU - EYE], flash: sup ? 0.08 : 0.2, reticle: true, reticleScale: 0.75 });
+    vm.eyeRelief = 0.03; return vm;
   }
   g36cProc() {
     const M = this.M, gb = new GunBuilder(M);
@@ -8691,7 +8693,7 @@ class Weapon {
   spread(ws) {
     if ((this.owner.hipMode || Settings.data.hipMode) === 'shotgun') return this.spreadLegacy(ws);
     const p = this.owner, m = p.motor;
-    let s = this.cur * (ws.ads ? 0.45 : 1);
+    let s = this.cur * (ws.ads ? (this.def.adsVertical ? 0 : 0.45) : 1); // v45 adsVertical: aimed shots go where the dot is
     if (!m.grounded) s += this.spreadAir;
     if (p.sprinting) s += this.spreadSprint * 0.5;
     if (m.crouching && m.grounded) s *= 0.8;
@@ -8755,7 +8757,8 @@ class Weapon {
     this.cur = Math.min(this.cur + (this.bloomPerShot || 0), this.bloomMax || 0); // applies from the NEXT shot
     const mz = this.muzzleWorld(ray, ws);
     if (this.local) {
-      const [rp, ry] = this.recoilKick(), am = ws.ads ? (this.def.adsRecoilMult ?? 0.8) : 1;
+      let [rp, ry] = this.recoilKick(); const am = ws.ads ? (this.def.adsRecoilMult ?? 0.8) : 1;
+      if (ws.ads && this.def.adsVertical) { ry = 0; rp = Math.min(rp, Math.max(0, this.def.adsVertical - p.recoilTP)); } // v45 SF2 aimed spray: climbs straight up to a cap, no side drift
       p.addRecoil(rp * am, ry * am);
       p.punchV += (this.kick ? this.kick.rx : 0.05) * (ws.ads ? 0.9 : 0.7); // small per-shot camera shudder on top of the recoil
       ws.kick(this.kick);
@@ -9237,7 +9240,8 @@ class WeaponSystem extends Arsenal {
   kick(k) {
     const a = this.ads ? 0.08 : 0.28;
     this.kickVel.z += k.z * 24 * (this.ads ? 0.7 : 1); this.kickVel.y += k.y * 5 * a;
-    this.kickRotVel.x += k.rx * 20 * a; this.kickRotVel.z += rand(-1, 1) * k.rx * 3 * a; this.kickRotVel.y += rand(-1, 1) * k.rx * 1.5 * a;
+    const side = this.ads && this.current.def.adsVertical ? 0 : 1; // the holo window must not wobble sideways under a narrow ADS lens
+    this.kickRotVel.x += k.rx * 20 * a; this.kickRotVel.z += rand(-1, 1) * k.rx * 3 * a * side; this.kickRotVel.y += rand(-1, 1) * k.rx * 1.5 * a * side;
   }
   muzzleLight(strength) { this.flashLightT = 0.04; this.flashLight.intensity = 15 * strength; }
 
@@ -9350,7 +9354,7 @@ class WeaponSystem extends Arsenal {
     let ex = lerp(vm.hipRot.x, vm.adsRot.x, this.adsT), ey = lerp(vm.hipRot.y, vm.adsRot.y, this.adsT), ez = lerp(vm.hipRot.z, vm.adsRot.z, this.adsT);
     pos.x += bx + this.swayX; pos.y += by + this.swayY + this.landY + this.kickPos.y; pos.z += this.kickPos.z;
     ex += this.kickRot.x + this.swayY * 1.5; ey += this.kickRot.y + this.swayX * 1.6; ez += this.kickRot.z + this.roll;
-    if (m.crouching) { pos.y += 0.008; ez += 0.03 * (1 - this.adsT); }
+    if (m.crouching) { pos.y += 0.008 * (1 - this.adsT); ez += 0.03 * (1 - this.adsT); } // v45: no offset once aimed (it slid the holo window off the axis)
     const mk = this.game.player.mantleK || 0; if (mk > 0.01) { pos.y -= 0.09 * mk; pos.z += 0.04 * mk; ex -= 0.45 * mk; ez += 0.2 * mk; } // v15 mantle: gun dips while the hands grab the ledge
     const sk = this.game.player.slideK || 0; if (sk > 0.01) { pos.x -= 0.025 * sk * (1 - this.adsT); pos.y -= 0.015 * sk; ez += 0.32 * sk * (1 - this.adsT * 0.7); } // v14 slide tilt
     if (this.sprintT > 0.01 && w.kind !== 'knife') { const s = this.sprintT; pos.x -= 0.03 * s; pos.y -= 0.045 * s; pos.z += 0.02 * s; ex -= 0.32 * s; ey += 0.62 * s; ez += 0.28 * s; }

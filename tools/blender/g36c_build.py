@@ -1,10 +1,11 @@
-# v45 Gold G36C (SF2 "G36C 黃金") — first-person model sculpted in Blender, in the game's GUN SPACE:
+# v45b G36C (SF2 "G36C 黃金") — first-person model built in Blender, in the game's GUN SPACE:
 #   Blender X = gun lateral (+ = right), Blender Y = u (forward), Blender Z = v (up); glTF Y-up export → game (x, v, −u).
-# Anchors match the procedural viewmodel (hands / ADS / reload pivots in src/09_models.js g36c()):
-#   bore axis v = 0 · pistol grip ≈ u −0.07 · handguard u 0.10–0.28 · receiver u −0.13–0.10 · butt u −0.405.
-# Real H&K G36C proportions: 228 mm barrel, short vented handguard, flat-top Picatinny rail (SF2: EOTech 552 in gold),
-# side-folding skeleton stock, big integrated trigger guard, 30-rd magazine with coupling studs, 4-prong flash hider.
-# Objects are named '<node>__<material>' (node: body / mag / charge / supp / hider); empties SIGHT and MUZZLE / MUZZLE_S.
+# Proportions follow the real H&K G36C ×1.1 (hinge→muzzle 500 mm, 220 mm stock, 228 mm barrel) with the grip centred on
+# u −0.078 / v −0.08 where the viewmodel hand sits: long polymer receiver with the moulded side rib and angled front facet,
+# the open "carry handle" bridge (rear + front towers) topped by a Picatinny rail, folding charging lever under the bridge,
+# short vented handguard with side / bottom rails, integrated trigger guard, ambi selector, side-folding skeleton stock
+# with a vertical hinge, 30-rd magazine with coupling studs, four-prong hider or a QD suppressor, and a gold EOTech 552.
+# Objects are named '<node>__<material>' (node: body / mag / charge / supp / hider); empties SIGHT, HOOD, MUZZLE(_S), SUPPORT, GRIP.
 # blender -b --factory-startup -P tools/blender/g36c_build.py -- tools/guns/g36c.glb
 import bpy, bmesh, math, sys, os
 from mathutils import Vector, Matrix
@@ -118,115 +119,179 @@ def rail(u0, u1, base, w=0.021, node='body', mat='gold'):
         box('tooth', -w / 2 + 0.0005, w / 2 - 0.0005, u, u + 0.0052, base + 0.0045, base + 0.0095, node, mat, 0.0005); u += 0.01
 
 
-# =============================================================================================== body
-# --- receiver (polymer housing in gold): rounded rear, flat top, magwell step
-rcv = prof('receiver', [(-0.13, -0.026), (-0.12, -0.033), (-0.02, -0.035), (0.07, -0.035), (0.1, -0.031), (0.1, 0.038), (-0.112, 0.038), (-0.13, 0.03)], 0.044, mat='gold', bev=0.004, seg=3)
-# shallow side panels + pin heads + the ejection port on the right
+
+def rail(u0, u1, base, w=0.021, node='body', mat='gold', face='up', x=0.0):
+    """Picatinny strip: base + side lips + teeth every 10 mm. face 'up' / 'down' / 'right' / 'left' (side rails sit at x)."""
+    obs = [box('rail', -w / 2, w / 2, u0, u1, 0, 0.0045, node, mat, 0.0006)]
+    for sx in (-1, 1): obs.append(box('railLip', sx * w / 2 - (0.0025 if sx > 0 else -0.0025), sx * w / 2 + (0.0012 if sx > 0 else -0.0012), u0, u1, 0.0045, 0.0075, node, mat, 0.0004))
+    u = u0 + 0.004
+    while u < u1 - 0.004:
+        obs.append(box('tooth', -w / 2 + 0.0005, w / 2 - 0.0005, u, u + 0.0052, 0.0045, 0.0095, node, mat, 0.0005)); u += 0.01
+    for ob in obs:
+        for vt in ob.data.vertices:
+            X, Y, Z = vt.co
+            if face == 'up': vt.co = (X, Y, base + Z)
+            elif face == 'down': vt.co = (X, Y, base - Z)
+            elif face == 'right': vt.co = (x + Z, Y, base - X)
+            else: vt.co = (x - Z, Y, base + X)
+        if face in ('down', 'left'): ob.data.flip_normals()
+    return obs
+
+
+def screw(u, v, x, r=0.0026, mat='steel'):
+    s = 1 if x > 0 else -1
+    cyl('screw', r, r, x, x + s * 0.0012, u, v, mat=mat, seg=12, axis='X')
+    box('screwSlot', min(x, x + s * 0.0016), max(x, x + s * 0.0016), u - r * 0.8, u + r * 0.8, v - 0.0004, v + 0.0004, mat='black', bev=0.0)
+
+
+# =============================================================================================== layout (metres, real G36C ×1.1)
+# hinge→muzzle 500 mm and a 220 mm stock (real), grip 42 mm ahead of the hinge, magazine 104–161 mm, handguard 307–453 mm.
+HINGE, HG0, HG1, HID0 = -0.116, 0.222, 0.382, 0.40
+TOP, RB = 0.03, 0.058            # receiver top, bridge-rail base
+RT = RB + 0.0095                  # rail tooth tops (where the sight sits)
+
+# =============================================================================================== upper receiver (gold polymer)
+prof('receiver', [(HINGE, TOP), (0.21, TOP), (HG0, 0.026), (HG0, -0.022), (0.14, -0.026), (0.078, -0.04), (-0.008, -0.04), (-0.03, -0.031), (HINGE, -0.031)],
+     0.040, mat='gold', bev=0.0035, seg=3)
+prof('receiverTop', [(HINGE, TOP - 0.002), (0.205, TOP - 0.002), (0.2, TOP + 0.006), (HINGE + 0.004, TOP + 0.006)], 0.031, mat='gold', bev=0.002, seg=2)
+box('chargeSlot', -0.0042, 0.0042, -0.07, 0.19, TOP + 0.0055, TOP + 0.0066, mat='black', bev=0.0)
 for sx in (-1, 1):
-    box('panel', sx * 0.022 - 0.0008, sx * 0.022 + 0.0008, -0.11, -0.03, -0.022, 0.026, mat='goldDark', bev=0.0004)
-    for (u, v) in ((-0.105, -0.02), (-0.04, -0.024), (0.055, -0.022), (0.085, 0.02), (-0.12, 0.016)):
-        cyl('pin', 0.0032, 0.0032, sx * 0.0215, sx * 0.0235 + sx * 0.0005, u, v, mat='steel', seg=12, axis='X')
-box('ejectFrame', 0.0215, 0.0232, -0.035, 0.03, 0.002, 0.024, mat='goldDark', bev=0.0005)
-box('ejectPort', 0.0226, 0.0236, -0.03, 0.025, 0.006, 0.02, mat='black', bev=0.0003)
-box('boltFace', 0.0228, 0.0238, -0.012, 0.012, 0.008, 0.018, mat='steel', bev=0.0003)
-prof('deflector', [(-0.045, 0.004), (-0.036, 0.004), (-0.036, 0.026), (-0.045, 0.02)], 0.006, x=0.0235, mat='gold', bev=0.001)
-# selector lever (ambidextrous) + markings
+    # moulded side band (the long G36 rib under the bridge) and the angled front facet down to the handguard
+    prof('sideRib', [(HINGE + 0.012, 0.016), (0.15, 0.016), (0.17, 0.022), (HINGE + 0.012, 0.022)], 0.0016, x=sx * 0.0203, mat='goldDark', bev=0.0004)
+    prof('frontFacet', [(0.1, -0.02), (0.15, 0.012), (0.205, 0.012), (0.205, -0.02)], 0.0014, x=sx * 0.0202, mat='goldDark', bev=0.0003)
+    prof('magwellPanel', [(-0.01, -0.012), (0.075, -0.012), (0.075, -0.038), (-0.006, -0.038)], 0.0014, x=sx * 0.0202, mat='goldDark', bev=0.0003)
+    for (u, v) in ((-0.104, 0.02), (-0.104, -0.022), (-0.03, -0.024), (0.06, 0.0), (0.12, -0.016), (0.195, 0.0), (0.195, -0.014)):
+        cyl('pin', 0.0028, 0.0028, sx * 0.0198, sx * 0.0216, u, v, mat='steel', seg=14, axis='X')
+# right side: rounded ejection port with the bolt carrier showing, brass deflector bump behind it
+prof('ejectFrame', [(-0.012, 0.002), (0.062, 0.002), (0.066, 0.009), (0.062, 0.016), (-0.012, 0.016), (-0.016, 0.009)], 0.002, x=0.0205, mat='black', bev=0.0005)
+box('boltCarrier', 0.0205, 0.0218, -0.006, 0.056, 0.004, 0.014, mat='steel', bev=0.0004)
+box('boltLug', 0.0213, 0.0222, 0.012, 0.024, 0.0055, 0.0125, mat='bright', bev=0.0003)
+prof('deflector', [(-0.03, 0.0), (-0.016, 0.0), (-0.016, 0.02), (-0.03, 0.014)], 0.006, x=0.0228, mat='gold', bev=0.0012)
+# rear and front towers carrying the bridge rail (the G36 "carry handle" opening between them)
+prof('towerR', [(HINGE, TOP), (HINGE, RB), (-0.052, RB), (-0.034, TOP)], 0.034, mat='gold', bev=0.0025, seg=2, holes=[oval(-0.08, 0.044, 0.008, 0.0062)])
+prof('towerF', [(0.162, TOP), (0.18, RB), (HG0, RB), (HG0, TOP)], 0.034, mat='gold', bev=0.0025, seg=2)
 for sx in (-1, 1):
-    prof('selector', [(-0.06, 0.0), (-0.02, 0.006), (-0.015, 0.012), (-0.05, 0.012), (-0.066, 0.006)], 0.004, x=sx * 0.0245, mat='polymer', bev=0.0008)
+    prof('logoPlate', [(0.186, TOP + 0.004), (0.216, TOP + 0.004), (0.216, RB - 0.004), (0.19, RB - 0.004)], 0.0012, x=sx * 0.0172, mat='goldDark', bev=0.0003)
+    for (u, v) in ((0.192, TOP + 0.008), (0.21, TOP + 0.008), (0.21, RB - 0.008), (-0.1, RB - 0.008), (-0.07, RB - 0.008)): screw(u, v, sx * 0.0172)
+box('bridge', -0.0125, 0.0125, HINGE, HG0, RB - 0.007, RB + 0.0002, mat='gold', bev=0.0015)
+for sx in (-1, 1): box('bridgeFlange', sx * 0.0125 - (0.0035 if sx > 0 else 0), sx * 0.0125 + (0.0035 if sx < 0 else 0), -0.05, 0.18, RB - 0.012, RB - 0.006, mat='gold', bev=0.001)
+rail(HINGE + 0.002, HG0 - 0.002, RB)
+# --- charging handle (node 'charge'): carrier rod in the top slot, folding T-lever under the front of the bridge
+box('chRod', -0.004, 0.004, 0.05, 0.168, TOP + 0.005, TOP + 0.011, node='charge', mat='steel', bev=0.0008)
+prof('chLever', [(0.148, TOP + 0.006), (0.164, TOP + 0.006), (0.166, TOP + 0.02), (0.15, TOP + 0.02)], 0.03, node='charge', mat='polymer', bev=0.002)
+box('chGrip', -0.016, 0.016, 0.149, 0.165, TOP + 0.017, TOP + 0.021, node='charge', mat='polymer', bev=0.0012)
+
+# =============================================================================================== handguard (gold), barrel, muzzle
+prof('handguard', [(HG0, 0.032), (0.366, 0.032), (0.378, 0.026), (HG1, 0.012), (HG1, -0.012), (0.376, -0.023), (0.362, -0.028), (HG0, -0.028)], 0.045, mat='gold', bev=0.004, seg=3,
+     holes=[oval(0.252, 0.018, 0.012, 0.0042), oval(0.288, 0.018, 0.012, 0.0042), oval(0.324, 0.018, 0.012, 0.0042),
+            oval(0.256, -0.008, 0.0055, 0.0055), oval(0.284, -0.008, 0.0055, 0.0055), oval(0.312, -0.008, 0.0055, 0.0055), oval(0.34, -0.008, 0.0055, 0.0055)])
+box('hgSeam', -0.0233, 0.0233, HG0, HG0 + 0.004, -0.028, 0.032, mat='goldDark', bev=0.0006)
+for (u, v) in ((0.236, 0.022), (0.352, 0.022)): cyl('hgPin', 0.0028, 0.0028, -0.0237, 0.0237, u, v, mat='steel', seg=14, axis='X')
+rail(0.238, 0.36, -0.028, mat='goldDark', face='down')
+rail(0.262, 0.342, -0.002, w=0.016, mat='goldDark', face='right', x=0.0225)
+rail(0.262, 0.342, -0.002, w=0.016, mat='goldDark', face='left', x=-0.0225)
+torus('slingLoopF', 0.007, 0.0017, 0.37, x=-0.028, v=-0.012, mat='steel', axis='X')
+cyl('barrel', 0.0092, 0.0088, 0.2, HID0 + 0.004, mat='steel', seg=28)
+lathe('barrelNut', [(0.0, HG1 - 0.004), (0.0118, HG1 - 0.004), (0.0118, HG1 + 0.006), (0.0098, HG1 + 0.01), (0.0, HG1 + 0.01)], mat='steel', seg=28)
+# open: four-prong flash hider (node 'hider')
+lathe('hiderBase', [(0.0, HID0), (0.0112, HID0), (0.0112, HID0 + 0.012), (0.0108, HID0 + 0.014), (0.0, HID0 + 0.014)], node='hider', mat='black', seg=28)
+for k in range(4):
+    a = math.pi / 4 + k * math.pi / 2; cx, cz = math.cos(a) * 0.0095, math.sin(a) * 0.0095
+    prong = box('prong', cx - 0.003, cx + 0.003, HID0 + 0.013, HID0 + 0.034, cz - 0.003, cz + 0.003, node='hider', mat='black', bev=0.0007)
+cyl('hiderBore', 0.0058, 0.0058, HID0 + 0.013, HID0 + 0.03, node='hider', mat='black', seg=16)
+# suppressed: QD collar with grip rings, long can (engraving texture), stepped front cap
+lathe('suppCollar', [(0.0, HID0 - 0.006), (0.0128, HID0 - 0.006), (0.0138, HID0), (0.0138, HID0 + 0.024), (0.0, HID0 + 0.024)], node='supp', mat='black', seg=32)
+for k in range(6): cyl('suppGrip', 0.0146, 0.0146, HID0 + 0.003 + k * 0.0036, HID0 + 0.0048 + k * 0.0036, node='supp', mat='black', seg=32)
+lathe('suppEnds', [(0.0, HID0 + 0.022), (0.0172, HID0 + 0.022), (0.0188, HID0 + 0.026), (0.0188, HID0 + 0.03), (0.0, HID0 + 0.03)], node='supp', mat='black', seg=36)
+cyl('suppTube', 0.0185, 0.0185, HID0 + 0.028, HID0 + 0.152, node='supp', mat='suppressor', seg=40, bev=0.0)
+lathe('suppCap', [(0.0, HID0 + 0.15), (0.0188, HID0 + 0.15), (0.0188, HID0 + 0.155), (0.016, HID0 + 0.161), (0.0068, HID0 + 0.163), (0.0055, HID0 + 0.157), (0.0, HID0 + 0.157)], node='supp', mat='black', seg=36)
+
+# =============================================================================================== lower: trigger housing, guard, grip
+prof('triggerHousing', [(HINGE + 0.004, -0.029), (-0.004, -0.029), (-0.004, -0.04), (-0.046, -0.04), (-0.104, -0.036), (HINGE + 0.004, -0.034)], 0.036, mat='gold', bev=0.0025, seg=2)
+prof('guard', [(-0.052, -0.038), (-0.004, -0.038), (-0.004, -0.046), (-0.012, -0.064), (-0.03, -0.07), (-0.05, -0.064)], 0.024, mat='gold', bev=0.0022, seg=2,
+     holes=[[(-0.046, -0.041), (-0.01, -0.041), (-0.016, -0.059), (-0.03, -0.0645), (-0.046, -0.058)]])
+prof('trigger', [(-0.033, -0.04), (-0.028, -0.04), (-0.029, -0.05), (-0.034, -0.058), (-0.038, -0.056), (-0.034, -0.048)], 0.006, mat='bright', bev=0.0008)
+prof('magCatch', [(-0.009, -0.04), (-0.002, -0.04), (-0.002, -0.05), (-0.008, -0.056), (-0.012, -0.054)], 0.018, mat='polymer', bev=0.0012)
+GRIP = [(-0.104, -0.036), (-0.046, -0.036), (-0.05, -0.05), (-0.056, -0.06), (-0.054, -0.07), (-0.06, -0.082), (-0.058, -0.094), (-0.066, -0.11), (-0.072, -0.128),
+        (-0.08, -0.136), (-0.1, -0.137), (-0.106, -0.128), (-0.1, -0.1), (-0.096, -0.07), (-0.1, -0.048)]
+prof('grip', GRIP, 0.031, mat='polymer', bev=0.006, seg=3)
+for sx in (-1, 1):
+    prof('gripPanel', [(-0.094, -0.05), (-0.064, -0.05), (-0.07, -0.122), (-0.098, -0.124), (-0.092, -0.08)], 0.0012, x=sx * 0.0156, mat='rubber', bev=0.0004)
+    for k in range(6): box('gripStip', sx * 0.0162 - 0.0006, sx * 0.0162 + 0.0006, -0.092 + k * 0.0045, -0.0895 + k * 0.0045, -0.118, -0.056, mat='polymer', bev=0.0002)
+    # ambidextrous selector (S / E / F) above the grip
+    cyl('selHub', 0.0055, 0.0055, sx * 0.0178, sx * 0.0206, -0.088, -0.02, mat='polymer', seg=18, axis='X')
+    prof('selLever', [(-0.09, -0.023), (-0.064, -0.018), (-0.062, -0.013), (-0.088, -0.016)], 0.0024, x=sx * 0.0212, mat='polymer', bev=0.0006)
     for k, col in enumerate(('dotW', 'dotR', 'dotR')):
-        cyl('mark', 0.0016, 0.0016, sx * 0.0222, sx * 0.0228, -0.075 + k * 0.012, 0.016 - k * 0.004, mat=col, seg=8, axis='X')
-# magwell with the paddle release behind the magazine
-prof('magwell', [(0.008, -0.034), (0.074, -0.034), (0.078, -0.052), (0.004, -0.05)], 0.04, mat='gold', bev=0.002)
-prof('magRelease', [(-0.002, -0.036), (0.008, -0.036), (0.006, -0.062), (-0.006, -0.062), (-0.01, -0.05)], 0.022, mat='polymer', bev=0.0015)
-# --- top Picatinny rail across receiver + handguard
-rail(-0.118, 0.17, 0.038)
-# --- charging handle (folding T under the rail, front of the receiver)
-box('chBody', -0.006, 0.006, 0.07, 0.118, 0.032, 0.04, node='charge', mat='steel', bev=0.0006)
-prof('chLever', [(0.072, 0.034), (0.08, 0.034), (0.082, 0.05), (0.07, 0.05)], 0.05, node='charge', mat='polymer', bev=0.0015)
-# --- handguard: vented, tapered nose, bottom rail, sling loop
-hg = prof('handguard', [(0.1, -0.031), (0.262, -0.029), (0.282, -0.017), (0.286, 0.0), (0.282, 0.024), (0.268, 0.034), (0.1, 0.035)], 0.05, mat='gold', bev=0.004, seg=3,
-          holes=[oval(0.13, 0.002, 0.011, 0.0095), oval(0.166, 0.002, 0.011, 0.0095), oval(0.202, 0.002, 0.011, 0.0095), oval(0.238, 0.002, 0.01, 0.0088)])
-box('hgSeam', -0.0255, 0.0255, 0.1, 0.104, -0.03, 0.034, mat='goldDark', bev=0.0005)
-rail(0.12, 0.27, -0.031, node='body', mat='goldDark')  # bottom rail (teeth face down after the flip below)
-for (u, v) in ((0.115, 0.022), (0.26, 0.022)): cyl('hgPin', 0.003, 0.003, -0.027, 0.027, u, v, mat='steel', seg=12, axis='X')
-torus('slingLoopF', 0.008, 0.0018, 0.27, x=-0.028, v=-0.02, mat='steel', axis='X')
-# --- barrel, gas block, front sling ring
-cyl('barrel', 0.0098, 0.0094, 0.15, 0.405, mat='steel', seg=24)
-cyl('barrelStep', 0.011, 0.011, 0.286, 0.3, mat='steel', seg=24)
-box('gasBlock', -0.0125, 0.0125, 0.29, 0.318, -0.024, 0.011, mat='goldDark', bev=0.003)
-cyl('gasTube', 0.0055, 0.0055, 0.282, 0.32, v=-0.016, mat='steel', seg=14)
-# --- pistol grip (black polymer): palm swell, finger grooves, stippled side panels
-grip = prof('grip', [(-0.08, -0.031), (-0.034, -0.031), (-0.042, -0.06), (-0.036, -0.075), (-0.046, -0.09), (-0.042, -0.105), (-0.054, -0.124), (-0.064, -0.132), (-0.088, -0.134),
-                     (-0.1, -0.124), (-0.098, -0.09), (-0.09, -0.05)], 0.033, mat='polymer', bev=0.005, seg=3)
-for sx in (-1, 1):
-    for k in range(7): box('stip', sx * 0.0168 - 0.0008, sx * 0.0168 + 0.0008, -0.088 + k * 0.0042, -0.085 + k * 0.0042, -0.112, -0.05, mat='rubber', bev=0.0003)
-box('gripCap', -0.015, 0.015, -0.098, -0.06, -0.137, -0.131, mat='polymer', bev=0.002, rot=('X', 0.3))
-# --- the big G36 trigger guard + trigger
-prof('guard', [(-0.04, -0.031), (0.034, -0.031), (0.034, -0.044), (0.014, -0.074), (-0.028, -0.078), (-0.046, -0.062)], 0.026, mat='gold', bev=0.002,
-     holes=[[(-0.03, -0.037), (0.022, -0.037), (0.008, -0.064), (-0.024, -0.067), (-0.034, -0.054)]])
-prof('trigger', [(-0.004, -0.034), (0.002, -0.034), (0.0, -0.05), (-0.006, -0.06), (-0.011, -0.058), (-0.006, -0.048)], 0.006, mat='bright', bev=0.0008)
-# --- side-folding skeleton stock with cheek rest, hinge and rubber butt pad
-prof('stock', [(-0.13, 0.026), (-0.2, 0.03), (-0.36, 0.024), (-0.398, 0.012), (-0.405, -0.075), (-0.388, -0.088), (-0.33, -0.036), (-0.2, -0.022), (-0.13, -0.022)], 0.032, mat='gold', bev=0.004, seg=3,
-     holes=[[(-0.165, 0.012), (-0.338, 0.01), (-0.37, -0.004), (-0.36, -0.018), (-0.33, -0.02), (-0.18, -0.011)], [(-0.384, 0.0), (-0.392, 0.0), (-0.394, -0.058), (-0.386, -0.066), (-0.362, -0.036)]])
-prof('buttPad', [(-0.398, 0.032), (-0.414, 0.03), (-0.416, -0.084), (-0.39, -0.096), (-0.386, -0.084), (-0.398, 0.012)], 0.034, mat='rubber', bev=0.004)
-for k in range(9): box('padGroove', -0.0175, 0.0175, -0.4165, -0.414, -0.08 + k * 0.012, -0.076 + k * 0.012, mat='rubber', bev=0.0003)
-cyl('hinge', 0.009, 0.009, -0.024, 0.024, x=-0.13, v=0.012, mat='goldDark', seg=18, axis='X')
-cyl('hingeCap', 0.0105, 0.0105, 0.0225, 0.026, x=-0.13, v=0.012, mat='steel', seg=18, axis='X')
-torus('slingLoopR', 0.008, 0.0018, -0.35, x=0.0, v=-0.062, mat='steel', axis='Y')
+        cyl('mark', 0.0013, 0.0013, sx * 0.0198, sx * 0.0204, -0.074 + k * 0.009, -0.006 - k * 0.004, mat=col, seg=8, axis='X')
+
+# =============================================================================================== side-folding skeleton stock
+prof('stock', [(HINGE - 0.006, TOP), (-0.3, TOP), (-0.336, 0.034), (-0.35, 0.034), (-0.35, -0.098), (-0.336, -0.1), (-0.3, -0.072), (-0.24, -0.047), (-0.17, -0.035), (HINGE - 0.006, -0.032)],
+     0.03, mat='gold', bev=0.0035, seg=3,
+     holes=[[(-0.134, 0.018), (-0.198, 0.018), (-0.198, -0.019), (-0.134, -0.021)],
+            [(-0.212, 0.018), (-0.33, 0.019), (-0.336, 0.006), (-0.336, -0.07), (-0.302, -0.056), (-0.244, -0.033), (-0.212, -0.023)]])
+prof('cheekRest', [(-0.21, TOP - 0.002), (-0.31, TOP - 0.002), (-0.31, TOP + 0.007), (-0.29, TOP + 0.01), (-0.23, TOP + 0.008)], 0.028, mat='gold', bev=0.003)
+prof('buttPad', [(-0.35, 0.036), (-0.362, 0.035), (-0.364, -0.098), (-0.352, -0.104), (-0.35, -0.1)], 0.033, mat='rubber', bev=0.004)
+for k in range(10): box('padGroove', -0.016, 0.016, -0.3645, -0.3625, -0.09 + k * 0.012, -0.087 + k * 0.012, mat='rubber', bev=0.0003)
+cyl('stockButton', 0.0055, 0.0055, -0.0155, -0.0185, -0.15, 0.0, mat='polymer', seg=16, axis='X')
+# vertical hinge on the right (the stock folds to the right side): block + three knuckles + pin caps
+box('hingeBlock', -0.02, 0.02, HINGE - 0.012, HINGE + 0.002, -0.031, TOP, mat='goldDark', bev=0.002)
+for (v0, v1) in ((-0.03, -0.012), (-0.009, 0.009), (0.012, 0.03)): cyl('knuckle', 0.0055, 0.0055, v0, v1, x=0.0205, v=HINGE - 0.005, mat='goldDark', seg=16, axis='Z')
+for v in (-0.0315, 0.0305): cyl('hingePin', 0.0028, 0.0028, v, v + 0.0015, x=0.0205, v=HINGE - 0.005, mat='steel', seg=12, axis='Z')
+torus('slingLoopR', 0.0075, 0.0017, -0.33, x=0.0, v=-0.09, mat='steel', axis='Y')
 
 # =============================================================================================== magazine (node 'mag')
-MAGP = [(0.012, -0.033), (0.068, -0.033), (0.082, -0.09), (0.1, -0.145), (0.118, -0.188), (0.098, -0.198), (0.078, -0.192), (0.06, -0.148), (0.044, -0.09), (0.028, -0.033)]
-mag = prof('mag', MAGP, 0.026, node='mag', mat='magBlack', bev=0.002, seg=2)
-for (a, b) in ((MAGP[1], MAGP[2]), (MAGP[2], MAGP[3]), (MAGP[3], MAGP[4])):  # raised spine along the front edge
-    prof('magSpine', [(a[0] - 0.004, a[1]), (a[0], a[1]), (b[0], b[1]), (b[0] - 0.004, b[1])], 0.016, node='mag', mat='magBlack', bev=0.0008)
-for sx in (-1, 1): prof('magWindow', [(0.03, -0.05), (0.05, -0.05), (0.075, -0.15), (0.068, -0.17), (0.06, -0.15)], 0.001, x=sx * 0.0131, node='mag', mat='polymer', bev=0.0)
-for sx in (-1, 1):  # coupling studs
-    for (u, v) in ((0.052, -0.075), (0.074, -0.14)): cyl('stud', 0.0042, 0.0038, sx * 0.0128, sx * 0.0165, u, v, node='mag', mat='magBlack', seg=12, axis='X')
-box('magBase', -0.0145, 0.0145, 0.072, 0.122, -0.206, -0.196, node='mag', mat='polymer', bev=0.002, rot=('X', -0.38))
-box('cartridge', -0.0045, 0.0045, 0.02, 0.06, -0.036, -0.03, node='mag', mat='brass', bev=0.0015)
+MAGP = [(0.0, -0.036), (0.06, -0.036), (0.064, -0.07), (0.075, -0.125), (0.09, -0.18), (0.088, -0.196), (0.03, -0.196), (0.028, -0.18), (0.016, -0.125), (0.006, -0.07)]
+prof('mag', MAGP, 0.028, node='mag', mat='magBlack', bev=0.0022, seg=2)
+for (a, b) in ((MAGP[1], MAGP[2]), (MAGP[2], MAGP[3]), (MAGP[3], MAGP[4])):  # front spine and rear ribs
+    prof('magSpine', [(a[0] - 0.004, a[1]), (a[0] + 0.001, a[1]), (b[0] + 0.001, b[1]), (b[0] - 0.004, b[1])], 0.02, node='mag', mat='magBlack', bev=0.0008)
+for (a, b) in ((MAGP[9], MAGP[8]), (MAGP[8], MAGP[7])):
+    prof('magRib', [(a[0] - 0.001, a[1]), (a[0] + 0.004, a[1]), (b[0] + 0.004, b[1]), (b[0] - 0.001, b[1])], 0.02, node='mag', mat='magBlack', bev=0.0008)
+for sx in (-1, 1):
+    prof('magWindow', [(0.022, -0.05), (0.04, -0.05), (0.06, -0.15), (0.056, -0.17), (0.046, -0.15)], 0.001, x=sx * 0.0142, node='mag', mat='polymer', bev=0.0)
+    for (u, v) in ((0.048, -0.062), (0.072, -0.16)):  # coupling studs (left) / sockets (right)
+        cyl('stud', 0.0044, 0.0040, sx * 0.0138, sx * 0.0172 if sx < 0 else sx * 0.015, u, v, node='mag', mat='magBlack', seg=14, axis='X')
+box('magBase', -0.0158, 0.0158, 0.026, 0.094, -0.2, -0.19, node='mag', mat='polymer', bev=0.0025, rot=('X', -0.27))
+box('cartridge', -0.0045, 0.0045, 0.012, 0.05, -0.037, -0.03, node='mag', mat='brass', bev=0.0016)
+cyl('bulletTip', 0.0045, 0.0012, 0.05, 0.062, v=-0.0335, node='mag', mat='brass', seg=12)
 
-# =============================================================================================== muzzle devices
-# suppressed: QD collar + black can with engraving (texture), front cap
-cyl('suppCollar', 0.0135, 0.0135, 0.395, 0.418, node='supp', mat='black', seg=28)
-for k in range(5): cyl('suppGrip', 0.0148, 0.0148, 0.398 + k * 0.004, 0.4, node='supp', mat='black', seg=28)
-cyl('suppTube', 0.0185, 0.0185, 0.416, 0.555, node='supp', mat='suppressor', seg=36, bev=0.0)
-lathe('suppEnds', [(0.0, 0.414), (0.0172, 0.414), (0.0188, 0.418), (0.0188, 0.42)], node='supp', mat='black')
-lathe('suppCap', [(0.0188, 0.552), (0.0188, 0.556), (0.016, 0.562), (0.0068, 0.564), (0.0055, 0.558), (0.0, 0.558)], node='supp', mat='black')
-# open: G36 four-prong flash hider
-cyl('hiderBase', 0.0112, 0.0112, 0.395, 0.41, node='hider', mat='black', seg=24)
-for k in range(4):
-    a = math.pi / 4 + k * math.pi / 2; cx, cz = math.cos(a) * 0.0098, math.sin(a) * 0.0098
-    box('prong', cx - 0.0032, cx + 0.0032, 0.408, 0.452, cz - 0.0032, cz + 0.0032, node='hider', mat='black', bev=0.0008, rot=None)
-
-# =============================================================================================== EOTech 552 (gold housing)
-EU0, EBASE = -0.045, 0.0475  # rear end of the sight, top of the rail teeth
-box('eoBase', -0.017, 0.017, EU0, EU0 + 0.105, EBASE, EBASE + 0.012, mat='goldDark', bev=0.002)
-cyl('eoKnob', 0.0072, 0.0072, 0.017, 0.028, x=EU0 + 0.05, v=EBASE + 0.006, mat='black', seg=18, axis='X')
-for k in range(10): box('eoKnurl', 0.0275, 0.0285, EU0 + 0.044 + k * 0.0012, EU0 + 0.0446 + k * 0.0012, EBASE, EBASE + 0.012, mat='black', bev=0.0)
-cyl('eoBattery', 0.0095, 0.0095, EU0 + 0.062, EU0 + 0.105, x=-0.006, v=EBASE + 0.02, mat='gold', seg=24)
-cyl('eoBatCap', 0.0102, 0.0102, EU0 + 0.1, EU0 + 0.11, x=-0.006, v=EBASE + 0.02, mat='black', seg=24)
-box('eoBody', -0.0185, 0.0185, EU0, EU0 + 0.062, EBASE + 0.01, EBASE + 0.03, mat='gold', bev=0.003)
-WC = EBASE + 0.03 + 0.016          # window centre = the sight axis (written to the SIGHT empty)
-WW, WH, HL, T = 0.034, 0.03, 0.056, 0.0028
-box('eoHoodTop', -WW / 2 - T, WW / 2 + T, EU0 + 0.004, EU0 + 0.004 + HL, WC + WH / 2, WC + WH / 2 + T, mat='gold', bev=0.0012)
-for sx in (-1, 1): box('eoHoodSide', sx * (WW / 2) - (T if sx < 0 else 0), sx * (WW / 2) + (T if sx > 0 else 0), EU0 + 0.004, EU0 + 0.004 + HL, EBASE + 0.03, WC + WH / 2 + T, mat='gold', bev=0.0012)
-for sx in (-1, 1): box('eoHoodRib', sx * (WW / 2 + T) - 0.0008, sx * (WW / 2 + T) + 0.0008, EU0 + 0.01, EU0 + HL - 0.004, WC - 0.006, WC + 0.006, mat='goldDark', bev=0.0003)
-box('eoRearPanel', -0.016, 0.016, EU0 - 0.003, EU0 + 0.002, EBASE + 0.012, EBASE + 0.03, mat='black', bev=0.001)
-for k, uu in enumerate((-0.006, 0.006)): box('eoButton', uu - 0.004, uu + 0.004, EU0 - 0.006, EU0 - 0.002, EBASE + 0.017, EBASE + 0.025, mat='rubber', bev=0.001)
-box('eoWinFrameR', -WW / 2, WW / 2, EU0 + 0.004, EU0 + 0.008, WC - WH / 2, WC - WH / 2 + 0.003, mat='black', bev=0.0003)
-box('eoWinFrameF', -WW / 2, WW / 2, EU0 + HL - 0.002, EU0 + HL + 0.002, WC - WH / 2, WC - WH / 2 + 0.003, mat='black', bev=0.0003)
-bm = bmesh.new()  # the holographic window glass (front)
-q = [bm.verts.new((x_, EU0 + HL - 0.006, z_)) for (x_, z_) in ((-WW / 2 + 0.001, WC - WH / 2 + 0.003), (WW / 2 - 0.001, WC - WH / 2 + 0.003), (WW / 2 - 0.001, WC + WH / 2 - 0.001), (-WW / 2 + 0.001, WC + WH / 2 - 0.001))]
+# =============================================================================================== EOTech 552 (gold) on the bridge rail
+EU0 = -0.078                       # rear of the sight base
+WW, WH, HL, T = 0.034, 0.026, 0.05, 0.003
+H0 = EU0 + 0.016                   # hood rear
+WC = RT + 0.0215 + WH / 2          # window centre = sight axis
+box('eoBase', -0.017, 0.017, EU0, EU0 + 0.128, RT, RT + 0.012, mat='goldDark', bev=0.002)
+box('eoClamp', -0.019, 0.019, EU0 + 0.03, EU0 + 0.062, RT - 0.006, RT + 0.004, mat='goldDark', bev=0.0012)
+cyl('eoKnob', 0.0075, 0.0075, -0.019, -0.03, x=EU0 + 0.046, v=RT, mat='black', seg=20, axis='X')
+for k in range(12):
+    a = 2 * math.pi * k / 12
+    box('eoKnurl', -0.0305, -0.019, EU0 + 0.046 + math.cos(a) * 0.0074 - 0.0007, EU0 + 0.046 + math.cos(a) * 0.0074 + 0.0007, RT + math.sin(a) * 0.0074 - 0.0007, RT + math.sin(a) * 0.0074 + 0.0007, mat='black', bev=0.0)
+box('eoBody', -0.0185, 0.0185, H0, H0 + HL, RT + 0.01, RT + 0.0215, mat='gold', bev=0.003)
+box('eoRearPanel', -0.016, 0.016, EU0 - 0.002, H0 + 0.002, RT + 0.006, RT + 0.019, mat='black', bev=0.0015)
+for uu in (-0.0065, 0.0065): box('eoButton', uu - 0.0042, uu + 0.0042, EU0 - 0.0055, EU0 - 0.001, RT + 0.009, RT + 0.017, mat='rubber', bev=0.0012)
+lathe('eoBattery', [(0.0, 0), (0.0105, 0), (0.0105, 0.036), (0.0, 0.036)], mat='gold', seg=24)
+bat = PARTS[-1][0]
+for vt in bat.data.vertices: X, Y, Z = vt.co; vt.co = (Y - 0.018, EU0 + 0.108 + X, RT + 0.0075 + Z)
+for sx in (-1, 1): cyl('eoBatCap', 0.0112, 0.0112, sx * 0.018, sx * 0.0215, x=EU0 + 0.108, v=RT + 0.0075, mat="black", seg=24, axis="X")
+# hood: two side walls, the roof (front edge chamfered down), ribs; window frame bars and the holographic glass
+for sx in (-1, 1):
+    prof('eoHoodSide', [(H0, RT + 0.012), (H0 + HL, RT + 0.012), (H0 + HL, WC + WH / 2 - 0.004), (H0 + HL - 0.008, WC + WH / 2 + T), (H0, WC + WH / 2 + T)], T, x=sx * (WW / 2 + T / 2), mat='gold', bev=0.0011)
+    box('eoHoodRib', sx * (WW / 2 + T) - 0.0008, sx * (WW / 2 + T) + 0.0008, H0 + 0.006, H0 + HL - 0.01, WC - 0.006, WC + 0.006, mat='goldDark', bev=0.0003)
+prof('eoHoodTop', [(H0, WC + WH / 2), (H0 + HL - 0.008, WC + WH / 2), (H0 + HL, WC + WH / 2 - 0.004), (H0 + HL, WC + WH / 2 - 0.001), (H0 + HL - 0.008, WC + WH / 2 + T), (H0, WC + WH / 2 + T)],
+     WW + 2 * T, mat='gold', bev=0.0011)
+box('eoWinSill', -WW / 2, WW / 2, H0, H0 + HL, RT + 0.0215 - 0.001, WC - WH / 2 - 0.001, mat='goldDark', bev=0.0006)  # hood floor (gold, like SF2's frame)
+box('eoWinFrame', -WW / 2, WW / 2, H0 + HL - 0.0085, H0 + HL - 0.0065, WC - WH / 2 - 0.001, WC - WH / 2 + 0.0012, mat='goldDark', bev=0.0003)
+bm = bmesh.new()
+q = [bm.verts.new((x_, H0 + HL - 0.007, z_)) for (x_, z_) in ((-WW / 2 + 0.0008, WC - WH / 2 + 0.001), (WW / 2 - 0.0008, WC - WH / 2 + 0.001), (WW / 2 - 0.0008, WC + WH / 2 - 0.0008), (-WW / 2 + 0.0008, WC + WH / 2 - 0.0008))]
 bm.faces.new(q); _obj('eoGlass', bm, 'body', 'lens')
+
 
 # =============================================================================================== empties + finishing
 def empty(name, loc):
     e = bpy.data.objects.new(name, None); e.location = loc; SCN.collection.objects.link(e); return e
 
 
-empty('SIGHT', (0, EU0 + HL * 0.5, WC)); empty('MUZZLE_S', (0, 0.564, 0)); empty('MUZZLE', (0, 0.452, 0))
-empty('ANCHOR', (0, 0, 0))
-
+empty('SIGHT', (0, H0 + HL * 0.5, WC)); empty('HOOD', (0, H0, WC)); empty('MUZZLE_S', (0, HID0 + 0.163, 0)); empty('MUZZLE', (0, HID0 + 0.034, 0))
+empty('SUPPORT', (0, 0.3, -0.028)); empty('GRIP', (0, -0.078, -0.082))
 
 
 def finish():
@@ -247,7 +312,7 @@ def finish():
             for f in bm_.faces:
                 n = f.normal; ax = max(range(3), key=lambda i: abs(n[i]))
                 for l in f.loops:
-                    p = l.vert.co; a, b = ((p.y, p.z), (p.x, p.z), (p.x, p.y))[ax]; l[uv].uv = (a * 8, b * 8)
+                    p = l.vert.co; a, b = ((p.y, p.z), (p.x, p.z), (p.x, p.y))[ax]; l[uv].uv = (a * 24, b * 24)
             bm_.to_mesh(ob.data); bm_.free()
         _activate(ob)
         try: bpy.ops.object.shade_smooth_by_angle(angle=math.radians(34))
@@ -256,12 +321,6 @@ def finish():
         if o.type == 'MESH' and o.hide_render: bpy.data.objects.remove(o, do_unlink=True)
 
 
-# flip the bottom-rail teeth: everything named rail/railLip/tooth below the bore goes upside-down around its own base
-for ob, node, mat in PARTS:
-    if mat == 'goldDark' and ob.name.split('.')[0] in ('rail', 'railLip', 'tooth'):
-        zc = -0.031
-        for vtx in ob.data.vertices: vtx.co.z = 2 * zc - vtx.co.z
-        ob.data.flip_normals()
 finish()
 os.makedirs(os.path.dirname(os.path.abspath(OUT)), exist_ok=True)
 bpy.ops.export_scene.gltf(filepath=os.path.abspath(OUT), export_format='GLB', export_yup=True, export_apply=True, export_texcoords=True, export_normals=True, export_materials='EXPORT')

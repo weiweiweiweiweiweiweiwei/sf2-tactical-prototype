@@ -62,13 +62,13 @@ const WEAPON_DATABASE = {
   g36c: {
     name: 'G36C 黃金 消音', type: 'assault', slot: 'primary', damageNear: 25, damageFar: 19, falloffStart: 25, falloffEnd: 60, fireRate: 0.08,
     recoilPitch: 0.011, recoilYaw: 0.012, recoilRecovery: 10,
-    hipSpread: 0.07, adsSpread: 0.0018, adsFov: 42, vmAdsFov: 15, adsType: 'red_dot', mobility: 0.95, maxAmmo: 30, reloadTime: 2.0, modelUrl: null,
+    hipSpread: 0.07, adsSpread: 0.0018, adsFov: 42, vmAdsFov: 20, adsVertical: 0.075, adsType: 'red_dot', mobility: 0.95, maxAmmo: 30, reloadTime: 2.0, modelUrl: null,
     model: 'g36c', sound: 'g36s', suppressed: true, tracerEvery: 0, penetration: 1, desc: 'EOTech 全息瞄具 + 消音器，槍聲小、不暴露雷達。',
   },
   g36c_gold: { // v45: the same gold G36C (Blender model) with the G36 four-prong flash hider instead of the can
     name: 'G36C 黃金', type: 'assault', slot: 'primary', damageNear: 25, damageFar: 19, falloffStart: 25, falloffEnd: 60, fireRate: 0.08,
     recoilPitch: 0.011, recoilYaw: 0.012, recoilRecovery: 10,
-    hipSpread: 0.07, adsSpread: 0.0018, adsFov: 42, vmAdsFov: 15, adsType: 'red_dot', mobility: 0.95, maxAmmo: 30, reloadTime: 2.0, modelUrl: null,
+    hipSpread: 0.07, adsSpread: 0.0018, adsFov: 42, vmAdsFov: 20, adsVertical: 0.075, adsType: 'red_dot', mobility: 0.95, maxAmmo: 30, reloadTime: 2.0, modelUrl: null,
     model: 'g36c', sound: 'm4', rate: 1.07, tracerEvery: 2, penetration: 1, desc: 'EOTech 全息瞄具 + 四叉消焰器，5.56 清脆槍聲，開火會上敵方雷達。',
   },
   mp5: {
@@ -383,7 +383,7 @@ function compileWeapon(id, s) {
     pellets: s.pellets || 1, headKill: s.headKill ?? (s.type === 'sniper'), headMult: s.headMult || PART_MULT.head, range: s.range || 260, penetration: s.penetration || 0,
     hipBase: s.hipSpread, adsBase: s.adsSpread, spreadBase: s.hipSpread, spreadCrouch: 0.8,
     recoil: { first: s.recoilPitch * 0.75, climb: s.recoilPitch, climbShots: 10, late: s.recoilPitch * 0.75, h: s.recoilYaw, hStart: 6, jitter: s.recoilYaw * 0.35 },
-    recoilRecovery: s.recoilRecovery, adsFov: s.adsFov, vmAdsFov: s.vmAdsFov, adsType: s.adsType, adsRecoilMult: 1, adsSpeed: s.adsSpeed || (s.type === 'smg' ? 24 : 20),
+    recoilRecovery: s.recoilRecovery, adsFov: s.adsFov, vmAdsFov: s.vmAdsFov, adsVertical: s.adsVertical || 0, adsType: s.adsType, adsRecoilMult: 1, adsSpeed: s.adsSpeed || (s.type === 'smg' ? 24 : 20),
     moveSpeed: CFG.player.baseSpeed * s.mobility, mobility: s.mobility, reloadTime: s.reloadTime, sound: s.sound || id,
     suppressed: !!s.suppressed, tracerEvery: s.tracerEvery ?? 2, shellReload: s.shellReload || 0, zoomFovs: s.zoomFovs || [s.adsFov],
     noise: s.suppressed ? 14 : t.noise, pump, bolt, soundRate: s.rate || 1, tpSpec: s.tp || null,

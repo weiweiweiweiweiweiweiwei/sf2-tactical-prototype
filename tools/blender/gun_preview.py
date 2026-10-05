@@ -21,9 +21,12 @@ sc.render.resolution_x, sc.render.resolution_y = 1400, 700; sc.render.film_trans
 world = bpy.data.worlds.new('w'); sc.world = world; world.color = (0.82, 0.84, 0.86)
 cam = bpy.data.objects.new('cam', bpy.data.cameras.new('cam')); sc.collection.objects.link(cam); sc.camera = cam
 # imported glTF: game space (x, v, −u) → Blender (x, u, v) again
-for name, loc, rot, ortho in (('side', (0.75, 0.08, 0.0), (math.pi / 2, 0, math.pi / 2), 1.08), ('left', (-0.75, 0.08, 0.0), (math.pi / 2, 0, -math.pi / 2), 1.08),
-                              ('34', (0.55, -0.45, 0.28), (math.radians(70), 0, math.radians(130)), 0)):
-    cam.location = loc; cam.rotation_euler = rot
+tgt = bpy.data.objects.new('tgt', None); sc.collection.objects.link(tgt)
+for name, loc, look, ortho in (('side', (0.75, 0.0, 0.0), (0, 0.0, 0.0), 0.86), ('left', (-0.75, 0.0, 0.0), (0, 0.0, 0.0), 0.86),
+                               ('34', (0.42, 0.5, 0.22), (0, 0.04, -0.02), 0), ('rear34', (0.3, -0.5, 0.2), (0, 0.0, 0.0), 0), ('top', (0.0, 0.03, 0.8), (0, 0.03, 0.0), 0.86)):
+    cam.constraints.clear(); cam.location = loc; tgt.location = look
+    c = cam.constraints.new('TRACK_TO'); c.target = tgt; c.track_axis = 'TRACK_NEGATIVE_Z'; c.up_axis = 'UP_Y' if name == 'top' else 'UP_Y'
+    if name == 'top': cam.location = (0.0001, 0.03, 0.8)
     if ortho: cam.data.type = 'ORTHO'; cam.data.ortho_scale = ortho
     else: cam.data.type = 'PERSP'; cam.data.lens = 50
     sc.render.filepath = os.path.abspath(f'{OUT}_{name}.png'); bpy.ops.render.render(write_still=True)
