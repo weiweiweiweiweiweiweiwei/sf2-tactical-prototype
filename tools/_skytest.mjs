@@ -35,4 +35,9 @@ const r2 = await p.evaluate(async () => {
 });
 await p.evaluate(async () => { const m = app.match; m.player.alive || (m.player.respawnT = 0); await new Promise((r) => setTimeout(r, 4500)); const P = m.player; P.yaw = -Math.PI / 2 + 0.25; P.pitch = -0.08; });
 await shot('view');
+const views = [['tower', -24, 10, -0.15, -0.05], ['clock', -3, -11.5, 0, 0.32], ['go', -8.4, 1.6, 0, -0.35], ['bridge', -9.5, -2.5, -1.45, -0.02], ['tram', -26, -11.5, -1.75, -0.03], ['east', 25.5, 11.5, 0.75, -0.06]];
+for (const [n, x, z, yaw, pitch] of views) {
+  await p.evaluate(async ([x, z, yaw, pitch]) => { const P = app.match.player; if (!P.alive) { P.respawnT = 0; await new Promise((r) => setTimeout(r, 4000)); } P.motor.teleport(new SF2.THREE.Vector3(x, 0.2, z)); P.yaw = yaw; P.pitch = pitch; P.spawnProtect = 9; await new Promise((r) => setTimeout(r, 900)); }, [x, z, yaw, pitch]);
+  await shot(n);
+}
 console.log(r, r2, errs.slice(0, 6)); await b.close(); srv.close();

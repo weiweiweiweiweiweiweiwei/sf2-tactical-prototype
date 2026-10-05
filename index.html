@@ -6757,7 +6757,14 @@ const SKY = {
 
 // ---------------------------------------------------------------------------------------------------------------- build
 function buildSky(b) {
-  const S = SKY, solid = !b.dry, vis = (m) => m;
+  const S = SKY, solid = !b.dry, glb = !b.dry && b.def._glb, vis = (m) => (glb ? null : m);
+  if (glb) glb.scene.traverse((o) => { // Blender visuals: 'sky:<name>' placeholders → the game's materials
+    if (!o.isMesh) return;
+    const nm = ((o.material && o.material.name) || '').replace(/^sky:/, '');
+    o.material = skyMat(b, nm); if (nm === 'btnGreen' || nm === 'btnRed') o.userData.btn = nm;
+    if (o.material.transparent) { o.renderOrder = 2; o.userData.noAO = true; }
+    o.castShadow = !/clockFace|glass|inlay|arrow/.test(nm); o.receiveShadow = true; o.matrixAutoUpdate = false; o.updateMatrix();
+  });
   // the two roofs (walkable slab) and the towers dropping into the clouds (collision only near the top; the rest is visual)
   for (const sx of [-1, 1]) {
     const x0 = sx < 0 ? -S.X1 : S.X0, x1 = sx < 0 ? -S.X0 : S.X1;
@@ -6777,7 +6784,8 @@ function buildSky(b) {
     // [x, z, w(x), d(z), h]
     [-25.0, -8.6, 1.4, 2.4, 1.6], [-21.5, -11.4, 2.8, 1.2, 1.2], [-17.2, -10.6, 1.3, 1.3, 1.3],
     [-24.6, 7.4, 1.4, 3.0, 1.6], [-14.0, 9.6, 1.3, 2.6, 1.3], [-11.2, 6.6, 1.2, 1.2, 1.2],
-    [-12.4, -10.8, 2.6, 1.2, 1.4], [-18.6, 2.4, 1.2, 1.2, 1.3], [-16.0, -3.6, 2.4, 1.2, 1.2],
+    [-12.4, -10.8, 2.6, 1.2, 1.4], [-16.6, 2.4, 1.2, 1.2, 1.3], [-15.0, -3.6, 2.4, 1.2, 1.2],
+    [-20.4, -2.3, 1.2, 5.4, 2.6], [-19.3, 2.4, 1.2, 5.2, 2.6], // tall crate stacks screening the spawn
   ];
   for (const sx of [1, -1]) for (const [x, z, w, d, h] of COVER) {
     const cx = x * sx, cz = z * sx;
@@ -6786,13 +6794,19 @@ function buildSky(b) {
   // street lamps at the roof corners (thin posts)
   for (const sx of [-1, 1]) for (const [x, z] of [[S.X1 - 0.6, S.Z0 + 0.6], [S.X1 - 0.6, S.Z1 - 0.6], [S.X0 + 0.6, S.Z1 - 0.6]]) b.box(sx * x - 0.1, 0, z * sx - 0.1, sx * x + 0.1, 2.6, z * sx + 0.1, vis('darkSteel'), { material: 'metal', radar: false });
   // clock tower to the north (out of reach; blocks bullets and grenades)
-  b.box(-13, -40, -46, 13, 34, -24, vis('plasterWhite'), { radar: false, physics: true });
+  b.box(-12, -40, -40, 12, 24, -20, vis('plasterWhite'), { radar: false, physics: true });
+  // walkable flat gears: the big one half over the outer edge of each roof, the pulley gears off the four corners
+  for (const sx of [-1, 1]) {
+    for (const [dx, hz] of [[0.6, 2.9], [1.4, 2.6], [2.2, 2.05], [2.8, 1.1]]) b.box(sx > 0 ? S.X1 : -S.X1 - dx, -0.4, -hz, sx > 0 ? S.X1 + dx : -S.X1, -0.02, hz, null, { material: 'metal', surface: 'metal', radar: 'catwalk' });
+    for (const L of S.LINES) b.box(sx * (S.X1 + 2.6) - 1.5, -0.35, L.z - 1.5, sx * (S.X1 + 2.6) + 1.5, -0.11, L.z + 1.5, null, { material: 'metal', surface: 'metal', radar: 'catwalk' });
+  }
   // spawn zones: Alpha on the west roof facing east, Bravo on the east roof facing west
-  b.spawnZone('alpha', -26, -6, -21, 6, -Math.PI / 2); b.spawnZone('bravo', 21, -6, 26, 6, Math.PI / 2);
+  b.spawnZone('alpha', -26, -3.6, -22, 3.6, -Math.PI / 2); b.spawnZone('bravo', 22, -3.6, 26, 3.6, Math.PI / 2);
   // patrol points (the bots also walk past the GO boxes — that is how they work the bridge)
   for (const [x, z] of [[-16, 0], [16, 0], [-10, -0.4], [10, 0.4], [-20, -11], [20, 11], [-20, 11], [20, -11], [0, -3]]) b.waypoint(x, z, 0);
   b.navRegion(-S.X1, S.Z0, S.X1, S.Z1, 0, 1.0);
-  if (solid) b.mechs.push(new SkyMechanisms(b));
+  if (solid) { b.mechs.push(new SkyMechanisms(b)); skyAtmosphere(b); }
+  if (glb) { glb.scene.updateMatrixWorld(true); b.scene.add(glb.scene); }
   else for (const sx of [-1, 1]) b.radar.push({ x0: sx < 0 ? -S.X0 : 0, z0: S.BR.z0, x1: sx < 0 ? 0 : S.X0, z1: S.BR.z1, kind: 'catwalk', top: 0 });
 }
 
@@ -6938,7 +6952,8 @@ class SkyMechanisms {
     const S = this.S, T = S.TRAM, BR = S.BR, lib = b.lib, sc = b.scene, M = (n) => lib.get(n);
     const box = (w, h, d, mat, x = 0, y = 0, z = 0) => { const g = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); g.position.set(x, y, z); g.castShadow = true; g.receiveShadow = true; return g; };
     const G = this.m.def._glb && this.m.def._glb.scene;
-    const pick = (name) => { if (!G) return null; const o = G.getObjectByName(name); if (o) o.parent.remove(o); return o; };
+    const pick = (name) => { if (!G) return null; const o = G.getObjectByName(name); if (o) { o.parent.remove(o); o.matrixAutoUpdate = true; } return o; };
+    const proto = G && G.getObjectByName('GO_PROTO'); if (proto) proto.parent.remove(proto);
     for (const L of this.bridge.leaves) {
       const pivot = new THREE.Group(); pivot.position.set(L.hx, 0, (BR.z0 + BR.z1) / 2); sc.add(pivot);
       const glb = pick(L.sx < 0 ? 'BRIDGE_W' : 'BRIDGE_E'), leaf = glb || box(BR.len, 0.3, BR.z1 - BR.z0, M(L.sx < 0 ? 'olive' : 'steel'), -L.sx * BR.len / 2, -0.15, 0);
@@ -6960,21 +6975,28 @@ class SkyMechanisms {
     // cables and the flat pulley gears at the four corners of each line
     this.gears = [];
     for (const t of this.trams) {
-      const cab = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 2 * (S.X1 + 5), 6), M('darkSteel')); cab.rotation.z = Math.PI / 2; cab.position.set(0, T.h + 1.1, t.L.z); sc.add(cab);
+      const cab = G ? null : new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 2 * (S.X1 + 3), 6), M('darkSteel')); if (cab) { cab.rotation.z = Math.PI / 2; cab.position.set(0, T.h + 1.1, t.L.z); sc.add(cab); }
       for (const sx of [-1, 1]) {
-        const gx = sx * (S.X1 + 4.5), glb = pick(`GEAR_${t.L.id}${sx < 0 ? 'W' : 'E'}`), gear = glb || this._gearMesh(M('bronze'), 2.1);
+        const gx = sx * (S.X1 + 2.6), glb = pick(`GEAR_${t.L.id}${sx < 0 ? 'W' : 'E'}`), gear = glb || this._gearMesh(M('bronze'), 2.1);
         if (!glb) gear.position.set(gx, -0.2, t.L.z); sc.add(gear);
         this.gears.push({ o: gear, dir: sx * (t.L.side) });
         if (!G) sc.add(box(0.18, T.h + 1.4, 0.18, M('darkSteel'), gx, (T.h + 1.4) / 2 - 0.2, t.L.z));
       }
     }
     for (const k of this.controls) {
-      const post = new THREE.Group(); post.add(box(0.08, 1.1, 0.08, M('darkSteel'), 0, 0.55, 0), box(0.36, 0.5, 0.26, M('bronze'), 0, 1.3, 0));
-      const lamp = new THREE.Mesh(new THREE.CircleGeometry(0.07, 12), new THREE.MeshBasicMaterial({ color: 0x40ff60 })); lamp.position.set(0, 1.13, 0.14); post.add(lamp);
-      k.mesh = post; k.lamp = lamp; sc.add(post);
+      let post, lamp = null, lampR = null;
+      if (proto) {
+        post = proto.clone(true); post.matrixAutoUpdate = true;
+        post.traverse((o) => { if (o.isMesh && o.userData.btn) { o.material = o.material.clone(); if (o.userData.btn === 'btnGreen') lamp = o.material; else lampR = o.material; } });
+      } else {
+        post = new THREE.Group(); post.add(box(0.08, 1.1, 0.08, M('darkSteel'), 0, 0.55, 0), box(0.36, 0.5, 0.26, M('bronze'), 0, 1.3, 0));
+        const l = new THREE.Mesh(new THREE.CircleGeometry(0.07, 12), new THREE.MeshBasicMaterial({ color: 0x40ff60 })); l.position.set(0, 1.13, 0.14); post.add(l); lamp = l.material;
+      }
+      k.mesh = post; k.lamp = lamp; k.lampR = lampR; sc.add(post);
       if (k.inCar) { k.t.mesh.add(post); post.position.set(k.dx * (k.t.L.side > 0 ? 1 : -1), 0, (k.z - k.t.L.z)); post.rotation.y = k.t.L.side > 0 ? 0 : Math.PI; }
       else { post.position.set(k.x, 0, k.z); post.rotation.y = k.kind === 'bridge' ? (k.x < 0 ? -Math.PI / 2 : Math.PI / 2) : (k.z > 0 ? 0 : Math.PI); }
     }
+    this.floorGears = ['FLOORGEAR_W', 'FLOORGEAR_E'].map((n) => G && G.getObjectByName(n)).filter(Boolean); this.floorGears.forEach((o) => { o.matrixAutoUpdate = true; });
     this.clock = this._clock(b);
     this.render(0, 1);
   }
@@ -6988,9 +7010,10 @@ class SkyMechanisms {
   _clock(b) {
     const G = this.m.def._glb && this.m.def._glb.scene, sc = b.scene;
     let hour = G && G.getObjectByName('CLOCK_H'), min = G && G.getObjectByName('CLOCK_M');
+    if (hour) hour.matrixAutoUpdate = min.matrixAutoUpdate = true;
     if (!hour) {
-      const face = new THREE.Mesh(new THREE.CircleGeometry(5, 48), new THREE.MeshStandardMaterial({ color: 0xf1ead8, roughness: 0.8 })); face.position.set(0, 22, -23.95); sc.add(face);
-      const hand = (len, w) => { const g = new THREE.BoxGeometry(w, len, 0.1); g.translate(0, len / 2, 0); const m = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ color: 0x2a2018, metalness: 0.4 })); m.position.set(0, 22, -23.85); sc.add(m); return m; };
+      const face = new THREE.Mesh(new THREE.CircleGeometry(4.2, 48), new THREE.MeshStandardMaterial({ color: 0xf1ead8, roughness: 0.8 })); face.position.set(0, 9.5, -19.6); sc.add(face);
+      const hand = (len, w) => { const g = new THREE.BoxGeometry(w, len, 0.1); g.translate(0, len / 2, 0); const m = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ color: 0x2a2018, metalness: 0.4 })); m.position.set(0, 9.5, -19.5); sc.add(m); return m; };
       hour = hand(2.6, 0.32); min = hand(4.0, 0.2);
     }
     return { hour, min };
@@ -7002,9 +7025,88 @@ class SkyMechanisms {
     for (const t of this.trams) if (t.mesh) t.mesh.position.x = (t.base ? t.base.x : 0) + lerp(t.prevX, t.x, alpha);
     this.gearSpin += dt * this.gearV * 1.4;
     for (const g of this.gears) g.o.rotation.y = this.gearSpin * g.dir;
-    for (const k of this.controls) if (k.lamp) { const busy = k.kind === 'bridge' ? this.bridge.k !== this.bridge.target : k.t.p !== k.t.target; k.lamp.material.color.setHex(busy ? 0xff3030 : 0x40ff60); }
+    for (const [i, o] of this.floorGears.entries()) o.rotation.y = (i ? -1 : 1) * this.bridge.k * Math.PI * 1.5;
+    for (const k of this.controls) if (k.lamp) { // green button lit = ready, red lit = running
+      const busy = k.kind === 'bridge' ? this.bridge.k !== this.bridge.target : k.t.p !== k.t.target, blink = 0.55 + 0.45 * Math.sin(this.time * 9);
+      k.lamp.color.setRGB(busy ? 0.08 : 0.25, busy ? 0.25 : 1.3, busy ? 0.1 : 0.35); if (k.lampR) k.lampR.color.setRGB(busy ? 1.4 * blink + 0.2 : 0.35, busy ? 0.18 : 0.06, busy ? 0.12 : 0.05);
+    }
     if (this.clock && this.clock.hour) { const d = new Date(), mm = d.getMinutes() + d.getSeconds() / 60, hh = (d.getHours() % 12) + mm / 60; this.clock.min.rotation.z = -mm / 60 * Math.PI * 2; this.clock.hour.rotation.z = -hh / 12 * Math.PI * 2; }
   }
+}
+
+// ------------------------------------------------------------------------------------------------- materials
+function skyMat(b, name) {
+  const tf = b.tf, lib = b.lib, std = (key, o) => lib.basic('sky:' + key, () => new THREE.MeshStandardMaterial(o));
+  const canvas = (key, size, draw, o = {}) => lib.basic('sky:' + key, () => {
+    const map = tf.simple('sky_' + key, size, draw, true, true); map.anisotropy = 4;
+    if (o.repeat) map.repeat.set(...o.repeat); if (o.offset) map.offset.set(...o.offset);
+    return new THREE.MeshStandardMaterial(Object.assign({ map, roughness: 0.85, metalness: 0 }, o.mat || {}));
+  });
+  switch (name) {
+    case 'floor': return canvas('floor', 512, (ctx, S) => { // pale marble flags with thin grey joints
+      const rnd = mulberry32(77); ctx.fillStyle = '#cfc7bb'; ctx.fillRect(0, 0, S, S);
+      for (let j = 0; j < 4; j++) for (let i = 0; i < 4; i++) { const v = 196 + Math.floor(rnd() * 22); ctx.fillStyle = `rgb(${v},${v - 5},${v - 14})`; ctx.fillRect(i * S / 4 + 2, j * S / 4 + 2, S / 4 - 4, S / 4 - 4);
+        for (let k = 0; k < 3; k++) { ctx.strokeStyle = `rgba(150,140,130,${0.08 + rnd() * 0.1})`; ctx.lineWidth = 1 + rnd(); ctx.beginPath(); let x = i * S / 4 + rnd() * S / 4, y = j * S / 4 + rnd() * S / 4; ctx.moveTo(x, y); for (let q = 0; q < 5; q++) { x += (rnd() - 0.5) * 40; y += (rnd() - 0.5) * 40; ctx.lineTo(x, y); } ctx.stroke(); } }
+      ctx.fillStyle = 'rgba(120,112,104,.55)'; for (let i = 0; i <= 4; i++) { ctx.fillRect(i * S / 4 - 2, 0, 4, S); ctx.fillRect(0, i * S / 4 - 2, S, 4); }
+    }, { mat: { roughness: 0.62, color: 0x9c958c } }); // the roofs face the sun: keep the marble from blowing out
+    case 'whiteBrick': return canvas('whiteBrick', 512, (ctx, S) => { // cream ashlar courses, offset joints
+      const rnd = mulberry32(91); ctx.fillStyle = '#b9b2a8'; ctx.fillRect(0, 0, S, S); const rows = 8, h = S / rows;
+      for (let j = 0; j < rows; j++) for (let i = -1; i < 4; i++) { const w = S / 3, x = i * w + (j % 2) * w / 2, v = 206 + Math.floor(rnd() * 22); ctx.fillStyle = `rgb(${v},${v - 3},${v - 10})`; ctx.fillRect(x + 3, j * h + 3, w - 6, h - 6); ctx.fillStyle = 'rgba(255,255,255,.18)'; ctx.fillRect(x + 3, j * h + 3, w - 6, 3); }
+    });
+    case 'clockFace': return canvas('clockFace', 1024, (ctx, S) => { // roman dial, brass ring
+      const c = S / 2; ctx.fillStyle = '#efe7d3'; ctx.fillRect(0, 0, S, S);
+      ctx.strokeStyle = '#8a6a3a'; ctx.lineWidth = S * 0.02; ctx.beginPath(); ctx.arc(c, c, S * 0.47, 0, 7); ctx.stroke(); ctx.lineWidth = S * 0.006; ctx.beginPath(); ctx.arc(c, c, S * 0.36, 0, 7); ctx.stroke();
+      ctx.fillStyle = '#4a3a26'; ctx.font = `bold ${S * 0.075}px serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ['XII', 'I', 'II', 'III', 'IIII', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI'].forEach((t, i) => { const a = i / 12 * Math.PI * 2 - Math.PI / 2; ctx.save(); ctx.translate(c + Math.cos(a) * S * 0.415, c + Math.sin(a) * S * 0.415); ctx.rotate(a + Math.PI / 2); ctx.fillText(t, 0, 0); ctx.restore(); });
+      for (let i = 0; i < 60; i++) { const a = i / 60 * Math.PI * 2; ctx.fillRect(c + Math.cos(a) * S * 0.35 - 3, c + Math.sin(a) * S * 0.35 - 3, i % 5 ? 4 : 9, i % 5 ? 4 : 9); }
+      ctx.strokeStyle = 'rgba(138,106,58,.5)'; ctx.lineWidth = 3; for (let k = 0; k < 8; k++) { const a = k / 8 * Math.PI * 2; ctx.beginPath(); ctx.moveTo(c + Math.cos(a) * S * 0.08, c + Math.sin(a) * S * 0.08); ctx.lineTo(c + Math.cos(a) * S * 0.3, c + Math.sin(a) * S * 0.3); ctx.stroke(); }
+    }, { repeat: [1 / 8.4, 1 / 8.4], offset: [0.5, -6.3 / 8.4], mat: { roughness: 0.7 } }); // glTF v = 1 + y on the dial (centre y 9.5, r 4.2)
+    case 'goPanel': return canvas('goPanel', 128, (ctx, S) => { // dot-matrix 'GO' on black
+      ctx.fillStyle = '#1b1b1b'; ctx.fillRect(0, 0, S, S); ctx.fillStyle = '#f2f2f2'; ctx.font = `bold ${S * 0.36}px monospace`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('G', S / 2, S * 0.3); ctx.fillText('O', S / 2, S * 0.72);
+    }, { repeat: [1 / 0.24, 1 / 0.32], offset: [0.5, -2.2 / 0.32], mat: { emissive: 0x333333, roughness: 0.5 } });
+    case 'inlay': return std('inlay', { color: 0xb0624a, roughness: 0.6, metalness: 0.1 });
+    case 'stone': return std('stone', { color: 0xd6cfc2, roughness: 0.8 });
+    case 'copper': return std('copper', { color: 0xd08a5c, roughness: 0.42, metalness: 0.55 });
+    case 'tramGreen': return std('tramGreen', { color: 0x3f7d68, roughness: 0.5, metalness: 0.25 });
+    case 'tramWood': return std('tramWood', { color: 0x7a5038, roughness: 0.75 });
+    case 'roofTin': return std('roofTin', { color: 0x7e8784, roughness: 0.45, metalness: 0.55 });
+    case 'leafGreen': return std('leafGreen', { color: 0x4a8a76, roughness: 0.5, metalness: 0.3 });
+    case 'leafGrey': return std('leafGrey', { color: 0x4d5a66, roughness: 0.5, metalness: 0.35 });
+    case 'arrow': return std('arrow', { color: 0xe3b23c, roughness: 0.4, metalness: 0.3, emissive: 0x3a2a00 });
+    case 'rubber': return std('rubber', { color: 0x161616, roughness: 0.9 });
+    case 'lampGlow': return lib.basic('sky:lampGlow', () => new THREE.MeshStandardMaterial({ color: 0xffe6c0, emissive: 0xffc890, emissiveIntensity: 1.2 }));
+    case 'glass': return lib.basic('sky:glass', () => new THREE.MeshStandardMaterial({ color: 0x9fb8c4, roughness: 0.1, metalness: 0.2, transparent: true, opacity: 0.45 }));
+    case 'btnGreen': return lib.basic('sky:btnG', () => new THREE.MeshBasicMaterial({ color: 0x40ff60 }));
+    case 'btnRed': return lib.basic('sky:btnR', () => new THREE.MeshBasicMaterial({ color: 0x501010 }));
+    case 'bronze': return std('bronzeGear', { color: 0xb08a5a, roughness: 0.45, metalness: 0.7 });
+    default: return MAT_PRESETS[name] ? lib.get(name) : std('x_' + name, { color: 0xcccccc });
+  }
+}
+
+// a sea of cloud below the roofs, a plume rising out of the chasm, and a rainbow in the east
+function skyAtmosphere(b) {
+  const tf = b.tf, sc = b.scene;
+  const puff = tf.simple('skyCloudPuff', 256, (ctx, S) => {
+    const rnd = mulberry32(5); ctx.clearRect(0, 0, S, S);
+    for (let i = 0; i < 40; i++) { const x = S * (0.25 + rnd() * 0.5), y = S * (0.3 + rnd() * 0.4), r = S * (0.08 + rnd() * 0.16), g = ctx.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, 'rgba(255,248,252,.55)'); g.addColorStop(1, 'rgba(255,248,252,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill(); }
+  }, true, false);
+  const mat = new THREE.SpriteMaterial({ map: puff, color: 0xf3e6f2, transparent: true, depthWrite: false, fog: true });
+  const rnd = mulberry32(19), add = (x, y, z, s) => { const sp = new THREE.Sprite(mat); sp.position.set(x, y, z); sp.scale.set(s, s * 0.55, 1); sp.userData.noAO = true; sc.add(sp); return sp; };
+  for (let i = 0, n = 0; i < 400 && n < 70; i++) { // the sea of cloud: well below the roofs and never around the towers (a puff's top half would veil the floor)
+    const a = rnd() * Math.PI * 2, d = 45 + rnd() * 150, x = Math.cos(a) * d, z = Math.sin(a) * d * 0.85, sz = 30 + rnd() * 40, y = -16 - rnd() * 14;
+    if (Math.abs(x) < 40 + sz / 2 && Math.abs(z) < 45 + sz / 2) continue;
+    if (y + sz * 0.28 > -6) continue; add(x, y, z, sz); n++;
+  }
+  for (let i = 0; i < 26; i++) add((rnd() - 0.5) * 70, -24 - rnd() * 8, (rnd() - 0.5) * 50, 26 + rnd() * 16); // low layer under the roofs
+  const plume = [];
+  for (let i = 0; i < 9; i++) plume.push(add((rnd() - 0.5) * 6, -9 + i * 0.9, -9 + i * 2.2, 10 + rnd() * 6));
+  b.animated.push((dt, t) => { plume.forEach((p, i) => { p.position.y = -9 + i * 0.9 + Math.sin(t * 0.3 + i) * 0.6; p.material.rotation = 0; }); });
+  // rainbow: a thin additive arc far in the east sky
+  const g = new THREE.RingGeometry(150, 162, 64, 1, Math.PI * 0.08, Math.PI * 0.62), cols = [], pa = g.attributes.position;
+  for (let i = 0; i < pa.count; i++) { const r = Math.hypot(pa.getX(i), pa.getY(i)), k = (r - 150) / 12, c = new THREE.Color().setHSL(0.78 * (1 - k), 0.9, 0.62); cols.push(c.r, c.g, c.b); }
+  g.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
+  const bow = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.28, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false }));
+  bow.position.set(260, -40, -120); bow.rotation.y = -Math.PI / 2.4; bow.userData.noAO = true; sc.add(bow);
 }
 
 MAPS.push({
@@ -7013,12 +7115,27 @@ MAPS.push({
   bounds: { minX: -36, maxX: 36, minZ: -24, maxZ: 22 },
   indoor: false, navLevels: [0], navStep: 1.5, viewMult: 1.2, radarRange: 40, killY: SKY.KILL_Y,
   hdri: 'kloofendal_48d_partly_cloudy_puresky', hdriBackground: true, envIntensity: 0.75, sky: { turbidity: 3, rayleigh: 1.2, elevation: 40, azimuth: 200 },
-  sun: { pos: [30, 55, 25], color: 0xfff4e6, intensity: 2.9, auto: true }, hemi: [0xeef2ff, 0xd8c8e0, 1.05], exposure: 0.95,
-  fog: { color: 0xe6dcef, near: 90, far: 420 }, acoustics: 'outdoor', ambience: 'hill', shadowFollow: 0,
+  sun: { pos: [30, 55, 25], color: 0xfff4e6, intensity: 2.4, auto: true }, hemi: [0xeef2ff, 0xd8c8e0, 0.85], exposure: 0.8,
+  fog: { color: 0xe6dcef, near: 140, far: 650 }, acoustics: 'outdoor', ambience: 'hill', shadowFollow: 0,
   shot: { pos: [0, 18, 38], target: [0, 0, -4] },
   objectives: { dom: [[-17, 0, 6], [0, 0, -3], [17, 0, -6]], relic: [19, 0, 5], domRadius: 3.2 },
-  async preload() { if (this._glb === undefined) this._glb = null; },
-  build(b) { buildSky(b); },
+  async preload() {
+    if (this._glb !== undefined) return;
+    this._glb = null;
+    try {
+      if (!window.SKY_GLB) await new Promise((res) => { const s = document.createElement('script'); s.src = 'assets/maps/skycity.js'; s.async = true; s.onload = res; s.onerror = res; document.head.appendChild(s); });
+      if (window.SKY_GLB) {
+        const bin = Uint8Array.from(atob(window.SKY_GLB), (c) => c.charCodeAt(0)).buffer, L = new GLTFLoader(), D = new DRACOLoader();
+        D.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/libs/draco/gltf/'); L.setDRACOLoader(D);
+        this._glb = await L.parseAsync(bin, ''); D.dispose();
+      }
+    } catch (e) { console.warn('Sky City GLB unavailable, using fallback visuals', e && e.message); this._glb = null; }
+  },
+  build(b) {
+    if (!b.dry && this._glb && !this._glbSrc) this._glbSrc = this._glb.scene;
+    if (!b.dry && this._glbSrc) this._glb = { scene: this._glbSrc.clone(true) };
+    buildSky(b);
+  },
 });
 /* =====================================================================
    NAV GRAPH — multi-level walkable grid (auto-sampled at every nav
