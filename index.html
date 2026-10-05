@@ -6169,7 +6169,7 @@ const RYOKAN_SPEC = {
     [8, 99, 43, 127], [8, 127, 24, 145], [8, 145, 43, 153], [10, 153, 43, 173], [17, 173, 43, 175], // 西側 west wing
     [20, 78, 37, 99], [37, 87, 40, 99],                                                         // west house room (左側入口)
     [17, 175, 101, 195], [11, 190, 39, 210], [39, 175, 101, 260],                               // 中央路口 crossing
-    [150, 159, 168, 198], [152, 198, 170, 232], [152, 232, 168, 262], [101, 262, 168, 281], [101, 250, 123, 262], // 天橋下 street
+    [150, 159, 168, 198], [168, 190, 170, 198], [151, 198, 170, 232], [151, 232, 168, 250], [152, 250, 168, 262], [101, 262, 168, 281], [101, 250, 123, 262], // 天橋下 street
     [64, 260, 126, 322],                                                                        // 逃脫點 / 攻方家
   ],
   // buildings: footprint rects (earlier entries win overlaps); storeys; open2 = some 2F rooms are playable
@@ -6239,6 +6239,7 @@ const RYOKAN_SPEC = {
     { id: 'e1n', r: [138, 55, 172, 59] }, { id: 'e1e', r: [172, 55, 175, 83] },                  // 東一棟 north + east
     { id: 'e2e', r: [172, 91, 175, 121] },                                                      // 東二棟 east
     { id: 'e3w', r: [165, 159, 168, 190] },                                                     // A棟 west (over 天橋下)
+    { id: 'e4s', r: [101, 250, 134, 253], y: 3.15 },                                           // B棟 south, reached from the 攻方 stairs
   ],
   // props: [kind, u, v, (size / extra)]
   props: [
@@ -6359,7 +6360,7 @@ function ryokanPlan(S = RYOKAN_SPEC) {
   const P = (u, v) => [U(u), V(v)];
   return {
     S, U, V, P, ground, slabs, outside, walls, rails, parts2, walls1, stairs, buildings,
-    eaves: S.eaves.map((e) => Object.assign({ id: e.id, y: S.EAVE }, M(e.r))), floors2: (S.floors2 || []).map(([u0, v0, u1, v1, type]) => Object.assign({ type }, M([u0, v0, u1, v1]))),
+    eaves: S.eaves.map((e) => Object.assign({ id: e.id, y: e.y ?? S.EAVE }, M(e.r))), floors2: (S.floors2 || []).map(([u0, v0, u1, v1, type]) => Object.assign({ type }, M([u0, v0, u1, v1]))),
     canopies: S.canopies.map((c) => Object.assign({ id: c.id, name: c.name, h: c.h, roof: c.roof }, M(c.r))),
     props: S.props.map(([kind, u, v, a]) => ({ kind, x: U(u), z: V(v), a })),
     spawns: { alpha: M(S.spawns.alpha), bravo: M(S.spawns.bravo) }, objective: P(...S.objective), dom: S.dom.map((d) => P(...d)),
