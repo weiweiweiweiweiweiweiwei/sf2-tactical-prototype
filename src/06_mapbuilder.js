@@ -29,7 +29,7 @@ class MapBuilder {
     this.game = game; this.def = def; this.dry = dry;
     if (!dry) { this.scene = game.scene; this.col = game.collision; this.phys = game.physics; this.lib = game.app.mats; this.tf = game.app.tex; }
     this.radar = []; this.navChains = []; this.navExtra = []; this.navRegions = []; this.waypoints = []; this.zones = {}; this.ladders = []; this.objectives = {}; this.T = null;
-    this.batches = new Map(); this.shafts = []; this.lightCount = 0; this.animated = []; this.used = new Set();
+    this.batches = new Map(); this.shafts = []; this.lightCount = 0; this.animated = []; this.used = new Set(); this.mechs = []; // v46 mechs: map mechanisms (tick / interact / prompt / render / net)
     this.bounds = def.bounds;
   }
 

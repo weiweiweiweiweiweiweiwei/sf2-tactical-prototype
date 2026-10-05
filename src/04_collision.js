@@ -91,6 +91,15 @@ class CollisionWorld {
     return b;
   }
 
+  // v46 map mechanisms (Sky City trams / drawbridge): a box can be moved (re-indexed in the grid) or switched off
+  _cells(b, fn) { const c = this.cell; for (let ix = Math.floor(b.min.x / c); ix <= Math.floor(b.max.x / c); ix++) for (let iz = Math.floor(b.min.z / c); iz <= Math.floor(b.max.z / c); iz++) fn(this._key(ix, iz)); }
+  moveBox(b, dx, dy, dz) {
+    this._cells(b, (k) => { const l = this.grid.get(k); if (l) { const i = l.indexOf(b); if (i >= 0) l.splice(i, 1); } });
+    b.min.x += dx; b.min.y += dy; b.min.z += dz; b.max.x += dx; b.max.y += dy; b.max.z += dz;
+    this._cells(b, (k) => { let l = this.grid.get(k); if (!l) this.grid.set(k, l = []); l.push(b); });
+  }
+  setSolid(b, move, shot = move) { b.blocksMove = move; b.blocksShot = shot; }
+
   query(minX, minZ, maxX, maxZ, out) {
     const c = this.cell, s = ++this.stamp;
     out.length = 0;

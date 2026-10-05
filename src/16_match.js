@@ -49,6 +49,7 @@ class Match {
     await this.setupEnvironment();
     progress(0.56, '計算 Bot 導航網格'); await nextFrame();
     this.nav = new NavGraph(this.collision, this.builder, def);
+    for (const mc of this.builder.mechs) if (mc.initNav) mc.initNav(this.nav);
     // v5 patrol network: designer waypoints snapped onto reachable nav nodes (bots patrol these until they see / hear something)
     this.patrol = this.builder.waypoints.map((p) => this.nav.snap(p, 8)).filter((p) => { const n = this.nav.nearest(p, false); return n && n.p.distanceTo(p) < 3; });
     progress(0.7, '部署部隊'); await nextFrame();
@@ -567,6 +568,7 @@ class Match {
   // v30 host: a friend pressed E — the relic first, then the gun in front of him (same reach and preference as yours)
   netInteract(np) {
     if (!np.alive || !this.canMove()) return;
+    for (const mc of this.builder.mechs) if (mc.interact(np)) return; // v46 GO boxes first
     const st = this.rules.hudState ? this.rules.hudState() : null;
     if (st && st.kind === 'relic') { this.rules.interactPressed(np); }
     const ars = np.arsenal, f = np.lookDir(TMP_V1); let best = null, bs = Infinity;
@@ -641,6 +643,7 @@ class Match {
   // E key: relic first (Capture the Relic), then a gun under your nose, otherwise the mode's interaction.
   onInteract() {
     if (this.isClient) return; // v29/v30: the host decides pickups — the E press reaches it in our commands (Match.netInteract)
+    for (const mc of this.builder.mechs) if (mc.interact(this.player)) return; // v46 GO boxes (bridge / trams)
     const st = this.rules.hudState ? this.rules.hudState() : null;
     if (st && st.kind === 'relic' && st.prompt) { this.rules.interactPressed(this.player); return; }
     if (this.pickTarget) { this.pickup(this.pickTarget); return; }
@@ -764,6 +767,8 @@ class Match {
       for (const b of this.bots) b.fixedUpdate(h);
       const ms = []; for (const c of this.combatants) if (c.alive) ms.push(c.motor);
       for (let i = 0; i < ms.length; i++) for (let j = i + 1; j < ms.length; j++) CharacterMotor.separate(ms[i], ms[j]);
+      for (const mc of this.builder.mechs) mc.tick(h); // v46 trams / drawbridge carry whoever stands on them
+      if (!client && this.def.killY !== undefined) for (const c of this.combatants) if (c.alive && c.motor.pos.y < this.def.killY) { c.spawnProtect = 0; this.applyDamage(c, 999, 'legs', c, WEAPON_DEFS.fall, null, null, { fall: true }); } // fell off the map
       this.acc -= h; steps++;
     }
     if (steps >= 14) this.acc = 0;
@@ -802,6 +807,7 @@ class Match {
     this.physics.step(dt);
     this.effects.update(dt);
     for (const fn of this.builder.animated) fn(dt, this.time);
+    for (const mc of this.builder.mechs) mc.render(dt, alpha);
     for (const m of this.builder.shafts) m.uniforms.uTime.value = this.time;
     this.spotT -= dt; if (this.spotT <= 0) { this.spotT = 0.15; this.updateSpotting(); }
     this.soldierLOD();
@@ -830,6 +836,7 @@ class Match {
     const pickPrompt = this.updateDrops(dt), ost = this.rules.hudState();
     hud.objective(ost, this);
     if (pickPrompt && !(ost && ost.prompt && ost.kind === 'relic')) hud.interact(pickPrompt);
+    if (p.alive) for (const mc of this.builder.mechs) { const mp = mc.prompt(p); if (mp) hud.interact(mp); }
     hud.markers(this.rules.markers([]), this.camera);
     hud.scoreboard(input.down('Tab') ? this : null);
     hud.update(dt, this);

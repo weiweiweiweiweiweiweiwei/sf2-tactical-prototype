@@ -181,6 +181,7 @@ class NetHost {
     // v29: the mode's state (relic, zones …) 10× a second; each friend gets his own view (his capture progress)
     this.ruleT = (this.ruleT || 0) - dt;
     if (this.ruleT <= 0 && m.rules.netState) { this.ruleT = 0.1; for (const [peer, np] of this.peers) this.t.send(peer, { k: 'rs', s: m.rules.netState(np) }, false); }
+    if (m.builder.mechs.length && (this.mechT = (this.mechT || 0) - dt) <= 0) { this.mechT = 0.1; const s = m.builder.mechs[0].netState(); for (const [peer] of this.peers) this.t.send(peer, { k: 'mech', s }, false); } // v46 trams / drawbridge
     this.snapT -= dt; if (this.snapT > 0) return;
     this.snapT = Math.max(0, this.snapT + 1 / NET_SNAP_HZ); this.tick++;
     const ents = m.combatants.filter((c) => !c.removed).map((c) => netEntity(m, c)), shots = this.shots.splice(0);
@@ -288,6 +289,7 @@ class NetClient {
     else if (d.k === 'flash') { m.app.post.flash(d.s, 0.6 + 4.2 * d.s); m.audio.deafen(d.s * 0.9, 1 + 3 * d.s); }
     else if (d.k === 'roster') { if (d.add) this._ghost(d.add); if (d.remove) this._unghost(d.remove); }
     else if (d.k === 'round') { if (d.ev === 'start') m.clientRoundStart(d.n | 0); else if (d.ev === 'end') m.clientRoundEnd(d.w === 'alpha' || d.w === 'bravo' ? d.w : null, String(d.why || '').slice(0, 30)); }
+    else if (d.k === 'mech') { const mc = m.builder.mechs[0]; if (mc) mc.applyNet(d.s); } // v46 trams / drawbridge
     else if (d.k === 'nade') m.clientNade(d);
     else if (d.k === 'boom') m.clientBoom(d);
     else if (d.k === 'drop') m.clientDrop(d);
