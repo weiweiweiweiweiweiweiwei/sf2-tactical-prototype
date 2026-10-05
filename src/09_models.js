@@ -305,7 +305,7 @@ class WeaponModels {
     for (const p of G.parts) {
       if ((p.node === 'supp' && !sup) || (p.node === 'hider' && sup)) continue;
       const node = p.node === 'mag' || p.node === 'charge' ? p.node : 'body';
-      if (p.mat === 'lens') { gb.extra.push({ geo: p.geo.clone(), mat: M.lens, node, noAO: true, order: 3 }); continue; }
+      if (p.mat === 'lens') continue; // v45: no tinted glass layer — SF2's holo window is clean
       gb.add(p.geo.clone(), MAT[p.mat] || M.gold, node);
     }
     const K = G.marks, sightY = K.SIGHT.y, mz = sup ? K.MUZZLE_S : K.MUZZLE, gu = K.GRIP ? -K.GRIP.z : 0.078, su = K.SUPPORT ? -K.SUPPORT.z : 0.3, sv = K.SUPPORT ? K.SUPPORT.y : -0.028;
@@ -313,7 +313,7 @@ class WeaponModels {
     this.arm(gb, [-0.038, sv - 0.032, -su], [-0.3, -0.3, -su + 0.3], 0.033); this.supportHand(gb, 0, sv + 0.028, su, 0.046);
     const b = gb.build();
     // SF2 EOTech ADS: the eye sits a few cm behind the hood so its gold rim frames the view (adsPos.z puts the hood rear at EYE)
-    const EYE = 0.07, hoodU = K.HOOD ? -K.HOOD.z : -K.SIGHT.z - 0.025;
+    const EYE = 0.08, hoodU = K.HOOD ? -K.HOOD.z : -K.SIGHT.z - 0.025;
     const vm = this._finish(b, { muzzleU: -mz.z, sightY, hipPos: [0.14, -0.175, -0.36], adsPos: [0, -sightY, hoodU - EYE], flash: sup ? 0.08 : 0.2, reticle: true, reticleScale: 0.75 });
     vm.eyeRelief = 0.03; return vm;
   }
@@ -568,7 +568,7 @@ class WeaponModels {
     if (type === 'he') {
       const s = new THREE.SphereGeometry(0.033, 18, 14); s.scale(1, 1.12, 1); gb.add(s, M.greenPaint, 'nade');
       gb.cyl(0.012, 0.012, 0.016, 0, 0.04, 0, M.bright, 'nade', 12);
-    } else if (type === 'flash') {
+    } else if (type === 'smoke') { // v45: models swapped — the glowing white band reads as a flashbang, so it went to the flash
       gb.add(new THREE.CylinderGeometry(0.022, 0.022, 0.1, 16), M.grayPaint, 'nade');
       for (let i = 0; i < 8; i++) { const a = (i / 8) * Math.PI * 2; gb.box(0.006, 0.02, 0.006, Math.cos(a) * 0.022, 0.01, Math.sin(a) * 0.022, M.rubber, 'nade'); }
       gb.cyl(0.012, 0.012, 0.016, 0, 0.056, 0, M.bright, 'nade', 12);

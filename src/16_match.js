@@ -16,7 +16,7 @@ class Match {
     this.stats = { shots: 0, hits: 0 }; this.firstBlood = true; this.acc = 0; this.spotT = 0; this.freezeT = 0; this.roundEndT = 0;
     this.grenades = []; this.combatants = []; this.bots = []; this.timers = [];
     this.rec = { frames: [], shots: [], last: -9 }; this.kc = null; // v13 killcam
-    this.loadoutIndex = clamp(config.loadout | 0, 0, 4); this.nextSpawnLoadoutIndex = null; this.lastHitSnd = 0;
+    this.loadoutIndex = clamp(config.loadout | 0, 0, LOADOUT_KEYS.length - 1); this.nextSpawnLoadoutIndex = null; this.lastHitSnd = 0;
     this.intel = { alpha: new TeamIntel(this.def.bounds), bravo: new TeamIntel(this.def.bounds) };
     this.drops = []; this.dropSeq = 0; this.pickTarget = null;
     this.net = null; this.humans = []; this.netSeq = 0; // v25: NetHost / NetClient session, remote humans (host)
@@ -531,14 +531,14 @@ class Match {
 
   emitNoise(pos, radius, team, kind = 'noise') { for (const b of this.bots) if (b.alive && b.team !== team) b.ai.hear(pos, radius, kind); }
 
-  // F1–F5: queue a loadout for the NEXT respawn (the current kit is not touched).
+  // F1–F3: queue a loadout for the NEXT respawn (the current kit is not touched); the three sets pop up mid-screen like SF2.
   queueLoadout(i) {
-    if (i < 0 || i > 4) return;
+    if (i < 0 || i >= LOADOUT_KEYS.length) return;
     this.nextSpawnLoadoutIndex = i === this.loadoutIndex ? null : i;
     const L = Settings.data.loadouts[i];
     if (this.isClient) this.net.queueLoadout(L); // the host builds the same kit for our soldier at the next respawn
     this.audio.mech('queue');
-    this.app.hud.toast(i === this.loadoutIndex ? `配裝 ${LOADOUT_KEYS[i]} 已在使用中` : `配裝 ${LOADOUT_KEYS[i]}（${WEAPON_DEFS[L.primary].name} + ${WEAPON_DEFS[L.secondary].name}）已排入，下次重生時套用`);
+    this.app.showLoadoutPicker(i, this.loadoutIndex);
   }
 
   /* ------------------------------ weapon drops / pickups ------------------------------ */

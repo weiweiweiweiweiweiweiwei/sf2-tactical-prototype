@@ -62,13 +62,13 @@ const WEAPON_DATABASE = {
   g36c: {
     name: 'G36C 黃金 消音', type: 'assault', slot: 'primary', damageNear: 25, damageFar: 19, falloffStart: 25, falloffEnd: 60, fireRate: 0.08,
     recoilPitch: 0.011, recoilYaw: 0.012, recoilRecovery: 10,
-    hipSpread: 0.07, adsSpread: 0.0018, adsFov: 42, vmAdsFov: 20, adsVertical: 0.075, adsType: 'red_dot', mobility: 0.95, maxAmmo: 30, reloadTime: 2.0, modelUrl: null,
+    hipSpread: 0.07, adsSpread: 0.0018, adsFov: 42, vmAdsFov: 17, adsVertical: 0.075, adsType: 'red_dot', mobility: 0.95, maxAmmo: 30, reloadTime: 2.0, modelUrl: null,
     model: 'g36c', sound: 'g36s', suppressed: true, tracerEvery: 0, penetration: 1, desc: 'EOTech 全息瞄具 + 消音器，槍聲小、不暴露雷達。',
   },
   g36c_gold: { // v45: the same gold G36C (Blender model) with the G36 four-prong flash hider instead of the can
     name: 'G36C 黃金', type: 'assault', slot: 'primary', damageNear: 25, damageFar: 19, falloffStart: 25, falloffEnd: 60, fireRate: 0.08,
     recoilPitch: 0.011, recoilYaw: 0.012, recoilRecovery: 10,
-    hipSpread: 0.07, adsSpread: 0.0018, adsFov: 42, vmAdsFov: 20, adsVertical: 0.075, adsType: 'red_dot', mobility: 0.95, maxAmmo: 30, reloadTime: 2.0, modelUrl: null,
+    hipSpread: 0.07, adsSpread: 0.0018, adsFov: 42, vmAdsFov: 17, adsVertical: 0.075, adsType: 'red_dot', mobility: 0.95, maxAmmo: 30, reloadTime: 2.0, modelUrl: null,
     model: 'g36c', sound: 'm4', rate: 1.07, tracerEvery: 2, penetration: 1, desc: 'EOTech 全息瞄具 + 四叉消焰器，5.56 清脆槍聲，開火會上敵方雷達。',
   },
   mp5: {
@@ -409,8 +409,8 @@ Object.assign(WEAPON_DEFS, {
   },
   fall: { id: 'fall', name: '墜落', kind: 'fall', headMult: 1, falloff: 1 },
   grab: { id: 'grab', name: '擒拿', kind: 'grab', damage: 78, killRange: 1.15, range: 1.9, headMult: 1, falloff: 1 },
-  he: { id: 'he', name: '手榴彈', kind: 'grenade', gtype: 'he', model: 'he', count: 1, fuse: 2.6, damage: 130, radius: 9, lethal: 1.4, moveSpeed: 6.0, adsMove: 1, falloff: 1 },
-  flash: { id: 'flash', name: '閃光彈', kind: 'grenade', gtype: 'flash', model: 'flash', count: 2, fuse: 1.9, radius: 24, moveSpeed: 6.0, adsMove: 1, falloff: 1 },
+  he: { id: 'he', name: '手榴彈', kind: 'grenade', gtype: 'he', model: 'he', count: 2, fuse: 2.6, damage: 130, radius: 9, lethal: 1.4, moveSpeed: 6.0, adsMove: 1, falloff: 1 },
+  flash: { id: 'flash', name: '閃光彈', kind: 'grenade', gtype: 'flash', model: 'flash', count: 1, fuse: 1.9, radius: 24, moveSpeed: 6.0, adsMove: 1, falloff: 1 },
   smoke: { id: 'smoke', name: '煙霧彈', kind: 'grenade', gtype: 'smoke', model: 'smoke', count: 1, fuse: 1.8, duration: 17, moveSpeed: 6.0, adsMove: 1, falloff: 1 },
 });
 const PRIMARY_IDS = Object.keys(WEAPON_DATABASE).filter((k) => WEAPON_DATABASE[k].slot === 'primary');
@@ -497,14 +497,13 @@ const DEFAULT_LOADOUTS = [
   { name: '突擊兵', primary: 'm4a1', secondary: 'p226' },
   { name: '狙擊手', primary: 'cheytac_m200', secondary: 'deagle' },
   { name: '突破手', primary: 'p90', secondary: 'p226' },
-  { name: '近戰專家', primary: 'remington870', secondary: 'deagle' },
-  { name: '火力支援', primary: 'm249', secondary: 'p226' },
 ];
 
-const LOADOUT_KEYS = 'ABCDE'; // v24: the 5 loadout sets are letters (SF2 armory tabs), no names; F1–F5 queue them in a match
+const STAR_BADGE = '<svg viewBox="0 0 24 24"><defs><linearGradient id="sbg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff3b0"/><stop offset=".55" stop-color="#f5c542"/><stop offset="1" stop-color="#b8801a"/></linearGradient></defs><circle cx="12" cy="12" r="11" fill="#2a1d05" stroke="#e6b23a" stroke-width="1.4"/><path d="M12 3.6l2.5 5.3 5.8.7-4.3 4 1.1 5.7L12 16.5l-5.1 2.8 1.1-5.7-4.3-4 5.8-.7z" fill="url(#sbg)" stroke="#fff2b8" stroke-width=".5"/></svg>'; // v45 host badge
+const LOADOUT_KEYS = 'ABC'; // v45: three loadout sets A–C (SF2 armory tabs), F1–F3 queue them in a match
 
 const MODES = {
-  general: { name: '一般模式', desc: '配裝主武器 + 副武器 + 刀 + 三種投擲物', slots: ['primary', 'secondary', 'knife', 'he', 'flash', 'smoke'] },
+  general: { name: '一般模式', desc: '配裝主武器 + 副武器 + 刀 + 三種投擲物', slots: ['primary', 'secondary', 'knife', 'he', 'smoke', 'flash'] }, // v45 wheel order: gun, pistol, knife, HE ×2, smoke, flash
   rifle: { name: '步槍戰', desc: '只能使用步槍 / 衝鋒槍 / 機槍與刀', slots: ['primary', 'knife'], primaryFilter: ['rifle', 'smg', 'lmg'], fallback: 'm4a1' },
   sniper: { name: '狙擊戰', desc: '全員狙擊槍（配裝的主武器若不是狙擊槍則用 CheyTac）+ 刀', slots: ['primary', 'knife'], primaryFilter: ['sniper'], fallback: 'cheytac_m200' },
   pistol: { name: '小槍戰', desc: '全員只能拿配裝的副武器（手槍）', slots: ['secondary'] },
@@ -538,7 +537,7 @@ const TIPS = [
   '衝刺中按 C / Ctrl 滑鏟：約 0.7 秒的加速低姿滑行，A / D 可微調方向，滑鏟中跳躍能保留速度。',
   '狙擊鏡：站定開鏡 100% 精準；移動中開鏡會像 CS 一樣失準，先急停再開槍。',
   '剛重生有 3.5 秒無敵保護，開槍會立即解除保護。',
-  '對戰中按 F1–F5 預約配裝，下次重生時才會換上。',
+  '對戰中按 F1–F3 預約配裝，下次重生時才會換上。',
   '佔領戰：站進據點圈內按住 E 6 秒；三點全佔，敵方連擊殺都無法得分！',
   '奪取戰：靠近山丘上的聖物按 E 拿起，扛回藍隊撤離點即贏得回合。',
   '走到梯子前按 W 往上爬、S 往下，SPACE 跳離梯子。',
@@ -618,10 +617,10 @@ const Settings = {
       if (s) {
         const lobby = Object.assign({}, this.data.lobby, s.lobby || {});
         lobby.ruleCfg = Object.assign({}, this.data.lobby.ruleCfg, (s.lobby && s.lobby.ruleCfg) || {});
-        lobby.opts = Object.assign({ pickup: true, killcam: true, ff: false }, lobby.opts); lobby.enemies = lobby.allies = Math.max(lobby.allies | 0, 1); // v45 room: N vs N
+        lobby.opts = Object.assign({ pickup: true, killcam: true, ff: false }, lobby.opts); if (lobby.loadout > 2) lobby.loadout = 0; lobby.enemies = lobby.allies = Math.max(lobby.allies | 0, 1); // v45 room: N vs N
         if (!RULES[lobby.rule]) lobby.rule = 'tdm';
         for (const [k, r] of Object.entries(RULES)) { const c = lobby.ruleCfg[k]; if (!c || !r.targets.includes(c.target) || !r.times.includes(c.time)) lobby.ruleCfg[k] = Object.assign({}, r.def); }
-        const loadouts = Array.isArray(s.loadouts) && s.loadouts.length === 5 ? s.loadouts : this.data.loadouts;
+        const loadouts = Array.isArray(s.loadouts) && s.loadouts.length >= 3 ? s.loadouts.slice(0, 3) : this.data.loadouts; // v45: 5 sets → 3
         Object.assign(this.data, s); this.data.lobby = lobby; this.data.loadouts = loadouts;
         for (const l of this.data.loadouts) { if (!WEAPON_DATABASE[l.primary] || WEAPON_DATABASE[l.primary].slot !== 'primary') l.primary = 'm4a1'; if (!WEAPON_DATABASE[l.secondary] || WEAPON_DATABASE[l.secondary].slot !== 'secondary') l.secondary = 'p226'; }
         const used = new Set(); // v45: a primary can sit in one set only — later duplicates take the first free gun

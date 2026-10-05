@@ -256,7 +256,7 @@ cyl('bulletTip', 0.0045, 0.0012, 0.05, 0.062, v=-0.0335, node='mag', mat='brass'
 
 # =============================================================================================== EOTech 552 (gold) on the bridge rail
 EU0 = -0.078                       # rear of the sight base
-WW, WH, HL, T = 0.034, 0.026, 0.05, 0.003
+WW, WH, HL, T = 0.034, 0.026, 0.032, 0.003   # v45: shallow hood — SF2's EOTech view is a thin gold frame, not a tunnel
 H0 = EU0 + 0.016                   # hood rear
 WC = RT + 0.0215 + WH / 2          # window centre = sight axis
 box('eoBase', -0.017, 0.017, EU0, EU0 + 0.128, RT, RT + 0.012, mat='goldDark', bev=0.002)
@@ -270,8 +270,8 @@ box('eoRearPanel', -0.016, 0.016, EU0 - 0.002, H0 + 0.002, RT + 0.006, RT + 0.01
 for uu in (-0.0065, 0.0065): box('eoButton', uu - 0.0042, uu + 0.0042, EU0 - 0.0055, EU0 - 0.001, RT + 0.009, RT + 0.017, mat='rubber', bev=0.0012)
 lathe('eoBattery', [(0.0, 0), (0.0105, 0), (0.0105, 0.036), (0.0, 0.036)], mat='gold', seg=24)
 bat = PARTS[-1][0]
-for vt in bat.data.vertices: X, Y, Z = vt.co; vt.co = (Y - 0.018, EU0 + 0.108 + X, RT + 0.0075 + Z)
-for sx in (-1, 1): cyl('eoBatCap', 0.0112, 0.0112, sx * 0.018, sx * 0.0215, x=EU0 + 0.108, v=RT + 0.0075, mat="black", seg=24, axis="X")
+for vt in bat.data.vertices: X, Y, Z = vt.co; vt.co = (Y - 0.018, EU0 + 0.108 + X, RT + 0.003 + Z)
+for sx in (-1, 1): cyl('eoBatCap', 0.0112, 0.0112, sx * 0.018, sx * 0.0215, x=EU0 + 0.108, v=RT + 0.003, mat="black", seg=24, axis="X")
 # hood: two side walls, the roof (front edge chamfered down), ribs; window frame bars and the holographic glass
 for sx in (-1, 1):
     prof('eoHoodSide', [(H0, RT + 0.012), (H0 + HL, RT + 0.012), (H0 + HL, WC + WH / 2 - 0.004), (H0 + HL - 0.008, WC + WH / 2 + T), (H0, WC + WH / 2 + T)], T, x=sx * (WW / 2 + T / 2), mat='gold', bev=0.0011)

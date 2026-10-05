@@ -260,7 +260,7 @@ class App {
   /* ------------------------------ v31 chat: room panel + in-match (Enter) ------------------------------ */
   buildChat() {
     const $ = this.$;
-    this.chatTeam = false; this.chatOpen = false;
+    this.chatTeam = true; this.chatOpen = false; // v45: team chat by default
     const send = (inp, team) => { const r = this.room; if (r && inp.value.trim() && r.say(inp.value, team)) inp.value = ''; };
     const li = $('lbChatIn');
     li.onkeydown = (e) => { e.stopPropagation(); if (e.key === 'Enter') send(li, this.chatTeam); else if (e.key === 'Tab') { e.preventDefault(); this.setChatTeam(!this.chatTeam); } };
@@ -275,7 +275,7 @@ class App {
     };
     gi.onkeyup = (e) => e.stopPropagation();
     li.onkeyup = (e) => e.stopPropagation();
-    this.setChatTeam(false);
+    this.setChatTeam(true);
   }
   setChatTeam(on) { this.chatTeam = !!on; for (const id of ['lbChatMode', 'chatMode']) { const b = this.$(id); b.textContent = on ? '隊伍' : '全體'; b.classList.toggle('team', on); } }
   _chatLine(m) {
@@ -287,7 +287,7 @@ class App {
   renderChat() {
     const r = this.room, log = this.$('lbChatLog'), on = !!(r && r.online);
     log.replaceChildren(...(r ? r.chat : []).slice(-40).map((m) => this._chatLine(m)));
-    if (!log.children.length) { const e = document.createElement('div'); e.className = 'cl sys'; e.textContent = on ? '房間裡的人都看得到這裡的訊息 · 對戰中按 Enter 聊天' : '朋友進房後就能在這裡聊天'; log.append(e); }
+    if (false && !log.children.length) { /* v45: no grey helper line in the chat */ const e = document.createElement('div'); e.className = 'cl sys'; e.textContent = on ? '房間裡的人都看得到這裡的訊息 · 對戰中按 Enter 聊天' : '朋友進房後就能在這裡聊天'; log.append(e); }
     log.scrollTop = log.scrollHeight; this.$('lbChatIn').disabled = !on;
   }
   onChat(r, m) {
@@ -419,6 +419,7 @@ class App {
   }
 
   /* ------------------------------ lobby ------------------------------ */
+  // (STAR_BADGE: the host's five-point star medal, inline SVG)
   buildLobby() {
     const L = Settings.data.lobby, $ = this.$;
     this.dry = MAPS.map((def) => { const b = new MapBuilder(null, def, true); def.build(b); return b; });
@@ -433,7 +434,10 @@ class App {
       const el = $(id); el.innerHTML = '';
       for (const [val, label] of items) { const b = document.createElement('button'); b.textContent = label; b.dataset.v = val; b.onclick = () => { if (key !== 'loadout' && this.isGuest()) return; L[key] = typeof L[key] === 'number' ? Number(val) : val; if (after) after(); this.audio.init(); this.audio.uiClick(); this.refreshLobby(); }; el.appendChild(b); }
     };
-    pills('lbDiff', DIFFICULTY.map((d, i) => [i, d.name]), 'difficulty');
+    document.querySelectorAll('#lobby .stepper button').forEach((b) => b.onclick = (e) => {
+      e.stopPropagation(); if (this.isGuest()) return;
+      const k = b.dataset.step; L[k] = clamp(L[k] + Number(b.dataset.d), 1, 12); this.audio.init(); this.audio.uiClick(); this.refreshLobby();
+    });
     // v45 SF2 待機室: map picker pop-up, room 設置 pop-up (pickup / killcam / friendly fire / bot difficulty), dropdowns close on any outside click
     const modal = (id, on) => { $(id).classList.toggle('on', on); if (on) { this.audio.init(); this.audio.uiClick(); } };
     $('lbMapOpen').onclick = () => { if (!this.isGuest()) modal('lbMapModal', true); };
@@ -442,7 +446,7 @@ class App {
     for (const [id, k] of [['optPickup', 'pickup'], ['optKillcam', 'killcam'], ['optFF', 'ff']]) $(id).onchange = () => { if (this.isGuest()) return; L.opts[k] = $(id).checked; this.audio.uiClick(); this.refreshLobby(); };
     document.addEventListener('click', () => document.querySelectorAll('#lobby .dd.open').forEach((d) => d.classList.remove('open')));
     // F5 = 開始 (the browser refresh is swallowed while the room is open)
-    addEventListener('keydown', (e) => { if (e.code === 'F5' && (this.state === 'lobby' || this.state === 'countdown')) { e.preventDefault(); if (this.state === 'lobby' && !$('lbMapModal').classList.contains('on')) this.beginCountdown(); } });
+    addEventListener('keydown', (e) => { if (e.code === 'F5' && (this.state === 'lobby' || this.state === 'countdown')) { e.preventDefault(); if (e.repeat) return; if (this.state === 'countdown') this.cancelCountdown(); else if (!$('lbMapModal').classList.contains('on')) this.beginCountdown(); } });
     pills('lbLoadout', Settings.data.loadouts.map((l, i) => [i, LOADOUT_KEYS[i]]), 'loadout');
     $('lbWarehouse').onclick = () => this.openWarehouse(); $('lbWh').onclick = () => this.openWarehouse();
     $('whClose').onclick = () => this.closeWarehouse();
@@ -482,15 +486,14 @@ class App {
     $('lobby').classList.toggle('guest', guest);
     drawMapPreview($('lbMapBig'), def, this.dry[L.map]);
     if (guest && this.warmMap !== L.map) { this.warmMap = L.map; this.warm(L.map); } // the host picked another map: prefetch it
-    $('lbMapName').textContent = `${def.name} · ${def.en}`; $('lbMapDesc').textContent = def.desc;
+    $('lbMapName').textContent = `${def.name} · ${def.en}`;
     [...$('lbMaps').children].forEach((b, i) => b.classList.toggle('on', i === L.map));
     const mark = (id, val) => [...$(id).children].forEach((b) => b.classList.toggle('on', String(b.dataset.v) === String(val)));
-    mark('lbDiff', L.difficulty); mark('lbLoadout', L.loadout);
+    mark('lbLoadout', L.loadout);
     const rc = L.ruleCfg[L.rule] || (L.ruleCfg[L.rule] = Object.assign({}, R.def)), roundsLike = R.timeUnit === 'sec';
     if (!R.targets.includes(rc.target)) rc.target = R.def.target;
     rc.time = R.def.time; // v45: no time option — score modes are untimed, round modes cap each round at 10 minutes
     $('lbTitle').textContent = `${R.name} - ${def.name}`;
-    $('lbModeDesc').textContent = `${MODES[L.mode].desc} · ${R.desc}${roundsLike ? ' · 每回合上限 10 分鐘' : ' · 無時間限制'}`;
     const opts = L.opts || (L.opts = { pickup: true, killcam: true, ff: false });
     $('optPickup').checked = opts.pickup !== false; $('optKillcam').checked = opts.killcam !== false; $('optFF').checked = !!opts.ff;
     // the six SF2 room settings: map · win condition · weapon mode | game mode · N vs N · 設置
@@ -502,7 +505,8 @@ class App {
     this._dd('ddRule', '模式', R.name, Object.entries(RULES).map(([k, r]) => [k, r.name]), (v) => {
       if (!host()) return; L.rule = v; if (!L.ruleCfg[v]) L.ruleCfg[v] = Object.assign({}, RULES[v].def); this.refreshLobby();
     }, L.rule);
-    this._dd('ddSize', '人數', `${L.allies} vs ${L.allies}`, Array.from({ length: 12 }, (_, i) => [i + 1, `${i + 1} vs ${i + 1}`]), (v) => { if (host()) { L.allies = L.enemies = +v; this.refreshLobby(); } }, L.allies);
+    this._dd('ddDiff', '難易度', DIFFICULTY[L.difficulty].name, DIFFICULTY.map((d, i) => [i, d.name]), (v) => { if (host()) { L.difficulty = +v; this.refreshLobby(); } }, L.difficulty);
+    $('lbAllies').textContent = L.allies; $('lbEnemies').textContent = L.enemies;
     this._dd('ddOpts', '進階', '設置', null, () => { if (host()) { $('lbOptModal').classList.add('on'); this.audio.uiClick(); } });
     const lo = Settings.data.loadouts[L.loadout];
     $('lbLoadoutInfo').textContent = `配裝 ${LOADOUT_KEYS[L.loadout]}：${WEAPON_DEFS[lo.primary].name} + ${WEAPON_DEFS[lo.secondary].name}`;
@@ -550,7 +554,7 @@ class App {
     const r = this.lbR, cam = this.lbCam, cv = this.$('lbCharCv'), w = cv.clientWidth, h = cv.clientHeight;
     if (!w || !h) return;
     if (cv.width !== Math.round(w * r.getPixelRatio()) || cv.height !== Math.round(h * r.getPixelRatio())) r.setSize(w, h, false);
-    cam.aspect = w / h; cam.position.set(0, 0.9, 7.1); cam.lookAt(0, 0.38, 0); cam.updateProjectionMatrix(); // feet clear of the chat panel
+    cam.aspect = w / h; cam.position.set(0, 1.0, 5.3); cam.lookAt(0, 0.86, 0); cam.updateProjectionMatrix(); // full figure; the translucent chat covers the legs
     this.lbT += dt; this.lbSoldier.root.rotation.y = Math.PI + 0.55 + Math.sin(this.lbT * 0.4) * 0.35;
     r.render(this.lbScene, cam);
   }
@@ -566,12 +570,12 @@ class App {
         const li = document.createElement('li'), h = hs[i];
         if (h) {
           const me = h.id === myId; li.className = 'human' + (me ? ' you' : '');
-          li.innerHTML = `<span class="n">${i + 1}</span><span class="rank">${h.host ? '★' : 'P'}</span><span class="nm">${esc(h.name)}${me ? '<em>（你）</em>' : ''}</span><span class="st ${h.host ? 'host' : h.st}">${h.host ? 'HOST' : ROOM_ST[h.st] || 'READY'}</span>`;
-        } else if (i < n) { li.className = 'bot'; li.innerHTML = `<span class="n">${i + 1}</span><span class="rank">AI</span><span class="nm">${names[(i - hs.length) % names.length]}</span><span class="st">BOT</span>`; }
-        else { li.className = 'empty'; li.innerHTML = `<span class="n">${i + 1}</span><span class="nm">— 空位 —</span>`; }
+          li.innerHTML = `<span class="n">${i + 1}</span><span class="rank">${h.host ? STAR_BADGE : 'P'}</span><span class="nm">${esc(h.name)}</span>${h.host || !ROOM_ST[h.st] ? '' : `<span class="st ${h.st}">${ROOM_ST[h.st]}</span>`}`;
+        } else if (i < n) { li.className = 'bot'; li.innerHTML = `<span class="n">${i + 1}</span><span class="rank">AI</span><span class="nm">${names[(i - hs.length) % names.length]}</span>`; }
+        else { li.className = 'empty'; li.innerHTML = `<span class="n">${i + 1}</span>`; }
         ol.appendChild(li);
       }
-      $(lbl).textContent = `${hs.length} 位玩家 · ${n - hs.length} 個 Bot`;
+      void lbl;
       $(sw).style.display = canSwitch && r.team !== team ? '' : 'none';
     }
   }
@@ -586,13 +590,13 @@ class App {
       else st = r.phase === 'playing' ? '對戰進行中' : r.members.length > 1 ? `${r.members.length} 人在房間` : '等待朋友加入';
     }
     if (this.state === 'countdown') st = '準備出發';
-    $('lbCodeTxt').textContent = code || '——— ———'; $('lbRoomName').textContent = name; $('lbStatus').textContent = st;
+    $('lbCodeTxt').textContent = code || '——— ———'; void name; void st;
     $('lbInvite').disabled = !(r && r.online && code);
     $('lbInvCode').textContent = code; $('lbInvLinkTxt').value = r ? inviteLink(r.code) : '';
     $('lbPub').checked = !!(r && r.pub); $('lbPubRow').style.display = r && r.role === 'host' ? '' : 'none';
     const sb = $('lbStart'); let txt = '開始 (F5)', off = false, msg = '';
     if (guest) { if (r.phase === 'playing' && r.mcfg) txt = '加入對戰 (F5)'; else { txt = '等待房主開始'; off = true; msg = r.entered ? '地圖和模式由房主設定 · 你可以選擇隊伍和配裝' : ''; } }
-    sb.textContent = txt; sb.disabled = off; sb.classList.toggle('wait', off); $('lbMsg').textContent = msg;
+    sb.textContent = txt; sb.disabled = off; sb.classList.toggle('wait', off); void msg;
     this.renderFriends(); // invite buttons depend on our room
   }
 
@@ -606,7 +610,7 @@ class App {
     this.state = 'countdown'; this.countT = 3;
     const def = MAPS[Settings.data.lobby.map];
     this.$('lbCountMap').textContent = `${def.name} · ${MODES[Settings.data.lobby.mode].name} · ${RULES[Settings.data.lobby.rule].name}`;
-    this.$('lbCount').classList.add('on'); this.$('lbStatus').textContent = '準備出發';
+    this.$('lbCount').classList.add('on');
     this._showCount(3);
   }
   _showCount(n) { const el = this.$('lbCountNum'); el.textContent = n; el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop'); this.audio.uiClick(); }
@@ -759,7 +763,7 @@ class App {
         if (this.$('lbInvPop').classList.contains('on')) { this.invite(false); return; }
         if (this.$('friends').classList.contains('on')) { this.friendsPanel(false); return; }
       }
-      const fk = /^F([1-5])$/.exec(code);
+      const fk = /^F([1-3])$/.exec(code);
       if (fk && m && (this.state === 'playing' || this.state === 'paused')) { m.queueLoadout(parseInt(fk[1], 10) - 1); return; } // works while dead too
       if (this.state === 'playing' && m && (code === 'Enter' || code === 'NumpadEnter') && this.room && this.room.online) { this.openChat(false); return; } // v31: chat (Tab in the box: team only)
       if (this.state !== 'playing' || !m || !m.player.alive) return;
@@ -885,6 +889,21 @@ class App {
     if (this.$('warehouse').classList.contains('on')) this.renderWarehouse();
   }
 
+  // v45 F1–F3: the three sets as cards in the middle of the screen (SF2), the picked one lit; fades out after ~2 s
+  showLoadoutPicker(pick, cur) {
+    const el = this.$('loPick'), LO = Settings.data.loadouts;
+    if (!this.whR) this._initPreview();
+    this._makeThumbs([...LO.flatMap((l) => [l.primary, l.secondary]), 'he', 'smoke', 'flash']);
+    const img = (id) => { const src = (this.thumbs && this.thumbs[id]) || WEAPON_ICONS[id] || ''; return src ? `<img src="${src}" alt="">` : ''; };
+    el.innerHTML = LO.map((l, i) => `<div class="lp${i === pick ? ' on' : ''}${i === cur ? ' cur' : ''}">
+      <div class="g p">${img(l.primary)}<span>${WEAPON_DEFS[l.primary].name}</span></div>
+      <div class="g s">${img(l.secondary)}<span>${WEAPON_DEFS[l.secondary].name}</span></div>
+      <div class="n">${['he', 'smoke', 'flash'].map((g) => `<div>${img(g)}<span>${WEAPON_DEFS[g].name}</span></div>`).join('')}</div>
+      <b>${LOADOUT_KEYS[i]} TYPE</b><small>${i === cur ? '使用中' : i === pick ? '下次重生換上' : `F${i + 1}`}</small></div>`).join('');
+    el.classList.remove('fade'); el.classList.add('on'); void el.offsetWidth;
+    clearTimeout(this.loPickT); this.loPickT = setTimeout(() => el.classList.add('fade'), 1700);
+  }
+
   /* ------------------------------ warehouse (loadouts) ------------------------------ */
   // v24: the armory is its own page — the room screen is hidden while it is open (it was a pop-up over the room).
   openWarehouse() {
@@ -971,7 +990,7 @@ class App {
   }
   renderWarehouse() {
     const $ = this.$, W = this.wh, LO = Settings.data.loadouts, L = Settings.data.lobby, lo = LO[W.slot];
-    // loadout sets A–E (no names)
+    // loadout sets A–C (no names)
     $('whSets').innerHTML = LO.map((_, i) => `<button data-i="${i}" class="${i === W.slot ? 'on' : ''}" title="對戰中按 F${i + 1}">${LOADOUT_KEYS[i]}</button>`).join('');
     [...$('whSets').children].forEach((b) => { b.onclick = () => { W.slot = +b.dataset.i; L.loadout = W.slot; W.sel = LO[W.slot][W.cat]; W.page = -1; Settings.save(); this.audio.uiClick(); this.renderWarehouse(); }; });
     $('whSetBig').textContent = LOADOUT_KEYS[W.slot]; $('whSetLine').textContent = `${WEAPON_DEFS[lo.primary].name} + ${WEAPON_DEFS[lo.secondary].name}`;
@@ -1000,7 +1019,7 @@ class App {
     for (let k = 0; k < PER; k++) {
       const id = page[k], c = document.createElement('button');
       if (!id) { c.className = 'whGun empty'; c.disabled = true; list.appendChild(c); continue; }
-      const inSet = LO.findIndex((l) => l[W.cat] === id); // v45: a primary shows 裝備中 whichever set (A–E) carries it
+      const inSet = LO.findIndex((l) => l[W.cat] === id); // v45: a primary shows 裝備中 whichever set (A–C) carries it
       c.className = 'whGun' + (inSet >= 0 && (W.cat === 'primary' || inSet === W.slot) ? ' eq' : '') + (W.sel === id ? ' sel' : ''); c.dataset.id = id;
       if (inSet >= 0) c.dataset.eq = LOADOUT_KEYS[inSet];
       const th = this.thumbs && this.thumbs[id] ? `<img src="${this.thumbs[id]}" alt="">` : WEAPON_ICONS[id] ? `<img class="ln" src="${WEAPON_ICONS[id]}" alt="">` : '';

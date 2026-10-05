@@ -227,7 +227,10 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
 .lb-char{position:relative;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:radial-gradient(ellipse at 50% 35%,rgba(90,110,130,.35),rgba(0,0,0,.5) 70%),linear-gradient(180deg,#1b232b,#0c1014)}
 .lb-char canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
 .lb-me{position:absolute;left:14px;top:12px;text-shadow:0 1px 3px #000}.lb-me b{display:block;font-size:20px;color:var(--gold);letter-spacing:1px}.lb-me span{font-size:13px;color:var(--dim)}
-.lb-char .lb-chat{position:absolute;left:0;right:0;bottom:0;height:300px;background:rgba(6,10,14,.55);backdrop-filter:blur(3px);border:0;border-top:1px solid rgba(255,255,255,.08);border-radius:0}
+.lb-char .lb-chat{position:absolute;left:0;right:0;bottom:0;height:300px;background:linear-gradient(180deg,rgba(6,10,14,0),rgba(6,10,14,.42) 22%,rgba(6,10,14,.6));border:0;border-radius:0;padding-top:40px}
+.team-col li.empty{border:0;border-bottom:1px solid rgba(255,255,255,.05);border-radius:0;background:rgba(255,255,255,.012)}
+.team-col li .rank svg{width:20px;height:20px;display:block;filter:drop-shadow(0 0 3px rgba(255,200,60,.6))}
+.team-col header .stepper{margin-left:auto}.team-col header span:empty{display:none}
 .lb-right{display:flex;flex-direction:column;gap:10px;min-width:0;height:782px}
 .lb-roomhd{display:flex;align-items:baseline;gap:14px;padding:8px 14px;background:linear-gradient(90deg,rgba(255,200,80,.18),transparent 70%);border-left:3px solid var(--gold);border-radius:3px}
 .lb-roomhd b{font-size:19px;letter-spacing:2px;color:#ffe7a0;white-space:nowrap}.lb-roomhd span{font-size:13px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -462,6 +465,18 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
 /* ---- lobby countdown / freeze / round banner / spectate ---- */
 .btn.icon{font-size:20px;padding:6px 12px;line-height:1}
 .btn.gear{font-size:24px}
+#loPick{position:absolute;left:50%;top:46%;transform:translate(-50%,-50%) scale(var(--ui,1));display:none;gap:12px;pointer-events:none;z-index:20}
+#loPick.on{display:flex;animation:lpIn .16s ease-out}#loPick.fade{animation:lpOut .45s ease-in forwards}
+@keyframes lpIn{from{opacity:0;transform:translate(-50%,-46%) scale(var(--ui,1))}to{opacity:1}}@keyframes lpOut{to{opacity:0;transform:translate(-50%,-50%) scale(calc(var(--ui,1)*.96))}}
+#loPick .lp{width:270px;padding:8px;border-radius:4px;background:rgba(20,22,24,.72);border:1px solid rgba(255,255,255,.08);display:flex;flex-direction:column;gap:6px;opacity:.55}
+#loPick .lp.on{opacity:1;background:rgba(150,152,156,.78);border-color:rgba(255,255,255,.55);box-shadow:0 0 18px rgba(0,0,0,.5)}
+#loPick .lp.cur:not(.on){opacity:.8}
+#loPick .g{position:relative;height:100px;border-radius:3px;background:rgba(0,0,0,.28);display:flex;align-items:center;justify-content:center;overflow:hidden}
+#loPick .g img{max-width:94%;max-height:90px;object-fit:contain}#loPick .g.s img{max-height:70px}
+#loPick span{position:absolute;left:6px;bottom:3px;font-size:13px;color:#e8e8e8;text-shadow:0 1px 2px #000}
+#loPick .n{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}#loPick .n div{position:relative;height:62px;background:rgba(0,0,0,.28);border-radius:3px;display:flex;align-items:center;justify-content:center}
+#loPick .n img{max-height:50px;max-width:90%}#loPick .n span{font-size:11px;top:2px;bottom:auto;left:3px}
+#loPick b{text-align:center;font-size:24px;letter-spacing:5px;color:#fff;font-variant:small-caps}#loPick small{text-align:center;font-size:13px;color:#ddd;margin-top:-4px}
 #lbCount{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.62);backdrop-filter:blur(6px)}
 #lbCount.on{display:flex}
 #lbCount .cz{text-align:center;zoom:var(--ui,1)}
@@ -532,7 +547,7 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
 @keyframes toast{0%{opacity:0;transform:translate(-50%,8px)}8%{opacity:1;transform:translate(-50%,0)}80%{opacity:1}100%{opacity:0}}
 
 /* ---- v24 armory: its own page (the room screen is hidden while it is open). SF2-style: soldier stage on the left; loadout
-   sets A–E, weapon detail + stat bars, slot row, filter / search and a paged 3×3 weapon grid on the right. 1440×820, scaled like the room. ---- */
+   sets A–C, weapon detail + stat bars, slot row, filter / search and a paged 3×3 weapon grid on the right. 1440×820, scaled like the room. ---- */
 #warehouse{z-index:13;background:radial-gradient(ellipse at 22% 50%,rgba(80,100,90,.3),transparent 55%),repeating-linear-gradient(135deg,rgba(255,255,255,.015) 0 2px,transparent 2px 9px),linear-gradient(180deg,#0d1210,#060807)}
 #warehouse .whz{position:absolute;left:50%;top:50%;width:1440px;height:820px;transform:translate(-50%,-50%) scale(var(--lz,1));transform-origin:center;display:grid;grid-template-rows:56px 1fr}
 .wh-top{display:flex;align-items:center;gap:18px;padding:0 20px;border-bottom:1px solid var(--line);background:rgba(0,0,0,.35)}
@@ -713,7 +728,7 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
     </div>
     <div id="objBar"></div><div id="lockout"></div>
     <div id="capture"><div class="cring" id="capRing"><b id="capLetter"></b></div><div class="lbl" id="capLbl"></div></div>
-    <div id="interact"></div><div id="toast"></div>
+    <div id="interact"></div><div id="toast"></div><div id="loPick"></div>
     <div id="chatbox"><div id="chatlog"></div><div class="ci"><span id="chatMode">全體</span><input type="text" id="chatInput" maxlength="120" autocomplete="off" spellcheck="false" placeholder="Enter 送出 · Tab 切換全體／隊伍 · Esc 取消"></div></div>
     <div id="timerBot"><i></i><b id="timerBotT">15:00</b><i></i></div>
     <div id="alive"><span class="a"><i>♥</i><b id="aliveA">0</b></span><span class="b"><i>♥</i><b id="aliveB">0</b></span></div>
@@ -762,7 +777,7 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
     <div class="lb-room"><span class="rmk">LOBBY</span><b>大廳</b> · 配對伺服器 <span id="hubNet">連線中…</span></div>
     <label class="hub-nick">暱稱<input type="text" id="hubNick" maxlength="12" placeholder="你的名字" autocomplete="off" spellcheck="false"></label>
     <button class="btn ghost" id="hubFriends" title="好友名單、加好友">👥 好友</button>
-    <button class="btn ghost" id="hubWh" title="倉庫：編輯 5 組配裝">🗄 倉庫</button>
+    <button class="btn ghost" id="hubWh" title="倉庫：編輯 3 組配裝">🗄 倉庫</button>
     <button class="btn ghost icon" id="hubFull" title="全螢幕">⛶</button>
     <button class="btn ghost icon gear" id="hubSettings" title="設定">⚙</button>
   </div>
@@ -781,7 +796,7 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
     <section class="hub-rooms"><header><h3>公開房間 PUBLIC ROOMS</h3><span id="hubRoomsN"></span></header>
       <div id="hubRooms"><div class="empty">正在讀取房間列表…</div></div></section>
   </div>
-  <div class="lb-foot">WASD 移動 · SHIFT 衝刺(不會掉下邊緣) · C 蹲(無腳步聲，衝刺中按 = 滑鏟) · SPACE 跳(對矮牆 = 攀爬翻越) · 右鍵 開鏡 · 1-6 武器 · F 擒拿 · E 互動/佔領 · F1–F5 預約配裝 · 梯子 W/S · Q 快速切換 · R 換彈 · TAB 計分板</div>
+  <div class="lb-foot">WASD 移動 · SHIFT 衝刺(不會掉下邊緣) · C 蹲(無腳步聲，衝刺中按 = 滑鏟) · SPACE 跳(對矮牆 = 攀爬翻越) · 右鍵 開鏡 · 1-6 武器 · F 擒拿 · E 互動/佔領 · F1–F3 預約配裝 · 梯子 W/S · Q 快速切換 · R 換彈 · TAB 計分板</div>
 </div></div>
 <div id="roomToast"></div>
 
@@ -800,7 +815,7 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
 <div id="lobby" class="screen"><div class="lbz">
   <div class="lb-top">
     <div class="lb-brand">SPECIAL FORCE <span>2</span><small>TACTICAL PROTOTYPE · v33</small></div>
-    <div class="lb-room"><span class="rmk">ROOM</span><span id="lbCodeTxt">——— ———</span> · <b id="lbRoomName">單機練習房</b> · <span id="lbStatus">等待中</span></div>
+    <div class="lb-room"><span class="rmk">ROOM</span><span id="lbCodeTxt">——— ———</span><b id="lbRoomName" hidden></b><span id="lbStatus" hidden></span></div>
     <div class="inv"><button class="btn" id="lbInvite" title="邀請朋友加入這個房間">＋ 邀請朋友</button>
       <div class="inv-pop" id="lbInvPop">
         <div class="inv-row"><div class="tx"><h4><i>🔗</i>邀請連結</h4><small>傳給朋友，對方點開就直接進入這個房間</small><input type="text" id="lbInvLinkTxt" readonly></div><button class="btn ghost" id="lbInvLink">複製連結</button></div>
@@ -810,7 +825,7 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
         <div id="lbInvMsg"></div>
       </div></div>
     <button class="btn ghost" id="lbFriends" title="好友名單">👥 好友</button>
-    <button class="btn ghost" id="lbWh" title="倉庫：編輯 5 組配裝">🗄 倉庫</button>
+    <button class="btn ghost" id="lbWh" title="倉庫：編輯 3 組配裝">🗄 倉庫</button>
     <button class="btn ghost icon" id="lbFull" title="全螢幕">⛶</button>
     <button class="btn ghost icon gear" id="lbSettings" title="設定">⚙</button>
     <button class="btn ghost" id="lbLeave" title="回到大廳">離開房間</button>
@@ -823,21 +838,21 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
         <div class="ci"><button class="btn ghost" id="lbChatMode" title="Tab：切換全體／隊伍">全體</button><input type="text" id="lbChatIn" maxlength="120" autocomplete="off" spellcheck="false" placeholder="輸入訊息，Enter 送出"><button class="btn" id="lbChatSend">送出</button></div></div>
     </section>
     <section class="lb-right">
-      <div class="lb-roomhd"><b id="lbTitle"></b><span id="lbModeDesc"></span></div>
+      <div class="lb-roomhd"><b id="lbTitle"></b></div>
       <div class="lb-cfg">
-        <div class="mapPrev hostonly" id="lbMapOpen" title="點擊選擇地圖"><canvas id="lbMapBig" width="600" height="340"></canvas><div class="info"><b id="lbMapName"></b><span id="lbMapDesc"></span></div></div>
+        <div class="mapPrev hostonly" id="lbMapOpen" title="點擊選擇地圖"><canvas id="lbMapBig" width="600" height="340"></canvas><div class="info"><b id="lbMapName"></b></div></div>
         <div class="lb-dds">
           <div class="dd hostonly" id="ddMap"></div><div class="dd hostonly" id="ddRule"></div>
-          <div class="dd hostonly" id="ddTarget"></div><div class="dd hostonly" id="ddSize"></div>
+          <div class="dd hostonly" id="ddDiff"></div><div class="dd hostonly" id="ddTarget"></div>
           <div class="dd hostonly" id="ddMode"></div><div class="dd hostonly" id="ddOpts"></div>
         </div>
       </div>
       <section class="lb-teams">
-        <div class="team-col a"><header><b>藍隊 ALPHA</b><span id="lbAllyLbl"></span><button class="btn ghost tsw" id="lbJoinA" style="display:none">換到藍隊</button></header><ol id="lbListA"></ol></div>
-        <div class="team-col b"><header><b>紅隊 BRAVO</b><span id="lbEnemyLbl"></span><button class="btn ghost tsw" id="lbJoinB" style="display:none">換到紅隊</button></header><ol id="lbListB"></ol></div>
+        <div class="team-col a"><header><b>藍隊 ALPHA</b><span id="lbAllyLbl"></span><button class="btn ghost tsw" id="lbJoinA" style="display:none">換到藍隊</button><div class="stepper hostonly"><button data-step="allies" data-d="-1">−</button><b id="lbAllies">6</b><button data-step="allies" data-d="1">+</button></div></header><ol id="lbListA"></ol></div>
+        <div class="team-col b"><header><b>紅隊 BRAVO</b><span id="lbEnemyLbl"></span><button class="btn ghost tsw" id="lbJoinB" style="display:none">換到紅隊</button><div class="stepper hostonly"><button data-step="enemies" data-d="-1">−</button><b id="lbEnemies">6</b><button data-step="enemies" data-d="1">+</button></div></header><ol id="lbListB"></ol></div>
       </section>
       <div class="lb-bottom">
-        <div class="lb-lo"><h3>出場配裝</h3><div class="pills" id="lbLoadout"></div><button class="btn ghost" id="lbWarehouse">編輯配裝 · 倉庫</button><div id="lbLoadoutInfo"></div><div id="lbMsg"></div></div>
+        <div class="lb-lo"><h3>出場配裝</h3><div class="pills" id="lbLoadout"></div><button class="btn ghost" id="lbWarehouse">編輯配裝 · 倉庫</button><div id="lbLoadoutInfo"></div><div id="lbMsg" hidden></div></div>
         <button class="btn start" id="lbStart">開始 (F5)</button>
       </div>
     </section>
@@ -847,8 +862,8 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
     <label class="tg"><input type="checkbox" id="optPickup"><span>可以撿取地上的槍械</span></label>
     <label class="tg"><input type="checkbox" id="optKillcam"><span>陣亡時播放擊殺回放（Killcam）</span></label>
     <label class="tg"><input type="checkbox" id="optFF"><span>友軍傷害（打得到隊友）</span></label>
-    <h3>電腦難度</h3><div class="pills" id="lbDiff"></div></div></div>
-  <div class="lb-foot">WASD 移動 · SHIFT 衝刺(不會掉下邊緣) · C 蹲(無腳步聲，衝刺中按 = 滑鏟) · SPACE 跳(對矮牆 = 攀爬翻越) · 右鍵 開鏡 · 1-6 武器 · F 擒拿 · E 互動/佔領 · F1–F5 預約配裝 · 梯子 W/S · Q 快速切換 · R 換彈 · TAB 計分板</div>
+    </div></div>
+  <div class="lb-foot">WASD 移動 · SHIFT 衝刺(不會掉下邊緣) · C 蹲(無腳步聲，衝刺中按 = 滑鏟) · SPACE 跳(對矮牆 = 攀爬翻越) · 右鍵 開鏡 · 1-6 武器 · F 擒拿 · E 互動/佔領 · F1–F3 預約配裝 · 梯子 W/S · Q 快速切換 · R 換彈 · TAB 計分板</div>
 </div>
   <div id="lbCount"><div class="cz"><div class="cl">即將出發</div><div class="cn" id="lbCountNum">3</div><div class="cm" id="lbCountMap"></div>
     <button class="btn ghost" id="lbCancel">✕ 取消 CANCEL</button></div></div>
@@ -870,7 +885,7 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
     <kbd>1 – 6</kbd><span>主武器 · 副武器 · 刀 · 手榴彈 · 閃光彈 · 煙霧彈</span>
     <kbd>投擲物</kbd><span>按住蓄力（像拉弓，越久越遠），放開投出；左鍵遠投 / 右鍵近拋；邊跑邊跳丟更遠</span>
     <kbd>E</kbd><span>佔領戰：在據點圈內按住 6 秒佔領 · 奪取戰：拿起聖物</span>
-    <kbd>F1 – F5</kbd><span>預約配裝（倉庫裡設定的 5 組），下次重生時才換上</span>
+    <kbd>F1 – F3</kbd><span>預約配裝（倉庫裡設定的 3 組），下次重生時才換上</span>
     <kbd>梯子</kbd><span>走到梯子前 W 往上、S 往下，SPACE 跳離</span>
     <kbd>F</kbd><span>左手擒拿：貼身一擊斃命，稍遠打到殘血（開鏡中也能用）</span>
     <kbd>Q</kbd><span>切回上一把武器（QC）</span><kbd>R</kbd><span>換彈（子彈打完會自動換）</span><kbd>TAB</kbd><span>計分板</span>
@@ -881,7 +896,7 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
 </div></div>
 
 <div id="warehouse" class="screen"><div class="whz">
-  <div class="wh-top"><button class="btn ghost" id="whClose">← 返回房間</button><div class="wh-title">倉庫<span>ARMORY</span></div><div class="wh-hint">5 組配裝 A–E · 點武器卡即裝備 · 對戰中按 F1–F5 預約配裝，下次重生時換上</div></div>
+  <div class="wh-top"><button class="btn ghost" id="whClose">← 返回房間</button><div class="wh-title">倉庫<span>ARMORY</span></div><div class="wh-hint">3 組配裝 A–C · 點武器卡即裝備 · 對戰中按 F1–F3 預約配裝，下次重生時換上</div></div>
   <div class="wh-body">
     <section class="wh-stage"><canvas id="whCanvas"></canvas><div class="wh-cap"><b id="whSetBig">A</b><span id="whSetLine"></span></div></section>
     <section class="wh-panel">
@@ -1009,13 +1024,13 @@ const WEAPON_DATABASE = {
   g36c: {
     name: 'G36C 黃金 消音', type: 'assault', slot: 'primary', damageNear: 25, damageFar: 19, falloffStart: 25, falloffEnd: 60, fireRate: 0.08,
     recoilPitch: 0.011, recoilYaw: 0.012, recoilRecovery: 10,
-    hipSpread: 0.07, adsSpread: 0.0018, adsFov: 42, vmAdsFov: 20, adsVertical: 0.075, adsType: 'red_dot', mobility: 0.95, maxAmmo: 30, reloadTime: 2.0, modelUrl: null,
+    hipSpread: 0.07, adsSpread: 0.0018, adsFov: 42, vmAdsFov: 17, adsVertical: 0.075, adsType: 'red_dot', mobility: 0.95, maxAmmo: 30, reloadTime: 2.0, modelUrl: null,
     model: 'g36c', sound: 'g36s', suppressed: true, tracerEvery: 0, penetration: 1, desc: 'EOTech 全息瞄具 + 消音器，槍聲小、不暴露雷達。',
   },
   g36c_gold: { // v45: the same gold G36C (Blender model) with the G36 four-prong flash hider instead of the can
     name: 'G36C 黃金', type: 'assault', slot: 'primary', damageNear: 25, damageFar: 19, falloffStart: 25, falloffEnd: 60, fireRate: 0.08,
     recoilPitch: 0.011, recoilYaw: 0.012, recoilRecovery: 10,
-    hipSpread: 0.07, adsSpread: 0.0018, adsFov: 42, vmAdsFov: 20, adsVertical: 0.075, adsType: 'red_dot', mobility: 0.95, maxAmmo: 30, reloadTime: 2.0, modelUrl: null,
+    hipSpread: 0.07, adsSpread: 0.0018, adsFov: 42, vmAdsFov: 17, adsVertical: 0.075, adsType: 'red_dot', mobility: 0.95, maxAmmo: 30, reloadTime: 2.0, modelUrl: null,
     model: 'g36c', sound: 'm4', rate: 1.07, tracerEvery: 2, penetration: 1, desc: 'EOTech 全息瞄具 + 四叉消焰器，5.56 清脆槍聲，開火會上敵方雷達。',
   },
   mp5: {
@@ -1356,8 +1371,8 @@ Object.assign(WEAPON_DEFS, {
   },
   fall: { id: 'fall', name: '墜落', kind: 'fall', headMult: 1, falloff: 1 },
   grab: { id: 'grab', name: '擒拿', kind: 'grab', damage: 78, killRange: 1.15, range: 1.9, headMult: 1, falloff: 1 },
-  he: { id: 'he', name: '手榴彈', kind: 'grenade', gtype: 'he', model: 'he', count: 1, fuse: 2.6, damage: 130, radius: 9, lethal: 1.4, moveSpeed: 6.0, adsMove: 1, falloff: 1 },
-  flash: { id: 'flash', name: '閃光彈', kind: 'grenade', gtype: 'flash', model: 'flash', count: 2, fuse: 1.9, radius: 24, moveSpeed: 6.0, adsMove: 1, falloff: 1 },
+  he: { id: 'he', name: '手榴彈', kind: 'grenade', gtype: 'he', model: 'he', count: 2, fuse: 2.6, damage: 130, radius: 9, lethal: 1.4, moveSpeed: 6.0, adsMove: 1, falloff: 1 },
+  flash: { id: 'flash', name: '閃光彈', kind: 'grenade', gtype: 'flash', model: 'flash', count: 1, fuse: 1.9, radius: 24, moveSpeed: 6.0, adsMove: 1, falloff: 1 },
   smoke: { id: 'smoke', name: '煙霧彈', kind: 'grenade', gtype: 'smoke', model: 'smoke', count: 1, fuse: 1.8, duration: 17, moveSpeed: 6.0, adsMove: 1, falloff: 1 },
 });
 const PRIMARY_IDS = Object.keys(WEAPON_DATABASE).filter((k) => WEAPON_DATABASE[k].slot === 'primary');
@@ -1444,14 +1459,13 @@ const DEFAULT_LOADOUTS = [
   { name: '突擊兵', primary: 'm4a1', secondary: 'p226' },
   { name: '狙擊手', primary: 'cheytac_m200', secondary: 'deagle' },
   { name: '突破手', primary: 'p90', secondary: 'p226' },
-  { name: '近戰專家', primary: 'remington870', secondary: 'deagle' },
-  { name: '火力支援', primary: 'm249', secondary: 'p226' },
 ];
 
-const LOADOUT_KEYS = 'ABCDE'; // v24: the 5 loadout sets are letters (SF2 armory tabs), no names; F1–F5 queue them in a match
+const STAR_BADGE = '<svg viewBox="0 0 24 24"><defs><linearGradient id="sbg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff3b0"/><stop offset=".55" stop-color="#f5c542"/><stop offset="1" stop-color="#b8801a"/></linearGradient></defs><circle cx="12" cy="12" r="11" fill="#2a1d05" stroke="#e6b23a" stroke-width="1.4"/><path d="M12 3.6l2.5 5.3 5.8.7-4.3 4 1.1 5.7L12 16.5l-5.1 2.8 1.1-5.7-4.3-4 5.8-.7z" fill="url(#sbg)" stroke="#fff2b8" stroke-width=".5"/></svg>'; // v45 host badge
+const LOADOUT_KEYS = 'ABC'; // v45: three loadout sets A–C (SF2 armory tabs), F1–F3 queue them in a match
 
 const MODES = {
-  general: { name: '一般模式', desc: '配裝主武器 + 副武器 + 刀 + 三種投擲物', slots: ['primary', 'secondary', 'knife', 'he', 'flash', 'smoke'] },
+  general: { name: '一般模式', desc: '配裝主武器 + 副武器 + 刀 + 三種投擲物', slots: ['primary', 'secondary', 'knife', 'he', 'smoke', 'flash'] }, // v45 wheel order: gun, pistol, knife, HE ×2, smoke, flash
   rifle: { name: '步槍戰', desc: '只能使用步槍 / 衝鋒槍 / 機槍與刀', slots: ['primary', 'knife'], primaryFilter: ['rifle', 'smg', 'lmg'], fallback: 'm4a1' },
   sniper: { name: '狙擊戰', desc: '全員狙擊槍（配裝的主武器若不是狙擊槍則用 CheyTac）+ 刀', slots: ['primary', 'knife'], primaryFilter: ['sniper'], fallback: 'cheytac_m200' },
   pistol: { name: '小槍戰', desc: '全員只能拿配裝的副武器（手槍）', slots: ['secondary'] },
@@ -1485,7 +1499,7 @@ const TIPS = [
   '衝刺中按 C / Ctrl 滑鏟：約 0.7 秒的加速低姿滑行，A / D 可微調方向，滑鏟中跳躍能保留速度。',
   '狙擊鏡：站定開鏡 100% 精準；移動中開鏡會像 CS 一樣失準，先急停再開槍。',
   '剛重生有 3.5 秒無敵保護，開槍會立即解除保護。',
-  '對戰中按 F1–F5 預約配裝，下次重生時才會換上。',
+  '對戰中按 F1–F3 預約配裝，下次重生時才會換上。',
   '佔領戰：站進據點圈內按住 E 6 秒；三點全佔，敵方連擊殺都無法得分！',
   '奪取戰：靠近山丘上的聖物按 E 拿起，扛回藍隊撤離點即贏得回合。',
   '走到梯子前按 W 往上爬、S 往下，SPACE 跳離梯子。',
@@ -1565,10 +1579,10 @@ const Settings = {
       if (s) {
         const lobby = Object.assign({}, this.data.lobby, s.lobby || {});
         lobby.ruleCfg = Object.assign({}, this.data.lobby.ruleCfg, (s.lobby && s.lobby.ruleCfg) || {});
-        lobby.opts = Object.assign({ pickup: true, killcam: true, ff: false }, lobby.opts); lobby.enemies = lobby.allies = Math.max(lobby.allies | 0, 1); // v45 room: N vs N
+        lobby.opts = Object.assign({ pickup: true, killcam: true, ff: false }, lobby.opts); if (lobby.loadout > 2) lobby.loadout = 0; lobby.enemies = lobby.allies = Math.max(lobby.allies | 0, 1); // v45 room: N vs N
         if (!RULES[lobby.rule]) lobby.rule = 'tdm';
         for (const [k, r] of Object.entries(RULES)) { const c = lobby.ruleCfg[k]; if (!c || !r.targets.includes(c.target) || !r.times.includes(c.time)) lobby.ruleCfg[k] = Object.assign({}, r.def); }
-        const loadouts = Array.isArray(s.loadouts) && s.loadouts.length === 5 ? s.loadouts : this.data.loadouts;
+        const loadouts = Array.isArray(s.loadouts) && s.loadouts.length >= 3 ? s.loadouts.slice(0, 3) : this.data.loadouts; // v45: 5 sets → 3
         Object.assign(this.data, s); this.data.lobby = lobby; this.data.loadouts = loadouts;
         for (const l of this.data.loadouts) { if (!WEAPON_DATABASE[l.primary] || WEAPON_DATABASE[l.primary].slot !== 'primary') l.primary = 'm4a1'; if (!WEAPON_DATABASE[l.secondary] || WEAPON_DATABASE[l.secondary].slot !== 'secondary') l.secondary = 'p226'; }
         const used = new Set(); // v45: a primary can sit in one set only — later duplicates take the first free gun
@@ -7266,7 +7280,7 @@ class WeaponModels {
     for (const p of G.parts) {
       if ((p.node === 'supp' && !sup) || (p.node === 'hider' && sup)) continue;
       const node = p.node === 'mag' || p.node === 'charge' ? p.node : 'body';
-      if (p.mat === 'lens') { gb.extra.push({ geo: p.geo.clone(), mat: M.lens, node, noAO: true, order: 3 }); continue; }
+      if (p.mat === 'lens') continue; // v45: no tinted glass layer — SF2's holo window is clean
       gb.add(p.geo.clone(), MAT[p.mat] || M.gold, node);
     }
     const K = G.marks, sightY = K.SIGHT.y, mz = sup ? K.MUZZLE_S : K.MUZZLE, gu = K.GRIP ? -K.GRIP.z : 0.078, su = K.SUPPORT ? -K.SUPPORT.z : 0.3, sv = K.SUPPORT ? K.SUPPORT.y : -0.028;
@@ -7274,7 +7288,7 @@ class WeaponModels {
     this.arm(gb, [-0.038, sv - 0.032, -su], [-0.3, -0.3, -su + 0.3], 0.033); this.supportHand(gb, 0, sv + 0.028, su, 0.046);
     const b = gb.build();
     // SF2 EOTech ADS: the eye sits a few cm behind the hood so its gold rim frames the view (adsPos.z puts the hood rear at EYE)
-    const EYE = 0.07, hoodU = K.HOOD ? -K.HOOD.z : -K.SIGHT.z - 0.025;
+    const EYE = 0.08, hoodU = K.HOOD ? -K.HOOD.z : -K.SIGHT.z - 0.025;
     const vm = this._finish(b, { muzzleU: -mz.z, sightY, hipPos: [0.14, -0.175, -0.36], adsPos: [0, -sightY, hoodU - EYE], flash: sup ? 0.08 : 0.2, reticle: true, reticleScale: 0.75 });
     vm.eyeRelief = 0.03; return vm;
   }
@@ -7529,7 +7543,7 @@ class WeaponModels {
     if (type === 'he') {
       const s = new THREE.SphereGeometry(0.033, 18, 14); s.scale(1, 1.12, 1); gb.add(s, M.greenPaint, 'nade');
       gb.cyl(0.012, 0.012, 0.016, 0, 0.04, 0, M.bright, 'nade', 12);
-    } else if (type === 'flash') {
+    } else if (type === 'smoke') { // v45: models swapped — the glowing white band reads as a flashbang, so it went to the flash
       gb.add(new THREE.CylinderGeometry(0.022, 0.022, 0.1, 16), M.grayPaint, 'nade');
       for (let i = 0; i < 8; i++) { const a = (i / 8) * Math.PI * 2; gb.box(0.006, 0.02, 0.006, Math.cos(a) * 0.022, 0.01, Math.sin(a) * 0.022, M.rubber, 'nade'); }
       gb.cyl(0.012, 0.012, 0.016, 0, 0.056, 0, M.bright, 'nade', 12);
@@ -8796,7 +8810,7 @@ class Weapon {
     const mz = this.muzzleWorld(ray, ws);
     if (this.local) {
       let [rp, ry] = this.recoilKick(); const am = ws.ads ? (this.def.adsRecoilMult ?? 0.8) : 1;
-      if (ws.ads && this.def.adsVertical) { ry = 0; rp = Math.min(rp, Math.max(0, this.def.adsVertical - p.recoilTP)); } // v45 SF2 aimed spray: climbs straight up to a cap, no side drift
+      if (ws.ads && this.def.adsVertical) { ry = clamp(ry * 0.6, -0.0105 - p.recoilTY, 0.0105 - p.recoilTY); rp = Math.min(rp, Math.max(0, this.def.adsVertical - p.recoilTP)); } // v45 SF2 aimed spray: climbs up to a cap, sways at most ±0.6° (≈1.2° side to side)
       p.addRecoil(rp * am, ry * am);
       p.punchV += (this.kick ? this.kick.rx : 0.05) * (ws.ads ? 0.9 : 0.7); // small per-shot camera shudder on top of the recoil
       ws.kick(this.kick);
@@ -9549,7 +9563,7 @@ class Human extends Combatant {
     const shift = !!(btn & BTN.SPRINT);
     const ws = this.gear(), w = ws.current;
     if (this.sprintBlock > 0) this.sprintBlock -= h;
-    this.sprinting = shift && f > 0 && !m.crouching && !ws.ads && !w.reloading && this.sprintBlock <= 0 && !(w.kind === 'grenade' && w.state !== 'idle');
+    this.sprinting = shift && f > 0 && !m.crouching && !w.reloading && this.sprintBlock <= 0 && !(w.kind === 'grenade' && w.state !== 'idle'); // v45: W+Shift while aimed drops the sight and sprints (any gun)
     m.edgeGuard = shift && m.grounded;
     let speed = w.moveSpeed * (this.carrying ? 0.88 : 1);
     if (m.crouching) speed *= P.crouchMult; else if (this.sprinting) speed *= P.sprintMult;
@@ -9670,11 +9684,12 @@ class Player extends Human {
 
   respawn(point, yaw) {
     const g = this.game;
-    if (g.nextSpawnLoadoutIndex !== null && g.nextSpawnLoadoutIndex !== g.loadoutIndex) { // F1–F5 queue: the new kit is issued only now
-      g.loadoutIndex = g.nextSpawnLoadoutIndex;
-      g.weapons.rebuild(loadoutDefs(g.mode, Settings.data.loadouts[g.loadoutIndex]));
-      g.app.hud.toast(`已換上配裝 ${LOADOUT_KEYS[g.loadoutIndex]}`);
-    }
+    const queued = g.nextSpawnLoadoutIndex !== null && g.nextSpawnLoadoutIndex !== g.loadoutIndex; // F1–F3 queue: the new kit is issued only now
+    if (queued) g.loadoutIndex = g.nextSpawnLoadoutIndex;
+    const kit = loadoutDefs(g.mode, Settings.data.loadouts[g.loadoutIndex]);
+    // v45: always respawn with the set's own guns — a weapon picked up from the floor does not carry over
+    if (queued || kit.map((d) => d.id).join() !== g.weapons.weapons.map((w) => w.def.id).join()) g.weapons.rebuild(kit);
+    if (queued) g.app.hud.toast(`已換上配裝 ${LOADOUT_KEYS[g.loadoutIndex]}`);
     g.nextSpawnLoadoutIndex = null;
     this.setSpectate(null);
     this.motor.teleport(point); this.life = (this.life || 0) + 1;
@@ -11700,7 +11715,7 @@ class Match {
     this.stats = { shots: 0, hits: 0 }; this.firstBlood = true; this.acc = 0; this.spotT = 0; this.freezeT = 0; this.roundEndT = 0;
     this.grenades = []; this.combatants = []; this.bots = []; this.timers = [];
     this.rec = { frames: [], shots: [], last: -9 }; this.kc = null; // v13 killcam
-    this.loadoutIndex = clamp(config.loadout | 0, 0, 4); this.nextSpawnLoadoutIndex = null; this.lastHitSnd = 0;
+    this.loadoutIndex = clamp(config.loadout | 0, 0, LOADOUT_KEYS.length - 1); this.nextSpawnLoadoutIndex = null; this.lastHitSnd = 0;
     this.intel = { alpha: new TeamIntel(this.def.bounds), bravo: new TeamIntel(this.def.bounds) };
     this.drops = []; this.dropSeq = 0; this.pickTarget = null;
     this.net = null; this.humans = []; this.netSeq = 0; // v25: NetHost / NetClient session, remote humans (host)
@@ -12215,14 +12230,14 @@ class Match {
 
   emitNoise(pos, radius, team, kind = 'noise') { for (const b of this.bots) if (b.alive && b.team !== team) b.ai.hear(pos, radius, kind); }
 
-  // F1–F5: queue a loadout for the NEXT respawn (the current kit is not touched).
+  // F1–F3: queue a loadout for the NEXT respawn (the current kit is not touched); the three sets pop up mid-screen like SF2.
   queueLoadout(i) {
-    if (i < 0 || i > 4) return;
+    if (i < 0 || i >= LOADOUT_KEYS.length) return;
     this.nextSpawnLoadoutIndex = i === this.loadoutIndex ? null : i;
     const L = Settings.data.loadouts[i];
     if (this.isClient) this.net.queueLoadout(L); // the host builds the same kit for our soldier at the next respawn
     this.audio.mech('queue');
-    this.app.hud.toast(i === this.loadoutIndex ? `配裝 ${LOADOUT_KEYS[i]} 已在使用中` : `配裝 ${LOADOUT_KEYS[i]}（${WEAPON_DEFS[L.primary].name} + ${WEAPON_DEFS[L.secondary].name}）已排入，下次重生時套用`);
+    this.app.showLoadoutPicker(i, this.loadoutIndex);
   }
 
   /* ------------------------------ weapon drops / pickups ------------------------------ */
@@ -13715,7 +13730,7 @@ class App {
   /* ------------------------------ v31 chat: room panel + in-match (Enter) ------------------------------ */
   buildChat() {
     const $ = this.$;
-    this.chatTeam = false; this.chatOpen = false;
+    this.chatTeam = true; this.chatOpen = false; // v45: team chat by default
     const send = (inp, team) => { const r = this.room; if (r && inp.value.trim() && r.say(inp.value, team)) inp.value = ''; };
     const li = $('lbChatIn');
     li.onkeydown = (e) => { e.stopPropagation(); if (e.key === 'Enter') send(li, this.chatTeam); else if (e.key === 'Tab') { e.preventDefault(); this.setChatTeam(!this.chatTeam); } };
@@ -13730,7 +13745,7 @@ class App {
     };
     gi.onkeyup = (e) => e.stopPropagation();
     li.onkeyup = (e) => e.stopPropagation();
-    this.setChatTeam(false);
+    this.setChatTeam(true);
   }
   setChatTeam(on) { this.chatTeam = !!on; for (const id of ['lbChatMode', 'chatMode']) { const b = this.$(id); b.textContent = on ? '隊伍' : '全體'; b.classList.toggle('team', on); } }
   _chatLine(m) {
@@ -13742,7 +13757,7 @@ class App {
   renderChat() {
     const r = this.room, log = this.$('lbChatLog'), on = !!(r && r.online);
     log.replaceChildren(...(r ? r.chat : []).slice(-40).map((m) => this._chatLine(m)));
-    if (!log.children.length) { const e = document.createElement('div'); e.className = 'cl sys'; e.textContent = on ? '房間裡的人都看得到這裡的訊息 · 對戰中按 Enter 聊天' : '朋友進房後就能在這裡聊天'; log.append(e); }
+    if (false && !log.children.length) { /* v45: no grey helper line in the chat */ const e = document.createElement('div'); e.className = 'cl sys'; e.textContent = on ? '房間裡的人都看得到這裡的訊息 · 對戰中按 Enter 聊天' : '朋友進房後就能在這裡聊天'; log.append(e); }
     log.scrollTop = log.scrollHeight; this.$('lbChatIn').disabled = !on;
   }
   onChat(r, m) {
@@ -13874,6 +13889,7 @@ class App {
   }
 
   /* ------------------------------ lobby ------------------------------ */
+  // (STAR_BADGE: the host's five-point star medal, inline SVG)
   buildLobby() {
     const L = Settings.data.lobby, $ = this.$;
     this.dry = MAPS.map((def) => { const b = new MapBuilder(null, def, true); def.build(b); return b; });
@@ -13888,7 +13904,10 @@ class App {
       const el = $(id); el.innerHTML = '';
       for (const [val, label] of items) { const b = document.createElement('button'); b.textContent = label; b.dataset.v = val; b.onclick = () => { if (key !== 'loadout' && this.isGuest()) return; L[key] = typeof L[key] === 'number' ? Number(val) : val; if (after) after(); this.audio.init(); this.audio.uiClick(); this.refreshLobby(); }; el.appendChild(b); }
     };
-    pills('lbDiff', DIFFICULTY.map((d, i) => [i, d.name]), 'difficulty');
+    document.querySelectorAll('#lobby .stepper button').forEach((b) => b.onclick = (e) => {
+      e.stopPropagation(); if (this.isGuest()) return;
+      const k = b.dataset.step; L[k] = clamp(L[k] + Number(b.dataset.d), 1, 12); this.audio.init(); this.audio.uiClick(); this.refreshLobby();
+    });
     // v45 SF2 待機室: map picker pop-up, room 設置 pop-up (pickup / killcam / friendly fire / bot difficulty), dropdowns close on any outside click
     const modal = (id, on) => { $(id).classList.toggle('on', on); if (on) { this.audio.init(); this.audio.uiClick(); } };
     $('lbMapOpen').onclick = () => { if (!this.isGuest()) modal('lbMapModal', true); };
@@ -13897,7 +13916,7 @@ class App {
     for (const [id, k] of [['optPickup', 'pickup'], ['optKillcam', 'killcam'], ['optFF', 'ff']]) $(id).onchange = () => { if (this.isGuest()) return; L.opts[k] = $(id).checked; this.audio.uiClick(); this.refreshLobby(); };
     document.addEventListener('click', () => document.querySelectorAll('#lobby .dd.open').forEach((d) => d.classList.remove('open')));
     // F5 = 開始 (the browser refresh is swallowed while the room is open)
-    addEventListener('keydown', (e) => { if (e.code === 'F5' && (this.state === 'lobby' || this.state === 'countdown')) { e.preventDefault(); if (this.state === 'lobby' && !$('lbMapModal').classList.contains('on')) this.beginCountdown(); } });
+    addEventListener('keydown', (e) => { if (e.code === 'F5' && (this.state === 'lobby' || this.state === 'countdown')) { e.preventDefault(); if (e.repeat) return; if (this.state === 'countdown') this.cancelCountdown(); else if (!$('lbMapModal').classList.contains('on')) this.beginCountdown(); } });
     pills('lbLoadout', Settings.data.loadouts.map((l, i) => [i, LOADOUT_KEYS[i]]), 'loadout');
     $('lbWarehouse').onclick = () => this.openWarehouse(); $('lbWh').onclick = () => this.openWarehouse();
     $('whClose').onclick = () => this.closeWarehouse();
@@ -13937,15 +13956,14 @@ class App {
     $('lobby').classList.toggle('guest', guest);
     drawMapPreview($('lbMapBig'), def, this.dry[L.map]);
     if (guest && this.warmMap !== L.map) { this.warmMap = L.map; this.warm(L.map); } // the host picked another map: prefetch it
-    $('lbMapName').textContent = `${def.name} · ${def.en}`; $('lbMapDesc').textContent = def.desc;
+    $('lbMapName').textContent = `${def.name} · ${def.en}`;
     [...$('lbMaps').children].forEach((b, i) => b.classList.toggle('on', i === L.map));
     const mark = (id, val) => [...$(id).children].forEach((b) => b.classList.toggle('on', String(b.dataset.v) === String(val)));
-    mark('lbDiff', L.difficulty); mark('lbLoadout', L.loadout);
+    mark('lbLoadout', L.loadout);
     const rc = L.ruleCfg[L.rule] || (L.ruleCfg[L.rule] = Object.assign({}, R.def)), roundsLike = R.timeUnit === 'sec';
     if (!R.targets.includes(rc.target)) rc.target = R.def.target;
     rc.time = R.def.time; // v45: no time option — score modes are untimed, round modes cap each round at 10 minutes
     $('lbTitle').textContent = `${R.name} - ${def.name}`;
-    $('lbModeDesc').textContent = `${MODES[L.mode].desc} · ${R.desc}${roundsLike ? ' · 每回合上限 10 分鐘' : ' · 無時間限制'}`;
     const opts = L.opts || (L.opts = { pickup: true, killcam: true, ff: false });
     $('optPickup').checked = opts.pickup !== false; $('optKillcam').checked = opts.killcam !== false; $('optFF').checked = !!opts.ff;
     // the six SF2 room settings: map · win condition · weapon mode | game mode · N vs N · 設置
@@ -13957,7 +13975,8 @@ class App {
     this._dd('ddRule', '模式', R.name, Object.entries(RULES).map(([k, r]) => [k, r.name]), (v) => {
       if (!host()) return; L.rule = v; if (!L.ruleCfg[v]) L.ruleCfg[v] = Object.assign({}, RULES[v].def); this.refreshLobby();
     }, L.rule);
-    this._dd('ddSize', '人數', `${L.allies} vs ${L.allies}`, Array.from({ length: 12 }, (_, i) => [i + 1, `${i + 1} vs ${i + 1}`]), (v) => { if (host()) { L.allies = L.enemies = +v; this.refreshLobby(); } }, L.allies);
+    this._dd('ddDiff', '難易度', DIFFICULTY[L.difficulty].name, DIFFICULTY.map((d, i) => [i, d.name]), (v) => { if (host()) { L.difficulty = +v; this.refreshLobby(); } }, L.difficulty);
+    $('lbAllies').textContent = L.allies; $('lbEnemies').textContent = L.enemies;
     this._dd('ddOpts', '進階', '設置', null, () => { if (host()) { $('lbOptModal').classList.add('on'); this.audio.uiClick(); } });
     const lo = Settings.data.loadouts[L.loadout];
     $('lbLoadoutInfo').textContent = `配裝 ${LOADOUT_KEYS[L.loadout]}：${WEAPON_DEFS[lo.primary].name} + ${WEAPON_DEFS[lo.secondary].name}`;
@@ -14005,7 +14024,7 @@ class App {
     const r = this.lbR, cam = this.lbCam, cv = this.$('lbCharCv'), w = cv.clientWidth, h = cv.clientHeight;
     if (!w || !h) return;
     if (cv.width !== Math.round(w * r.getPixelRatio()) || cv.height !== Math.round(h * r.getPixelRatio())) r.setSize(w, h, false);
-    cam.aspect = w / h; cam.position.set(0, 0.9, 7.1); cam.lookAt(0, 0.38, 0); cam.updateProjectionMatrix(); // feet clear of the chat panel
+    cam.aspect = w / h; cam.position.set(0, 1.0, 5.3); cam.lookAt(0, 0.86, 0); cam.updateProjectionMatrix(); // full figure; the translucent chat covers the legs
     this.lbT += dt; this.lbSoldier.root.rotation.y = Math.PI + 0.55 + Math.sin(this.lbT * 0.4) * 0.35;
     r.render(this.lbScene, cam);
   }
@@ -14021,12 +14040,12 @@ class App {
         const li = document.createElement('li'), h = hs[i];
         if (h) {
           const me = h.id === myId; li.className = 'human' + (me ? ' you' : '');
-          li.innerHTML = `<span class="n">${i + 1}</span><span class="rank">${h.host ? '★' : 'P'}</span><span class="nm">${esc(h.name)}${me ? '<em>（你）</em>' : ''}</span><span class="st ${h.host ? 'host' : h.st}">${h.host ? 'HOST' : ROOM_ST[h.st] || 'READY'}</span>`;
-        } else if (i < n) { li.className = 'bot'; li.innerHTML = `<span class="n">${i + 1}</span><span class="rank">AI</span><span class="nm">${names[(i - hs.length) % names.length]}</span><span class="st">BOT</span>`; }
-        else { li.className = 'empty'; li.innerHTML = `<span class="n">${i + 1}</span><span class="nm">— 空位 —</span>`; }
+          li.innerHTML = `<span class="n">${i + 1}</span><span class="rank">${h.host ? STAR_BADGE : 'P'}</span><span class="nm">${esc(h.name)}</span>${h.host || !ROOM_ST[h.st] ? '' : `<span class="st ${h.st}">${ROOM_ST[h.st]}</span>`}`;
+        } else if (i < n) { li.className = 'bot'; li.innerHTML = `<span class="n">${i + 1}</span><span class="rank">AI</span><span class="nm">${names[(i - hs.length) % names.length]}</span>`; }
+        else { li.className = 'empty'; li.innerHTML = `<span class="n">${i + 1}</span>`; }
         ol.appendChild(li);
       }
-      $(lbl).textContent = `${hs.length} 位玩家 · ${n - hs.length} 個 Bot`;
+      void lbl;
       $(sw).style.display = canSwitch && r.team !== team ? '' : 'none';
     }
   }
@@ -14041,13 +14060,13 @@ class App {
       else st = r.phase === 'playing' ? '對戰進行中' : r.members.length > 1 ? `${r.members.length} 人在房間` : '等待朋友加入';
     }
     if (this.state === 'countdown') st = '準備出發';
-    $('lbCodeTxt').textContent = code || '——— ———'; $('lbRoomName').textContent = name; $('lbStatus').textContent = st;
+    $('lbCodeTxt').textContent = code || '——— ———'; void name; void st;
     $('lbInvite').disabled = !(r && r.online && code);
     $('lbInvCode').textContent = code; $('lbInvLinkTxt').value = r ? inviteLink(r.code) : '';
     $('lbPub').checked = !!(r && r.pub); $('lbPubRow').style.display = r && r.role === 'host' ? '' : 'none';
     const sb = $('lbStart'); let txt = '開始 (F5)', off = false, msg = '';
     if (guest) { if (r.phase === 'playing' && r.mcfg) txt = '加入對戰 (F5)'; else { txt = '等待房主開始'; off = true; msg = r.entered ? '地圖和模式由房主設定 · 你可以選擇隊伍和配裝' : ''; } }
-    sb.textContent = txt; sb.disabled = off; sb.classList.toggle('wait', off); $('lbMsg').textContent = msg;
+    sb.textContent = txt; sb.disabled = off; sb.classList.toggle('wait', off); void msg;
     this.renderFriends(); // invite buttons depend on our room
   }
 
@@ -14061,7 +14080,7 @@ class App {
     this.state = 'countdown'; this.countT = 3;
     const def = MAPS[Settings.data.lobby.map];
     this.$('lbCountMap').textContent = `${def.name} · ${MODES[Settings.data.lobby.mode].name} · ${RULES[Settings.data.lobby.rule].name}`;
-    this.$('lbCount').classList.add('on'); this.$('lbStatus').textContent = '準備出發';
+    this.$('lbCount').classList.add('on');
     this._showCount(3);
   }
   _showCount(n) { const el = this.$('lbCountNum'); el.textContent = n; el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop'); this.audio.uiClick(); }
@@ -14214,7 +14233,7 @@ class App {
         if (this.$('lbInvPop').classList.contains('on')) { this.invite(false); return; }
         if (this.$('friends').classList.contains('on')) { this.friendsPanel(false); return; }
       }
-      const fk = /^F([1-5])$/.exec(code);
+      const fk = /^F([1-3])$/.exec(code);
       if (fk && m && (this.state === 'playing' || this.state === 'paused')) { m.queueLoadout(parseInt(fk[1], 10) - 1); return; } // works while dead too
       if (this.state === 'playing' && m && (code === 'Enter' || code === 'NumpadEnter') && this.room && this.room.online) { this.openChat(false); return; } // v31: chat (Tab in the box: team only)
       if (this.state !== 'playing' || !m || !m.player.alive) return;
@@ -14340,6 +14359,21 @@ class App {
     if (this.$('warehouse').classList.contains('on')) this.renderWarehouse();
   }
 
+  // v45 F1–F3: the three sets as cards in the middle of the screen (SF2), the picked one lit; fades out after ~2 s
+  showLoadoutPicker(pick, cur) {
+    const el = this.$('loPick'), LO = Settings.data.loadouts;
+    if (!this.whR) this._initPreview();
+    this._makeThumbs([...LO.flatMap((l) => [l.primary, l.secondary]), 'he', 'smoke', 'flash']);
+    const img = (id) => { const src = (this.thumbs && this.thumbs[id]) || WEAPON_ICONS[id] || ''; return src ? `<img src="${src}" alt="">` : ''; };
+    el.innerHTML = LO.map((l, i) => `<div class="lp${i === pick ? ' on' : ''}${i === cur ? ' cur' : ''}">
+      <div class="g p">${img(l.primary)}<span>${WEAPON_DEFS[l.primary].name}</span></div>
+      <div class="g s">${img(l.secondary)}<span>${WEAPON_DEFS[l.secondary].name}</span></div>
+      <div class="n">${['he', 'smoke', 'flash'].map((g) => `<div>${img(g)}<span>${WEAPON_DEFS[g].name}</span></div>`).join('')}</div>
+      <b>${LOADOUT_KEYS[i]} TYPE</b><small>${i === cur ? '使用中' : i === pick ? '下次重生換上' : `F${i + 1}`}</small></div>`).join('');
+    el.classList.remove('fade'); el.classList.add('on'); void el.offsetWidth;
+    clearTimeout(this.loPickT); this.loPickT = setTimeout(() => el.classList.add('fade'), 1700);
+  }
+
   /* ------------------------------ warehouse (loadouts) ------------------------------ */
   // v24: the armory is its own page — the room screen is hidden while it is open (it was a pop-up over the room).
   openWarehouse() {
@@ -14426,7 +14460,7 @@ class App {
   }
   renderWarehouse() {
     const $ = this.$, W = this.wh, LO = Settings.data.loadouts, L = Settings.data.lobby, lo = LO[W.slot];
-    // loadout sets A–E (no names)
+    // loadout sets A–C (no names)
     $('whSets').innerHTML = LO.map((_, i) => `<button data-i="${i}" class="${i === W.slot ? 'on' : ''}" title="對戰中按 F${i + 1}">${LOADOUT_KEYS[i]}</button>`).join('');
     [...$('whSets').children].forEach((b) => { b.onclick = () => { W.slot = +b.dataset.i; L.loadout = W.slot; W.sel = LO[W.slot][W.cat]; W.page = -1; Settings.save(); this.audio.uiClick(); this.renderWarehouse(); }; });
     $('whSetBig').textContent = LOADOUT_KEYS[W.slot]; $('whSetLine').textContent = `${WEAPON_DEFS[lo.primary].name} + ${WEAPON_DEFS[lo.secondary].name}`;
@@ -14455,7 +14489,7 @@ class App {
     for (let k = 0; k < PER; k++) {
       const id = page[k], c = document.createElement('button');
       if (!id) { c.className = 'whGun empty'; c.disabled = true; list.appendChild(c); continue; }
-      const inSet = LO.findIndex((l) => l[W.cat] === id); // v45: a primary shows 裝備中 whichever set (A–E) carries it
+      const inSet = LO.findIndex((l) => l[W.cat] === id); // v45: a primary shows 裝備中 whichever set (A–C) carries it
       c.className = 'whGun' + (inSet >= 0 && (W.cat === 'primary' || inSet === W.slot) ? ' eq' : '') + (W.sel === id ? ' sel' : ''); c.dataset.id = id;
       if (inSet >= 0) c.dataset.eq = LOADOUT_KEYS[inSet];
       const th = this.thumbs && this.thumbs[id] ? `<img src="${this.thumbs[id]}" alt="">` : WEAPON_ICONS[id] ? `<img class="ln" src="${WEAPON_ICONS[id]}" alt="">` : '';

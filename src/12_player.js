@@ -123,7 +123,7 @@ class Human extends Combatant {
     const shift = !!(btn & BTN.SPRINT);
     const ws = this.gear(), w = ws.current;
     if (this.sprintBlock > 0) this.sprintBlock -= h;
-    this.sprinting = shift && f > 0 && !m.crouching && !ws.ads && !w.reloading && this.sprintBlock <= 0 && !(w.kind === 'grenade' && w.state !== 'idle');
+    this.sprinting = shift && f > 0 && !m.crouching && !w.reloading && this.sprintBlock <= 0 && !(w.kind === 'grenade' && w.state !== 'idle'); // v45: W+Shift while aimed drops the sight and sprints (any gun)
     m.edgeGuard = shift && m.grounded;
     let speed = w.moveSpeed * (this.carrying ? 0.88 : 1);
     if (m.crouching) speed *= P.crouchMult; else if (this.sprinting) speed *= P.sprintMult;
@@ -244,11 +244,12 @@ class Player extends Human {
 
   respawn(point, yaw) {
     const g = this.game;
-    if (g.nextSpawnLoadoutIndex !== null && g.nextSpawnLoadoutIndex !== g.loadoutIndex) { // F1–F5 queue: the new kit is issued only now
-      g.loadoutIndex = g.nextSpawnLoadoutIndex;
-      g.weapons.rebuild(loadoutDefs(g.mode, Settings.data.loadouts[g.loadoutIndex]));
-      g.app.hud.toast(`已換上配裝 ${LOADOUT_KEYS[g.loadoutIndex]}`);
-    }
+    const queued = g.nextSpawnLoadoutIndex !== null && g.nextSpawnLoadoutIndex !== g.loadoutIndex; // F1–F3 queue: the new kit is issued only now
+    if (queued) g.loadoutIndex = g.nextSpawnLoadoutIndex;
+    const kit = loadoutDefs(g.mode, Settings.data.loadouts[g.loadoutIndex]);
+    // v45: always respawn with the set's own guns — a weapon picked up from the floor does not carry over
+    if (queued || kit.map((d) => d.id).join() !== g.weapons.weapons.map((w) => w.def.id).join()) g.weapons.rebuild(kit);
+    if (queued) g.app.hud.toast(`已換上配裝 ${LOADOUT_KEYS[g.loadoutIndex]}`);
     g.nextSpawnLoadoutIndex = null;
     this.setSpectate(null);
     this.motor.teleport(point); this.life = (this.life || 0) + 1;

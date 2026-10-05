@@ -109,7 +109,7 @@ class Weapon {
     const mz = this.muzzleWorld(ray, ws);
     if (this.local) {
       let [rp, ry] = this.recoilKick(); const am = ws.ads ? (this.def.adsRecoilMult ?? 0.8) : 1;
-      if (ws.ads && this.def.adsVertical) { ry = 0; rp = Math.min(rp, Math.max(0, this.def.adsVertical - p.recoilTP)); } // v45 SF2 aimed spray: climbs straight up to a cap, no side drift
+      if (ws.ads && this.def.adsVertical) { ry = clamp(ry * 0.6, -0.0105 - p.recoilTY, 0.0105 - p.recoilTY); rp = Math.min(rp, Math.max(0, this.def.adsVertical - p.recoilTP)); } // v45 SF2 aimed spray: climbs up to a cap, sways at most ±0.6° (≈1.2° side to side)
       p.addRecoil(rp * am, ry * am);
       p.punchV += (this.kick ? this.kick.rx : 0.05) * (ws.ads ? 0.9 : 0.7); // small per-shot camera shudder on top of the recoil
       ws.kick(this.kick);

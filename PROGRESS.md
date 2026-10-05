@@ -497,6 +497,24 @@
 - v42 失落神殿：泥磚牆幾乎都能穿射，硬掩體只有石柱和出生點裝甲車，中央帆布卡車。
   - 出生點視線一開始有漏，用 `tools/_losprobe.mjs <地圖>` 列出漏的視線，再補上石牆。
 
+## v45c（2026-10-05）：房間精簡、3 組配裝和 F1–F3 卡片、開鏡衝刺
+- 房間：
+  - 下拉選單排成「地圖／模式、難易度／勝利分數、武器限制／設置」。
+  - 隊伍人數改回 `.stepper`。
+  - 隊伍列表只顯示編號、徽章和名字。房主徽章是 `STAR_BADGE`（SVG，定義在 01_core.js）。
+  - F5 在 `countdown` 狀態時會取消倒數。
+  - 聊天預設 `chatTeam = true`。
+- 配裝：
+  - `LOADOUT_KEYS = 'ABC'`；舊存檔的 5 組會被截成 3 組。
+  - `app.showLoadoutPicker()` 顯示 `#loPick` 卡片，圖片用 `_makeThumbs` 產生（槍和投擲物都有）。測試：`node tools/_lopick.mjs`。
+- 重生：如果目前武器和配裝不同（例如撿過槍），就用 `loadoutDefs` 重建武器。
+- 衝刺：`Player.sprinting` 不再被 `ws.ads` 擋住，所以按住 Shift 前進會自動取消開鏡（WeaponSystem 原本就會在衝刺時關掉開鏡）。
+- `adsVertical`：左右後座可以累積到 ±0.0105 rad。
+- G36C：
+  - `HL` 從 0.05 改成 0.032，`EYE` 改 0.08，`vmAdsFov` 改 17。
+  - GLB 裡的 `lens` 網格不再渲染。
+- 投擲物：煙霧彈改用灰色帶肋的罐子，閃光彈改用有白環的罐子。`MODES.general.slots` 的順序改成 he → smoke → flash，手榴彈 2 顆、閃光彈 1 顆。
+
 ## v45b（2026-10-05）：SF2 待機室、倉庫唯一裝備、G36C 照真槍重建
 - 房間（00_head.html、17_app.js）：
   - 版面是 `.lb-char`（WebGL 角色舞台 `_lbStage`／`_renderLobbyStage`，左下半透明聊天室）加上 `.lb-right`（地圖縮圖、`_dd()` 下拉選單 ×6、隊伍 12+12 格、配裝和「開始 (F5)」）。
