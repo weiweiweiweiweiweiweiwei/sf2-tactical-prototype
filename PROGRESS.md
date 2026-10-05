@@ -497,6 +497,18 @@
 - v42 失落神殿：泥磚牆幾乎都能穿射，硬掩體只有石柱和出生點裝甲車，中央帆布卡車。
   - 出生點視線一開始有漏，用 `tools/_losprobe.mjs <地圖>` 列出漏的視線，再補上石牆。
 
+## v45（2026-10-05）：黃金 G36C（Blender 模型）
+- 模型腳本是 `tools/blender/g36c_build.py`，輸出 `tools/guns/g36c.glb`。用 `node tools/guns/pack.mjs` 打包成 `assets/guns/guns.js`（base64，本機雙擊開啟也能玩）。
+- 遊戲端在 `loadGunModels()`（09_models.js）載入模型。網格命名為 `<node>__<mat>`，並用空物件 SIGHT／MUZZLE／MUZZLE_S 標出瞄準線和兩種槍口位置。如果模型載不到，就退回程式生成的舊版 G36C（`g36cProc`）。
+- 有兩把武器：`g36c`（消音器，`suppressed`）和 `g36c_gold`（消焰器，使用 m4 槍聲，射速倍率 1.07）。
+- 開鏡設定：
+  - 新增 `vmAdsFov`：開鏡時槍模鏡頭的視角，G36C 設 15°，讓全息視窗變大，又不會像在看隧道。
+  - 新增 `reticleScale`（0.55），把準心縮小到和視窗相稱。
+  - 新增 `eyeRelief`，可以逐把槍設定開鏡時眼睛和瞄具的最小距離。
+  - 世界放大的 `adsFov` 從 50 改成 42。
+- 機匣的大平面用霧面金（`goldSatin`），避免整片反射成黑色鏡面。
+- 截圖工具：`node tools/_gunshot.mjs g36c,g36c_gold`，輸出腰射和開鏡兩張圖。
+
 ## v44（2026-10-05）：櫻花客棧（SF2 Ryokan）＋ Blender 建模流程
 - **資料來源**：
   - 韓國戰隊戰影片裡 Tab 計分板的完整地圖輪廓（影片 4:3 是把 16:9 壓扁，用正方形的目標物圖示校正 ×4/3）。

@@ -15,6 +15,7 @@ class GunMats {
     this.bright = metal(0x9ea3a9, 0.22, 1, 0.05);
     this.gold = metal(0xe2b24c, 0.2, 1, 0.3);
     this.goldDark = metal(0xa77d2c, 0.32, 1, 0.2);
+    this.goldSatin = metal(0xf0c25a, 0.38, 1, 0.35); // v45 Blender G36C: big flat faces need a satin finish or they mirror the dark room
     this.blade = metal(0xd2d8dd, 0.16, 1, 0.2);
     this.polymer = P({ color: 0x262628, metalness: 0.1, roughness: 0.7, roughnessMap: wear.roughnessMap, normalMap: wear.normalMap, normalScale: new THREE.Vector2(0.5, 0.5) });
     this.rubber = P({ color: 0x131313, metalness: 0, roughness: 0.92 });
@@ -40,9 +41,33 @@ class GunMats {
     this.odGreen = P({ color: 0x4a5236, metalness: 0.1, roughness: 0.62, roughnessMap: wear.roughnessMap, normalMap: wear.normalMap, normalScale: new THREE.Vector2(0.45, 0.45) });
     this.bakelite = P({ color: 0x6e2f1c, metalness: 0.05, roughness: 0.42, clearcoat: 0.35, clearcoatRoughness: 0.35 });
     this.grayPaint = P({ color: 0x6b6f72, metalness: 0.4, roughness: 0.5 });
+    this.magBlack = P({ color: 0x1b1b1d, metalness: 0.15, roughness: 0.55, roughnessMap: wear.roughnessMap, normalMap: wear.normalMap, normalScale: new THREE.Vector2(0.45, 0.45) });
+    this.brass = metal(0xc8963e, 0.3, 1, 0.1);
+    this.dotR = new THREE.MeshBasicMaterial({ color: new THREE.Color(1, 0.2, 0.15).multiplyScalar(1.4) }); this.dotR.userData.keep = true;
     this.reticle = tf.reticle();
     this.flashTex = tf.flash();
   }
+}
+
+/* v45 Blender gun models: assets/guns/guns.js sets window.GUN_GLB[id] = base64 GLB (file:// friendly). Meshes are named
+   '<node>__<material>' in gun space; empties SIGHT / MUZZLE / MUZZLE_S mark the sight axis and the two muzzle ends. */
+const GUN_MODELS = {};
+function loadGunModels() {
+  if (loadGunModels.p) return loadGunModels.p;
+  return (loadGunModels.p = (async () => {
+    try {
+      if (!window.GUN_GLB) await new Promise((res) => { const s = document.createElement('script'); s.src = 'assets/guns/guns.js'; s.async = true; s.onload = res; s.onerror = res; document.head.appendChild(s); });
+      for (const [id, b64] of Object.entries(window.GUN_GLB || {})) {
+        const bin = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0)).buffer, gltf = await new GLTFLoader().parseAsync(bin, ''), parts = [], marks = {};
+        gltf.scene.updateMatrixWorld(true);
+        gltf.scene.traverse((o) => {
+          if (o.isMesh) { const g = o.geometry.clone(); g.applyMatrix4(o.matrixWorld); const nm = o.name.split('__'); parts.push({ node: nm[0], mat: ((o.material && o.material.name) || '').replace('gun:', '') || (nm[1] || '').replace(/_\d+$/, ''), geo: g }); }
+          else if (/^(SIGHT|MUZZLE|MUZZLE_S)$/.test(o.name)) marks[o.name] = o.getWorldPosition(new THREE.Vector3());
+        });
+        GUN_MODELS[id] = { parts, marks };
+      }
+    } catch (e) { console.warn('gun GLB unavailable, procedural fallback:', e && e.message); }
+  })());
 }
 
 class GunBuilder {
@@ -136,7 +161,7 @@ class WeaponModels {
   // Build the first-person model for a weapon definition: procedural first, then (optionally) an external GLTF/GLB swapped in.
   build(def) {
     const key = def.model || def.id;
-    const vm = (key === 'he' || key === 'flash' || key === 'smoke') ? this.grenade(key) : this[key]();
+    const vm = (key === 'he' || key === 'flash' || key === 'smoke') ? this.grenade(key) : this[key](def);
     if (def.kind !== 'grenade' && def.kind !== 'knife') this._fitAds(vm, def);
     if (def.modelUrl) this.attachGLTF(vm, def.modelUrl);
     return vm;
@@ -147,7 +172,7 @@ class WeaponModels {
   _fitAds(vm, def) {
     if (!this.adsFit) this.adsFit = new Map();
     if (this.adsFit.has(def.id)) { vm.adsPos.z += this.adsFit.get(def.id); return; }
-    const minD = def.kind === 'pistol' ? 0.3 : vm.reticle ? 0.09 : def.adsType === '2d_scope_overlay' ? 0.07 : 0.13;
+    const minD = vm.eyeRelief || (def.kind === 'pistol' ? 0.3 : vm.reticle ? 0.09 : def.adsType === '2d_scope_overlay' ? 0.07 : 0.13);
     const cam = this._adsCam || (this._adsCam = new THREE.PerspectiveCamera(48, 1.6, 0.01, 10)); cam.updateMatrixWorld();
     const g = vm.group, v = new THREE.Vector3(), p = new THREE.Vector3(), z0 = vm.adsPos.z;
     for (let it = 0; it < 3; it++) {
@@ -201,9 +226,9 @@ class WeaponModels {
     s.position.set(x, y, -u); s.scale.set(size, size, 1); s.visible = false; s.renderOrder = 10; s.userData.baseScale = size; parent.add(s);
     return s;
   }
-  _reticle(parent, y, dot = false) {
+  _reticle(parent, y, dot = false, scale = 1) {
     const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: dot ? this.M.dotTex : this.M.reticle, blending: THREE.AdditiveBlending, depthWrite: false, depthTest: true, transparent: true, color: new THREE.Color(1, 0.22, 0.16).multiplyScalar(dot ? 3.2 : 2.2), opacity: 0 }));
-    s.position.set(0, y, -3); const k = dot ? 0.075 : 0.32; s.scale.set(k, k, 1); s.renderOrder = 4; parent.add(s);
+    s.position.set(0, y, -3); const k = (dot ? 0.075 : 0.32) * scale; s.scale.set(k, k, 1); s.renderOrder = 4; parent.add(s);
     return s;
   }
 
@@ -270,7 +295,27 @@ class WeaponModels {
   // Gold G36C — built from its iconic parts so it reads instantly: tall arched CARRY HANDLE running along the whole
   // receiver (with the rail + red dot on top), vented handguard with oval ports, longer exposed barrel + gas block,
   // big integrated trigger guard, side-folding skeleton stock, translucent magazine with coupling lugs.
-  g36c() {
+  // v45 Gold G36C from Blender (tools/blender/g36c_build.py): flat-top rail + gold EOTech 552, vented handguard,
+  // skeleton side-folder, black magazine; def.suppressed picks the engraved can or the four-prong flash hider.
+  g36c(def) {
+    const G = GUN_MODELS.g36c; if (!G || !G.marks.SIGHT) return this.g36cProc(def);
+    const M = this.M, gb = new GunBuilder(M), sup = !def || def.suppressed !== false;
+    gb.node('mag', new THREE.Vector3(0, -0.035, -0.03)).node('charge', new THREE.Vector3(0, 0.045, -0.07));
+    const MAT = { gold: M.goldSatin, goldDark: M.goldDark, polymer: M.polymer, rubber: M.rubber, steel: M.steel, black: M.black, bright: M.bright, magBlack: M.magBlack, brass: M.brass, suppressor: M.suppressor, dotW: M.dotW, dotR: M.dotR };
+    for (const p of G.parts) {
+      if ((p.node === 'supp' && !sup) || (p.node === 'hider' && sup)) continue;
+      const node = p.node === 'mag' || p.node === 'charge' ? p.node : 'body';
+      if (p.mat === 'lens') { gb.extra.push({ geo: p.geo.clone(), mat: M.lens, node, noAO: true, order: 3 }); continue; }
+      gb.add(p.geo.clone(), MAT[p.mat] || M.gold, node);
+    }
+    const sightY = G.marks.SIGHT.y, mz = sup ? G.marks.MUZZLE_S : G.marks.MUZZLE;
+    this.arm(gb, [0.02, -0.115, 0.1], [0.19, -0.3, 0.42]); this.gripHand(gb, 0.001, -0.082, -0.07, -0.36);
+    this.arm(gb, [-0.038, -0.06, -0.2], [-0.3, -0.3, 0.08], 0.033); this.supportHand(gb, 0, 0.0, 0.2, 0.05);
+    const b = gb.build();
+    const vm = this._finish(b, { muzzleU: -mz.z, sightY, hipPos: [0.14, -0.165, -0.37], adsPos: [0, -sightY, -0.24], flash: sup ? 0.08 : 0.2, reticle: true, reticleScale: 0.55 });
+    vm.eyeRelief = 0.05; return vm; // holo window fills more of the view, like SF2's EOTech ADS
+  }
+  g36cProc() {
     const M = this.M, gb = new GunBuilder(M);
     const oval = (u, v, a, b, n = 10) => { const p = []; for (let i = 0; i < n; i++) { const t = (i / n) * Math.PI * 2; p.push([u + Math.cos(t) * a, v + Math.sin(t) * b]); } return p; };
     gb.node('mag', new THREE.Vector3(0, -0.035, -0.03)).node('charge', new THREE.Vector3(0, 0.045, -0.07));
@@ -557,12 +602,13 @@ class WeaponModels {
     out.hipPos = new THREE.Vector3(...o.hipPos); out.hipRot = new THREE.Euler(...(o.hipRot || [0, 0.035, 0]));
     out.adsPos = o.adsPos ? new THREE.Vector3(...o.adsPos) : out.hipPos.clone(); out.adsRot = o.adsPos ? new THREE.Euler(0, 0, 0) : out.hipRot.clone();
     if (o.muzzleU) { out.muzzle = new THREE.Object3D(); out.muzzle.position.set(0, 0, -o.muzzleU); g.add(out.muzzle); out.flash = this._flash(g, 0, 0, o.muzzleU + 0.03, o.flash); }
-    if (o.reticle) out.reticle = this._reticle(g, o.sightY, o.reticle === 'dot');
+    if (o.reticle) out.reticle = this._reticle(g, o.sightY, o.reticle === 'dot', o.reticleScale || 1);
     return out;
   }
 
   /* ---------------------- third-person (low detail) ---------------------- */
   tp(id) {
+    if (id === 'g36c_gold') id = 'g36c';
     if (this.tpCache.has(id)) return this.tpCache.get(id);
     const spec = WEAPON_DATABASE[id] && WEAPON_DATABASE[id].tp;
     if (spec) { const g = this.tpGeneric(spec); this.tpCache.set(id, g); return g; }

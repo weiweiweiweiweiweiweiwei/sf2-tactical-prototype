@@ -54,6 +54,7 @@ class Match {
     this.effects = new Effects(this.scene, app.tex, this.audio);
     this.player = new Player(this);
     if (this.isClient) this.player.team = this.net.team === 'bravo' ? 'bravo' : 'alpha'; // a client plays on his room team, with no bots of its own
+    await loadGunModels(); // v45 Blender gun models (GLB) must be parsed before the viewmodels are built
     this.weapons = new WeaponSystem(this, loadoutDefs(this.mode, Settings.data.loadouts[this.loadoutIndex])); this.weapons.setEnvironment(this.vmEnv || this.scene.environment);
     this.combatants.push(this.player);
     if (!this.isClient) {

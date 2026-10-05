@@ -284,7 +284,7 @@ class WeaponSystem extends Arsenal {
     const fovNow = this.fov + p.fovPunch;
     if (Math.abs(cam.fov - fovNow) > 1e-4) { cam.fov = fovNow; cam.updateProjectionMatrix(); }
     this.sprintT = damp(this.sprintT, p.sprinting ? 1 : 0, 12, dt);
-    const vmFov = lerp(58, 48, this.adsT * (w.scoped ? 0 : 1));
+    const vmFov = lerp(58, w.def.vmAdsFov || 48, this.adsT * (w.scoped ? 0 : 1)); // v45 vmAdsFov: narrower viewmodel lens = bigger holo window
     if (Math.abs(this.camera.fov - vmFov) > 0.01) { this.camera.fov = vmFov; this.camera.updateProjectionMatrix(); }
 
     // viewmodel lives at the camera's world transform
