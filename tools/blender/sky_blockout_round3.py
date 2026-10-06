@@ -1,7 +1,7 @@
 # v46 block-out round 3: start from the player's OWN live edits (Blender autosave), keep every shape he made, and only
 #   - scale crate heights to the agreed rule (his 1.15 / 2.3 steps → 1.5 one crate / 3.0 two crates)
-#   - straw crate as tall as the two-crate stacks (his pink note), on its original footprint
-#   - bridge GO box back on the floor; trams 4.6 m tall; four cable poles; tower behind the tower-side car
+#   - straw crate between the two grey lines of the plan, flush with the L stack, as tall as the two-crate stacks
+#   - bridge GO box back on the floor; trams at his height × the same crate scale; four cable poles; tower behind the tower-side car
 #   - mirror every base-A object to base B (B = A with game x → −x, i.e. Blender Y → −Y)
 # blender -b <player autosave>.blend -P tools/blender/sky_blockout_round3.py -- <out.blend>
 import bpy, bmesh, sys
@@ -61,14 +61,14 @@ scale_z(obj('CRATE_A3'), K); obj('CRATE_A3').name = 'CRATE_A3 L 形箱堆（橫�
 scale_z(obj('CRATE_A4'), K); obj('CRATE_A4').name = 'CRATE_A4 L 形箱堆（直段，兩層）'
 l2 = obj('CRATE_A3', dup=True); scale_z(l2, K); l2.name = 'CRATE_A2 L 形箱堆（左側靠峽谷，鏡像右側：靠纜車兩層、內側單層）'
 for ob in (obj('CRATE_A3'), obj('CRATE_A4'), l2, a1): ob['note'] = f'單層 {ONE} m（站著露出下巴以上、蹲下完全躲住、跳不上去）；兩層 {TWO} m'
-st = obj('STRAW_A'); box(st, 8.97, 12.83, 20.32, 21.57, 0, TWO)                # his pink note: as tall as the others
+st = obj('STRAW_A'); box(st, 7.18, 12.56, 20.41, 22.74, 0, TWO)                # between the two grey lines on the plan, flush with the L's outer face, as tall as the stacks
 st['note'] = f'吸管箱：和兩層箱堆同高 {TWO} m，中間挖一個人可以穿過的洞，通往鐘樓側的纜車站'
 # ---- bridge GO box: his spot, back on the floor
 box(obj('GO_BRIDGE_A'), -2.84, -1.94, 12.88, 13.78, 0, 1.6)
 
 # ---- trams: his 5.4 × 10 m car, 4.6 m tall; the tower-side car is the same car reflected through the centre
-TR_H = 4.6
 tl = obj('TRAM_L'); bake(tl)
+TR_H = max(v.co.z for v in tl.data.vertices) * K       # his car height, in the same crate scale
 for v in tl.data.vertices: v.co.z = TR_H if v.co.z > 0.1 else 0.0
 for ob in list(bpy.data.objects):
     if ob.name.split(' ')[0] == 'TRAM_R': bpy.data.objects.remove(ob, do_unlink=True)
