@@ -235,7 +235,9 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
 .lb-roomhd{display:flex;align-items:baseline;gap:14px;padding:8px 14px;background:linear-gradient(90deg,rgba(255,200,80,.18),transparent 70%);border-left:3px solid var(--gold);border-radius:3px}
 .lb-roomhd b{font-size:19px;letter-spacing:2px;color:#ffe7a0;white-space:nowrap}.lb-roomhd span{font-size:13px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .lb-cfg{display:grid;grid-template-columns:300px 1fr;gap:14px;height:170px}
-.lb-cfg .mapPrev{height:170px;cursor:pointer}.lb-cfg .mapPrev:hover{border-color:var(--accent)}
+.lb-cfg .mapPrev{height:170px;cursor:pointer}
+#lbMapImg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}#lbMapImg.miss{display:none}
+.maps button img.th{width:100%;height:38px;object-fit:cover;display:block;border-radius:2px;margin-bottom:2px}.lb-modal .maps button img.th{height:104px}.lb-cfg .mapPrev:hover{border-color:var(--accent)}
 .lb-dds{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:repeat(3,1fr);gap:8px 12px}
 .dd{position:relative}.dd>button{position:relative;width:100%;height:100%;display:flex;align-items:center;justify-content:center;cursor:pointer;background:linear-gradient(180deg,rgba(255,255,255,.07),rgba(0,0,0,.35));border:1px solid rgba(255,255,255,.2);border-radius:3px;color:#fff;font-size:17px;font-weight:700;letter-spacing:1px}
 .dd>button small{position:absolute;left:10px;font-size:11px;color:var(--faint);letter-spacing:2px;font-weight:600}.dd>button i{position:absolute;right:12px;font-style:normal;font-size:12px;color:#fff}
@@ -251,7 +253,7 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
 .lb-modal{position:absolute;inset:0;z-index:40;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.6);backdrop-filter:blur(4px)}.lb-modal.on{display:flex}
 .lb-modal .mz{display:block;zoom:1;width:1040px;max-height:720px;overflow-y:auto;background:#0f151b;border:1px solid var(--accent);border-radius:6px;padding:14px 18px 18px}
 .lb-modal header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}.lb-modal header b{font-size:20px;letter-spacing:4px;color:var(--accent)}
-.lb-modal .maps{grid-template-columns:repeat(4,1fr);gap:10px}.lb-modal .maps button{font-size:14px;padding:5px}.lb-modal .maps button canvas{height:120px}
+.lb-modal .maps{grid-template-columns:repeat(5,1fr);gap:10px}.lb-modal .maps button{font-size:14px;padding:5px}.lb-modal .maps button canvas{height:104px}
 .lb-modal .mz.opt{width:520px;overflow:visible}.lb-modal .mz.opt .pills{display:flex;flex-direction:row}.lb-modal .tg{display:flex;align-items:center;gap:12px;padding:10px 6px;font-size:17px;border-bottom:1px solid rgba(255,255,255,.06);cursor:pointer}
 .lb-modal .tg input{width:20px;height:20px;accent-color:var(--accent)}.lb-modal h3{font-size:13px;letter-spacing:4px;color:var(--accent);margin:14px 0 8px}
 /* v27 room bar: code, room name, ＋ 邀請朋友 pop-up, 離開房間 */
@@ -840,7 +842,7 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
     <section class="lb-right">
       <div class="lb-roomhd"><b id="lbTitle"></b></div>
       <div class="lb-cfg">
-        <div class="mapPrev hostonly" id="lbMapOpen" title="點擊選擇地圖"><canvas id="lbMapBig" width="600" height="340"></canvas><div class="info"><b id="lbMapName"></b></div></div>
+        <div class="mapPrev hostonly" id="lbMapOpen" title="點擊選擇地圖"><canvas id="lbMapBig" width="600" height="340"></canvas><img id="lbMapImg" alt="" onerror="this.classList.add('miss'); if (window.app) app.refreshLobby && app.refreshLobby()"><div class="info"><b id="lbMapName"></b></div></div>
         <div class="lb-dds">
           <div class="dd hostonly" id="ddMap"></div><div class="dd hostonly" id="ddRule"></div>
           <div class="dd hostonly" id="ddDiff"></div><div class="dd hostonly" id="ddTarget"></div>

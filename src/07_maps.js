@@ -1186,6 +1186,7 @@ const MAPS = [
     sun: { pos: [30, 60, -20], color: 0xfff0d2, intensity: 3.0, auto: true }, hemi: [0xdce8ff, 0x8a7656, 0.85], exposure: 0.88,
     fog: { color: 0xd9cfbd, near: 70, far: 260 }, acoustics: 'canyon', ambience: 'desert', shadowFollow: 64,
     shot: { pos: [-40, 24, -6], target: [0, 2, 0] },
+    thumb: { pos: [-62, 42, 58], target: [0, 4, 0], fov: 55 },
     objectives: { dom: [[-21, 10, 34], [0, 0, 0], [21, 10, -34]], relic: [0, 0, 0], domRadius: 5 },
     build(b) {
       const LT = b.def._lanes || (b.def._lanes = makeLaneTerrain({
@@ -1247,6 +1248,7 @@ const MAPS = [
     sun: { pos: [-30, 55, 25], color: 0xfff0dc, intensity: 2.9, auto: true }, hemi: [0xdbe6f5, 0x6a7450, 0.85], exposure: 0.88,
     fog: { color: 0xc4ced6, near: 70, far: 260 }, acoustics: 'canyon', ambience: 'hill', shadowFollow: 64,
     shot: { pos: [-30, 18, 20], target: [0, 1, 0] },
+    thumb: { pos: [-48, 26, 38], target: [0, 3, 0], fov: 55 },
     objectives: { dom: [[15, -0.5, 27], [0, 3.2, 0], [-15, -0.5, -27]], relic: [0, 3.2, 0], domRadius: 5 },
     build(b) {
       const LT = b.def._lanes || (b.def._lanes = makeLaneTerrain({
@@ -1317,6 +1319,7 @@ const MAPS = [
     sun: { pos: [40, 30, -50], color: 0xfff4e6, intensity: 2.5, auto: true }, hemi: [0xdfe8f5, 0x8a9098, 0.95], exposure: 0.92,
     fog: { color: 0xdde4ea, near: 40, far: 190 }, acoustics: 'canyon', ambience: 'snow', shadowFollow: 60, snow: true,
     shot: { pos: [-34, 16, -20], target: [0, 6, 0] },
+    thumb: { pos: [-55, 34, -38], target: [0, 6, 0], fov: 55 },
     objectives: { dom: [[18, -1, -30], [0, 6, 0], [-18, -1, 30]], relic: [0, 6, 0], domRadius: 5 },
     build(b) {
       const LT = b.def._lanes || (b.def._lanes = makeLaneTerrain({

@@ -439,6 +439,7 @@ MAPS.push({
   sun: { pos: [30, 55, 25], color: 0xfff4e6, intensity: 2.4, auto: true }, hemi: [0xeef2ff, 0xd8c8e0, 0.85], exposure: 0.8,
   fog: { color: 0xe6dcef, near: 140, far: 650 }, acoustics: 'outdoor', ambience: 'hill', shadowFollow: 0,
   shot: { pos: [0, 18, 38], target: [0, 0, -4] },
+  thumb: { pos: [-40, 12, 34], target: [2, 6, -10], fov: 58 },
   objectives: { dom: [[-17, 0, 6], [0, 0, -3], [17, 0, -6]], relic: [19, 0, 5], domRadius: 3.2 },
   async preload() {
     if (this._glb !== undefined) return;

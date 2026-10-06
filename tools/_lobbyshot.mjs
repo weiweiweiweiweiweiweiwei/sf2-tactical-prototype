@@ -8,6 +8,8 @@ for (const [w, h] of [[1280, 720], [1920, 1080], [1366, 768]]) {
   const p = await b.newPage({ viewport: { width: w, height: h } }); const errs = []; p.on('pageerror', (e) => errs.push(e.message));
   await p.goto(`http://127.0.0.1:${srv.address().port}/index.html`); await p.waitForFunction(() => window.app && window.SF2);
   const r = await p.evaluate(async () => { app.createRoom(); await new Promise((r) => setTimeout(r, 2500)); const s = document.getElementById('lbStart').getBoundingClientRect(); return { bottom: Math.round(s.bottom), right: Math.round(s.right), vw: innerWidth, vh: innerHeight }; });
-  await p.screenshot({ path: `tools/out/lobby_${w}x${h}.jpg`, type: 'jpeg', quality: 85 }); console.log(w, h, r, errs.slice(0, 3)); await p.close();
+  await p.screenshot({ path: `tools/out/lobby_${w}x${h}.jpg`, type: 'jpeg', quality: 85 });
+  if (w === 1920) { await p.evaluate(async () => { document.querySelector('#ddMap>button').click(); await new Promise((r) => setTimeout(r, 1500)); }); await p.screenshot({ path: 'tools/out/lobby_maps.jpg', type: 'jpeg', quality: 85 }); }
+  console.log(w, h, r, errs.slice(0, 3)); await p.close();
 }
 await b.close(); srv.close();

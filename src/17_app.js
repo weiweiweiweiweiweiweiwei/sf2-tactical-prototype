@@ -425,8 +425,10 @@ class App {
     this.dry = MAPS.map((def) => { const b = new MapBuilder(null, def, true); def.build(b); return b; });
     const maps = $('lbMaps');
     MAPS.forEach((def, i) => {
-      const bt = document.createElement('button'); const cv = document.createElement('canvas'); cv.width = 176; cv.height = 88;
-      drawMapPreview(cv, def, this.dry[i], { labels: false }); bt.append(cv, document.createTextNode(`${i + 1}. ${def.name}`));
+      // v46: the real scene from the map's best angle (assets/maps/thumbs, made by tools/_mapthumbs.mjs); the floor plan if it is missing
+      const bt = document.createElement('button'), img = document.createElement('img'); img.className = 'th'; img.alt = ''; img.loading = 'lazy';
+      img.onerror = () => { const cv = document.createElement('canvas'); cv.width = 176; cv.height = 88; drawMapPreview(cv, def, this.dry[i], { labels: false }); img.replaceWith(cv); };
+      img.src = mapThumb(def); bt.append(img, document.createTextNode(`${i + 1}. ${def.name}`));
       bt.onclick = () => { if (this.isGuest()) return; L.map = i; this.audio.init(); this.audio.uiClick(); $('lbMapModal').classList.remove('on'); this.refreshLobby(); this.warm(i); };
       maps.appendChild(bt);
     });
@@ -484,7 +486,8 @@ class App {
     const $ = this.$, r = this.room, guest = this.isGuest(), L = this.roomCfg(), R = RULES[L.rule];
     const def = MAPS[L.map];
     $('lobby').classList.toggle('guest', guest);
-    drawMapPreview($('lbMapBig'), def, this.dry[L.map]);
+    const big = $('lbMapImg'); if (big.dataset.id !== def.id) { big.dataset.id = def.id; big.classList.remove('miss'); big.src = mapThumb(def); }
+    if (big.classList.contains('miss')) drawMapPreview($('lbMapBig'), def, this.dry[L.map]);
     if (guest && this.warmMap !== L.map) { this.warmMap = L.map; this.warm(L.map); } // the host picked another map: prefetch it
     $('lbMapName').textContent = `${def.name} · ${def.en}`;
     [...$('lbMaps').children].forEach((b, i) => b.classList.toggle('on', i === L.map));
