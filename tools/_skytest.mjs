@@ -15,19 +15,19 @@ const r = await p.evaluate(async () => {
   for (const bt of m.bots) { bt.ai.update = () => {}; bt.ai.wishSpeed = 0; }
   await sleep(9000); // freeze
   // bridge: stand at the west GO box, press E
-  P.motor.teleport(new SF2.THREE.Vector3(-8.4, 0.1, 1.0)); P.spawnProtect = 0; await sleep(300);
+  P.motor.teleport(new SF2.THREE.Vector3(-13.3, 0.1, -1.5)); P.spawnProtect = 0; await sleep(300);
   out.promptBridge = mc.prompt(P); m.onInteract(); await sleep(4600); out.bridgeK = mc.bridge.k; out.navBridgeOk = mc.navBridge.filter((n) => n.ok).length;
   // walk onto the bridge middle → stands on it
-  P.motor.teleport(new SF2.THREE.Vector3(-2, 0.2, -3)); await sleep(500); out.onBridgeY = +P.motor.pos.y.toFixed(2);
-  // tram: south car is at the west dock; step in, press E inside
-  const t = mc.trams[1], kc = mc.controls.find((k) => k.inCar && k.t === t), q = mc.ctrlPos(kc); P.motor.teleport(new SF2.THREE.Vector3(q.x + (q.x < t.x ? 0.9 : -0.9), 0.2, q.z)); await sleep(400);
+  P.motor.teleport(new SF2.THREE.Vector3(-4, 0.2, 0.45)); await sleep(500); out.onBridgeY = +P.motor.pos.y.toFixed(2);
+  // tram: the north car is parked at Alpha; step in, press E inside
+  const t = mc.trams[0], kc = mc.controls.find((k) => k.inCar && k.t === t), q = mc.ctrlPos(kc); P.motor.teleport(new SF2.THREE.Vector3(q.x + (q.x < t.x ? 0.9 : -0.9), 0.2, q.z)); await sleep(400);
   out.promptCar = mc.prompt(P); out.x0 = +P.motor.pos.x.toFixed(2); m.onInteract(); await sleep(5600);
   out.midX = +P.motor.pos.x.toFixed(2); out.midY = +P.motor.pos.y.toFixed(2); out.tramX = +t.x.toFixed(2);
   return out;
 });
 await shot('ride');
 const r2 = await p.evaluate(async () => {
-  const sleep = (ms) => new Promise((r) => setTimeout(r, ms)), m = app.match, mc = m.builder.mechs[0], P = m.player, t = mc.trams[1];
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms)), m = app.match, mc = m.builder.mechs[0], P = m.player, t = mc.trams[0];
   await sleep(7000); const o = { endX: +P.motor.pos.x.toFixed(2), tramEnd: +t.x.toFixed(2), alive1: P.alive };
   // fall: walk off the north edge
   P.motor.teleport(new SF2.THREE.Vector3(-18, 0.2, 0)); P.motor.pos.z = -13.6; P.motor.grounded = false; await sleep(2600); o.aliveAfterFall = P.alive; o.y = +P.motor.pos.y.toFixed(1);
@@ -35,7 +35,7 @@ const r2 = await p.evaluate(async () => {
 });
 await p.evaluate(async () => { const m = app.match; m.player.alive || (m.player.respawnT = 0); await new Promise((r) => setTimeout(r, 4500)); const P = m.player; P.yaw = -Math.PI / 2 + 0.25; P.pitch = -0.08; });
 await shot('view');
-const views = [['tower', -24, 10, -0.15, -0.05], ['clock', -3, -11.5, 0, 0.32], ['go', -8.4, 1.6, 0, -0.35], ['bridge', -9.5, -2.5, -1.45, -0.02], ['tram', -26, -11.5, -1.75, -0.03], ['east', 25.5, 11.5, 0.75, -0.06]];
+const views = [['tower', -24, -8, -2.36, 0.15], ['clock', -12, -10, Math.PI, 0.3], ['go', -14.6, -1.4, -Math.PI / 2, -0.35], ['bridge', -17, 0.4, -Math.PI / 2, -0.02], ['tram', -14, -9, 0, -0.03], ['straw', -21.6, 4.5, Math.PI, -0.05], ['east', 24, 6, Math.PI / 2, -0.06]];
 for (const [n, x, z, yaw, pitch] of views) {
   await p.evaluate(async ([x, z, yaw, pitch]) => { const P = app.match.player; if (!P.alive) { P.respawnT = 0; await new Promise((r) => setTimeout(r, 4000)); } P.motor.teleport(new SF2.THREE.Vector3(x, 0.2, z)); P.yaw = yaw; P.pitch = pitch; P.spawnProtect = 9; await new Promise((r) => setTimeout(r, 900)); }, [x, z, yaw, pitch]);
   await shot(n);

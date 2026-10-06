@@ -1,23 +1,42 @@
 /* =====================================================================
    v46 SKY CITY (天空之城 · SF2 "Skywalker" 스카이워커 / GNN 天空之門, sniper-mode map) — two white-brick tower tops
    floating over a sea of cloud, split by a deep chasm. Alpha holds the west roof, Bravo the east roof; a clock tower
-   (showing the real time) closes the north end. No railings anywhere: whoever steps off the edge falls to his death.
+   (showing the real time) closes the south end of the chasm. No railings anywhere: whoever steps off falls to his death.
+   Layout = the player's Blender block-out (maps/skycity/blockout, Blender X = game z, Blender −Y = game x). The two roofs
+   are MIRROR images (x → −x); the two tram lines are point images of each other.
    Mechanisms (press E at a GO box):
-   · Drawbridge — one bascule leaf on each roof, hinged at the chasm edge next to its winch drum. Raised = the roofs are
-     cut off; lowered = a 4 m walkway across the middle. A box beside each winch toggles both leaves.
-   · Two trams on cables along the north and south edges (point-symmetric: the north car starts east, the south car
-     west). Each line has three GO boxes — inside the car, at the west station and at the east station; a press sends
-     the car to the other side (or calls it over). The car is an openwork box taller than a man: only its doorway, on
-     the platform side, can be shot through, and stepping out of it over the chasm is a fall. Its roof cannot be stood on.
-     While a car runs, the flat gears around the map (cable pulleys) turn.
-   Layout (metres): roofs x ∈ ±[7, 27], z ∈ [−13, 13], floor y = 0; chasm 14 m; bridge z ∈ [−5, −1].
+   · Drawbridge — one bascule leaf on each roof, hinged at the chasm edge beside its winch. Raised = the roofs are cut off;
+     lowered = a 2.7 m walkway across the middle. The box between the leaf and the hut toggles both leaves.
+   · Two trams on cables along the north (−z) and south (+z) edges. The north car parks at Alpha, the south car at Bravo;
+     each line has three GO boxes — inside the car and one at each roof. A press sends the car to the other roof (or calls
+     it over). Lower walls are solid wood (about 2 m), above them the arched windows are open: bullets and grenades go
+     through. The doorway faces the roof; stepping out of it over the chasm is a fall; the roof of the car is out of reach.
+     On the Alpha roof the south car stops behind the "straw" crate tunnel. While a car runs, the corner pulley gears turn.
+   Metres: roofs x ∈ ±[11, 26.5], z ∈ [−12.75, 12.85], floor y = 0; chasm 22 m; bridge z ∈ [−0.9, 1.8].
    ===================================================================== */
 const SKY = {
-  X0: 7, X1: 27, Z0: -13, Z1: 13, KILL_Y: -14,
-  BR: { z0: -5, z1: -1, len: 7, up: 1.08, time: 4.0 },              // leaf width (z), length (x), raised angle (rad), travel time
-  TRAM: { len: 7, w: 3, h: 2.9, dock: 20, speed: 4.6, door: 1.5 }, // car length (x) / width (z), dock centre |x|
-  LINES: [{ id: 'N', z: -14.5, side: 1, start: 1 }, { id: 'S', z: 14.5, side: -1, start: 0 }], // side: +1 = doorway faces +z (platform south of the car)
+  X0: 11, X1: 26.5, Z0: -12.75, Z1: 12.85, KILL_Y: -14,
+  BR: { z0: -0.9, z1: 1.8, len: 11, up: 1.08, time: 4.0 },          // leaf width (z), length (x, hinge → middle), raised angle, travel time
+  TRAM: { len: 10.07, w: 5.4, h: 5.09, sill: 2.0, door: 2.0, speed: 5.2, cable: 6.29 },
+  // x: car centre parked at Alpha (p = 0) / at Bravo (p = 1); side: +1 = the doorway faces +z; door: doorway offset along the car
+  LINES: [{ id: 'N', z: -15.71, side: 1, x: [-15.615, 19.385], start: 0, door: 2.2 },
+          { id: 'S', z: 15.71, side: -1, x: [-19.385, 15.615], start: 1, door: -2.2 }],
+  PULLEY: { x: 29.2, r: 2.5 },
+  GEAR: { z: -1.08, r: 5.2 },                                         // the big half gear on the outer edge of each roof
+  // Alpha-side solids (x < 0); Bravo is the mirror. [x0, x1, z0, z1, h]
+  HUT: [-16.37, -12.33, -7.18, -2.69, 3.2],
+  WINCH: [-13.5, -9.99, 2.06, 8.34, 2.7],
+  CRATES: [
+    [-20.86, -19.60, -12.29, -6.57, 3.0],                             // outer stack by the north tram stop (two crates)
+    [-12.54, -11.64, -11.94, -9.50, 3.0], [-12.54, -11.64, -9.50, -7.00, 1.5], // chasm-side L: a walkable edge on its north end, flush against the hut
+    [-17.54, -16.64, 7.18, 9.87, 1.5], [-17.54, -16.64, 9.87, 12.56, 3.0], [-20.41, -17.54, 11.66, 12.56, 3.0], // the L on the south side
+  ],
+  STRAW: [-22.74, -20.41, 7.18, 12.56, 3.0, 0.25, 2.1],               // crate tunnel along z: walls 0.25, hole 2.1 m tall
+  GO: { bridge: [-13.33, -2.2], N: [-18.9, -12.33], S: [-23.4, 12.6] },
+  SPAWN: [-25.6, -20.4, -0.9, 1.8],
+  TOWER: { z: 19.21, x: 16.73, clockY: 9.5 },
 };
+const skyBox = (x0, x1, sx) => (sx < 0 ? [x0, x1] : [-x1, -x0]);       // an Alpha x-range on this roof
 
 // ---------------------------------------------------------------------------------------------------------------- build
 function buildSky(b) {
@@ -29,45 +48,36 @@ function buildSky(b) {
     if (o.material.transparent) { o.renderOrder = 2; o.userData.noAO = true; }
     o.castShadow = !/clockFace|glass|inlay|arrow/.test(nm); o.receiveShadow = true; o.matrixAutoUpdate = false; o.updateMatrix();
   });
-  // the two roofs (walkable slab) and the towers dropping into the clouds (collision only near the top; the rest is visual)
   for (const sx of [-1, 1]) {
-    const x0 = sx < 0 ? -S.X1 : S.X0, x1 = sx < 0 ? -S.X0 : S.X1;
+    const [x0, x1] = skyBox(-S.X1, -S.X0, sx), B = (a, c, z0, z1, y0, y1, m, o) => { const [p, q] = skyBox(a, c, sx); b.box(p, y0, z0, q, y1, z1, m, o); };
+    // the roof (walkable slab) and the tower dropping into the clouds (collision only near the top; the rest is visual)
     b.box(x0, -2, S.Z0, x1, 0, S.Z1, vis('pavers'), { radar: false, surface: 'concrete' });
     b.box(x0, -40, S.Z0, x1, -2, S.Z1, vis('plasterWhite'), { radar: false, physics: false });
-    b.box(x0 - 0.12, -0.35, S.Z0 - 0.12, x1 + 0.12, -0.02, S.Z1 + 0.12, vis('brick'), { collide: false, radar: false }); // red cornice band
+    // the guard hut (solid block) and the bridge winch (it overhangs the chasm a little)
+    const H = S.HUT, W = S.WINCH;
+    B(H[0], H[1], H[2], H[3], 0, H[4], vis('brick'), { material: 'concrete', radar: 'solid' });
+    B(W[0], W[1], W[2], W[3], 0, W[4], null, { material: 'metal', radar: 'crate' });
+    // crate stacks (one crate 1.5 m: standing shows the head from the chin up, crouching hides, too high to jump on; two = 3 m)
+    for (const [a, c, z0, z1, h] of S.CRATES) B(a, c, z0, z1, 0, h, vis('wood'), { material: 'wood', penetrable: true, radar: h > 2 ? 'container' : 'crate', tile: 1.5 });
+    // the "straw": a long crate with a walk-through hole, leading to where the south car stops on the Alpha roof
+    const [a, c, z0, z1, h, t, hole] = S.STRAW, wo = { material: 'wood', penetrable: true, radar: 'container', tile: 1.5 };
+    B(a, a + t, z0, z1, 0, h, vis('wood'), wo); B(c - t, c, z0, z1, 0, h, vis('wood'), wo); B(a + t, c - t, z0, z1, hole, h, vis('wood'), Object.assign({}, wo, { radar: false }));
+    // the big half gear on the outer edge (walkable, half of it over the drop) and the corner pulley gears (walkable)
+    const G = S.GEAR;
+    for (let i = 0; i < 6; i++) {
+      const u0 = G.r * i / 6, u1 = G.r * (i + 1) / 6, hz = Math.sqrt(Math.max(0, G.r * G.r - u1 * u1)) + 0.1;
+      B(-S.X1 - u1, -S.X1 - u0, G.z - hz, G.z + hz, -0.4, -0.02, null, { material: 'metal', surface: 'metal', radar: 'catwalk' });
+    }
+    for (const L of S.LINES) { const px = sx * S.PULLEY.x, r = S.PULLEY.r * 0.8; b.box(px - r, -0.35, L.z - r, px + r, -0.11, L.z + r, null, { material: 'metal', surface: 'metal', radar: 'catwalk' }); }
   }
-  // bridge winch (drum on its frame), the GO box next to it, the brick guard hut
-  for (const sx of [-1, 1]) {
-    const hx = sx * S.X0;                                             // hinge line (chasm edge)
-    b.box(hx + sx * 1.0, 0, -8.6, hx + sx * 4.2, 2.7, -5.6, null, { material: 'metal', radar: 'crate' }); // winch drum + gears
-    b.box(hx + sx * 1.8, 0, 0.6, hx + sx * 5.8, 3.3, 4.6, vis('brick'), { material: 'concrete', radar: 'solid' }); // guard hut (solid block)
-    b.box(hx + sx * 1.75, 3.3, 0.5, hx + sx * 5.85, 3.55, 4.7, vis('plasterWhite'), { material: 'concrete', radar: false });
-  }
-  // crates and cover (point-symmetric: (x, z) on the west ↔ (−x, −z) on the east)
-  const COVER = [
-    // [x, z, w(x), d(z), h]
-    [-25.0, -8.6, 1.4, 2.4, 1.6], [-21.5, -11.4, 2.8, 1.2, 1.2], [-17.2, -10.6, 1.3, 1.3, 1.3],
-    [-24.6, 7.4, 1.4, 3.0, 1.6], [-14.0, 9.6, 1.3, 2.6, 1.3], [-11.2, 6.6, 1.2, 1.2, 1.2],
-    [-12.4, -10.8, 2.6, 1.2, 1.4], [-16.6, 2.4, 1.2, 1.2, 1.3], [-15.0, -3.6, 2.4, 1.2, 1.2],
-    [-20.4, -2.3, 1.2, 5.4, 2.6], [-19.3, 2.4, 1.2, 5.2, 2.6], // tall crate stacks screening the spawn
-  ];
-  for (const sx of [1, -1]) for (const [x, z, w, d, h] of COVER) {
-    const cx = x * sx, cz = z * sx;
-    b.box(cx - w / 2, 0, cz - d / 2, cx + w / 2, h, cz + d / 2, vis('wood'), { material: 'wood', penetrable: true, radar: 'crate', tile: 1.2 });
-  }
-  // street lamps at the roof corners (thin posts)
-  for (const sx of [-1, 1]) for (const [x, z] of [[S.X1 - 0.6, S.Z0 + 0.6], [S.X1 - 0.6, S.Z1 - 0.6], [S.X0 + 0.6, S.Z1 - 0.6]]) b.box(sx * x - 0.1, 0, z * sx - 0.1, sx * x + 0.1, 2.6, z * sx + 0.1, vis('darkSteel'), { material: 'metal', radar: false });
-  // clock tower to the north (out of reach; blocks bullets and grenades)
-  b.box(-12, -40, -40, 12, 24, -20, vis('plasterWhite'), { radar: false, physics: true });
-  // walkable flat gears: the big one half over the outer edge of each roof, the pulley gears off the four corners
-  for (const sx of [-1, 1]) {
-    for (const [dx, hz] of [[0.6, 2.9], [1.4, 2.6], [2.2, 2.05], [2.8, 1.1]]) b.box(sx > 0 ? S.X1 : -S.X1 - dx, -0.4, -hz, sx > 0 ? S.X1 + dx : -S.X1, -0.02, hz, null, { material: 'metal', surface: 'metal', radar: 'catwalk' });
-    for (const L of S.LINES) b.box(sx * (S.X1 + 2.6) - 1.5, -0.35, L.z - 1.5, sx * (S.X1 + 2.6) + 1.5, -0.11, L.z + 1.5, null, { material: 'metal', surface: 'metal', radar: 'catwalk' });
-  }
-  // spawn zones: Alpha on the west roof facing east, Bravo on the east roof facing west
-  b.spawnZone('alpha', -26, -3.6, -22, 3.6, -Math.PI / 2); b.spawnZone('bravo', 22, -3.6, 26, 3.6, Math.PI / 2);
+  // clock tower across the south end of the chasm (out of reach; blocks bullets and grenades)
+  b.box(-S.TOWER.x, -40, S.TOWER.z, S.TOWER.x, 30, S.TOWER.z + 20, vis('plasterWhite'), { radar: false, physics: true });
+  // spawn zones: Alpha on the west roof facing east, Bravo on the east roof facing west (behind the bridge: the raised leaves screen them)
+  const [s0, s1, sz0, sz1] = S.SPAWN;
+  b.spawnZone('alpha', s0, sz0, s1, sz1, -Math.PI / 2); b.spawnZone('bravo', -s1, sz0, -s0, sz1, Math.PI / 2);
   // patrol points (the bots also walk past the GO boxes — that is how they work the bridge)
-  for (const [x, z] of [[-16, 0], [16, 0], [-10, -0.4], [10, 0.4], [-20, -11], [20, 11], [-20, 11], [20, -11], [0, -3]]) b.waypoint(x, z, 0);
+  for (const [x, z] of [[-15, 0.4], [-19, -4], [-24, -8], [-14.5, 4], [-23, 5], [-19, 9.5], [-14, -10], [-25, 10]]) { b.waypoint(x, z, 0); b.waypoint(-x, z, 0); }
+  b.waypoint(0, 0.45, 0);
   b.navRegion(-S.X1, S.Z0, S.X1, S.Z1, 0, 1.0);
   if (solid) { b.mechs.push(new SkyMechanisms(b)); skyAtmosphere(b); }
   if (glb) { glb.scene.updateMatrixWorld(true); b.scene.add(glb.scene); }
@@ -90,34 +100,39 @@ class SkyMechanisms {
       for (let i = 0; i < 10; i++) segs.push(this.col.addBox(new THREE.Vector3(hx, 0, BR.z0), new THREE.Vector3(hx + 0.1, 0.1, BR.z1), { material: 'metal', surface: 'metal', blocksMove: false, blocksShot: false }));
       this.bridge.leaves.push({ sx, hx, walk, segs, mesh: null });
     }
-    // -------- trams
+    // -------- trams: solid floor, solid lower walls up to the sill (bullets stop), open arched windows above (bullets and
+    // grenades pass), a roof whose tall collider nobody can stand on, and a doorway (offset along the car) facing the roof
     this.trams = S.LINES.map((L) => {
       const t = { L, p: L.start, target: L.start, x: 0, prevX: 0, boxes: [], mesh: null };
-      t.x = t.prevX = this._tramX(t.p);
-      const hw = T.len / 2, z0 = L.z - T.w / 2, z1 = L.z + T.w / 2, inner = L.side > 0 ? z1 : z0, outer = L.side > 0 ? z0 : z1;
-      const add = (x0, y0, za, x1, y1, zb, o = {}) => t.boxes.push(this.col.addBox(new THREE.Vector3(t.x + x0, y0, Math.min(za, zb)), new THREE.Vector3(t.x + x1, y1, Math.max(za, zb)), Object.assign({ material: 'metal', surface: 'wood' }, o)));
-      add(-hw, -0.3, z0, hw, 0, z1);                                    // floor
-      add(-hw, T.h, z0, hw, T.h + 1.6, z1, { blocksShot: true });       // roof (tall collider: nothing can stand on it)
-      add(-hw, 0, outer, hw, T.h, outer - L.side * 0.12);               // back wall (cliff side)
-      add(-hw, 0, z0, -hw + 0.12, T.h, z1); add(hw - 0.12, 0, z0, hw, T.h, z1); // end walls
-      add(-hw, 0, inner, -T.door / 2, T.h, inner + L.side * 0.12 * -1); add(T.door / 2, 0, inner, hw, T.h, inner - L.side * 0.12); // platform side with the doorway
+      t.x = t.prevX = this._tramX(t, t.p);
+      const hw = T.len / 2, z0 = L.z - T.w / 2, z1 = L.z + T.w / 2, inner = L.side > 0 ? z1 : z0, outer = L.side > 0 ? z0 : z1, th = 0.14, d0 = L.door - T.door / 2, d1 = L.door + T.door / 2;
+      const add = (x0, y0, za, x1, y1, zb, o = {}) => t.boxes.push(this.col.addBox(new THREE.Vector3(t.x + x0, y0, Math.min(za, zb)), new THREE.Vector3(t.x + x1, y1, Math.max(za, zb)), Object.assign({ material: 'wood', surface: 'wood', penetrable: true }, o)));
+      add(-hw, -0.3, z0, hw, 0, z1, { material: 'metal', penetrable: false });  // floor
+      add(-hw, T.h - 0.5, z0, hw, T.h + 1.6, z1, { material: 'metal', penetrable: false }); // roof (tall collider: nothing can stand on it)
+      add(-hw, 0, outer, hw, T.sill, outer - L.side * th);             // back wall (cliff side)
+      add(-hw, 0, z0, -hw + th, T.sill, z1); add(hw - th, 0, z0, hw, T.sill, z1); // end walls
+      add(-hw, 0, inner, d0, T.sill, inner - L.side * th); add(d1, 0, inner, hw, T.sill, inner - L.side * th); // platform side, doorway between
+      add(-hw, T.sill, outer, hw, T.h - 0.5, outer - L.side * th, { blocksShot: false }); // window openings: you can't climb out, shots fly through
+      add(-hw, T.sill, z0, -hw + th, T.h - 0.5, z1, { blocksShot: false }); add(hw - th, T.sill, z0, hw, T.h - 0.5, z1, { blocksShot: false });
+      add(-hw, T.sill, inner, d0, T.h - 0.5, inner - L.side * th, { blocksShot: false }); add(d1, T.sill, inner, hw, T.h - 0.5, inner - L.side * th, { blocksShot: false });
       return t;
     });
-    // GO boxes: [kind, ref, x, z] (the car's own box rides with it)
+    // GO boxes (Alpha positions mirrored to Bravo); the car's own box rides with it, near its back wall
     this.controls = [];
-    for (const sx of [-1, 1]) this.controls.push({ kind: 'bridge', x: sx * (S.X0 + 1.4), z: -0.2, y: 0 });
+    const go = (x, z, o) => this.controls.push(Object.assign({ x, z, y: 0 }, o));
+    for (const sx of [-1, 1]) go(sx < 0 ? S.GO.bridge[0] : -S.GO.bridge[0], S.GO.bridge[1], { kind: 'bridge' });
     for (const t of this.trams) {
-      const zSt = t.L.z + t.L.side * (T.w / 2 + 1.0);
-      for (const sx of [-1, 1]) this.controls.push({ kind: 'tram', t, x: sx * (T.dock + T.len / 2 + 0.9), z: zSt, y: 0, station: sx });
-      this.controls.push({ kind: 'tram', t, inCar: true, dx: T.len / 2 - 0.8, z: t.L.z - t.L.side * 0.7, y: 0 });
+      const g = S.GO[t.L.id];
+      for (const sx of [-1, 1]) go(sx < 0 ? g[0] : -g[0], g[1], { kind: 'tram', t, station: sx });
+      go(0, t.L.z - t.L.side * 1.3, { kind: 'tram', t, inCar: true, dx: 0 });
     }
     for (const c of this.controls) if (!c.inCar) this.col.addBox(new THREE.Vector3(c.x - 0.18, 0, c.z - 0.18), new THREE.Vector3(c.x + 0.18, 1.45, c.z + 0.18), { material: 'metal', blocksShot: false });
     for (const L of this.bridge.leaves) this.col.setSolid(L.walk, true, true); // the nav graph is sampled with the bridge down (initNav)
     this.gearSpin = 0; this.gearV = 0;
     this._visuals(b);
   }
-  _tramX(p) { const d = this.S.TRAM.dock; return lerp(-d, d, p); }
-  ctrlPos(c) { return c.inCar ? { x: c.t.x + c.dx * (c.t.L.side > 0 ? 1 : -1), z: c.z } : c; }
+  _tramX(t, p) { return lerp(t.L.x[0], t.L.x[1], p); }
+  ctrlPos(c) { return c.inCar ? { x: c.t.x + c.dx, z: c.z } : c; }
 
   // ---- simulation (fixed step, after every soldier has moved)
   tick(h) {
@@ -131,9 +146,9 @@ class SkyMechanisms {
     for (const t of this.trams) {
       t.prevX = t.x;
       if (t.p !== t.target) {
-        const step = S.TRAM.speed * h / (2 * S.TRAM.dock), ease = Math.min(1, 0.25 + 3 * Math.min(t.p, 1 - t.p, 0.25)); // gentle start / stop
+        const step = S.TRAM.speed * h / Math.abs(t.L.x[1] - t.L.x[0]), ease = Math.min(1, 0.25 + 3 * Math.min(t.p, 1 - t.p, 0.25)); // gentle start / stop
         t.p = t.target > t.p ? Math.min(t.target, t.p + step * ease) : Math.max(t.target, t.p - step * ease);
-        const nx = this._tramX(t.p), dx = nx - t.x;
+        const nx = this._tramX(t, t.p), dx = nx - t.x;
         if (dx) { this._carry(t, dx); for (const bx of t.boxes) this.col.moveBox(bx, dx, 0, 0); t.x = nx; moving = 1; }
         if (t.p === t.target) this.m.audio.mech && this.m.audio.mech('queue', new THREE.Vector3(t.x, 1, t.L.z));
       }
@@ -151,7 +166,7 @@ class SkyMechanisms {
     for (const c of this.m.combatants) {
       if (!c.alive) continue;
       const p = c.motor.pos;
-      if (p.x > t.x - hw && p.x < t.x + hw && Math.abs(p.z - t.L.z) < T.w / 2 && p.y > -0.4 && p.y < T.h) p.x += dx;
+      if (p.x > t.x - hw && p.x < t.x + hw && Math.abs(p.z - t.L.z) < T.w / 2 && p.y > -0.4 && p.y < T.h - 0.5) p.x += dx;
     }
   }
   // the leaf at its current angle as ten AABB slices (hinge → tip, 0.32 m thick); anyone they sweep into is pushed out on top
@@ -178,7 +193,6 @@ class SkyMechanisms {
   }
   initNav(nav) { // called once the nav graph exists (it is built with the bridge DOWN so both roofs stay one component)
     this.navBridge = nav.nodes.filter((n) => Math.abs(n.p.x) < this.S.X0 - 0.1);
-    for (const n of nav.nodes) if (Math.abs(n.p.z) > this.S.Z1 - 0.3) n.ok = false; // never path into a tram bay (the car leaves)
     this._applyBridge(true); for (const n of this.navBridge) n.ok = this.bridge.k >= 1;
   }
 
@@ -189,7 +203,8 @@ class SkyMechanisms {
     const S = this.S, T = S.TRAM, p = bot.motor.pos, sx = p.x < 0 ? -1 : 1;
     const lines = this.trams.filter((t) => !t.rider || !t.rider.alive || t.rider.ai.state !== 'RIDE').sort((a, b) => Math.abs(p.z - a.L.z) - Math.abs(p.z - b.L.z));
     const t = lines[0]; if (!t) return null;
-    const me = this, home = sx < 0 ? 0 : 1, dock = sx * T.dock, bayZ = t.L.z + t.L.side * (T.w / 2 + 0.9), exitZ = t.L.z + t.L.side * (T.w / 2 + 2.2);
+    const me = this, home = sx < 0 ? 0 : 1, L = t.L, edge = L.z + L.side * (T.w / 2 + 0.75), out = L.z + L.side * (T.w / 2 + 2.2);
+    const dock = L.x[home] + L.door, far = L.x[1 - home] + L.door, bayZ = edge, exitZ = out;
     const st = this.controls.find((k) => k.t === t && k.station === sx), car = this.controls.find((k) => k.t === t && k.inCar);
     t.rider = bot;
     const ride = {
@@ -213,7 +228,7 @@ class SkyMechanisms {
             break;
           case 'board':
             if (!docked(home)) { this.phase = 'call'; break; }
-            if (toward(dock, t.L.z, walk) < 0.7) { me.press(car, bot); this.phase = 'ride'; }
+            if (toward(t.x, car.z, walk) < 0.9) { me.press(car, bot); this.phase = 'ride'; }
             break;
           case 'ride':
             ai.wishSpeed = 0; ai._scan(dt, 1.2);
@@ -221,7 +236,7 @@ class SkyMechanisms {
             else if (t.p === t.target && t.p === home) me.press(car, bot); // still at home (someone called it back): go again
             break;
           case 'exit':
-            if (toward(-dock, exitZ, walk) < 0.8 || Math.abs(m.pos.z - t.L.z) > T.w / 2 + 1.8) { this.done(); ai.path = []; ai.goal = null; return false; }
+            if (toward(far, exitZ, walk) < 0.8 || Math.abs(m.pos.z - t.L.z) > T.w / 2 + 1.8) { this.done(); ai.path = []; ai.goal = null; return false; }
             break;
         }
         return true;
@@ -264,7 +279,7 @@ class SkyMechanisms {
     const br = this.bridge; br.target = s[1] ? 1 : 0; if (Math.abs(br.k - s[0]) > 0.08) { br.k = clamp(+s[0] || 0, 0, 1); this._applyBridge(false); }
     this.trams.forEach((t, i) => {
       t.target = s[3 + i * 2] ? 1 : 0; const p = clamp(+s[2 + i * 2] || 0, 0, 1);
-      if (Math.abs(t.p - p) > 0.03) { const dx = this._tramX(p) - t.x; t.p = p; this._carry(t, dx); for (const bx of t.boxes) this.col.moveBox(bx, dx, 0, 0); t.x = t.prevX = this._tramX(p); }
+      if (Math.abs(t.p - p) > 0.03) { const dx = this._tramX(t, p) - t.x; t.p = p; this._carry(t, dx); for (const bx of t.boxes) this.col.moveBox(bx, dx, 0, 0); t.x = t.prevX = this._tramX(t, p); }
     });
   }
 
@@ -283,25 +298,25 @@ class SkyMechanisms {
     }
     for (const t of this.trams) {
       const g = pick('TRAM_' + t.L.id);
-      if (g) { g.position.x -= this._tramX(t.L.start); sc.add(g); t.mesh = g; t.base = g.position.clone(); }
+      if (g) { g.position.x -= this._tramX(t, t.L.start); sc.add(g); t.mesh = g; t.base = g.position.clone(); }
       else {
-        const grp = new THREE.Group(), hw = T.len / 2, inner = t.L.side * T.w / 2;
-        grp.add(box(T.len, 0.3, T.w, M('darkWood'), 0, -0.15, 0), box(T.len + 0.3, 0.25, T.w + 0.3, M('olive'), 0, T.h + 0.12, 0));
-        grp.add(box(T.len, T.h, 0.12, M('darkWood'), 0, T.h / 2, -inner), box(0.12, T.h, T.w, M('darkWood'), -hw, T.h / 2, 0), box(0.12, T.h, T.w, M('darkWood'), hw, T.h / 2, 0));
-        const seg = hw - T.door / 2; grp.add(box(seg, T.h, 0.12, M('darkWood'), -hw + seg / 2, T.h / 2, inner), box(seg, T.h, 0.12, M('darkWood'), hw - seg / 2, T.h / 2, inner));
-        grp.add(box(0.5, 0.5, 0.6, M('darkSteel'), 0, T.h + 0.55, 0));
-        grp.position.set(t.x, 0, t.L.z); sc.add(grp); t.mesh = grp; t.base = new THREE.Vector3(0, 0, t.L.z);
+        const grp = new THREE.Group(), hw = T.len / 2, inner = t.L.side * T.w / 2, L = t.L, d0 = L.door - T.door / 2, d1 = L.door + T.door / 2;
+        grp.add(box(T.len, 0.3, T.w, M('darkWood'), 0, -0.15, 0), box(T.len + 0.3, 0.25, T.w + 0.3, M('olive'), 0, T.h - 0.12, 0));
+        grp.add(box(T.len, T.sill, 0.12, M('darkWood'), 0, T.sill / 2, -inner), box(0.12, T.sill, T.w, M('darkWood'), -hw, T.sill / 2, 0), box(0.12, T.sill, T.w, M('darkWood'), hw, T.sill / 2, 0));
+        grp.add(box(d0 + hw, T.sill, 0.12, M('darkWood'), (-hw + d0) / 2, T.sill / 2, inner), box(hw - d1, T.sill, 0.12, M('darkWood'), (d1 + hw) / 2, T.sill / 2, inner));
+        for (const [cx, cz] of [[-hw, -T.w / 2], [hw, -T.w / 2], [-hw, T.w / 2], [hw, T.w / 2]]) grp.add(box(0.16, T.h, 0.16, M('olive'), cx, T.h / 2, cz));
+        grp.position.set(t.x, 0, L.z); sc.add(grp); t.mesh = grp; t.base = new THREE.Vector3(0, 0, 0);
       }
     }
-    // cables and the flat pulley gears at the four corners of each line
+    // cables, the cable poles and the flat pulley gears at the four corners
     this.gears = [];
     for (const t of this.trams) {
-      const cab = G ? null : new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 2 * (S.X1 + 3), 6), M('darkSteel')); if (cab) { cab.rotation.z = Math.PI / 2; cab.position.set(0, T.h + 1.1, t.L.z); sc.add(cab); }
+      const cab = G ? null : new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 2 * S.PULLEY.x, 6), M('darkSteel')); if (cab) { cab.rotation.z = Math.PI / 2; cab.position.set(0, T.cable, t.L.z); sc.add(cab); }
       for (const sx of [-1, 1]) {
-        const gx = sx * (S.X1 + 2.6), glb = pick(`GEAR_${t.L.id}${sx < 0 ? 'W' : 'E'}`), gear = glb || this._gearMesh(M('bronze'), 2.1);
+        const gx = sx * S.PULLEY.x, glb = pick(`GEAR_${t.L.id}${sx < 0 ? 'W' : 'E'}`), gear = glb || this._gearMesh(M('bronze'), S.PULLEY.r);
         if (!glb) gear.position.set(gx, -0.2, t.L.z); sc.add(gear);
-        this.gears.push({ o: gear, dir: sx * (t.L.side) });
-        if (!G) sc.add(box(0.18, T.h + 1.4, 0.18, M('darkSteel'), gx, (T.h + 1.4) / 2 - 0.2, t.L.z));
+        this.gears.push({ o: gear, dir: sx * t.L.side });
+        if (!G) sc.add(box(0.3, T.cable + 0.6, 0.3, M('darkSteel'), gx, (T.cable + 0.6) / 2 - 0.3, t.L.z));
       }
     }
     for (const k of this.controls) {
@@ -314,8 +329,9 @@ class SkyMechanisms {
         const l = new THREE.Mesh(new THREE.CircleGeometry(0.07, 12), new THREE.MeshBasicMaterial({ color: 0x40ff60 })); l.position.set(0, 1.13, 0.14); post.add(l); lamp = l.material;
       }
       k.mesh = post; k.lamp = lamp; k.lampR = lampR; sc.add(post);
-      if (k.inCar) { k.t.mesh.add(post); post.position.set(k.dx * (k.t.L.side > 0 ? 1 : -1), 0, (k.z - k.t.L.z)); post.rotation.y = k.t.L.side > 0 ? 0 : Math.PI; }
-      else { post.position.set(k.x, 0, k.z); post.rotation.y = k.kind === 'bridge' ? (k.x < 0 ? -Math.PI / 2 : Math.PI / 2) : (k.z > 0 ? 0 : Math.PI); }
+      // every GO box faces into its roof (the panel looks at whoever comes to press it, not at the cliff)
+      if (k.inCar) { k.t.mesh.add(post); post.position.set(k.dx, 0, k.z - k.t.L.z); post.rotation.y = k.t.L.side > 0 ? 0 : Math.PI; }
+      else { post.position.set(k.x, 0, k.z); post.rotation.y = k.kind === 'bridge' ? (k.x < 0 ? -Math.PI / 2 : Math.PI / 2) : (k.z > 0 ? Math.PI : 0); }
     }
     this.floorGears = ['FLOORGEAR_W', 'FLOORGEAR_E'].map((n) => G && G.getObjectByName(n)).filter(Boolean); this.floorGears.forEach((o) => { o.matrixAutoUpdate = true; });
     this.clock = this._clock(b);
@@ -333,8 +349,8 @@ class SkyMechanisms {
     let hour = G && G.getObjectByName('CLOCK_H'), min = G && G.getObjectByName('CLOCK_M');
     if (hour) hour.matrixAutoUpdate = min.matrixAutoUpdate = true;
     if (!hour) {
-      const face = new THREE.Mesh(new THREE.CircleGeometry(4.2, 48), new THREE.MeshStandardMaterial({ color: 0xf1ead8, roughness: 0.8 })); face.position.set(0, 9.5, -19.6); sc.add(face);
-      const hand = (len, w) => { const g = new THREE.BoxGeometry(w, len, 0.1); g.translate(0, len / 2, 0); const m = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ color: 0x2a2018, metalness: 0.4 })); m.position.set(0, 9.5, -19.5); sc.add(m); return m; };
+      const Z = SKY.TOWER.z, Y = SKY.TOWER.clockY, face = new THREE.Mesh(new THREE.CircleGeometry(4.2, 48), new THREE.MeshStandardMaterial({ color: 0xf1ead8, roughness: 0.8 })); face.position.set(0, Y, Z - 0.4); face.rotation.y = Math.PI; sc.add(face);
+      const hand = (len, w) => { const g = new THREE.BoxGeometry(w, len, 0.1); g.translate(0, len / 2, 0); const m = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ color: 0x2a2018, metalness: 0.4 })); m.position.set(0, Y, Z - 0.5); sc.add(m); return m; };
       hour = hand(2.6, 0.32); min = hand(4.0, 0.2);
     }
     return { hour, min };
@@ -351,7 +367,7 @@ class SkyMechanisms {
       const busy = k.kind === 'bridge' ? this.bridge.k !== this.bridge.target : k.t.p !== k.t.target, blink = 0.55 + 0.45 * Math.sin(this.time * 9);
       k.lamp.color.setRGB(busy ? 0.08 : 0.25, busy ? 0.25 : 1.3, busy ? 0.1 : 0.35); if (k.lampR) k.lampR.color.setRGB(busy ? 1.4 * blink + 0.2 : 0.35, busy ? 0.18 : 0.06, busy ? 0.12 : 0.05);
     }
-    if (this.clock && this.clock.hour) { const d = new Date(), mm = d.getMinutes() + d.getSeconds() / 60, hh = (d.getHours() % 12) + mm / 60; this.clock.min.rotation.z = -mm / 60 * Math.PI * 2; this.clock.hour.rotation.z = -hh / 12 * Math.PI * 2; }
+    if (this.clock && this.clock.hour) { const d = new Date(), mm = d.getMinutes() + d.getSeconds() / 60, hh = (d.getHours() % 12) + mm / 60; this.clock.min.rotation.z = mm / 60 * Math.PI * 2; this.clock.hour.rotation.z = hh / 12 * Math.PI * 2; } // the dial faces −z: clockwise seen from the roofs
   }
 }
 
@@ -431,16 +447,16 @@ function skyAtmosphere(b) {
 }
 
 MAPS.push({
-  id: 'skycity', name: '天空之城', en: 'SKY CITY', desc: '雲端鐘樓 · 可升降吊橋 · 南北兩條纜車 · 四周無護欄 · 54×28', slogan: 'SKYWALKER · 別往下看',
+  id: 'skycity', name: '天空之城', en: 'SKY CITY', desc: '雲端鐘樓 · 可升降吊橋 · 南北兩條纜車 · 四周無護欄 · 53×26', slogan: 'SKYWALKER · 別往下看',
   look: { desat: 0.06, contrast: 1.04, pivot: 0.45, highlights: 1.06 },
-  bounds: { minX: -36, maxX: 36, minZ: -24, maxZ: 22 },
+  bounds: { minX: -36, maxX: 36, minZ: -24, maxZ: 24 },
   indoor: false, navLevels: [0], navStep: 1.5, viewMult: 1.2, radarRange: 40, killY: SKY.KILL_Y,
   hdri: 'kloofendal_48d_partly_cloudy_puresky', hdriBackground: true, envIntensity: 0.75, sky: { turbidity: 3, rayleigh: 1.2, elevation: 40, azimuth: 200 },
   sun: { pos: [30, 55, 25], color: 0xfff4e6, intensity: 2.4, auto: true }, hemi: [0xeef2ff, 0xd8c8e0, 0.85], exposure: 0.8,
   fog: { color: 0xe6dcef, near: 140, far: 650 }, acoustics: 'outdoor', ambience: 'hill', shadowFollow: 0,
-  shot: { pos: [0, 18, 38], target: [0, 0, -4] },
-  thumb: { pos: [-40, 12, 34], target: [2, 6, -10], fov: 58 },
-  objectives: { dom: [[-17, 0, 6], [0, 0, -3], [17, 0, -6]], relic: [19, 0, 5], domRadius: 3.2 },
+  shot: { pos: [0, 18, -40], target: [0, 0, 4] },
+  thumb: { pos: [-40, 12, -34], target: [2, 6, 10], fov: 58 },
+  objectives: { dom: [[-18, 0, -3], [0, 0, 0.45], [18, 0, -3]], relic: [18, 0, 3], domRadius: 3.2 },
   async preload() {
     if (this._glb !== undefined) return;
     this._glb = null;
