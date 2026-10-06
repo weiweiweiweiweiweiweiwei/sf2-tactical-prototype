@@ -81,17 +81,14 @@ class SkyMechanisms {
   constructor(b) {
     this.b = b; this.m = b.game; this.col = b.col; this.S = SKY; this.time = 0;
     const S = SKY, T = S.TRAM, BR = S.BR;
-    // -------- drawbridge: leaf colliders (walk + shots) while down; three slanted shot-blockers while raised
+    // -------- drawbridge: a flat walk box while down; while raised or turning, ten boxes follow the leaf (solid: you hit it, you can't run through it)
     this.bridge = { k: 0, target: 0, leaves: [] };                     // k: 0 = raised, 1 = lowered
     for (const sx of [-1, 1]) {
       const hx = sx * S.X0, tipX = 0;
       const walk = this.col.addBox(new THREE.Vector3(Math.min(hx, tipX), -0.32, BR.z0), new THREE.Vector3(Math.max(hx, tipX), 0, BR.z1), { material: 'metal', surface: 'metal' });
-      const steps = [];
-      for (let i = 0; i < 3; i++) {
-        const a = BR.len * (i / 3), c = BR.len * ((i + 1) / 3), xa = hx - sx * a * Math.cos(BR.up), xc = hx - sx * c * Math.cos(BR.up);
-        steps.push(this.col.addBox(new THREE.Vector3(Math.min(xa, xc), a * Math.sin(BR.up), BR.z0), new THREE.Vector3(Math.max(xa, xc), c * Math.sin(BR.up) + 0.3, BR.z1), { material: 'metal', blocksMove: false }));
-      }
-      this.bridge.leaves.push({ sx, hx, walk, steps, mesh: null });
+      const segs = [];
+      for (let i = 0; i < 10; i++) segs.push(this.col.addBox(new THREE.Vector3(hx, 0, BR.z0), new THREE.Vector3(hx + 0.1, 0.1, BR.z1), { material: 'metal', surface: 'metal', blocksMove: false, blocksShot: false }));
+      this.bridge.leaves.push({ sx, hx, walk, segs, mesh: null });
     }
     // -------- trams
     this.trams = S.LINES.map((L) => {
@@ -128,7 +125,7 @@ class SkyMechanisms {
     this.time += h;
     if (br.k !== br.target) {
       const was = br.k; br.k = br.target > br.k ? Math.min(br.target, br.k + h / S.BR.time) : Math.max(br.target, br.k - h / S.BR.time);
-      if ((was === 1) !== (br.k === 1) || (br.k === br.target)) this._applyBridge(false);
+      if ((was === 1) !== (br.k === 1) || (br.k === br.target)) this._applyBridge(false); else this._poseLeaves();
     }
     let moving = 0;
     for (const t of this.trams) {
@@ -157,11 +154,23 @@ class SkyMechanisms {
       if (p.x > t.x - hw && p.x < t.x + hw && Math.abs(p.z - t.L.z) < T.w / 2 && p.y > -0.4 && p.y < T.h) p.x += dx;
     }
   }
+  // the leaf at its current angle as ten AABB slices (hinge → tip, 0.32 m thick); anyone they sweep into is pushed out on top
+  _poseLeaves() {
+    const BR = this.S.BR, a = BR.up * (1 - this.bridge.k), ca = Math.cos(a), sa = Math.sin(a), th = 0.32, n = 10;
+    for (const L of this.bridge.leaves) {
+      const dx = -L.sx * ca, dy = sa, tx = -L.sx * th * sa, ty = -th * ca;
+      L.segs.forEach((b, i) => {
+        const s0 = BR.len * i / n, s1 = BR.len * (i + 1) / n, xs = [L.hx + dx * s0, L.hx + dx * s1, L.hx + dx * s0 + tx, L.hx + dx * s1 + tx], ys = [dy * s0, dy * s1, dy * s0 + ty, dy * s1 + ty];
+        this.col.setBox(b, Math.min(...xs), Math.min(...ys), BR.z0, Math.max(...xs), Math.max(...ys), BR.z1);
+      });
+    }
+  }
   _applyBridge(init) {
-    const br = this.bridge, down = br.k >= 1, up = br.k <= 0;
+    const br = this.bridge, down = br.k >= 1;
+    this._poseLeaves();
     for (const L of br.leaves) {
       this.col.setSolid(L.walk, down, down);
-      for (const s of L.steps) this.col.setSolid(s, false, up);
+      for (const s of L.segs) this.col.setSolid(s, !down, !down);
     }
     // bots: the nodes over the chasm only exist while the bridge is down
     const nav = this.m.nav;
@@ -171,6 +180,54 @@ class SkyMechanisms {
     this.navBridge = nav.nodes.filter((n) => Math.abs(n.p.x) < this.S.X0 - 0.1);
     for (const n of nav.nodes) if (Math.abs(n.p.z) > this.S.Z1 - 0.3) n.ok = false; // never path into a tram bay (the car leaves)
     this._applyBridge(true); for (const n of this.navBridge) n.ok = this.bridge.k >= 1;
+  }
+
+  // ---- bots ride the trams (host): walk to the bay, call the car, step in, press GO, ride, step out on the far roof.
+  // Offered while the bridge is up (otherwise they simply walk across); one bot per car at a time.
+  botRide(bot) {
+    if (this.bridge.k >= 1) return null;
+    const S = this.S, T = S.TRAM, p = bot.motor.pos, sx = p.x < 0 ? -1 : 1;
+    const lines = this.trams.filter((t) => !t.rider || !t.rider.alive || t.rider.ai.state !== 'RIDE').sort((a, b) => Math.abs(p.z - a.L.z) - Math.abs(p.z - b.L.z));
+    const t = lines[0]; if (!t) return null;
+    const me = this, home = sx < 0 ? 0 : 1, dock = sx * T.dock, bayZ = t.L.z + t.L.side * (T.w / 2 + 0.9), exitZ = t.L.z + t.L.side * (T.w / 2 + 2.2);
+    const st = this.controls.find((k) => k.t === t && k.station === sx), car = this.controls.find((k) => k.t === t && k.inCar);
+    t.rider = bot;
+    const ride = {
+      phase: 'go', T: 0,
+      done() { if (t.rider === bot) t.rider = null; },
+      step(ai, dt) {
+        this.T += dt; if (this.T > 70 || !bot.alive) { this.done(); return false; }
+        const m = bot.motor, walk = CFG.bot.patrolSpeed * 1.1;
+        const toward = (x, z, spd) => { const dx = x - m.pos.x, dz = z - m.pos.z, d = Math.hypot(dx, dz) || 1; ai.wishX = dx / d; ai.wishZ = dz / d; ai.wishSpeed = spd; ai._turnTo(Math.atan2(-dx, -dz), 5, dt); return d; };
+        const docked = (side) => t.p === t.target && t.p === side;
+        switch (this.phase) {
+          case 'go':
+            if (!ai.path.length || !ai.goal || ai.goal.distanceTo(new THREE.Vector3(dock, 0, bayZ)) > 1) ai.setPath(new THREE.Vector3(dock, 0, bayZ), false);
+            if (!ai._follow(walk, dt, true, true) || Math.hypot(m.pos.x - dock, m.pos.z - bayZ) < 1.2) this.phase = 'call';
+            if (this.T > 30) { this.done(); return false; }
+            break;
+          case 'call':
+            ai.wishSpeed = 0;
+            if (docked(home)) { this.phase = 'board'; break; }
+            if (t.p === t.target) me.press(st, bot);
+            break;
+          case 'board':
+            if (!docked(home)) { this.phase = 'call'; break; }
+            if (toward(dock, t.L.z, walk) < 0.7) { me.press(car, bot); this.phase = 'ride'; }
+            break;
+          case 'ride':
+            ai.wishSpeed = 0; ai._scan(dt, 1.2);
+            if (docked(1 - home)) this.phase = 'exit';
+            else if (t.p === t.target && t.p === home) me.press(car, bot); // still at home (someone called it back): go again
+            break;
+          case 'exit':
+            if (toward(-dock, exitZ, walk) < 0.8 || Math.abs(m.pos.z - t.L.z) > T.w / 2 + 1.8) { this.done(); ai.path = []; ai.goal = null; return false; }
+            break;
+        }
+        return true;
+      },
+    };
+    return ride;
   }
 
   // ---- interaction

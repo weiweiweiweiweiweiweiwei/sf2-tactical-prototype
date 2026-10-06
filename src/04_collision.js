@@ -99,6 +99,11 @@ class CollisionWorld {
     this._cells(b, (k) => { let l = this.grid.get(k); if (!l) this.grid.set(k, l = []); l.push(b); });
   }
   setSolid(b, move, shot = move) { b.blocksMove = move; b.blocksShot = shot; }
+  setBox(b, x0, y0, z0, x1, y1, z1) { // re-shape a box (the turning drawbridge leaf)
+    this._cells(b, (k) => { const l = this.grid.get(k); if (l) { const i = l.indexOf(b); if (i >= 0) l.splice(i, 1); } });
+    b.min.set(x0, y0, z0); b.max.set(x1, y1, z1);
+    this._cells(b, (k) => { let l = this.grid.get(k); if (!l) this.grid.set(k, l = []); l.push(b); });
+  }
 
   query(minX, minZ, maxX, maxZ, out) {
     const c = this.cell, s = ++this.stamp;

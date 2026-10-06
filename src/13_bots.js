@@ -162,6 +162,7 @@ class BotAI {
   get D() { return DIFFICULTY[this.game.config.difficulty] || DIFFICULTY[1]; }
 
   reset() {
+    if (this.ride) { this.ride.done(); this.ride = null; }
     this.state = 'PATROL'; this.path = []; this.pathIdx = 0; this.goal = null; this.target = null; this.goalKind = null;
     this.lastKnown = new THREE.Vector3(); this.lastSeenT = -10; this.seeTarget = false; this.alertT = 0;
     this.reactT = 0; this.engageT = 0; this.burstLeft = 0; this.burstGapT = 0; this.shotT = 0; this.settleT = 0;
@@ -415,7 +416,11 @@ class BotAI {
         if (objective) { this.state = 'OBJECTIVE'; this.objT = 0; break; }
         if (!this._follow(walk * (1 - this.caution * 0.18), dt, this.lookT <= 0, true)) {
           if (this.goal) { this.state = 'HOLD'; this.holdT = rand(1.0, 2.6) * (0.6 + this.caution); this.scanBase = bot.yaw; this.goal = null; }
-          else { const p = this._searchGoal(); if (p) this.setPath(p); }
+          else {
+            const mc = g.builder.mechs[0]; // v46 Sky City: sometimes take the tram across instead
+            if (mc && mc.botRide && Math.random() < 0.25 && (this.ride = mc.botRide(bot))) { this.state = 'RIDE'; break; }
+            const p = this._searchGoal(); if (p) this.setPath(p);
+          }
         }
         break;
       }
@@ -434,6 +439,7 @@ class BotAI {
         this.wishX = this.wishZ = this.wishSpeed = 0; this._scan(dt, 1.4);
         this.searchT -= dt; if (this.searchT <= 0) { this.state = 'PATROL'; this.path = []; this.goal = null; }
         break;
+      case 'RIDE': if (!this.ride || !this.ride.step(this, dt)) { this.ride = null; this.state = 'PATROL'; this.path = []; this.goal = null; } break;
       case 'MELEE': this._melee(dt); break;
       case 'ENGAGE': this._engage(dt); break;
       case 'COVER': this._cover(dt); break;

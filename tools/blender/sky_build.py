@@ -256,7 +256,7 @@ def bridge_leaves():
     for sx in (-1, 1):
         name = 'BRIDGE_' + ('W' if sx < 0 else 'E'); new_obj(name, (0.0, 0.0, 0.0))   # world-space mesh, origin (0,0,0)
         hx = sx * X0; xa, xb = sorted((hx, 0.0 + sx * 0.02)); za, zb = BR_Z0, BR_Z1
-        deck = 'leafGrey' if sx < 0 else 'leafGreen'   # SF2: slate leaf on the west roof, green leaf on the east
+        deck = 'leafGreen'   # both leaves alike (SF2: green deck, yellow trim)
         box(name, deck, xa, -0.12, za, xb, 0.0, zb)
         for zz in (za, zb - 0.12):                                                # side girders + truss underneath
             box(name, 'darkSteel', xa, -0.55, zz, xb, -0.12, zz + 0.12)
@@ -475,5 +475,5 @@ for (name, mat), B in BUCKETS.items():
     for p_ in me.polygons: p_.use_smooth = False
 os.makedirs(os.path.dirname(os.path.abspath(OUT)), exist_ok=True)
 bpy.ops.export_scene.gltf(filepath=os.path.abspath(OUT), export_format='GLB', export_yup=True, export_apply=True, export_texcoords=True, export_normals=True,
-                          export_materials='EXPORT', export_draco_mesh_compression_enable=True, export_draco_mesh_compression_level=6)
+                          export_materials='EXPORT', export_draco_mesh_compression_enable=False)  # Draco DLL is blocked by Windows Smart App Control on this PC
 print('EXPORTED', OUT, 'objects', len(BUCKETS), 'faces', sum(len(o.data.polygons) for o in bpy.data.objects if o.type == 'MESH'))
