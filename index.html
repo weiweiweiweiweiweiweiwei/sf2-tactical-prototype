@@ -6728,6 +6728,7 @@ MAPS.push({
   sun: { pos: [-35, 50, 30], color: 0xfff1e0, intensity: 2.7, auto: true }, hemi: [0xe6ecf7, 0x8a8078, 0.95], exposure: 0.92,
   fog: { color: 0xc9d2dc, near: 70, far: 330 }, acoustics: 'outdoor', ambience: 'hill', shadowFollow: 0,
   shot: { pos: [-22, 15, 34], target: [4, 2, -6] },
+  thumb: { pos: [26.8, 1.75, -21.9], target: [31.4, 2.6, -12.4], fov: 72 }, // the user's pick: sakura + banner over the onsen, the main hall behind
   get objectives() { const P = this._plan || (this._plan = ryokanPlan()); return { dom: P.dom.map(([x, z]) => [x, 0, z]), relic: [P.objective[0], RYOKAN_SPEC.F2, P.objective[1]], domRadius: 4.5 }; },
   // the Blender visuals ship as a JS file (window.RYOKAN_GLB = base64 GLB) so file:// play works like assets/sfx.js
   async preload() {
