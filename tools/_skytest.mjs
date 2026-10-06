@@ -37,7 +37,7 @@ await p.evaluate(async () => { const m = app.match; m.player.alive || (m.player.
 await shot('view');
 await p.evaluate(async () => { const mc = app.match.builder.mechs[0], t = mc.trams[1]; if (t.p > 0.5) mc.press(mc.controls.find((k) => k.t === t && k.station === -1), app.match.player); await new Promise((r) => setTimeout(r, 9500)); });
 const views = [['tower', -24, -8, -2.36, 0.15], ['clock', -12, -10, Math.PI, 0.3], ['go', -14.6, -1.4, -Math.PI / 2, -0.35], ['bridge', -17, 0.4, -Math.PI / 2, -0.02], ['tram', -14, -9, 0, -0.03],
-  ['hutdoor', -15.1, -10.5, Math.PI, 0], ['hutin', -15.1, -5.6, Math.PI, 0], ['winchside', -11.6, 11.2, 0, -0.1], ['strawcar', -21.575, 5.5, Math.PI, -0.05], ['chasm', -12.4, -0.3, -Math.PI / 2, 0.02], ['chasm2', 3, 0.45, Math.PI / 2, 0.1], ['east', 24, 6, Math.PI / 2, -0.06]];
+  ['hutdoor', -15.1, -10.5, Math.PI, 0], ['hutin', -15.1, -5.6, Math.PI, 0], ['winchside', -11.6, 11.2, 0, -0.1], ['strawcar', -21.575, 5.5, Math.PI, -0.05], ['chasm', -12.4, -0.3, -Math.PI / 2, 0.02], ['chasm2', 3, 0.45, Math.PI / 2, 0.1], ['east', 24, 6, Math.PI / 2, -0.06], ['hutwin', 15.4, -4.9, Math.PI / 2, 0], ['ncarB', 18.2, -3.5, 0, -0.02]];
 for (const [n, x, z, yaw, pitch] of views) {
   await p.evaluate(async ([x, z, yaw, pitch]) => { const P = app.match.player; if (!P.alive) { P.respawnT = 0; await new Promise((r) => setTimeout(r, 4000)); } P.motor.teleport(new SF2.THREE.Vector3(x, 0.2, z)); P.yaw = yaw; P.pitch = pitch; P.spawnProtect = 9; await new Promise((r) => setTimeout(r, 900)); }, [x, z, yaw, pitch]);
   await shot(n);

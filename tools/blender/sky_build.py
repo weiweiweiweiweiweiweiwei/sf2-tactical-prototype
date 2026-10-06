@@ -19,7 +19,7 @@ RNG = random.Random(4612)
 X0, X1, Z0, Z1 = 11.0, 26.5, -12.75, 12.85
 BR_Z0, BR_Z1 = -0.9, 1.8
 T_LEN, T_W, T_H, T_SILL, T_DOOR, T_CABLE = 10.07, 5.4, 5.09, 2.0, 2.0, 6.29
-LINES = [('N', -15.71, 1, (-15.615, 19.385), 0, 0.0), ('S', 15.71, -1, (-21.465, 21.465), 1, 0.0)]  # id, z, side, x@A/x@B, start, door offset
+LINES = [('N', -15.71, 1, (-15.615, 15.615), 0, 0.0), ('S', 15.71, -1, (-21.465, 21.465), 1, 0.0)]  # id, z, side, x@A/x@B, start, door offset
 PULLEY_X, PULLEY_R = 29.2, 2.5
 GEAR_Z, GEAR_R = -1.08, 5.2
 HUT = (-16.37, -12.33, -7.18, -2.69, 3.2)
@@ -233,7 +233,7 @@ def roofs():
 
 
 # ================================================================================================ HUT, WINCH, CRATES
-HUT_OPEN = [('-z', -15.75, -14.55, 0.0, 2.2), ('-z', -13.95, -12.95, 1.0, 2.1), ('+z', -15.85, -14.45, 1.0, 2.1)]   # face, x0, x1, y0, y1 (Alpha)
+HUT_OPEN = [('-z', -15.75, -14.55, 0.0, 2.2), ('-z', -13.95, -12.95, 1.0, 2.1), ('+z', -15.85, -14.45, 1.0, 2.1), ('+x', -6.1, -3.75, 0.95, 2.25)]   # face, u0, u1, y0, y1 (Alpha; u = x on z-walls, z on the x-walls)
 HUT_T = 0.25
 
 
@@ -249,18 +249,23 @@ def huts():
     x0_, x1_, z0, z1, h = HUT; t = HUT_T
     for sx in (-1, 1):
         reg = 'west' if sx < 0 else 'east'; xa, xb = MR(x0_, x1_, sx)
-        for face, zf0, zf1 in (('-z', z0, z0 + t), ('+z', z1 - t, z1)):     # long walls with their openings
-            ops = sorted(MR(o[1], o[2], sx) + (o[3], o[4]) for o in HUT_OPEN if o[0] == face)
-            u = xa
+        xw = {'-x': MR(x0_, x0_ + t, sx), '+x': MR(x1_ - t, x1_, sx)}
+        for face in ('-z', '+z', '-x', '+x'):
+            alx = face[1] == 'z'
+            if alx: s0, s1 = (z0, z0 + t) if face == '-z' else (z1 - t, z1); u0, u1 = xa, xb
+            else: s0, s1 = xw[face]; u0, u1 = z0, z1
+            P = (lambda a, b, y0, y1, s0=s0, s1=s1, alx=alx: hut_piece(reg, a, b, s0, s1, y0, y1) if alx else hut_piece(reg, s0, s1, a, b, y0, y1))
+            Bx = (lambda m, a, b, y0, y1, d, s0=s0, s1=s1, alx=alx: box(reg, m, a, y0, s0 - d, b, y1, s1 + d) if alx else box(reg, m, s0 - d, y0, a, s1 + d, y1, b))
+            ops = sorted((MR(o[1], o[2], sx) if alx else (o[1], o[2])) + (o[3], o[4]) for o in HUT_OPEN if o[0] == face)
+            u = u0
             for (a, b, y0, y1) in ops:
-                hut_piece(reg, u, a, zf0, zf1, 0, h)
-                if y0 > 0: hut_piece(reg, a, b, zf0, zf1, 0, y0)
-                hut_piece(reg, a, b, zf0, zf1, y1, h)
-                box(reg, 'stone', a - 0.08, y1, zf0 - 0.06, b + 0.08, y1 + 0.14, zf1 + 0.06)    # lintel
-                if y0 > 0: box(reg, 'stone', a - 0.05, y0 - 0.1, zf0 - 0.08, b + 0.05, y0, zf1 + 0.08)   # sill
+                P(u, a, 0, h)
+                if y0 > 0: P(a, b, 0, y0)
+                P(a, b, y1, h)
+                Bx('stone', a - 0.08, b + 0.08, y1, y1 + 0.14, 0.06)                 # lintel
+                if y0 > 0: Bx('stone', a - 0.05, b + 0.05, y0 - 0.1, y0, 0.08)       # sill
                 u = b
-            hut_piece(reg, u, xb, zf0, zf1, 0, h)
-        hut_piece(reg, xa, xa + t, z0, z1, 0, h); hut_piece(reg, xb - t, xb, z0, z1, 0, h)
+            P(u, u1, 0, h)
         box(reg, 'stone', xa - 0.12, h, z0 - 0.12, xb + 0.12, h + 0.25, z1 + 0.12)          # roof slab
         box(reg, 'roofTin', xa + 0.1, h + 0.25, z0 + 0.1, xb - 0.1, h + 0.32, z1 - 0.1, skip=('b',))
         box(reg, 'whiteBrick', xa + t, h - 0.02, z0 + t, xb - t, h, z1 - t, skip=('t',))     # ceiling
