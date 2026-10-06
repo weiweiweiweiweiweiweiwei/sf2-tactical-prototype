@@ -6767,12 +6767,15 @@ const SKY = {
   BR: { z0: -0.9, z1: 1.8, len: 11, up: 1.08, time: 4.0 },          // leaf width (z), length (x, hinge → middle), raised angle, travel time
   TRAM: { len: 10.07, w: 5.4, h: 5.09, sill: 2.0, door: 2.0, speed: 5.2, cable: 6.29 },
   // x: car centre parked at Alpha (p = 0) / at Bravo (p = 1); side: +1 = the doorway faces +z; door: doorway offset along the car
-  LINES: [{ id: 'N', z: -15.71, side: 1, x: [-15.615, 19.385], start: 0, door: 2.2 },
-          { id: 'S', z: 15.71, side: -1, x: [-19.385, 15.615], start: 1, door: -2.2 }],
+  // (the doorway is in the middle; the south car parks flush with the outer edge, its doorway right at the straw tunnel)
+  LINES: [{ id: 'N', z: -15.71, side: 1, x: [-15.615, 19.385], start: 0, door: 0 },
+          { id: 'S', z: 15.71, side: -1, x: [-21.465, 21.465], start: 1, door: 0 }],
   PULLEY: { x: 29.2, r: 2.5 },
   GEAR: { z: -1.08, r: 5.2 },                                         // the big half gear on the outer edge of each roof
   // Alpha-side solids (x < 0); Bravo is the mirror. [x0, x1, z0, z1, h]
   HUT: [-16.37, -12.33, -7.18, -2.69, 3.2],
+  // the hut is hollow: a doorless entrance and an open window on the north wall, an open window on the bridge side (shoot through)
+  HUT_OPEN: [['-z', -15.75, -14.55, 0, 2.2], ['-z', -13.95, -12.95, 1.0, 2.1], ['+z', -15.85, -14.45, 1.0, 2.1]], HUT_T: 0.25,
   WINCH: [-13.5, -9.99, 2.06, 8.34, 2.7],
   CRATES: [
     [-20.86, -19.60, -12.29, -6.57, 3.0],                             // outer stack by the north tram stop (two crates)
@@ -6801,9 +6804,17 @@ function buildSky(b) {
     // the roof (walkable slab) and the tower dropping into the clouds (collision only near the top; the rest is visual)
     b.box(x0, -2, S.Z0, x1, 0, S.Z1, vis('pavers'), { radar: false, surface: 'concrete' });
     b.box(x0, -40, S.Z0, x1, -2, S.Z1, vis('plasterWhite'), { radar: false, physics: false });
-    // the guard hut (solid block) and the bridge winch (it overhangs the chasm a little)
-    const H = S.HUT, W = S.WINCH;
-    B(H[0], H[1], H[2], H[3], 0, H[4], vis('brick'), { material: 'concrete', radar: 'solid' });
+    // the guard hut (hollow, walk in through the doorway; its windows are open) and the bridge winch (it overhangs the chasm a little)
+    const H = S.HUT, W = S.WINCH, ht = S.HUT_T, wall = { material: 'concrete', radar: 'wall' };
+    for (const [face, zw0, zw1] of [['-z', H[2], H[2] + ht], ['+z', H[3] - ht, H[3]]]) {
+      let u = H[0];
+      for (const [, a, c, y0, y1] of S.HUT_OPEN.filter((o) => o[0] === face).sort((p, q) => p[1] - q[1])) {
+        B(u, a, zw0, zw1, 0, H[4], vis('brick'), wall); if (y0 > 0) B(a, c, zw0, zw1, 0, y0, vis('brick'), wall); B(a, c, zw0, zw1, y1, H[4], vis('brick'), wall); u = c;
+      }
+      B(u, H[1], zw0, zw1, 0, H[4], vis('brick'), wall);
+    }
+    B(H[0], H[0] + ht, H[2], H[3], 0, H[4], vis('brick'), wall); B(H[1] - ht, H[1], H[2], H[3], 0, H[4], vis('brick'), wall);
+    B(H[0], H[1], H[2], H[3], H[4] - 0.02, H[4] + 0.32, vis('brick'), { material: 'concrete', radar: false });
     B(W[0], W[1], W[2], W[3], 0, W[4], null, { material: 'metal', radar: 'crate' });
     // crate stacks (one crate 1.5 m: standing shows the head from the chin up, crouching hides, too high to jump on; two = 3 m)
     for (const [a, c, z0, z1, h] of S.CRATES) B(a, c, z0, z1, 0, h, vis('wood'), { material: 'wood', penetrable: true, radar: h > 2 ? 'container' : 'crate', tile: 1.5 });

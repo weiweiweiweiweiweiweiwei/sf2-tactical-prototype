@@ -19,7 +19,7 @@ RNG = random.Random(4612)
 X0, X1, Z0, Z1 = 11.0, 26.5, -12.75, 12.85
 BR_Z0, BR_Z1 = -0.9, 1.8
 T_LEN, T_W, T_H, T_SILL, T_DOOR, T_CABLE = 10.07, 5.4, 5.09, 2.0, 2.0, 6.29
-LINES = [('N', -15.71, 1, (-15.615, 19.385), 0, 2.2), ('S', 15.71, -1, (-19.385, 15.615), 1, -2.2)]  # id, z, side, x@A/x@B, start, door offset
+LINES = [('N', -15.71, 1, (-15.615, 19.385), 0, 0.0), ('S', 15.71, -1, (-21.465, 21.465), 1, 0.0)]  # id, z, side, x@A/x@B, start, door offset
 PULLEY_X, PULLEY_R = 29.2, 2.5
 GEAR_Z, GEAR_R = -1.08, 5.2
 HUT = (-16.37, -12.33, -7.18, -2.69, 3.2)
@@ -82,9 +82,16 @@ def cyl(obj, mat, c, r, length, axis='y', seg=20, r2=None, caps=True):
         try: bm.faces.new((rings[0][i], rings[0][j], rings[1][j], rings[1][i]))
         except ValueError: pass
     if caps:
-        for ring_ in rings:
-            try: bm.faces.new(ring_)
-            except ValueError: pass
+        ax = {'x': Vector((1, 0, 0)), 'y': Vector((0, 1, 0)), 'z': Vector((0, 0, 1))}[axis]; ax = G(*ax)
+        for end, ring_ in zip((-1, 1), rings): cap(bm, ring_, ax * end)
+
+
+def cap(bm, ring_, out):
+    """an end cap whose normal points along out (so it is never back-face culled from outside)."""
+    try: f = bm.faces.new(ring_)
+    except ValueError: return
+    f.normal_update()
+    if f.normal.dot(out) < 0: f.normal_flip()
 
 
 def box_rot(obj, mat, cx, cy, cz, a, u0, u1, v0, v1, y0, y1):
@@ -129,9 +136,8 @@ def gear_vert(obj, mat, cx, cy, cz, r, axis='x', teeth=16, th=0.25):
         j = (i + 1) % n
         try: bm.faces.new((f0[i], f0[j], f1[j], f1[i]))
         except ValueError: pass
-    for lst in (f0, f1):
-        try: bm.faces.new(lst)
-        except ValueError: pass
+    ax = G(1, 0, 0) if axis == 'x' else G(0, 0, 1)
+    cap(bm, f0, -ax); cap(bm, f1, ax)
 
 
 def ring(obj, mat, cx, y, cz, r, w, seg=28):
@@ -227,28 +233,39 @@ def roofs():
 
 
 # ================================================================================================ HUT, WINCH, CRATES
+HUT_OPEN = [('-z', -15.75, -14.55, 0.0, 2.2), ('-z', -13.95, -12.95, 1.0, 2.1), ('+z', -15.85, -14.45, 1.0, 2.1)]   # face, x0, x1, y0, y1 (Alpha)
+HUT_T = 0.25
+
+
+def hut_piece(reg, x0, x1, z0, z1, y0, y1):
+    """a piece of hut wall, coloured by height band: brick plinth, white brick, brick frieze."""
+    h = HUT[4]
+    for (a, b, mat) in ((0, 0.9, 'brick'), (0.9, h - 0.5, 'whiteBrick'), (h - 0.5, h, 'brick')):
+        lo, hi = max(y0, a), min(y1, b)
+        if hi - lo > 1e-3: box(reg, mat, x0, lo, z0, x1, hi, z1)
+
+
 def huts():
-    x0_, x1_, z0, z1, h = HUT
+    x0_, x1_, z0, z1, h = HUT; t = HUT_T
     for sx in (-1, 1):
         reg = 'west' if sx < 0 else 'east'; xa, xb = MR(x0_, x1_, sx)
-        box(reg, 'brick', xa, 0, z0, xb, 0.9, z1, skip=('b', 't'))
-        box(reg, 'whiteBrick', xa, 0.9, z0, xb, h, z1, skip=('b', 't'))
-        box(reg, 'stone', xa - 0.12, h, z0 - 0.12, xb + 0.12, h + 0.25, z1 + 0.12)
+        for face, zf0, zf1 in (('-z', z0, z0 + t), ('+z', z1 - t, z1)):     # long walls with their openings
+            ops = sorted(MR(o[1], o[2], sx) + (o[3], o[4]) for o in HUT_OPEN if o[0] == face)
+            u = xa
+            for (a, b, y0, y1) in ops:
+                hut_piece(reg, u, a, zf0, zf1, 0, h)
+                if y0 > 0: hut_piece(reg, a, b, zf0, zf1, 0, y0)
+                hut_piece(reg, a, b, zf0, zf1, y1, h)
+                box(reg, 'stone', a - 0.08, y1, zf0 - 0.06, b + 0.08, y1 + 0.14, zf1 + 0.06)    # lintel
+                if y0 > 0: box(reg, 'stone', a - 0.05, y0 - 0.1, zf0 - 0.08, b + 0.05, y0, zf1 + 0.08)   # sill
+                u = b
+            hut_piece(reg, u, xb, zf0, zf1, 0, h)
+        hut_piece(reg, xa, xa + t, z0, z1, 0, h); hut_piece(reg, xb - t, xb, z0, z1, 0, h)
+        box(reg, 'stone', xa - 0.12, h, z0 - 0.12, xb + 0.12, h + 0.25, z1 + 0.12)          # roof slab
         box(reg, 'roofTin', xa + 0.1, h + 0.25, z0 + 0.1, xb - 0.1, h + 0.32, z1 - 0.1, skip=('b',))
-        box(reg, 'brick', xa - 0.05, h - 0.5, z0 - 0.05, xb + 0.05, h, z1 + 0.05, skip=('b', 't'))
-        # door on the roof-side face (away from the chasm), windows toward the bridge and the chasm
-        xo = M(x0_, sx); d = -0.06 if sx < 0 else 0.06                    # outer face (toward the spawn)
-        zc = (z0 + z1) / 2
-        box(reg, 'darkWood', xo, 0, zc - 0.6, xo + d, 2.2, zc + 0.6)
-        box(reg, 'stone', xo, 2.2, zc - 0.75, xo + d * 1.6, 2.4, zc + 0.75)
-        for (wa, wb) in ((M(x0_ + 0.8, sx), M(x0_ + 1.9, sx)), (M(x1_ - 1.9, sx), M(x1_ - 0.8, sx))):   # two windows on the bridge (+z) face
-            a, b = sorted((wa, wb))
-            box(reg, 'glass', a, 1.4, z1, b, 2.4, z1 + 0.03)
-            box(reg, 'darkWood', a - 0.08, 1.32, z1, b + 0.08, 1.42, z1 + 0.08); box(reg, 'darkWood', a - 0.08, 2.4, z1, b + 0.08, 2.48, z1 + 0.08)
-            box(reg, 'darkWood', (a + b) / 2 - 0.04, 1.42, z1, (a + b) / 2 + 0.04, 2.4, z1 + 0.06)
-        xc = M(x1_, sx); dc = 0.03 if sx < 0 else -0.03                    # chasm-side window
-        box(reg, 'glass', xc, 1.4, zc - 0.7, xc + dc, 2.4, zc + 0.7)
-        box(reg, 'darkWood', xc, 1.32, zc - 0.78, xc + dc * 2.5, 1.42, zc + 0.78); box(reg, 'darkWood', xc, 2.4, zc - 0.78, xc + dc * 2.5, 2.48, zc + 0.78)
+        box(reg, 'whiteBrick', xa + t, h - 0.02, z0 + t, xb - t, h, z1 - t, skip=('t',))     # ceiling
+        box(reg, 'darkWood', xa + t, 0.0, z0 + t, xb - t, 0.02, z1 - t, skip=('b',))          # plank floor inside
+        p, q = MR(x0_ + t + 0.05, x0_ + t + 0.55, sx); box(reg, 'tramWood', p, 0.45, z0 + 1.2, q, 0.55, z1 - 1.2)   # a bench on the back wall
 
 
 def winches():
@@ -313,7 +330,7 @@ def crates():
 def floor_gears():
     for sx in (-1, 1):
         o = new_obj('FLOORGEAR_' + ('W' if sx < 0 else 'E'), (sx * X1, -0.2, GEAR_Z))
-        gear_flat(o, 'bronze', 0, 0.0, 0, GEAR_R, 40, 0.36, 0.14, 8)
+        gear_flat(o, 'bronze', sx * X1, -0.2, GEAR_Z, GEAR_R, 40, 0.36, 0.14, 8)
 
 
 # ================================================================================================ DYNAMIC OBJECTS
@@ -402,7 +419,7 @@ def pulleys():
         for sx in (-1, 1):
             gx = sx * PULLEY_X
             name = 'GEAR_' + lid + ('W' if sx < 0 else 'E'); new_obj(name, (gx, -0.2, lz))
-            gear_flat(name, 'bronze', 0, 0, 0, PULLEY_R, 24, 0.2, 0.2, 6)
+            gear_flat(name, 'bronze', gx, -0.2, lz, PULLEY_R, 24, 0.2, 0.2, 6)
             reg = 'west' if sx < 0 else 'east'                             # the cable pole on the pulley's axle
             cyl(reg, 'darkSteel', (gx, (T_CABLE + 0.6 - 1.5) / 2, lz), 0.16, T_CABLE + 0.6 + 1.5, 'y', 12)
             cyl(reg, 'copper', (gx, T_CABLE, lz), 0.42, 0.16, 'z', 18)       # cable sheave at the top
@@ -439,8 +456,8 @@ def tower():
     box(reg, 'darkSteel', -3.0, CY + CR + 1.7, F - 0.1, 3.0, CY + CR + 4.2, F - 0.05)
     disc_mz(reg, 'clockFace', 0, CY, F - 0.4, CR, 48)
     ring_mz(reg, 'copper', 0, CY, F - 0.42, CR + 0.25, 0.35, 48)
-    new_obj('CLOCK_H', (0, CY, F - 0.5)); box('CLOCK_H', 'darkSteel', -0.14, -0.35, -0.04, 0.14, 2.3, 0.04)
-    new_obj('CLOCK_M', (0, CY, F - 0.58)); box('CLOCK_M', 'darkSteel', -0.09, -0.45, -0.04, 0.09, 3.6, 0.04)
+    new_obj('CLOCK_H', (0, CY, F - 0.5)); box('CLOCK_H', 'darkSteel', -0.14, CY - 0.35, F - 0.54, 0.14, CY + 2.3, F - 0.46)
+    new_obj('CLOCK_M', (0, CY, F - 0.58)); box('CLOCK_M', 'darkSteel', -0.09, CY - 0.45, F - 0.62, 0.09, CY + 3.6, F - 0.54)
     # side towers (taller than the body) and the central stepped spire with the copper ball
     for cxx in (-TOWER_X + 3.0, TOWER_X - 3.0):
         box(reg, 'whiteBrick', cxx - 3.0, 0.6, F - 0.4, cxx + 3.0, 30, F + 6.0, skip=('b',))
