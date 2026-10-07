@@ -6768,8 +6768,12 @@ const SKY = {
   TRAM: { len: 10.07, w: 5.4, h: 5.09, sill: 2.0, door: 2.0, speed: 5.2, cable: 6.29 },
   // x: car centre parked at Alpha (p = 0) / at Bravo (p = 1); side: +1 = the doorway faces +z; door: doorway offset along the car
   // (the doorway is in the middle; the south car parks flush with the outer edge, its doorway right at the straw tunnel)
-  LINES: [{ id: 'N', z: -15.71, side: 1, x: [-15.615, 15.615], start: 0, door: 0 },
-          { id: 'S', z: 15.71, side: -1, x: [-21.465, 21.465], start: 1, door: 0 }],
+  // The long sides are four equal bays; seen from the platform, left to right: a small arched window, the doorway, a square
+  // window, a big arched window (the back wall repeats them with a square window for the doorway). The north car parks with
+  // its doorway against the outer crate stack; the south car with its doorway at the straw tunnel.
+  BAYS: [['arch', 0.8], ['door', 2.0], ['rect', 1.9], ['arch', 1.8]], WIN_TOP: 3.99,
+  LINES: [{ id: 'N', z: -15.71, side: 1, x: [-17.08, 19.6], start: 0, door: -1.259 },
+          { id: 'S', z: 15.71, side: -1, x: [-22.834, 20.316], start: 1, door: 1.259 }],
   PULLEY: { x: 29.2, r: 2.5 },
   GEAR: { z: -1.08, r: 5.2 },                                         // the big half gear on the outer edge of each roof
   // Alpha-side solids (x < 0); Bravo is the mirror. [x0, x1, z0, z1, h]
@@ -6870,9 +6874,18 @@ class SkyMechanisms {
       add(-hw, 0, outer, hw, T.sill, outer - L.side * th);             // back wall (cliff side)
       add(-hw, 0, z0, -hw + th, T.sill, z1); add(hw - th, 0, z0, hw, T.sill, z1); // end walls
       add(-hw, 0, inner, d0, T.sill, inner - L.side * th); add(d1, 0, inner, hw, T.sill, inner - L.side * th); // platform side, doorway between
-      add(-hw, T.sill, outer, hw, T.h - 0.5, outer - L.side * th, { blocksShot: false }); // window openings: you can't climb out, shots fly through
-      add(-hw, T.sill, z0, -hw + th, T.h - 0.5, z1, { blocksShot: false }); add(hw - th, T.sill, z0, hw, T.h - 0.5, z1, { blocksShot: false });
-      add(-hw, T.sill, inner, d0, T.h - 0.5, inner - L.side * th, { blocksShot: false }); add(d1, T.sill, inner, hw, T.h - 0.5, inner - L.side * th, { blocksShot: false });
+      // above the sill: solid wall between the windows, the openings let shots through (but nobody climbs out)
+      const top = T.h - 0.5, bw = T.len / 4, open = { blocksShot: false };
+      for (const [zf, isInner] of [[outer, false], [inner, true]]) {
+        const zb = zf - L.side * th * (zf === inner ? 1 : -1);
+        S.BAYS.forEach(([kind, w], i) => {
+          const c = L.side > 0 ? -hw + (i + 0.5) * bw : hw - (i + 0.5) * bw, a = c - bw / 2, b = c + bw / 2;
+          if (kind === 'door' && isInner) { add(a, T.sill, zf, d0, top, zb); add(d1, T.sill, zf, b, top, zb); add(d0, S.WIN_TOP, zf, d1, top, zb); return; }
+          const half = (kind === 'door' ? 1.9 : w) / 2, wt = kind === 'arch' ? S.WIN_TOP - half * 0.6 : S.WIN_TOP;
+          add(a, T.sill, zf, c - half, top, zb); add(c + half, T.sill, zf, b, top, zb); add(c - half, wt, zf, c + half, top, zb); add(c - half, T.sill, zf, c + half, wt, zb, open);
+        });
+      }
+      add(-hw, T.sill, z0, -hw + th, top, z1, open); add(hw - th, T.sill, z0, hw, top, z1, open); // end walls: arched windows
       return t;
     });
     // GO boxes (Alpha positions mirrored to Bravo); the car's own box rides with it, near its back wall
@@ -7130,6 +7143,22 @@ class SkyMechanisms {
 }
 
 // ------------------------------------------------------------------------------------------------- materials
+// a century of weather on a canvas texture: chipped paint showing what is under it, rain streaks, sun bleach, grime low down
+function skyAge(ctx, S, seed, o) {
+  const rnd = mulberry32(seed);
+  for (let i = 0; i < (o.streaks || 0); i++) { // rain streaks running down from the top of the tile
+    const x = rnd() * S, w = 2 + rnd() * 7, len = S * (0.25 + rnd() * 0.7), g = ctx.createLinearGradient(0, 0, 0, len);
+    g.addColorStop(0, `rgba(28,22,14,${0.12 + rnd() * 0.16})`); g.addColorStop(1, 'rgba(28,22,14,0)'); ctx.fillStyle = g; ctx.fillRect(x, 0, w, len);
+  }
+  for (let i = 0; i < (o.chips || 0); i++) { // flaked paint: an irregular patch of the layer underneath, with a dark rim
+    const cx = rnd() * S, cy = rnd() * S, r = 2 + rnd() * (o.chipR || 9), n = 6 + Math.floor(rnd() * 4);
+    ctx.beginPath(); for (let k = 0; k < n; k++) { const a = k / n * Math.PI * 2, rr = r * (0.5 + rnd() * 0.7); ctx[k ? 'lineTo' : 'moveTo'](cx + Math.cos(a) * rr, cy + Math.sin(a) * rr * 0.7); }
+    ctx.closePath(); ctx.fillStyle = o.chip; ctx.fill(); ctx.strokeStyle = 'rgba(20,14,8,.35)'; ctx.lineWidth = 1; ctx.stroke();
+  }
+  if (o.fade) { ctx.fillStyle = `rgba(206,196,176,${o.fade})`; ctx.fillRect(0, 0, S, S); }
+  if (o.dirt) { const g = ctx.createLinearGradient(0, S, 0, S * 0.45); g.addColorStop(0, `rgba(42,32,20,${o.dirt})`); g.addColorStop(1, 'rgba(42,32,20,0)'); ctx.fillStyle = g; ctx.fillRect(0, 0, S, S); }
+  for (let i = 0; i < (o.specks || 0); i++) { ctx.fillStyle = `rgba(${rnd() < 0.5 ? '30,24,16' : '210,200,180'},${0.08 + rnd() * 0.12})`; ctx.fillRect(rnd() * S, rnd() * S, 1 + rnd() * 2, 1 + rnd() * 2); }
+}
 function skyMat(b, name) {
   const tf = b.tf, lib = b.lib, std = (key, o) => lib.basic('sky:' + key, () => new THREE.MeshStandardMaterial(o));
   const canvas = (key, size, draw, o = {}) => lib.basic('sky:' + key, () => {
@@ -7167,22 +7196,26 @@ function skyMat(b, name) {
     case 'tramGreen': return canvas('tramGreen', 256, (ctx, S) => { // #4C7338 … #5B863F, faint brush streaks, no metal sheen
       const rnd = mulberry32(31), g = ctx.createLinearGradient(0, 0, 0, S); g.addColorStop(0, '#5b863f'); g.addColorStop(1, '#4c7338'); ctx.fillStyle = g; ctx.fillRect(0, 0, S, S);
       for (let i = 0; i < 260; i++) { ctx.fillStyle = `rgba(${rnd() < 0.5 ? '30,50,22' : '120,150,90'},${0.04 + rnd() * 0.05})`; ctx.fillRect(rnd() * S, rnd() * S, 1 + rnd() * 3, 6 + rnd() * 30); }
-    }, { mat: { roughness: 0.82, metalness: 0.08 } });
+      skyAge(ctx, S, 71, { streaks: 16, chips: 34, chip: '#6b4b33', chipR: 8, fade: 0.1, dirt: 0.22, specks: 300 }); // rust-brown primer under the green
+    }, { mat: { roughness: 0.86, metalness: 0.06 } });
     case 'tramBrown': return canvas('tramBrown', 256, (ctx, S) => { // #32261E … #4A382C, settled dust
       const rnd = mulberry32(37); ctx.fillStyle = '#3e2f25'; ctx.fillRect(0, 0, S, S);
       for (let i = 0; i < 900; i++) { const v = rnd(); ctx.fillStyle = v < 0.5 ? `rgba(74,56,44,${0.3 + rnd() * 0.4})` : `rgba(50,38,30,${0.3 + rnd() * 0.4})`; ctx.fillRect(rnd() * S, rnd() * S, 2 + rnd() * 6, 2 + rnd() * 6); }
       for (let i = 0; i < 300; i++) { ctx.fillStyle = `rgba(150,130,110,${0.05 + rnd() * 0.08})`; ctx.fillRect(rnd() * S, rnd() * S, 1, 1); }
+      skyAge(ctx, S, 73, { streaks: 10, chips: 18, chip: 'rgba(122,64,36,.8)', chipR: 12, dirt: 0.15 }); // rust blooms
     }, { mat: { roughness: 0.95, metalness: 0.05 } });
     case 'tramPanel': return canvas('tramPanel', 256, (ctx, S) => { // vertical tongue-and-groove planks
       const rnd = mulberry32(41), n = 6, w = S / n;
       for (let i = 0; i < n; i++) { const v = 128 + Math.floor(rnd() * 22); ctx.fillStyle = `rgb(${v + 12},${v - 22},${v - 58})`; ctx.fillRect(i * w, 0, w, S);
         for (let k = 0; k < 7; k++) { ctx.strokeStyle = `rgba(70,40,20,${0.1 + rnd() * 0.12})`; ctx.lineWidth = 1; ctx.beginPath(); const x = i * w + 4 + rnd() * (w - 8); ctx.moveTo(x, 0); ctx.bezierCurveTo(x + rnd() * 6 - 3, S / 3, x + rnd() * 6 - 3, S * 2 / 3, x + rnd() * 4 - 2, S); ctx.stroke(); }
         ctx.fillStyle = 'rgba(40,24,14,.65)'; ctx.fillRect(i * w, 0, 2, S); ctx.fillStyle = 'rgba(255,230,200,.12)'; ctx.fillRect(i * w + 2, 0, 2, S); }
-    }, { mat: { roughness: 0.85 } });
+      skyAge(ctx, S, 79, { streaks: 18, chips: 10, chip: 'rgba(150,140,120,.6)', chipR: 6, fade: 0.14, dirt: 0.35, specks: 200 }); // grey, sun-dried wood
+    }, { mat: { roughness: 0.9 } });
     case 'tramTrim': return canvas('tramTrim', 128, (ctx, S) => { // salmon paint over wood
       const rnd = mulberry32(43); ctx.fillStyle = '#c3826b'; ctx.fillRect(0, 0, S, S);
       for (let i = 0; i < 40; i++) { ctx.fillStyle = `rgba(${rnd() < 0.5 ? '150,90,70' : '220,170,150'},${0.06 + rnd() * 0.06})`; ctx.fillRect(0, rnd() * S, S, 1 + rnd() * 2); }
-    }, { mat: { roughness: 0.8 } });
+      skyAge(ctx, S, 83, { streaks: 8, chips: 16, chip: '#8e8273', chipR: 6, fade: 0.16, dirt: 0.18, specks: 120 }); // faded salmon, bare wood where it flaked
+    }, { mat: { roughness: 0.88 } });
     case 'tramRoof': return std('tramRoof', { color: 0x2f4a2a, roughness: 0.85, metalness: 0.1 });
     case 'hazard': return canvas('hazard', 128, (ctx, S) => { // yellow / black diagonal stripes
       ctx.fillStyle = '#e0b62a'; ctx.fillRect(0, 0, S, S); ctx.fillStyle = '#1d1a16';
@@ -7193,11 +7226,25 @@ function skyMat(b, name) {
       for (let j = 0; j < n; j++) { const v = 96 + Math.floor(rnd() * 20); ctx.fillStyle = `rgb(${v + 6},${v - 22},${v - 48})`; ctx.fillRect(0, j * h, S, h);
         for (let k = 0; k < 6; k++) { ctx.strokeStyle = `rgba(40,22,10,${0.1 + rnd() * 0.15})`; ctx.beginPath(); const y = j * h + 3 + rnd() * (h - 6); ctx.moveTo(0, y); ctx.lineTo(S, y + rnd() * 4 - 2); ctx.stroke(); }
         ctx.fillStyle = 'rgba(25,14,8,.7)'; ctx.fillRect(0, j * h, S, 2); }
-    }, { mat: { roughness: 0.88 } });
+      skyAge(ctx, S, 89, { chips: 0, fade: 0.08, dirt: 0.2, specks: 400 }); // worn by a century of boots
+    }, { mat: { roughness: 0.92 } });
     case 'roofTin': return std('roofTin', { color: 0x7e8784, roughness: 0.45, metalness: 0.55 });
-    case 'leafGreen': return std('leafGreen', { color: 0x4a8a76, roughness: 0.5, metalness: 0.3 });
+    case 'leafGreen': return canvas('leafGreen', 256, (ctx, S) => { // matte teal deck paint, mottled with wear
+      const rnd = mulberry32(53); ctx.fillStyle = '#2d5a53'; ctx.fillRect(0, 0, S, S);
+      for (let i = 0; i < 500; i++) { const r = 3 + rnd() * 14; ctx.fillStyle = `rgba(${rnd() < 0.5 ? '22,64,58' : '60,104,94'},${0.05 + rnd() * 0.08})`; ctx.beginPath(); ctx.arc(rnd() * S, rnd() * S, r, 0, 7); ctx.fill(); }
+    }, { mat: { roughness: 0.8, metalness: 0.1 } });
+    case 'gearTan': return canvas('gearTan', 128, (ctx, S) => { // sand-painted cast metal (winch gears, bands, hinge gears)
+      const rnd = mulberry32(59); ctx.fillStyle = '#b39878'; ctx.fillRect(0, 0, S, S);
+      for (let i = 0; i < 220; i++) { ctx.fillStyle = `rgba(${rnd() < 0.5 ? '120,96,70' : '214,196,170'},${0.06 + rnd() * 0.08})`; ctx.fillRect(rnd() * S, rnd() * S, 1 + rnd() * 4, 1 + rnd() * 4); }
+    }, { mat: { roughness: 0.72, metalness: 0.18 } });
+    case 'rustPlate': return canvas('rustPlate', 256, (ctx, S) => { // rust-brown floor plate under the winch
+      const rnd = mulberry32(61); ctx.fillStyle = '#6e3a28'; ctx.fillRect(0, 0, S, S);
+      for (let i = 0; i < 700; i++) { ctx.fillStyle = `rgba(${rnd() < 0.5 ? '140,74,44' : '70,34,22'},${0.08 + rnd() * 0.12})`; ctx.fillRect(rnd() * S, rnd() * S, 2 + rnd() * 8, 1 + rnd() * 3); }
+      ctx.strokeStyle = 'rgba(40,20,12,.5)'; ctx.lineWidth = 2; ctx.strokeRect(1, 1, S - 2, S - 2);
+    }, { mat: { roughness: 0.9, metalness: 0.2 } });
+    case 'railSteel': return std('railSteel', { color: 0xb9bec2, roughness: 0.45, metalness: 0.5 });
     case 'leafGrey': return std('leafGrey', { color: 0x4d5a66, roughness: 0.5, metalness: 0.35 });
-    case 'arrow': return std('arrow', { color: 0xe3b23c, roughness: 0.4, metalness: 0.3, emissive: 0x3a2a00 });
+    case 'arrow': return std('arrow', { color: 0xe8c43a, roughness: 0.6, metalness: 0.1, emissive: 0x2a2000 });
     case 'rubber': return std('rubber', { color: 0x161616, roughness: 0.9 });
     case 'lampGlow': return lib.basic('sky:lampGlow', () => new THREE.MeshStandardMaterial({ color: 0xffe6c0, emissive: 0xffc890, emissiveIntensity: 1.2 }));
     case 'glass': return lib.basic('sky:glass', () => new THREE.MeshStandardMaterial({ color: 0x9fb8c4, roughness: 0.1, metalness: 0.2, transparent: true, opacity: 0.45 }));

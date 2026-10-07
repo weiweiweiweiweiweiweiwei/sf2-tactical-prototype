@@ -19,7 +19,8 @@ RNG = random.Random(4612)
 X0, X1, Z0, Z1 = 11.0, 26.5, -12.75, 12.85
 BR_Z0, BR_Z1 = -0.9, 1.8
 T_LEN, T_W, T_H, T_SILL, T_DOOR, T_CABLE = 10.07, 5.4, 5.09, 2.0, 2.0, 6.29
-LINES = [('N', -15.71, 1, (-15.615, 15.615), 0, 0.0), ('S', 15.71, -1, (-21.465, 21.465), 1, 0.0)]  # id, z, side, x@A/x@B, start, door offset
+LINES = [('N', -15.71, 1, (-17.08, 19.6), 0, -1.259), ('S', 15.71, -1, (-22.834, 20.316), 1, 1.259)]
+BAYS = [('arch', 0.8), ('door', 2.0), ('rect', 1.9), ('arch', 1.8)]; WIN_TOP = 3.99   # = SKY.BAYS (seen from the platform, left → right)  # id, z, side, x@A/x@B, start, door offset
 PULLEY_X, PULLEY_R = 29.2, 2.5
 GEAR_Z, GEAR_R = -1.08, 5.2
 HUT = (-16.37, -12.33, -7.18, -2.69, 3.2)
@@ -30,7 +31,7 @@ STRAW = (-22.74, -20.41, 7.18, 12.56, 3.0, 0.25, 2.1)
 TOWER_Z, TOWER_X, CLOCK_Y, CLOCK_R = 19.21, 16.73, 9.5, 4.2
 TILE = {'floor': 2.0, 'inlay': 1.0, 'whiteBrick': 3.0, 'brick': 1.6, 'wood': 1.5, 'darkWood': 1.5, 'stone': 2.0, 'bronze': 1.0, 'steel': 1.0,
         'darkSteel': 1.0, 'tramGreen': 1.5, 'tramWood': 1.2, 'copper': 1.0, 'glass': 2.0, 'clockFace': 1.0, 'roofTin': 1.5, 'lampGlow': 1.0,
-        'goPanel': 1.0, 'tramPanel': 1.2, 'tramTrim': 1.0, 'tramBrown': 1.5, 'tramRoof': 2.0, 'hazard': 0.5, 'leafGreen': 3.0, 'leafGrey': 3.0, 'arrow': 1.0, 'rubber': 1.0, 'cloud': 1.0}
+        'goPanel': 1.0, 'tramPanel': 1.2, 'tramTrim': 1.0, 'tramBrown': 1.5, 'tramRoof': 2.0, 'hazard': 0.5, 'gearTan': 1.0, 'rustPlate': 1.5, 'railSteel': 1.0, 'leafGreen': 3.0, 'leafGrey': 3.0, 'arrow': 1.0, 'rubber': 1.0, 'cloud': 1.0}
 
 
 def G(x, y, z): return Vector((x, -z, y))  # game → Blender
@@ -274,22 +275,31 @@ def huts():
 
 
 def winches():
+    """SF2 winch: a drum of wooden staves with two tan metal bands, chunky tan gears on both ends, on a rust-brown plate."""
     x0_, x1_, z0, z1, h = WINCH
     for sx in (-1, 1):
         reg = 'west' if sx < 0 else 'east'
-        cx = M((x0_ + x1_) / 2, sx); cy = 1.35; cz = (z0 + z1) / 2; L = (z1 - z0) - 1.4
-        cyl(reg, 'bronze', (cx, cy, cz), 1.05, L, 'z', 28)                # the drum, axis along the chasm edge
-        for k in range(14):
-            a = 2 * math.pi * k / 14; x_ = cx + math.cos(a) * 1.08; y_ = cy + math.sin(a) * 1.08
-            box(reg, 'copper', x_ - 0.05, y_ - 0.05, cz - L / 2 - 0.05, x_ + 0.05, y_ + 0.05, cz + L / 2 + 0.05)
-        for e in (-1, 1): gear_vert(reg, 'bronze', cx, cy, cz + e * (L / 2 + 0.2), 1.3, 'z', 18, 0.22)
-        cyl(reg, 'darkSteel', (cx, cy, cz), 0.22, z1 - z0, 'z', 14)
-        for e in (-1, 1): box(reg, 'darkSteel', cx - 0.45, 0, cz + e * (L / 2 + 0.5) - 0.15, cx + 0.45, cy + 0.2, cz + e * (L / 2 + 0.5) + 0.15)
-        bx0, bx1 = MR(x0_, -X0, sx); box(reg, 'stone', bx0, 0, z0, bx1, 0.12, z1)   # plinth (on the roof part only)
-        # gear train down to the leaf hinge
-        hx = sx * X0
-        gear_vert(reg, 'bronze', hx - sx * 0.6, 0.6, z0 - 0.05, 0.6, 'z', 12, 0.2)
-        cyl(reg, 'darkSteel', (hx - sx * 0.3, -0.05, (BR_Z0 + BR_Z1) / 2), 0.26, BR_Z1 - BR_Z0 + 0.9, 'z', 16)   # hinge axle
+        cx = M((x0_ + x1_) / 2, sx); cy = 1.55; cz = (z0 + z1) / 2; L = (z1 - z0) - 1.5
+        px0, px1 = MR(x0_ - 0.25, x1_ + 0.1, sx); box(reg, 'rustPlate', px0, 0.0, z0 - 0.3, px1, 0.05, z1 + 0.3)
+        cyl(reg, 'darkWood', (cx, cy, cz), 0.98, L, 'z', 22)
+        n = 22; R0, R1 = 0.98, 1.07
+        for k in range(n):                                                 # the staves, along the drum axis
+            a0 = 2 * math.pi * (k + 0.06) / n; a1 = 2 * math.pi * (k + 0.94) / n
+            P = lambda a, r, z: (cx + math.cos(a) * r, cy + math.sin(a) * r, z)
+            am = (a0 + a1) / 2; out = (math.cos(am), math.sin(am), 0)
+            za_, zb_ = cz - L / 2, cz + L / 2
+            oface(reg, 'wood', [P(a0, R1, za_), P(a1, R1, za_), P(a1, R1, zb_), P(a0, R1, zb_)], out)
+            oface(reg, 'wood', [P(a0, R0, za_), P(a0, R1, za_), P(a0, R1, zb_), P(a0, R0, zb_)], (-math.sin(a0), math.cos(a0), 0))
+            oface(reg, 'wood', [P(a1, R0, za_), P(a1, R1, za_), P(a1, R1, zb_), P(a1, R0, zb_)], (math.sin(a1), -math.cos(a1), 0))
+        for e in (-1, 1):
+            cyl(reg, 'gearTan', (cx, cy, cz + e * (L / 2 - 0.65)), 1.12, 0.22, 'z', 28)      # metal band
+            gear_vert(reg, 'gearTan', cx, cy, cz + e * (L / 2 + 0.22), 1.5, 'z', 14, 0.38)   # end gear
+            cyl(reg, 'gearTan', (cx, cy, cz + e * (L / 2 + 0.22)), 0.5, 0.62, 'z', 18)       # hub
+            cyl(reg, 'gearTan', (cx, cy, cz + e * (L / 2 + 0.22)), 1.12, 0.46, 'z', 28)      # rim behind the teeth
+        cyl(reg, 'darkSteel', (cx, cy, cz), 0.2, z1 - z0 + 0.3, 'z', 14)
+        hx = sx * X0                                                       # gear train down to the leaf hinge
+        gear_vert(reg, 'gearTan', hx - sx * 0.6, 0.6, z0 - 0.1, 0.6, 'z', 10, 0.24)
+        cyl(reg, 'darkSteel', (hx - sx * 0.3, -0.05, (BR_Z0 + BR_Z1) / 2), 0.26, BR_Z1 - BR_Z0 + 1.0, 'z', 16)   # hinge axle
 
 
 def crate_block(reg, x0, x1, z0, z1, y0, y1):
@@ -347,25 +357,44 @@ def new_obj(name, origin):
 
 
 def bridge_leaves():
+    """SF2 bascule leaves: a matte teal deck with silver edge rails and a yellow outline that narrows toward the tip, an
+    arrow pointing back to the hinge, a Warren truss under each edge, and a tan sector gear on each side of the hinge."""
     for sx in (-1, 1):
         name = 'BRIDGE_' + ('W' if sx < 0 else 'E'); new_obj(name, (0.0, 0.0, 0.0))   # world-space mesh, origin (0,0,0)
-        hx = sx * X0; xa, xb = sorted((hx, sx * 0.02)); za, zb = BR_Z0, BR_Z1
-        box(name, 'leafGreen', xa, -0.12, za, xb, 0.0, zb)               # both leaves alike (SF2: green deck, yellow trim)
-        for zz in (za, zb - 0.12): box(name, 'darkSteel', xa, -0.55, zz, xb, -0.12, zz + 0.12)
-        n = 10
-        for k in range(n):
-            x_a = xa + (xb - xa) * k / n; x_b = xa + (xb - xa) * (k + 1) / n
-            for zz in (za + 0.02, zb - 0.1): diag(name, 'darkSteel', (x_a, -0.5, zz), (x_b, -0.15, zz), 0.07)
-            box(name, 'darkSteel', x_a - 0.04, -0.55, za, x_a + 0.04, -0.12, zb)
-        y = 0.006                                                          # yellow edge lines + an arrow across the chasm
-        for zz in (za + 0.2, zb - 0.28): flat(name, 'arrow', xa + 0.2, xb - 0.2, zz, zz + 0.08, y)
-        zc = (za + zb) / 2; base = hx - sx * 2.5; tip = sx * 1.6
-        flat(name, 'arrow', base, tip, zc - 0.11, zc + 0.11, y)
-        bm = bk(name, 'arrow'); pts = [(tip - sx * 0.0, zc + 0.5), (tip - sx * 1.0, zc), (tip, zc - 0.5)]
-        vs = [bm.verts.new(G(px, y, pz)) for (px, pz) in sorted(pts, key=lambda p: p[1])]
-        try: bm.faces.new(vs if sx > 0 else vs[::-1])
-        except ValueError: pass
-        for zz in (za - 0.25, zb + 0.25): gear_vert(name, 'bronze', hx - sx * 0.25, -0.1, zz, 0.7, 'z', 14, 0.16)   # quadrant gears at the hinge
+        hx = sx * X0; Lf = X0 - 0.02; za, zb = BR_Z0, BR_Z1; zc = (za + zb) / 2; W = zb - za
+        X = lambda s: hx - sx * s                                          # leaf-local s (hinge → tip) to world x
+        xa, xb = sorted((X(0), X(Lf)))
+        box(name, 'leafGreen', xa, -0.12, za, xb, 0.0, zb)
+        for zz in (za, zb - 0.09): box(name, 'railSteel', xa, 0.0, zz, xb, 0.07, zz + 0.09)   # silver edge rails
+        # the truss: top chord under the deck edge, bottom chord, posts and alternating diagonals; cross beams at the posts
+        D = 0.85; n = 8
+        for zz in (za + 0.04, zb - 0.16):
+            box(name, 'darkSteel', xa, -0.24, zz, xb, -0.12, zz + 0.12)
+            box(name, 'darkSteel', min(X(0.4), X(Lf - 0.3)), -0.12 - D, zz, max(X(0.4), X(Lf - 0.3)), -D, zz + 0.12)
+            for k in range(n + 1):
+                s = 0.4 + (Lf - 0.7) * k / n
+                box(name, 'darkSteel', X(s) - 0.05, -D, zz, X(s) + 0.05, -0.12, zz + 0.12)
+                if k < n:
+                    s2 = 0.4 + (Lf - 0.7) * (k + 1) / n
+                    a, b = ((X(s), -D + 0.06, zz + 0.06), (X(s2), -0.18, zz + 0.06)) if k % 2 == 0 else ((X(s), -0.18, zz + 0.06), (X(s2), -D + 0.06, zz + 0.06))
+                    diag(name, 'darkSteel', a, b, 0.05)
+        for k in range(n + 1):
+            s = 0.4 + (Lf - 0.7) * k / n; box(name, 'darkSteel', X(s) - 0.05, -0.2, za + 0.1, X(s) + 0.05, -0.12, zb - 0.1)
+        # yellow outline: full width from the hinge, a step inward at 60 %, a narrow lane to the tip; arrow toward the hinge
+        y = 0.006; lw = 0.08
+
+        def line(s0, t0, s1, t1):
+            dx, dz = X(s1) - X(s0), t1 - t0; ln = math.hypot(dx, dz) or 1; ox, oz = -dz / ln * lw / 2, dx / ln * lw / 2
+            p = [(X(s0) + ox, y, zc + t0 + oz), (X(s1) + ox, y, zc + t1 + oz), (X(s1) - ox, y, zc + t1 - oz), (X(s0) - ox, y, zc + t0 - oz)]
+            oface(name, 'arrow', p, (0, 1, 0))
+        wo, wi = W / 2 - 0.3, W / 2 - 0.62; s0, s1, s2, s3 = 0.35, 0.6 * Lf, 0.6 * Lf + 0.5, Lf - 0.3
+        for g in (-1, 1):
+            line(s0, g * wo, s1, g * wo); line(s1, g * wo, s2, g * wi); line(s2, g * wi, s3, g * wi)
+        line(s0, -wo, s0, wo); line(s3, -wi, s3, wi)
+        sh0, sh1, hd = s3 - 0.5, s3 - 1.7, s3 - 2.4                        # the arrow: shaft + head, pointing to the hinge
+        oface(name, 'arrow', [(X(sh0), y, zc - 0.12), (X(sh1), y, zc - 0.12), (X(sh1), y, zc + 0.12), (X(sh0), y, zc + 0.12)], (0, 1, 0))
+        oface(name, 'arrow', [(X(sh1), y, zc - 0.42), (X(hd), y, zc), (X(sh1), y, zc + 0.42)], (0, 1, 0))
+        for zz in (za - 0.22, zb + 0.22): gear_vert(name, 'gearTan', X(0.3), -0.25, zz, 1.05, 'z', 12, 0.26)   # sector gears at the hinge
 
 
 def oface(obj, mat, pts, out):
@@ -423,28 +452,29 @@ def trams():
             for zz in (z0 + 0.25, z1 - 0.95):
                 box(o, 'hazard', cx + e * (hw - 0.35) - 0.35, -0.72, zz, cx + e * (hw - 0.35) + 0.35, -0.34, zz + 0.7)
         # the long walls: five bays, the middle one is the doorway (platform side) or a square window (cliff side)
-        wc = T_DOOR + 0.4; wo = (T_LEN - wc) / 4
-        bays = [(cx - hw, cx - hw + wo, 'arch'), (cx - hw + wo, cx - wc / 2, 'rect'), (cx - wc / 2, cx + wc / 2, 'mid'),
-                (cx + wc / 2, cx + hw - wo, 'rect'), (cx + hw - wo, cx + hw, 'arch')]
+        # the long walls: four equal bays (see BAYS); on the back wall the doorway bay is a square window
+        bw = T_LEN / 4
+        bays = []
+        for i, (kind, w) in enumerate(BAYS):
+            c = cx + (-hw + (i + 0.5) * bw if side > 0 else hw - (i + 0.5) * bw); bays.append((c - bw / 2, c + bw / 2, c, kind, w))
         for zf, dz, is_inner in ((outer, th if outer == z0 else -th, False), (inner, th if inner == z0 else -th, True)):
             nz = -1 if dz > 0 else 1                                       # outward normal (z)
-            for (b0, b1, kind) in bays:
-                m = 0.22                                                    # jamb width inside the bay
-                if kind == 'mid' and is_inner:
-                    opening_wall(o, 'tramTrim', 'z', zf, dz, b0, b1, 0.0, frieze, b0 + m - 0.02, b1 - m + 0.02, 0.0, frieze - 0.25, False)
+            for (b0, b1, c, kind, w) in bays:
+                if kind == 'door' and is_inner:
+                    opening_wall(o, 'tramTrim', 'z', zf, dz, b0, b1, 0.0, frieze, c - w / 2, c + w / 2, 0.0, WIN_TOP, False)
                     continue
+                if kind == 'door': kind, w = 'rect', 1.9
                 # wainscot below the sill: planks + a green inset frame and a salmon outer frame (on both faces)
                 box(o, 'tramPanel', b0, 0.18, zf, b1, T_SILL, zf + dz)
                 box(o, 'tramBrown', b0, 0.0, zf + 0.02 * nz, b1, 0.18, zf + dz - 0.02 * nz)
-                for w in (zf + 0.015 * nz, zf + dz - 0.015 * nz):
-                    for (pa, pb, ya, yb) in ((b0 + 0.18, b0 + 0.26, 0.4, T_SILL - 0.22), (b1 - 0.26, b1 - 0.18, 0.4, T_SILL - 0.22),
-                                             (b0 + 0.18, b1 - 0.18, 0.4, 0.48), (b0 + 0.18, b1 - 0.18, T_SILL - 0.3, T_SILL - 0.22)):
-                        box(o, 'tramGreen', pa, ya, w - 0.01, pb, yb, w + 0.01)
+                for wz in (zf + 0.015 * nz, zf + dz - 0.015 * nz):
+                    for (pa, pb, ya, yb) in ((b0 + 0.22, b0 + 0.3, 0.4, T_SILL - 0.22), (b1 - 0.3, b1 - 0.22, 0.4, T_SILL - 0.22),
+                                             (b0 + 0.22, b1 - 0.22, 0.4, 0.48), (b0 + 0.22, b1 - 0.22, T_SILL - 0.3, T_SILL - 0.22)):
+                        box(o, 'tramGreen', pa, ya, wz - 0.01, pb, yb, wz + 0.01)
                 box(o, 'tramTrim', b0, T_SILL - 0.08, zf + 0.04 * nz, b1, T_SILL + 0.06, zf + dz - 0.04 * nz)   # sill rail
-                opening_wall(o, 'tramTrim', 'z', zf, dz, b0, b1, T_SILL + 0.06, frieze, b0 + m, b1 - m, T_SILL + 0.06, frieze - 0.2,
-                             kind == 'arch')
-            for (b0, b1, kind) in bays[:-1]:                                # green posts between the bays (and at the ends)
-                box(o, 'tramGreen', b1 - 0.09, 0.0, zf + 0.03 * nz, b1 + 0.09, frieze, zf + dz - 0.03 * nz)
+                opening_wall(o, 'tramTrim', 'z', zf, dz, b0, b1, T_SILL + 0.06, frieze, c - w / 2, c + w / 2, T_SILL + 0.06, WIN_TOP, kind == 'arch')
+            for k in (1, 2, 3):                                            # green posts between the bays
+                xx = cx - hw + k * bw; box(o, 'tramGreen', xx - 0.1, 0.0, zf + 0.03 * nz, xx + 0.1, frieze, zf + dz - 0.03 * nz)
             box(o, 'tramGreen', cx - hw, frieze, zf + 0.05 * nz, cx + hw, top, zf + dz - 0.05 * nz)      # frieze band
         # end walls: two arched windows each
         for e in (-1, 1):
@@ -474,7 +504,7 @@ def trams():
             cyl(o, 'darkSteel', (cx + e * 1.2, T_CABLE + 0.32, lz), 0.09, 0.42, 'z', 10)
         # benches along the back wall: wood seat on dark-brown legs
         zb0, zb1 = (outer + 0.14, outer + 0.64) if outer == z0 else (outer - 0.64, outer - 0.14)
-        for (a, b) in ((cx - hw + 0.4, cx - wc / 2 - 0.1), (cx + wc / 2 + 0.1, cx + hw - 0.4)):
+        for (a, b) in ((cx - hw + 0.4, cx - 0.2), (cx + 0.2, cx + hw - 0.4)):
             box(o, 'tramWood', a, 0.45, zb0, b, 0.53, zb1)
             for xx in (a + 0.2, (a + b) / 2, b - 0.2): box(o, 'tramBrown', xx - 0.05, 0.0, zb0 + 0.08, xx + 0.05, 0.45, zb1 - 0.08)
 
