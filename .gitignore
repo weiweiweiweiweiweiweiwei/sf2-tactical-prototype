@@ -6,3 +6,6 @@ ref/*.webp
 ref/*.png
 tools/ryokan/plan.json
 tools/ryokan/ryokan.glb
+
+# walkable .blend copies of the maps + their exported textures (tools/_matexport.mjs, glb_to_blend.py, blend_sky.py) — large, local only
+maps/*/view/

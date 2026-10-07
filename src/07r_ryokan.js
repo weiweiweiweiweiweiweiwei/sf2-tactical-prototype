@@ -263,6 +263,7 @@ function buildRyokan(b) {
       if (!o.isMesh) return;
       const nm = (o.material && o.material.name) || '', key = 'ry_' + nm.replace(/^ry:/, '');
       const sp = ryokanSpecialMat(b, nm.replace(/^ry:/, ''));
+      o.userData.srcMat = nm; // the Blender placeholder name (tools/_matexport.mjs maps the game material back to it)
       if (sp) { o.material = sp; if (sp.transparent) { o.renderOrder = 2; o.userData.noAO = true; } } else if (MAT_PRESETS[key]) o.material = b.lib.get(key);
       o.castShadow = !/nocast|petal|water|glass|tileEnds/i.test(o.name); o.receiveShadow = !/far_nocast/.test(o.name); o.matrixAutoUpdate = false; o.updateMatrix();
     });

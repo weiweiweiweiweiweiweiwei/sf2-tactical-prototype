@@ -19,7 +19,7 @@ RNG = random.Random(4612)
 X0, X1, Z0, Z1 = 11.0, 26.5, -12.75, 12.85
 BR_Z0, BR_Z1 = -0.9, 1.8
 T_LEN, T_W, T_H, T_SILL, T_DOOR, T_CABLE = 10.07, 5.4, 5.09, 2.0, 2.0, 6.29
-LINES = [('N', -15.71, 1, (-17.08, 19.6), 0, -1.259), ('S', 15.71, -1, (-22.834, 20.316), 1, 1.259)]
+LINES = [('N', -15.71, 1, (-17.08, 14.565), 0, -1.259), ('S', 15.71, -1, (-22.834, 20.316), 1, 1.259)]
 BAYS = [('arch', 0.8), ('door', 2.0), ('rect', 1.9), ('arch', 1.8)]; WIN_TOP = 3.99   # = SKY.BAYS (seen from the platform, left → right)  # id, z, side, x@A/x@B, start, door offset
 PULLEY_X, PULLEY_R = 29.2, 2.5
 GEAR_Z, GEAR_R = -1.08, 5.2

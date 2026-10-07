@@ -22,9 +22,10 @@ const SKY = {
   // (the doorway is in the middle; the south car parks flush with the outer edge, its doorway right at the straw tunnel)
   // The long sides are four equal bays; seen from the platform, left to right: a small arched window, the doorway, a square
   // window, a big arched window (the back wall repeats them with a square window for the doorway). The north car parks with
-  // its doorway against the outer crate stack; the south car with its doorway at the straw tunnel.
+  // its doorway against the outer crate stack at Alpha and its tail end against that stack at Bravo; the south car with its
+  // doorway at the straw tunnel.
   BAYS: [['arch', 0.8], ['door', 2.0], ['rect', 1.9], ['arch', 1.8]], WIN_TOP: 3.99,
-  LINES: [{ id: 'N', z: -15.71, side: 1, x: [-17.08, 19.6], start: 0, door: -1.259 },
+  LINES: [{ id: 'N', z: -15.71, side: 1, x: [-17.08, 14.565], start: 0, door: -1.259 }, // at Bravo its tail end meets the outer stack
           { id: 'S', z: 15.71, side: -1, x: [-22.834, 20.316], start: 1, door: 1.259 }],
   PULLEY: { x: 29.2, r: 2.5 },
   GEAR: { z: -1.08, r: 5.2 },                                         // the big half gear on the outer edge of each roof
@@ -51,6 +52,7 @@ function buildSky(b) {
   if (glb) glb.scene.traverse((o) => { // Blender visuals: 'sky:<name>' placeholders → the game's materials
     if (!o.isMesh) return;
     const nm = ((o.material && o.material.name) || '').replace(/^sky:/, '');
+    o.userData.srcMat = 'sky:' + nm; // (tools/_matexport.mjs)
     o.material = skyMat(b, nm); if (nm === 'btnGreen' || nm === 'btnRed') o.userData.btn = nm;
     if (o.material.transparent) { o.renderOrder = 2; o.userData.noAO = true; }
     o.castShadow = !/clockFace|glass|inlay|arrow/.test(nm); o.receiveShadow = true; o.matrixAutoUpdate = false; o.updateMatrix();
