@@ -27,11 +27,11 @@ HUT = (-16.37, -12.33, -7.18, -2.69, 3.2)
 WINCH = (-13.5, -9.99, 2.06, 8.34, 2.7)
 CRATES = [(-20.86, -19.60, -12.29, -6.57, 3.0), (-12.54, -11.64, -11.94, -9.50, 3.0), (-12.54, -11.64, -9.50, -7.00, 1.5),
           (-17.54, -16.64, 7.18, 9.87, 1.5), (-17.54, -16.64, 9.87, 12.56, 3.0), (-20.41, -17.54, 11.66, 12.56, 3.0)]
-STRAW = (-22.74, -20.41, 7.18, 12.56, 3.0, 0.25, 2.1)
+STRAW = (-22.74, -20.41, 7.18, 12.56, 3.0, 0.25, 2.88)
 TOWER_Z, TOWER_X, CLOCK_Y, CLOCK_R = 19.21, 16.73, 9.5, 4.2
 TILE = {'floor': 2.0, 'inlay': 1.0, 'whiteBrick': 3.0, 'brick': 1.6, 'wood': 1.5, 'darkWood': 1.5, 'stone': 2.0, 'bronze': 1.0, 'steel': 1.0,
         'darkSteel': 1.0, 'tramGreen': 1.5, 'tramWood': 1.2, 'copper': 1.0, 'glass': 2.0, 'clockFace': 1.0, 'roofTin': 1.5, 'lampGlow': 1.0,
-        'goPanel': 1.0, 'tramPanel': 1.2, 'tramTrim': 1.0, 'tramBrown': 1.5, 'tramRoof': 2.0, 'hazard': 0.5, 'gearTan': 1.0, 'rustPlate': 1.5, 'railSteel': 1.0, 'leafGreen': 3.0, 'leafGrey': 3.0, 'arrow': 1.0, 'rubber': 1.0, 'cloud': 1.0}
+        'goPanel': 1.0, 'tramPanel': 1.2, 'tramTrim': 1.0, 'tramBrown': 1.5, 'tramRoof': 2.0, 'hazard': 0.5, 'gearTan': 1.0, 'poleMetal': 1.0, 'floorGlass': 2.0, 'rustPlate': 1.5, 'railSteel': 1.0, 'leafGreen': 3.0, 'leafGrey': 3.0, 'arrow': 1.0, 'rubber': 1.0, 'cloud': 1.0}
 
 
 def G(x, y, z): return Vector((x, -z, y))  # game → Blender
@@ -105,24 +105,19 @@ def box_rot(obj, mat, cx, cy, cz, a, u0, u1, v0, v1, y0, y1):
     for f in F: quad(obj, mat, f)
 
 
-def gear_flat(obj, mat, cx, cy, cz, r, teeth=24, th=0.18, hole=0.25, spokes=6):
-    """horizontal gear (axis y): toothed rim, hub, spokes."""
+def gear_flat(obj, mat, cx, cy, cz, r, teeth=24, th=0.18, hub=0.25):
+    """horizontal gear (axis y): a SOLID toothed disc with a raised hub and a ring groove (no openings)."""
     bm = bk(obj, mat); n = teeth * 4; top, bot = [], []
     for i in range(n):
         a = 2 * math.pi * i / n; rr = r if (i % 4) in (1, 2) else r * 0.9
         top.append(bm.verts.new(G(cx + math.cos(a) * rr, cy + th / 2, cz + math.sin(a) * rr))); bot.append(bm.verts.new(G(cx + math.cos(a) * rr, cy - th / 2, cz + math.sin(a) * rr)))
-    ri = r * 0.78; itop, ibot = [], []
-    for i in range(n):
-        a = 2 * math.pi * i / n
-        itop.append(bm.verts.new(G(cx + math.cos(a) * ri, cy + th / 2, cz + math.sin(a) * ri))); ibot.append(bm.verts.new(G(cx + math.cos(a) * ri, cy - th / 2, cz + math.sin(a) * ri)))
     for i in range(n):
         j = (i + 1) % n
-        for f in ((top[i], top[j], itop[j], itop[i]), (bot[j], bot[i], ibot[i], ibot[j]), (bot[i], bot[j], top[j], top[i]), (itop[i], itop[j], ibot[j], ibot[i])):
-            try: bm.faces.new(f)
-            except ValueError: pass
-    cyl(obj, mat, (cx, cy, cz), r * hole, th * 1.6, 'y', 18)
-    for k in range(spokes):
-        box_rot(obj, mat, cx, cy, cz, 2 * math.pi * k / spokes, r * hole * 0.9, ri * 1.01, -r * 0.07, r * 0.07, -th * 0.35, th * 0.35)
+        try: bm.faces.new((bot[i], bot[j], top[j], top[i]))
+        except ValueError: pass
+    cap(bm, top, G(0, 1, 0)); cap(bm, bot, G(0, -1, 0))
+    cyl(obj, mat, (cx, cy + th / 2 + 0.03, cz), r * hub, 0.06, 'y', 24)                  # raised hub
+    ring(obj, 'tramBrown', cx, cy + th / 2 + 0.004, cz, r * 0.72, r * 0.04, 48)   # a dark ring line on the face
 
 
 def gear_vert(obj, mat, cx, cy, cz, r, axis='x', teeth=16, th=0.25):
@@ -345,7 +340,18 @@ def crates():
 def floor_gears():
     for sx in (-1, 1):
         o = new_obj('FLOORGEAR_' + ('W' if sx < 0 else 'E'), (sx * X1, -0.2, GEAR_Z))
-        gear_flat(o, 'bronze', sx * X1, -0.2, GEAR_Z, GEAR_R, 40, 0.36, 0.14, 8)
+        gear_flat(o, 'gearTan', sx * X1, -0.32, GEAR_Z, GEAR_R, 40, 0.36, 0.16)   # hub stays under the glass
+        reg = 'west' if sx < 0 else 'east'; c = (sx * X1, GEAR_Z); R0, R1 = GEAR_R + 0.1, GEAR_R + 0.55; m = 24
+        # a sheet of glass over the half that sticks out, framed by a low red-brick curb (the floor is walkable glass)
+        P = lambda a, r, y: (c[0] + sx * math.cos(a) * r, y, c[1] + math.sin(a) * r)
+        for k in range(m):
+            a0 = -math.pi / 2 + math.pi * k / m; a1 = -math.pi / 2 + math.pi * (k + 1) / m
+            oface(reg, 'floorGlass', [(c[0], -0.012, c[1]), P(a0, R0, -0.012), P(a1, R0, -0.012)], (0, 1, 0))
+            oface(reg, 'brick', [P(a0, R0, 0.08), P(a1, R0, 0.08), P(a1, R1, 0.08), P(a0, R1, 0.08)], (0, 1, 0))
+            am = (a0 + a1) / 2; out = (sx * math.cos(am), 0, math.sin(am))
+            oface(reg, 'brick', [P(a0, R1, -0.75), P(a1, R1, -0.75), P(a1, R1, 0.08), P(a0, R1, 0.08)], out)
+            oface(reg, 'brick', [P(a0, R0, -0.2), P(a1, R0, -0.2), P(a1, R0, 0.08), P(a0, R0, 0.08)], (-out[0], 0, -out[2]))
+            oface(reg, 'brick', [P(a0, R0, -0.75), P(a1, R0, -0.75), P(a1, R1, -0.75), P(a0, R1, -0.75)], (0, -1, 0))
 
 
 # ================================================================================================ DYNAMIC OBJECTS
@@ -514,12 +520,12 @@ def pulleys():
         for sx in (-1, 1):
             gx = sx * PULLEY_X
             name = 'GEAR_' + lid + ('W' if sx < 0 else 'E'); new_obj(name, (gx, -0.2, lz))
-            gear_flat(name, 'bronze', gx, -0.2, lz, PULLEY_R, 24, 0.2, 0.2, 6)
+            gear_flat(name, 'gearTan', gx, -0.2, lz, PULLEY_R, 24, 0.22, 0.2)
             reg = 'west' if sx < 0 else 'east'                             # the cable pole on the pulley's axle
-            cyl(reg, 'darkSteel', (gx, (T_CABLE + 0.6 - 1.5) / 2, lz), 0.16, T_CABLE + 0.6 + 1.5, 'y', 12)
+            cyl(reg, 'poleMetal', (gx, (T_CABLE + 0.6 - 1.5) / 2, lz), 0.16, T_CABLE + 0.6 + 1.5, 'y', 12)
             cyl(reg, 'copper', (gx, T_CABLE, lz), 0.42, 0.16, 'z', 18)       # cable sheave at the top
             box(reg, 'copper', gx - 0.3, T_CABLE + 0.45, lz - 0.3, gx + 0.3, T_CABLE + 0.6, lz + 0.3)
-            diag(reg, 'darkSteel', (sx * (X1 - 0.2), -0.4, lz * 0.8), (gx, -0.2, lz), 0.08)   # arm back to the roof
+            diag(reg, 'poleMetal', (sx * (X1 - 0.2), -0.4, lz * 0.8), (gx, -0.2, lz), 0.08)   # arm back to the roof
         cyl('far', 'darkSteel', (0, T_CABLE, lz), 0.035, 2 * PULLEY_X, 'x', 6)
         cyl('far', 'darkSteel', (0, T_CABLE + 0.32, lz), 0.02, 2 * PULLEY_X, 'x', 5)
 

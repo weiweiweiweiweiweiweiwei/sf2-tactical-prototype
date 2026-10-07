@@ -6786,7 +6786,7 @@ const SKY = {
     [-12.54, -11.64, -11.94, -9.50, 3.0], [-12.54, -11.64, -9.50, -7.00, 1.5], // chasm-side L: a walkable edge on its north end, flush against the hut
     [-17.54, -16.64, 7.18, 9.87, 1.5], [-17.54, -16.64, 9.87, 12.56, 3.0], [-20.41, -17.54, 11.66, 12.56, 3.0], // the L on the south side
   ],
-  STRAW: [-22.74, -20.41, 7.18, 12.56, 3.0, 0.25, 2.1],               // crate tunnel along z: walls 0.25, hole 2.1 m tall
+  STRAW: [-22.74, -20.41, 7.18, 12.56, 3.0, 0.25, 2.88],              // crate tunnel along z: walls 0.25, a thin plank roof, hole 2.88 m tall
   GO: { bridge: [-13.33, -2.2], N: [-18.9, -12.33], S: [-23.4, 12.6] },
   SPAWN: [-25.6, -20.4, -0.9, 1.8],
   TOWER: { z: 19.21, x: 16.73, clockY: 9.5 },
@@ -6826,9 +6826,10 @@ function buildSky(b) {
     B(a, a + t, z0, z1, 0, h, vis('wood'), wo); B(c - t, c, z0, z1, 0, h, vis('wood'), wo); B(a + t, c - t, z0, z1, hole, h, vis('wood'), Object.assign({}, wo, { radar: false }));
     // the big half gear on the outer edge (walkable, half of it over the drop) and the corner pulley gears (walkable)
     const G = S.GEAR;
-    for (let i = 0; i < 6; i++) {
-      const u0 = G.r * i / 6, u1 = G.r * (i + 1) / 6, hz = Math.sqrt(Math.max(0, G.r * G.r - u1 * u1)) + 0.1;
-      B(-S.X1 - u1, -S.X1 - u0, G.z - hz, G.z + hz, -0.4, -0.02, null, { material: 'metal', surface: 'metal', radar: 'catwalk' });
+    const GR = G.r + 0.55;                                              // the glass floor over the gear, out to its brick curb
+    for (let i = 0; i < 8; i++) {
+      const u0 = GR * i / 8, u1 = GR * (i + 1) / 8, hz = Math.sqrt(Math.max(0, GR * GR - u1 * u1)) + 0.1;
+      B(-S.X1 - u1, -S.X1 - u0, G.z - hz, G.z + hz, -0.4, 0, null, { material: 'glass', surface: 'metal', radar: 'catwalk' });
     }
     for (const L of S.LINES) { const px = sx * S.PULLEY.x, r = S.PULLEY.r * 0.8; b.box(px - r, -0.35, L.z - r, px + r, -0.11, L.z + r, null, { material: 'metal', surface: 'metal', radar: 'catwalk' }); }
   }
@@ -7243,6 +7244,8 @@ function skyMat(b, name) {
       ctx.strokeStyle = 'rgba(40,20,12,.5)'; ctx.lineWidth = 2; ctx.strokeRect(1, 1, S - 2, S - 2);
     }, { mat: { roughness: 0.9, metalness: 0.2 } });
     case 'railSteel': return std('railSteel', { color: 0xb9bec2, roughness: 0.45, metalness: 0.5 });
+    case 'poleMetal': return std('poleMetal', { color: 0x5c6267, roughness: 0.38, metalness: 0.75 }); // dark gunmetal, not black
+    case 'floorGlass': return lib.basic('sky:floorGlass', () => new THREE.MeshStandardMaterial({ color: 0xcfe4ea, roughness: 0.05, metalness: 0.1, transparent: true, opacity: 0.22, depthWrite: false }));
     case 'leafGrey': return std('leafGrey', { color: 0x4d5a66, roughness: 0.5, metalness: 0.35 });
     case 'arrow': return std('arrow', { color: 0xe8c43a, roughness: 0.6, metalness: 0.1, emissive: 0x2a2000 });
     case 'rubber': return std('rubber', { color: 0x161616, roughness: 0.9 });
