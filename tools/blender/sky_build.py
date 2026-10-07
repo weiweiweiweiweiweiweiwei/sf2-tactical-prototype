@@ -30,7 +30,7 @@ STRAW = (-22.74, -20.41, 7.18, 12.56, 3.0, 0.25, 2.1)
 TOWER_Z, TOWER_X, CLOCK_Y, CLOCK_R = 19.21, 16.73, 9.5, 4.2
 TILE = {'floor': 2.0, 'inlay': 1.0, 'whiteBrick': 3.0, 'brick': 1.6, 'wood': 1.5, 'darkWood': 1.5, 'stone': 2.0, 'bronze': 1.0, 'steel': 1.0,
         'darkSteel': 1.0, 'tramGreen': 1.5, 'tramWood': 1.2, 'copper': 1.0, 'glass': 2.0, 'clockFace': 1.0, 'roofTin': 1.5, 'lampGlow': 1.0,
-        'goPanel': 1.0, 'leafGreen': 3.0, 'leafGrey': 3.0, 'arrow': 1.0, 'rubber': 1.0, 'cloud': 1.0}
+        'goPanel': 1.0, 'tramPanel': 1.2, 'tramTrim': 1.0, 'tramBrown': 1.5, 'tramRoof': 2.0, 'hazard': 0.5, 'leafGreen': 3.0, 'leafGrey': 3.0, 'arrow': 1.0, 'rubber': 1.0, 'cloud': 1.0}
 
 
 def G(x, y, z): return Vector((x, -z, y))  # game → Blender
@@ -368,55 +368,115 @@ def bridge_leaves():
         for zz in (za - 0.25, zb + 0.25): gear_vert(name, 'bronze', hx - sx * 0.25, -0.1, zz, 0.7, 'z', 14, 0.16)   # quadrant gears at the hinge
 
 
+def oface(obj, mat, pts, out):
+    """a face (game coords) turned so its normal points along out (game vector)."""
+    bm = bk(obj, mat)
+    try: f = bm.faces.new([bm.verts.new(G(*p)) for p in pts])
+    except ValueError: return
+    f.normal_update()
+    if f.normal.dot(G(*out)) < 0: f.normal_flip()
+
+
+def opening_wall(o, mat, axis, plane, d, u0, u1, y0, y1, a0, a1, ob, ot, arch):
+    """a wall slab with one opening: the slab spans u0..u1 × y0..y1 in the plane (axis 'z': u = x, plane = z; axis 'x': u = z,
+    plane = x), thickness d (signed, toward the car's inside). The opening spans a0..a1 × ob..ot, with a round top when arch."""
+    P = (lambda u, y, w: (u, y, plane + w)) if axis == 'z' else (lambda u, y, w: (plane + w, y, u))
+    nrm = (lambda s: (0, 0, s)) if axis == 'z' else (lambda s: (s, 0, 0))
+    r = (a1 - a0) / 2 if arch else 0.0; ys = ot - r; n = 10 if arch else 1
+    edge = [(a0 + r - r * math.cos(math.pi * i / n), ys + r * math.sin(math.pi * i / n)) for i in range(n + 1)] if arch else [(a0, ot), (a1, ot)]
+    sgn = -1 if d > 0 else 1                                               # the outer face looks away from the inside
+    for w, s in ((0.0, sgn), (d, -sgn)):
+        if ob > y0: oface(o, mat, [P(u0, y0, w), P(u1, y0, w), P(u1, ob, w), P(u0, ob, w)], nrm(s))     # below the opening
+        oface(o, mat, [P(u0, ob, w), P(a0, ob, w), P(a0, ys, w), P(u0, ys, w)], nrm(s))                  # left jamb
+        oface(o, mat, [P(a1, ob, w), P(u1, ob, w), P(u1, ys, w), P(a1, ys, w)], nrm(s))                  # right jamb
+        oface(o, mat, [P(u0, ys, w), P(a0, ys, w), P(a0, y1, w), P(u0, y1, w)], nrm(s))
+        oface(o, mat, [P(a1, ys, w), P(u1, ys, w), P(u1, y1, w), P(a1, y1, w)], nrm(s))
+        for i in range(len(edge) - 1):                                    # over the arch / lintel
+            (ua, ya), (ub, yb) = edge[i], edge[i + 1]
+            oface(o, mat, [P(ua, ya, w), P(ub, yb, w), P(ub, y1, w), P(ua, y1, w)], nrm(s))
+    # reveals (the depth of the opening)
+    rim = [(a0, ob), (a0, ys)] + edge + [(a1, ys), (a1, ob)]
+    for i in range(len(rim) - 1):
+        (ua, ya), (ub, yb) = rim[i], rim[i + 1]
+        mid_u, mid_y = (ua + ub) / 2, (ya + yb) / 2; cu, cy = (a0 + a1) / 2, (ob + ys) / 2
+        out = (cu - mid_u, 0, 0) if axis == 'z' else (0, 0, cu - mid_u)
+        out = (out[0], cy - mid_y, out[2])
+        oface(o, mat, [P(ua, ya, 0), P(ub, yb, 0), P(ub, yb, d), P(ua, ya, d)], out)
+    if ob > y0:
+        oface(o, mat, [P(a0, ob, 0), P(a1, ob, 0), P(a1, ob, d), P(a0, ob, d)], (0, 1, 0))
+
+
 def trams():
+    """SF2 trams: a green painted-steel frame (matte), wood wainscot with a green inset and a salmon outer frame below the
+    sill, open windows above (arched at the ends of each side, square next to the doorway), dark-brown undercarriage with
+    yellow/black bumper blocks, green eaves and clerestory, a green hanger to the trolley on the cable."""
     for (lid, lz, side, xs, start, door) in LINES:
         name = 'TRAM_' + lid; cx = xs[start]; o = name
         new_obj(name, (cx, 0.0, lz))
         hw = T_LEN / 2; z0, z1 = lz - T_W / 2, lz + T_W / 2; inner = z1 if side > 0 else z0; outer = z0 if side > 0 else z1
-        d0, d1 = cx + door - T_DOOR / 2, cx + door + T_DOOR / 2; top = T_H - 0.5
-        box(o, 'tramWood', cx - hw, -0.32, z0, cx + hw, 0.0, z1)               # floor
-        box(o, 'tramGreen', cx - hw - 0.05, -0.62, z0 - 0.05, cx + hw + 0.05, -0.32, z1 + 0.05)
-        for yy in (-0.62, -0.5): box(o, 'darkSteel', cx - hw - 0.08, yy, z0 - 0.08, cx + hw + 0.08, yy + 0.05, z1 + 0.08)
-
-        def wall_x(zf, d, xf, xt):                                         # a long wall: solid panel to the sill, arched windows above
-            box(o, 'tramGreen', xf, 0, zf, xt, T_SILL, zf + d)
-            box(o, 'tramWood', xf, T_SILL - 0.08, zf, xt, T_SILL + 0.06, zf + d * 1.5)
-            n = max(1, round((xt - xf) / 1.3))
-            for k in range(n + 1):
-                xx = xf + (xt - xf) * k / n; box(o, 'tramWood', xx - 0.07, T_SILL, zf, xx + 0.07, top, zf + d)
-            for k in range(n):                                             # arch heads (stepped) between the posts
-                xa_ = xf + (xt - xf) * k / n; xb_ = xf + (xt - xf) * (k + 1) / n; half = (xb_ - xa_) / 2
-                for s_, yy in ((1.0, top - 0.22), (0.75, top - 0.42), (0.45, top - 0.55)):
-                    box(o, 'tramGreen', xa_, yy, zf, xa_ + half * (1 - s_) + 0.07, top, zf + d); box(o, 'tramGreen', xb_ - half * (1 - s_) - 0.07, yy, zf, xb_, top, zf + d)
-            box(o, 'tramGreen', xf, top - 0.18, zf, xt, top, zf + d * 1.4)
-
-        def wall_z(xf, d):                                                 # an end wall
-            box(o, 'tramGreen', xf, 0, z0, xf + d, T_SILL, z1)
-            box(o, 'tramWood', xf, T_SILL - 0.08, z0, xf + d * 1.5, T_SILL + 0.06, z1)
-            for k in range(5):
-                zz = z0 + T_W * k / 4; box(o, 'tramWood', xf, T_SILL, zz - 0.07, xf + d, top, zz + 0.07)
-            box(o, 'tramGreen', xf, top - 0.4, z0, xf + d, top, z1)
-
-        dz_out = 0.12 if outer == z0 else -0.12; dz_in = 0.12 if inner == z0 else -0.12
-        wall_x(outer, dz_out, cx - hw, cx + hw)
-        wall_x(inner, dz_in, cx - hw, d0); wall_x(inner, dz_in, d1, cx + hw)
-        box(o, 'tramGreen', d0, top - 0.4, inner, d1, top, inner + dz_in)        # lintel over the doorway
-        for xx in (d0, d1): box(o, 'copper', xx - 0.09, 0, inner - 0.09, xx + 0.09, top, inner + 0.09)
-        wall_z(cx - hw, 0.12); wall_z(cx + hw, -0.12)
-        for (xx, zz) in ((cx - hw, z0), (cx + hw, z0), (cx - hw, z1), (cx + hw, z1)): box(o, 'copper', xx - 0.12, 0, zz - 0.12, xx + 0.12, top + 0.1, zz + 0.12)
-        # roof: green eaves, arched clerestory, tin top; the trolley with two black wheels running on the cable
-        box(o, 'tramGreen', cx - hw - 0.25, top, z0 - 0.25, cx + hw + 0.25, top + 0.16, z1 + 0.25)
-        box(o, 'tramGreen', cx - hw + 0.4, top + 0.16, z0 + 0.6, cx + hw - 0.4, top + 0.42, z1 - 0.6)
-        box(o, 'roofTin', cx - hw + 0.3, top + 0.42, z0 + 0.5, cx + hw - 0.3, top + 0.5, z1 - 0.5)
-        box(o, 'darkSteel', cx - 1.6, top + 0.5, lz - 0.3, cx + 1.6, top + 0.62, lz + 0.3)
+        top = T_H - 0.5; frieze = top - 0.4; th = 0.12
+        # floor + undercarriage
+        box(o, 'tramWood', cx - hw, -0.06, z0, cx + hw, 0.0, z1, skip=('b',))
+        box(o, 'tramBrown', cx - hw, -0.34, z0, cx + hw, -0.06, z1)
+        box(o, 'tramBrown', cx - hw + 0.6, -0.72, z0 + 0.5, cx + hw - 0.6, -0.34, z1 - 0.5)
         for e in (-1, 1):
+            for zz in (z0 + 0.25, z1 - 0.95):
+                box(o, 'hazard', cx + e * (hw - 0.35) - 0.35, -0.72, zz, cx + e * (hw - 0.35) + 0.35, -0.34, zz + 0.7)
+        # the long walls: five bays, the middle one is the doorway (platform side) or a square window (cliff side)
+        wc = T_DOOR + 0.4; wo = (T_LEN - wc) / 4
+        bays = [(cx - hw, cx - hw + wo, 'arch'), (cx - hw + wo, cx - wc / 2, 'rect'), (cx - wc / 2, cx + wc / 2, 'mid'),
+                (cx + wc / 2, cx + hw - wo, 'rect'), (cx + hw - wo, cx + hw, 'arch')]
+        for zf, dz, is_inner in ((outer, th if outer == z0 else -th, False), (inner, th if inner == z0 else -th, True)):
+            nz = -1 if dz > 0 else 1                                       # outward normal (z)
+            for (b0, b1, kind) in bays:
+                m = 0.22                                                    # jamb width inside the bay
+                if kind == 'mid' and is_inner:
+                    opening_wall(o, 'tramTrim', 'z', zf, dz, b0, b1, 0.0, frieze, b0 + m - 0.02, b1 - m + 0.02, 0.0, frieze - 0.25, False)
+                    continue
+                # wainscot below the sill: planks + a green inset frame and a salmon outer frame (on both faces)
+                box(o, 'tramPanel', b0, 0.18, zf, b1, T_SILL, zf + dz)
+                box(o, 'tramBrown', b0, 0.0, zf + 0.02 * nz, b1, 0.18, zf + dz - 0.02 * nz)
+                for w in (zf + 0.015 * nz, zf + dz - 0.015 * nz):
+                    for (pa, pb, ya, yb) in ((b0 + 0.18, b0 + 0.26, 0.4, T_SILL - 0.22), (b1 - 0.26, b1 - 0.18, 0.4, T_SILL - 0.22),
+                                             (b0 + 0.18, b1 - 0.18, 0.4, 0.48), (b0 + 0.18, b1 - 0.18, T_SILL - 0.3, T_SILL - 0.22)):
+                        box(o, 'tramGreen', pa, ya, w - 0.01, pb, yb, w + 0.01)
+                box(o, 'tramTrim', b0, T_SILL - 0.08, zf + 0.04 * nz, b1, T_SILL + 0.06, zf + dz - 0.04 * nz)   # sill rail
+                opening_wall(o, 'tramTrim', 'z', zf, dz, b0, b1, T_SILL + 0.06, frieze, b0 + m, b1 - m, T_SILL + 0.06, frieze - 0.2,
+                             kind == 'arch')
+            for (b0, b1, kind) in bays[:-1]:                                # green posts between the bays (and at the ends)
+                box(o, 'tramGreen', b1 - 0.09, 0.0, zf + 0.03 * nz, b1 + 0.09, frieze, zf + dz - 0.03 * nz)
+            box(o, 'tramGreen', cx - hw, frieze, zf + 0.05 * nz, cx + hw, top, zf + dz - 0.05 * nz)      # frieze band
+        # end walls: two arched windows each
+        for e in (-1, 1):
+            xf = cx + e * hw; dx = -e * th
+            for (a, b) in ((z0, lz), (lz, z1)):
+                box(o, 'tramPanel', xf + min(0, dx), 0.18, a, xf + max(0, dx), T_SILL, b)
+                box(o, 'tramBrown', xf + min(0, dx) - 0.02, 0.0, a, xf + max(0, dx) + 0.02, 0.18, b)
+                box(o, 'tramTrim', xf + min(0, dx) - 0.04, T_SILL - 0.08, a, xf + max(0, dx) + 0.04, T_SILL + 0.06, b)
+                opening_wall(o, 'tramTrim', 'x', xf, dx, a, b, T_SILL + 0.06, frieze, a + 0.3, b - 0.3, T_SILL + 0.06, frieze - 0.2, True)
+            box(o, 'tramGreen', xf + min(0, dx) - 0.05, frieze, z0, xf + max(0, dx) + 0.05, top, z1)
+            box(o, 'tramGreen', xf + min(0, dx) - 0.03, 0.0, lz - 0.09, xf + max(0, dx) + 0.03, frieze, lz + 0.09)
+        for (xx, zz) in ((cx - hw, z0), (cx + hw, z0), (cx - hw, z1), (cx + hw, z1)):   # corner posts
+            box(o, 'tramGreen', xx - 0.13, 0.0, zz - 0.13, xx + 0.13, top + 0.05, zz + 0.13)
+        # roof: green eaves with a dark rim, clerestory with small windows, dark roof sheet
+        box(o, 'tramGreen', cx - hw - 0.3, top, z0 - 0.3, cx + hw + 0.3, top + 0.12, z1 + 0.3)
+        box(o, 'tramBrown', cx - hw - 0.32, top + 0.12, z0 - 0.32, cx + hw + 0.32, top + 0.17, z1 + 0.32)
+        box(o, 'tramGreen', cx - hw + 0.5, top + 0.17, z0 + 0.7, cx + hw - 0.5, top + 0.45, z1 - 0.7)
+        for k in range(6):
+            xx = cx - hw + 0.9 + k * (T_LEN - 1.8) / 5
+            for zz in (z0 + 0.69, z1 - 0.71): box(o, 'tramBrown', xx - 0.3, top + 0.22, zz, xx + 0.3, top + 0.4, zz + 0.02)
+        box(o, 'tramRoof', cx - hw + 0.4, top + 0.45, z0 + 0.6, cx + hw - 0.4, top + 0.52, z1 - 0.6)
+        # hanger (green arm) to the trolley with two black wheels on the cable
+        box(o, 'tramGreen', cx - 1.7, top + 0.52, lz - 0.28, cx + 1.7, top + 0.66, lz + 0.28)
+        for e in (-1, 1):
+            box(o, 'tramGreen', cx + e * 1.2 - 0.08, top + 0.66, lz - 0.28, cx + e * 1.2 + 0.08, T_CABLE + 0.32, lz - 0.14)
             cyl(o, 'rubber', (cx + e * 1.2, T_CABLE + 0.32, lz), 0.32, 0.16, 'z', 20)
             cyl(o, 'darkSteel', (cx + e * 1.2, T_CABLE + 0.32, lz), 0.09, 0.42, 'z', 10)
-            box(o, 'darkSteel', cx + e * 1.2 - 0.06, top + 0.6, lz - 0.24, cx + e * 1.2 + 0.06, T_CABLE + 0.32, lz - 0.17)
-        # benches along the back wall
-        zb0, zb1 = (outer + 0.12, outer + 0.62) if outer == z0 else (outer - 0.62, outer - 0.12)
-        box(o, 'tramWood', cx - hw + 0.5, 0.45, zb0, cx + hw - 0.5, 0.55, zb1)
-        for xx in (cx - hw + 0.8, cx, cx + hw - 0.8): box(o, 'darkWood', xx - 0.05, 0, zb0 + 0.1, xx + 0.05, 0.45, zb1 - 0.1)
+        # benches along the back wall: wood seat on dark-brown legs
+        zb0, zb1 = (outer + 0.14, outer + 0.64) if outer == z0 else (outer - 0.64, outer - 0.14)
+        for (a, b) in ((cx - hw + 0.4, cx - wc / 2 - 0.1), (cx + wc / 2 + 0.1, cx + hw - 0.4)):
+            box(o, 'tramWood', a, 0.45, zb0, b, 0.53, zb1)
+            for xx in (a + 0.2, (a + b) / 2, b - 0.2): box(o, 'tramBrown', xx - 0.05, 0.0, zb0 + 0.08, xx + 0.05, 0.45, zb1 - 0.08)
 
 
 def pulleys():

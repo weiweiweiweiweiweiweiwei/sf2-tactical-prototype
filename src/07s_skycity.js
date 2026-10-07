@@ -414,8 +414,38 @@ function skyMat(b, name) {
     case 'inlay': return std('inlay', { color: 0xb0624a, roughness: 0.6, metalness: 0.1 });
     case 'stone': return std('stone', { color: 0xd6cfc2, roughness: 0.8 });
     case 'copper': return std('copper', { color: 0xd08a5c, roughness: 0.42, metalness: 0.55 });
-    case 'tramGreen': return std('tramGreen', { color: 0x3f7d68, roughness: 0.5, metalness: 0.25 });
-    case 'tramWood': return std('tramWood', { color: 0x7a5038, roughness: 0.75 });
+    // trams (SF2 look): matte painted steel in olive / moss green, dusty dark-brown undercarriage, wood wainscot and floor,
+    // salmon-painted window frames, yellow/black bumper blocks — flat, low-poly colouring with only light texture
+    case 'tramGreen': return canvas('tramGreen', 256, (ctx, S) => { // #4C7338 … #5B863F, faint brush streaks, no metal sheen
+      const rnd = mulberry32(31), g = ctx.createLinearGradient(0, 0, 0, S); g.addColorStop(0, '#5b863f'); g.addColorStop(1, '#4c7338'); ctx.fillStyle = g; ctx.fillRect(0, 0, S, S);
+      for (let i = 0; i < 260; i++) { ctx.fillStyle = `rgba(${rnd() < 0.5 ? '30,50,22' : '120,150,90'},${0.04 + rnd() * 0.05})`; ctx.fillRect(rnd() * S, rnd() * S, 1 + rnd() * 3, 6 + rnd() * 30); }
+    }, { mat: { roughness: 0.82, metalness: 0.08 } });
+    case 'tramBrown': return canvas('tramBrown', 256, (ctx, S) => { // #32261E … #4A382C, settled dust
+      const rnd = mulberry32(37); ctx.fillStyle = '#3e2f25'; ctx.fillRect(0, 0, S, S);
+      for (let i = 0; i < 900; i++) { const v = rnd(); ctx.fillStyle = v < 0.5 ? `rgba(74,56,44,${0.3 + rnd() * 0.4})` : `rgba(50,38,30,${0.3 + rnd() * 0.4})`; ctx.fillRect(rnd() * S, rnd() * S, 2 + rnd() * 6, 2 + rnd() * 6); }
+      for (let i = 0; i < 300; i++) { ctx.fillStyle = `rgba(150,130,110,${0.05 + rnd() * 0.08})`; ctx.fillRect(rnd() * S, rnd() * S, 1, 1); }
+    }, { mat: { roughness: 0.95, metalness: 0.05 } });
+    case 'tramPanel': return canvas('tramPanel', 256, (ctx, S) => { // vertical tongue-and-groove planks
+      const rnd = mulberry32(41), n = 6, w = S / n;
+      for (let i = 0; i < n; i++) { const v = 128 + Math.floor(rnd() * 22); ctx.fillStyle = `rgb(${v + 12},${v - 22},${v - 58})`; ctx.fillRect(i * w, 0, w, S);
+        for (let k = 0; k < 7; k++) { ctx.strokeStyle = `rgba(70,40,20,${0.1 + rnd() * 0.12})`; ctx.lineWidth = 1; ctx.beginPath(); const x = i * w + 4 + rnd() * (w - 8); ctx.moveTo(x, 0); ctx.bezierCurveTo(x + rnd() * 6 - 3, S / 3, x + rnd() * 6 - 3, S * 2 / 3, x + rnd() * 4 - 2, S); ctx.stroke(); }
+        ctx.fillStyle = 'rgba(40,24,14,.65)'; ctx.fillRect(i * w, 0, 2, S); ctx.fillStyle = 'rgba(255,230,200,.12)'; ctx.fillRect(i * w + 2, 0, 2, S); }
+    }, { mat: { roughness: 0.85 } });
+    case 'tramTrim': return canvas('tramTrim', 128, (ctx, S) => { // salmon paint over wood
+      const rnd = mulberry32(43); ctx.fillStyle = '#c3826b'; ctx.fillRect(0, 0, S, S);
+      for (let i = 0; i < 40; i++) { ctx.fillStyle = `rgba(${rnd() < 0.5 ? '150,90,70' : '220,170,150'},${0.06 + rnd() * 0.06})`; ctx.fillRect(0, rnd() * S, S, 1 + rnd() * 2); }
+    }, { mat: { roughness: 0.8 } });
+    case 'tramRoof': return std('tramRoof', { color: 0x2f4a2a, roughness: 0.85, metalness: 0.1 });
+    case 'hazard': return canvas('hazard', 128, (ctx, S) => { // yellow / black diagonal stripes
+      ctx.fillStyle = '#e0b62a'; ctx.fillRect(0, 0, S, S); ctx.fillStyle = '#1d1a16';
+      for (let k = -2; k < 4; k++) { ctx.beginPath(); ctx.moveTo(k * S / 2, 0); ctx.lineTo(k * S / 2 + S / 4, 0); ctx.lineTo(k * S / 2 + S / 4 + S, S); ctx.lineTo(k * S / 2 + S, S); ctx.fill(); }
+    }, { mat: { roughness: 0.7 } });
+    case 'tramWood': return canvas('tramWood', 256, (ctx, S) => { // worn floor / bench planks
+      const rnd = mulberry32(47), n = 5, h = S / n;
+      for (let j = 0; j < n; j++) { const v = 96 + Math.floor(rnd() * 20); ctx.fillStyle = `rgb(${v + 6},${v - 22},${v - 48})`; ctx.fillRect(0, j * h, S, h);
+        for (let k = 0; k < 6; k++) { ctx.strokeStyle = `rgba(40,22,10,${0.1 + rnd() * 0.15})`; ctx.beginPath(); const y = j * h + 3 + rnd() * (h - 6); ctx.moveTo(0, y); ctx.lineTo(S, y + rnd() * 4 - 2); ctx.stroke(); }
+        ctx.fillStyle = 'rgba(25,14,8,.7)'; ctx.fillRect(0, j * h, S, 2); }
+    }, { mat: { roughness: 0.88 } });
     case 'roofTin': return std('roofTin', { color: 0x7e8784, roughness: 0.45, metalness: 0.55 });
     case 'leafGreen': return std('leafGreen', { color: 0x4a8a76, roughness: 0.5, metalness: 0.3 });
     case 'leafGrey': return std('leafGrey', { color: 0x4d5a66, roughness: 0.5, metalness: 0.35 });
