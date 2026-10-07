@@ -17,6 +17,7 @@ const r = await p.evaluate(async () => {
   const G = m.def._glb.scene; out.kids = mc.gears.map((g) => g.o.name + ':' + g.o.children.map((c) => c.name + '[' + c.type + ' ' + c.position.toArray().map((v) => v.toFixed(1)) + ']').join(','));
   const named = []; m.scene.traverse((o) => { if (/GEAR|BRIDGE|TRAM_/.test(o.name)) { o.updateMatrixWorld(true); const w = new TH.Vector3().setFromMatrixPosition(o.matrixWorld); named.push(o.name + ' ' + o.type + ' @' + w.toArray().map((v) => v.toFixed(1)) + ' parent=' + (o.parent && o.parent.name)); } }); out.named = named;
   for (const [i, o] of mc.floorGears.entries()) out['floor' + i] = desc(o);
+  for (const k of [0, 0.5, 1]) { mc.bridge.k = k; mc.render(0, 1); for (const [i, o] of mc.winches.entries()) out[`winch${i}@k=${k}`] = desc(o); }
   return out;
 });
 console.log(r); await b.close(); srv.close();

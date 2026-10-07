@@ -31,7 +31,7 @@ STRAW = (-22.74, -20.41, 7.18, 12.56, 3.0, 0.25, 2.88)
 TOWER_Z, TOWER_X, CLOCK_Y, CLOCK_R = 19.21, 16.73, 9.5, 4.2
 TILE = {'floor': 2.0, 'inlay': 1.0, 'whiteBrick': 3.0, 'brick': 1.6, 'wood': 1.5, 'darkWood': 1.5, 'stone': 2.0, 'bronze': 1.0, 'steel': 1.0,
         'darkSteel': 1.0, 'tramGreen': 1.5, 'tramWood': 1.2, 'copper': 1.0, 'glass': 2.0, 'clockFace': 1.0, 'roofTin': 1.5, 'lampGlow': 1.0,
-        'goPanel': 1.0, 'tramPanel': 1.2, 'tramTrim': 1.0, 'tramBrown': 1.5, 'tramRoof': 2.0, 'hazard': 0.5, 'gearTan': 1.0, 'poleMetal': 1.0, 'floorGlass': 2.0, 'rustPlate': 1.5, 'railSteel': 1.0, 'leafGreen': 3.0, 'leafGrey': 3.0, 'arrow': 1.0, 'rubber': 1.0, 'cloud': 1.0}
+        'goPanel': 1.0, 'tramPanel': 1.2, 'tramTrim': 1.0, 'tramBrown': 1.5, 'tramRoof': 2.0, 'hazard': 0.5, 'gearTan': 1.0, 'bronzeOld': 1.2, 'clockHand': 1.0, 'poleMetal': 1.0, 'floorGlass': 2.0, 'rustPlate': 1.5, 'railSteel': 1.0, 'leafGreen': 3.0, 'leafGrey': 3.0, 'arrow': 1.0, 'rubber': 1.0, 'cloud': 1.0}
 
 
 def G(x, y, z): return Vector((x, -z, y))  # game → Blender
@@ -105,19 +105,29 @@ def box_rot(obj, mat, cx, cy, cz, a, u0, u1, v0, v1, y0, y1):
     for f in F: quad(obj, mat, f)
 
 
-def gear_flat(obj, mat, cx, cy, cz, r, teeth=24, th=0.18, hub=0.25):
-    """horizontal gear (axis y): a SOLID toothed disc with a raised hub and a ring groove (no openings)."""
-    bm = bk(obj, mat); n = teeth * 4; top, bot = [], []
+def gear_flat(obj, mat, cx, cy, cz, r, teeth=24, th=0.4, hub=0.22, spokes=6):
+    """horizontal SOLID gear (axis y), cast-bronze look: a toothed rim, the web inside it recessed, six raised spokes, a hub
+    with a dark bore ring and a groove line on the web. Every face is turned outward (no culled sides)."""
+    bm = bk(obj, mat); n = teeth * 4; yt, yb = cy + th / 2, cy - th / 2; rin = r * 0.78; yr = yt - min(0.12, th * 0.35)
+    ang = [2 * math.pi * i / n for i in range(n)]
+    rad = [r if (i % 4) in (1, 2) else r * 0.88 for i in range(n)]
+    O = lambda i, y: (cx + math.cos(ang[i]) * rad[i], y, cz + math.sin(ang[i]) * rad[i])
+    I = lambda i, y: (cx + math.cos(ang[i]) * rin, y, cz + math.sin(ang[i]) * rin)
     for i in range(n):
-        a = 2 * math.pi * i / n; rr = r if (i % 4) in (1, 2) else r * 0.9
-        top.append(bm.verts.new(G(cx + math.cos(a) * rr, cy + th / 2, cz + math.sin(a) * rr))); bot.append(bm.verts.new(G(cx + math.cos(a) * rr, cy - th / 2, cz + math.sin(a) * rr)))
-    for i in range(n):
-        j = (i + 1) % n
-        try: bm.faces.new((bot[i], bot[j], top[j], top[i]))
-        except ValueError: pass
-    cap(bm, top, G(0, 1, 0)); cap(bm, bot, G(0, -1, 0))
-    cyl(obj, mat, (cx, cy + th / 2 + 0.03, cz), r * hub, 0.06, 'y', 24)                  # raised hub
-    ring(obj, 'tramBrown', cx, cy + th / 2 + 0.004, cz, r * 0.72, r * 0.04, 48)   # a dark ring line on the face
+        j = (i + 1) % n; am = (ang[i] + ang[j]) / 2 + (2 * math.pi if j == 0 else 0) * 0
+        a0, a1 = O(i, yt), O(j, yt); ex, ez = a1[0] - a0[0], a1[2] - a0[2]; out = (ez, 0, -ex)   # edge normal, outward (CCW in x-z seen from above)
+        if (out[0] * (a0[0] - cx) + out[2] * (a0[2] - cz)) < 0: out = (-out[0], 0, -out[2])
+        oface(obj, mat, [O(i, yb), O(j, yb), O(j, yt), O(i, yt)], out)                       # tooth flanks
+        oface(obj, mat, [O(i, yt), O(j, yt), I(j, yt), I(i, yt)], (0, 1, 0))                 # rim top
+        oface(obj, mat, [I(i, yr), I(j, yr), I(j, yt), I(i, yt)], (-math.cos(ang[i]), 0, -math.sin(ang[i])))   # rim inner wall
+    oface(obj, mat, [O(i, yb) for i in range(n)], (0, -1, 0))                                  # underside
+    oface(obj, mat, [I(i, yr) for i in range(n)], (0, 1, 0))                                   # recessed web
+    for k in range(spokes):
+        box_rot(obj, mat, cx, cy, cz, 2 * math.pi * k / spokes + math.pi / spokes, r * hub * 0.9, rin + 0.02, -r * 0.05, r * 0.05, yr - cy, yt - cy - 0.005)
+    cyl(obj, mat, (cx, (yr + yt) / 2 + 0.01, cz), r * hub, yt - yr + 0.02, 'y', 28)            # hub
+    ring(obj, 'tramBrown', cx, yt + 0.021, cz, r * hub * 0.6, r * hub * 0.22, 28)               # dark bore ring
+    ring(obj, 'tramBrown', cx, yr + 0.004, cz, r * 0.56, r * 0.025, 48)                         # groove on the web
+    ring(obj, 'tramBrown', cx, yt + 0.003, cz, rin + r * 0.05, r * 0.02, 64)                    # groove along the rim
 
 
 def gear_vert(obj, mat, cx, cy, cz, r, axis='x', teeth=16, th=0.25):
@@ -206,10 +216,32 @@ def roofs():
     for sx in (-1, 1):
         reg = 'west' if sx < 0 else 'east'
         xa, xb = MR(-X1, -X0, sx)
-        box(reg, 'floor', xa, -0.3, Z0, xb, 0.0, Z1, skip=('b',))
-        # cornice: red brick band + a white stone lip, then the white-brick tower with stone and brick bands
-        box(reg, 'brick', xa - 0.18, -0.75, Z0 - 0.18, xb + 0.18, -0.06, Z1 + 0.18, skip=('t',))
-        box(reg, 'stone', xa - 0.26, -0.34, Z0 - 0.26, xb + 0.26, -0.31, Z1 + 0.26, skip=())
+        xo, inw = sx * X1, -sx                                             # the outer edge, and the direction into the roof
+        Rg, Rb = GEAR_R + 0.1, GEAR_R + 0.55                               # glass radius, brick-curb radius (centre on the outer edge)
+        # the slab: sides (the outer one with a slot where the big gear passes through), the marble top around the window
+        box(reg, 'floor', xa, -0.3, Z0, xb, 0.0, Z1, skip=('b', 't', 'w' if sx < 0 else 'e'))
+        for (za, zb) in ((Z0, GEAR_Z - Rg), (GEAR_Z + Rg, Z1)): oface(reg, 'floor', [(xo, -0.3, za), (xo, -0.3, zb), (xo, 0.0, zb), (xo, 0.0, za)], (-inw, 0, 0))
+        xi = xo + inw * Rb
+        flat(reg, 'floor', xi, sx * X0, Z0, Z1, 0.0)
+        flat(reg, 'floor', xo, xi, Z0, GEAR_Z - Rb, 0.0); flat(reg, 'floor', xo, xi, GEAR_Z + Rb, Z1, 0.0)
+        P = lambda a, r, y: (xo + inw * math.cos(a) * r, y, GEAR_Z + math.sin(a) * r)
+        m = 24
+        for k in range(m):                                                 # marble around the curb, out to the square
+            a0 = -math.pi / 2 + math.pi * k / m; a1 = a0 + math.pi / m
+            t0 = Rb / max(abs(math.cos(a0)), abs(math.sin(a0))); t1 = Rb / max(abs(math.cos(a1)), abs(math.sin(a1)))
+            oface(reg, 'floor', [P(a0, Rb, 0.0), P(a1, Rb, 0.0), P(a1, t1, 0.0), P(a0, t0, 0.0)], (0, 1, 0))
+            oface(reg, 'brick', [P(a0, Rg, 0.0), P(a1, Rg, 0.0), P(a1, Rb, 0.0), P(a0, Rb, 0.0)], (0, 1, 0))        # red-brick curb
+            am = (a0 + a1) / 2; cin = (-inw * math.cos(am), 0, -math.sin(am))
+            oface(reg, 'brick', [P(a0, Rg, -0.62), P(a1, Rg, -0.62), P(a1, Rg, 0.0), P(a0, Rg, 0.0)], cin)            # the pit wall
+            oface(reg, 'floorGlass', [P(0, 0, 0.004), P(a0, Rg, 0.004), P(a1, Rg, 0.004)], (0, 1, 0))                # glass
+            oface(reg, 'tramBrown', [P(0, 0, -0.62), P(a0, Rg, -0.62), P(a1, Rg, -0.62)], (0, 1, 0))                 # pit floor
+        # cornice: red brick band + a white stone lip, then the white-brick tower with stone and brick bands — the outer
+        # side leaves a slot for the gear
+        for (mat, y0, y1, o, sk) in (('brick', -0.75, -0.06, 0.18, ('t',)), ('stone', -0.34, -0.31, 0.26, ())):
+            box(reg, mat, xa - o, y0, Z0 - o, xb + o, y1, Z0, skip=sk); box(reg, mat, xa - o, y0, Z1, xb + o, y1, Z1 + o, skip=sk)
+            ci = sx * X0; box(reg, mat, min(ci, ci - inw * o), y0, Z0, max(ci, ci - inw * o), y1, Z1, skip=sk)
+            box(reg, mat, min(xo, xo - inw * o), y0, Z0, max(xo, xo - inw * o), y1, GEAR_Z - Rg, skip=sk)
+            box(reg, mat, min(xo, xo - inw * o), y0, GEAR_Z + Rg, max(xo, xo - inw * o), y1, Z1, skip=sk)
         box(reg, 'whiteBrick', xa, -42.0, Z0, xb, -0.75, Z1, skip=('t', 'b'))
         for yb in (-4.5, -9.0, -16.0): box(reg, 'stone', xa - 0.12, yb - 0.35, Z0 - 0.12, xb + 0.12, yb, Z1 + 0.12)
         for yb in (-6.0, -12.0): box(reg, 'brick', xa - 0.06, yb - 0.9, Z0 - 0.06, xb + 0.06, yb, Z1 + 0.06, skip=('t', 'b'))
@@ -220,7 +252,9 @@ def roofs():
         y = 0.004; w = 0.22; ins = 0.85
         xi0, xi1 = xa + ins, xb - ins
         flat(reg, 'inlay', xi0, xi1, Z0 + ins, Z0 + ins + w, y); flat(reg, 'inlay', xi0, xi1, Z1 - ins - w, Z1 - ins, y)
-        flat(reg, 'inlay', xi0, xi0 + w, Z0 + ins, Z1 - ins, y); flat(reg, 'inlay', xi1 - w, xi1, Z0 + ins, Z1 - ins, y)
+        xo_l = (xi0, xi0 + w) if sx < 0 else (xi1 - w, xi1); xc_l = (xi1 - w, xi1) if sx < 0 else (xi0, xi0 + w)   # outer / chasm-side border lines
+        flat(reg, 'inlay', *xc_l, Z0 + ins, Z1 - ins, y)
+        for (za_, zb_) in ((Z0 + ins, GEAR_Z - GEAR_R - 0.75), (GEAR_Z + GEAR_R + 0.75, Z1 - ins)): flat(reg, 'inlay', *xo_l, za_, zb_, y)   # broken by the glass window
         cx = M(-18.3, sx)
         ring(reg, 'inlay', cx, y, 0.45, 2.2, 0.22); ring(reg, 'inlay', cx, y, 0.45, 1.2, 0.16)
         flat(reg, 'inlay', *MR(-X0 - 0.6, -18.3 + 2.0, sx), 0.34, 0.56, y)  # the line from the ring to the bridge
@@ -276,6 +310,7 @@ def winches():
         reg = 'west' if sx < 0 else 'east'
         cx = M((x0_ + x1_) / 2, sx); cy = 1.55; cz = (z0 + z1) / 2; L = (z1 - z0) - 1.5
         px0, px1 = MR(x0_ - 0.25, x1_ + 0.1, sx); box(reg, 'rustPlate', px0, 0.0, z0 - 0.3, px1, 0.05, z1 + 0.3)
+        reg = new_obj('WINCH_' + ('W' if sx < 0 else 'E'), (cx, cy, cz))   # the drum turns in place while the bridge moves
         cyl(reg, 'darkWood', (cx, cy, cz), 0.98, L, 'z', 22)
         n = 22; R0, R1 = 0.98, 1.07
         for k in range(n):                                                 # the staves, along the drum axis
@@ -292,6 +327,8 @@ def winches():
             cyl(reg, 'gearTan', (cx, cy, cz + e * (L / 2 + 0.22)), 0.5, 0.62, 'z', 18)       # hub
             cyl(reg, 'gearTan', (cx, cy, cz + e * (L / 2 + 0.22)), 1.12, 0.46, 'z', 28)      # rim behind the teeth
         cyl(reg, 'darkSteel', (cx, cy, cz), 0.2, z1 - z0 + 0.3, 'z', 14)
+        reg = 'west' if sx < 0 else 'east'
+        for e in (-1, 1): box(reg, 'darkSteel', cx - 0.3, 0.05, cz + e * (L / 2 + 0.75) - 0.12, cx + 0.3, cy, cz + e * (L / 2 + 0.75) + 0.12)   # axle bearings
         hx = sx * X0                                                       # gear train down to the leaf hinge
         gear_vert(reg, 'gearTan', hx - sx * 0.6, 0.6, z0 - 0.1, 0.6, 'z', 10, 0.24)
         cyl(reg, 'darkSteel', (hx - sx * 0.3, -0.05, (BR_Z0 + BR_Z1) / 2), 0.26, BR_Z1 - BR_Z0 + 1.0, 'z', 16)   # hinge axle
@@ -340,18 +377,7 @@ def crates():
 def floor_gears():
     for sx in (-1, 1):
         o = new_obj('FLOORGEAR_' + ('W' if sx < 0 else 'E'), (sx * X1, -0.2, GEAR_Z))
-        gear_flat(o, 'gearTan', sx * X1, -0.32, GEAR_Z, GEAR_R, 40, 0.36, 0.16)   # hub stays under the glass
-        reg = 'west' if sx < 0 else 'east'; c = (sx * X1, GEAR_Z); R0, R1 = GEAR_R + 0.1, GEAR_R + 0.55; m = 24
-        # a sheet of glass over the half that sticks out, framed by a low red-brick curb (the floor is walkable glass)
-        P = lambda a, r, y: (c[0] + sx * math.cos(a) * r, y, c[1] + math.sin(a) * r)
-        for k in range(m):
-            a0 = -math.pi / 2 + math.pi * k / m; a1 = -math.pi / 2 + math.pi * (k + 1) / m
-            oface(reg, 'floorGlass', [(c[0], -0.012, c[1]), P(a0, R0, -0.012), P(a1, R0, -0.012)], (0, 1, 0))
-            oface(reg, 'brick', [P(a0, R0, 0.08), P(a1, R0, 0.08), P(a1, R1, 0.08), P(a0, R1, 0.08)], (0, 1, 0))
-            am = (a0 + a1) / 2; out = (sx * math.cos(am), 0, math.sin(am))
-            oface(reg, 'brick', [P(a0, R1, -0.75), P(a1, R1, -0.75), P(a1, R1, 0.08), P(a0, R1, 0.08)], out)
-            oface(reg, 'brick', [P(a0, R0, -0.2), P(a1, R0, -0.2), P(a1, R0, 0.08), P(a0, R0, 0.08)], (-out[0], 0, -out[2]))
-            oface(reg, 'brick', [P(a0, R0, -0.75), P(a1, R0, -0.75), P(a1, R1, -0.75), P(a0, R1, -0.75)], (0, -1, 0))
+        gear_flat(o, 'bronzeOld', sx * X1, -0.28, GEAR_Z, GEAR_R, 40, 0.5, 0.17)   # top at −0.03: just under the glass
 
 
 # ================================================================================================ DYNAMIC OBJECTS
@@ -520,7 +546,7 @@ def pulleys():
         for sx in (-1, 1):
             gx = sx * PULLEY_X
             name = 'GEAR_' + lid + ('W' if sx < 0 else 'E'); new_obj(name, (gx, -0.2, lz))
-            gear_flat(name, 'gearTan', gx, -0.2, lz, PULLEY_R, 24, 0.22, 0.2)
+            gear_flat(name, 'bronzeOld', gx, -0.25, lz, PULLEY_R, 24, 0.4, 0.22)
             reg = 'west' if sx < 0 else 'east'                             # the cable pole on the pulley's axle
             cyl(reg, 'poleMetal', (gx, (T_CABLE + 0.6 - 1.5) / 2, lz), 0.16, T_CABLE + 0.6 + 1.5, 'y', 12)
             cyl(reg, 'copper', (gx, T_CABLE, lz), 0.42, 0.16, 'z', 18)       # cable sheave at the top
@@ -557,8 +583,13 @@ def tower():
     box(reg, 'darkSteel', -3.0, CY + CR + 1.7, F - 0.1, 3.0, CY + CR + 4.2, F - 0.05)
     disc_mz(reg, 'clockFace', 0, CY, F - 0.4, CR, 48)
     ring_mz(reg, 'copper', 0, CY, F - 0.42, CR + 0.25, 0.35, 48)
-    new_obj('CLOCK_H', (0, CY, F - 0.5)); box('CLOCK_H', 'darkSteel', -0.14, CY - 0.35, F - 0.54, 0.14, CY + 2.3, F - 0.46)
-    new_obj('CLOCK_M', (0, CY, F - 0.58)); box('CLOCK_M', 'darkSteel', -0.09, CY - 0.45, F - 0.62, 0.09, CY + 3.6, F - 0.54)
+    for (nm, zf, L, w, tail) in (('CLOCK_H', F - 0.5, 2.5, 0.2, 0.7), ('CLOCK_M', F - 0.6, 3.75, 0.13, 0.9)):
+        new_obj(nm, (0, CY, zf))
+        box(nm, 'clockHand', -w / 2, CY - tail, zf - 0.04, w / 2, CY + L * 0.78, zf + 0.04)                       # shaft
+        for (y0, y1, hw) in ((0.70, 0.78, 0.30), (0.78, 0.86, 0.24), (0.86, 0.93, 0.15), (0.93, 1.0, 0.06)):     # spade tip
+            box(nm, 'clockHand', -hw * L / 3.75 * 1.6, CY + L * y0, zf - 0.045, hw * L / 3.75 * 1.6, CY + L * y1, zf + 0.045)
+        box(nm, 'clockHand', -w * 1.6, CY - tail - 0.25, zf - 0.04, w * 1.6, CY - tail, zf + 0.04)                 # counterweight
+    cyl(reg, 'copper', (0, CY, F - 0.68), 0.32, 0.12, 'z', 20)                                                     # centre cap
     # side towers (taller than the body) and the central stepped spire with the copper ball
     for cxx in (-TOWER_X + 3.0, TOWER_X - 3.0):
         box(reg, 'whiteBrick', cxx - 3.0, 0.6, F - 0.4, cxx + 3.0, 30, F + 6.0, skip=('b',))

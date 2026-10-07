@@ -6826,12 +6826,12 @@ function buildSky(b) {
     B(a, a + t, z0, z1, 0, h, vis('wood'), wo); B(c - t, c, z0, z1, 0, h, vis('wood'), wo); B(a + t, c - t, z0, z1, hole, h, vis('wood'), Object.assign({}, wo, { radar: false }));
     // the big half gear on the outer edge (walkable, half of it over the drop) and the corner pulley gears (walkable)
     const G = S.GEAR;
-    const GR = G.r + 0.55;                                              // the glass floor over the gear, out to its brick curb
+    // (its inner half lies under a glass window in the roof — the roof slab is the floor there; the outer half is bare bronze)
     for (let i = 0; i < 8; i++) {
-      const u0 = GR * i / 8, u1 = GR * (i + 1) / 8, hz = Math.sqrt(Math.max(0, GR * GR - u1 * u1)) + 0.1;
-      B(-S.X1 - u1, -S.X1 - u0, G.z - hz, G.z + hz, -0.4, 0, null, { material: 'glass', surface: 'metal', radar: 'catwalk' });
+      const u0 = G.r * i / 8, u1 = G.r * (i + 1) / 8, hz = Math.sqrt(Math.max(0, G.r * G.r - u1 * u1)) + 0.1;
+      B(-S.X1 - u1, -S.X1 - u0, G.z - hz, G.z + hz, -0.5, -0.03, null, { material: 'metal', surface: 'metal', radar: 'catwalk' });
     }
-    for (const L of S.LINES) { const px = sx * S.PULLEY.x, r = S.PULLEY.r * 0.8; b.box(px - r, -0.35, L.z - r, px + r, -0.11, L.z + r, null, { material: 'metal', surface: 'metal', radar: 'catwalk' }); }
+    for (const L of S.LINES) { const px = sx * S.PULLEY.x, r = S.PULLEY.r * 0.8; b.box(px - r, -0.45, L.z - r, px + r, -0.05, L.z + r, null, { material: 'metal', surface: 'metal', radar: 'catwalk' }); }
   }
   // clock tower across the south end of the chasm (out of reach; blocks bullets and grenades)
   b.box(-S.TOWER.x, -40, S.TOWER.z, S.TOWER.x, 30, S.TOWER.z + 20, vis('plasterWhite'), { radar: false, physics: true });
@@ -7106,6 +7106,7 @@ class SkyMechanisms {
       else { post.position.set(k.x, 0, k.z); post.rotation.y = k.kind === 'bridge' ? (k.x < 0 ? -Math.PI / 2 : Math.PI / 2) : (k.z > 0 ? Math.PI : 0); }
     }
     this.floorGears = ['FLOORGEAR_W', 'FLOORGEAR_E'].map((n) => G && G.getObjectByName(n)).filter(Boolean); this.floorGears.forEach((o) => { o.matrixAutoUpdate = true; });
+    this.winches = ['WINCH_W', 'WINCH_E'].map((n) => G && G.getObjectByName(n)).filter(Boolean); this.winches.forEach((o) => { o.matrixAutoUpdate = true; }); // drums turn on their axle (pivot = axle)
     this.clock = this._clock(b);
     this.render(0, 1);
   }
@@ -7135,6 +7136,7 @@ class SkyMechanisms {
     this.gearSpin += dt * this.gearV * 1.4;
     for (const g of this.gears) g.o.rotation.y = this.gearSpin * g.dir;
     for (const [i, o] of this.floorGears.entries()) o.rotation.y = (i ? -1 : 1) * this.bridge.k * Math.PI * 1.5;
+    for (const [i, o] of this.winches.entries()) o.rotation.z = (i ? 1 : -1) * this.bridge.k * Math.PI * 2.5; // the winch reels the leaf in / out: ~1¼ turns over the 4 s
     for (const k of this.controls) if (k.lamp) { // green button lit = ready, red lit = running
       const busy = k.kind === 'bridge' ? this.bridge.k !== this.bridge.target : k.t.p !== k.t.target, blink = 0.55 + 0.45 * Math.sin(this.time * 9);
       k.lamp.color.setRGB(busy ? 0.08 : 0.25, busy ? 0.25 : 1.3, busy ? 0.1 : 0.35); if (k.lampR) k.lampR.color.setRGB(busy ? 1.4 * blink + 0.2 : 0.35, busy ? 0.18 : 0.06, busy ? 0.12 : 0.05);
@@ -7244,8 +7246,15 @@ function skyMat(b, name) {
       ctx.strokeStyle = 'rgba(40,20,12,.5)'; ctx.lineWidth = 2; ctx.strokeRect(1, 1, S - 2, S - 2);
     }, { mat: { roughness: 0.9, metalness: 0.2 } });
     case 'railSteel': return std('railSteel', { color: 0xb9bec2, roughness: 0.45, metalness: 0.5 });
+    case 'bronzeOld': return canvas('bronzeOld', 256, (ctx, S) => { // heavy old cast bronze: dark, mottled, worn bright on the edges, a little verdigris
+      const rnd = mulberry32(97), g = ctx.createLinearGradient(0, 0, S, S); g.addColorStop(0, '#7a5631'); g.addColorStop(1, '#5c3f24'); ctx.fillStyle = g; ctx.fillRect(0, 0, S, S);
+      for (let i = 0; i < 600; i++) { const r = 2 + rnd() * 12; ctx.fillStyle = `rgba(${rnd() < 0.55 ? '40,26,14' : '160,118,70'},${0.05 + rnd() * 0.09})`; ctx.beginPath(); ctx.arc(rnd() * S, rnd() * S, r, 0, 7); ctx.fill(); }
+      for (let i = 0; i < 22; i++) { ctx.fillStyle = `rgba(78,112,90,${0.12 + rnd() * 0.15})`; ctx.beginPath(); ctx.arc(rnd() * S, rnd() * S, 2 + rnd() * 7, 0, 7); ctx.fill(); }
+      for (let i = 0; i < 300; i++) { ctx.fillStyle = `rgba(210,170,110,${0.06 + rnd() * 0.1})`; ctx.fillRect(rnd() * S, rnd() * S, 1 + rnd() * 3, 1); }
+    }, { mat: { roughness: 0.5, metalness: 0.65 } });
+    case 'clockHand': return std('clockHand', { color: 0x1d1915, roughness: 0.55, metalness: 0.5 });
     case 'poleMetal': return std('poleMetal', { color: 0x5c6267, roughness: 0.38, metalness: 0.75 }); // dark gunmetal, not black
-    case 'floorGlass': return lib.basic('sky:floorGlass', () => new THREE.MeshStandardMaterial({ color: 0xcfe4ea, roughness: 0.05, metalness: 0.1, transparent: true, opacity: 0.22, depthWrite: false }));
+    case 'floorGlass': return lib.basic('sky:floorGlass', () => new THREE.MeshStandardMaterial({ color: 0x9db3b8, roughness: 0.12, metalness: 0, transparent: true, opacity: 0.12, depthWrite: false, envMapIntensity: 0.25 })); // clear: the gear must read through it
     case 'leafGrey': return std('leafGrey', { color: 0x4d5a66, roughness: 0.5, metalness: 0.35 });
     case 'arrow': return std('arrow', { color: 0xe8c43a, roughness: 0.6, metalness: 0.1, emissive: 0x2a2000 });
     case 'rubber': return std('rubber', { color: 0x161616, roughness: 0.9 });
