@@ -221,6 +221,32 @@ function makeLaneTerrain(L) {
   };
   return { sample, floorAt: (x, z) => carve(x, z).fy };
 }
+// v52 Satellite Base walkable grid (1 m cells, point-symmetric), shared by the map build and tools/satellite/export_plan.mjs
+function satellitePlan() {
+  const H = 3.6, B = { x0: -42, z0: -26, x1: 42, z1: 26 }, W = B.x1 - B.x0, D = B.z1 - B.z0;
+  // ---- carve the walkable space (alpha half; every rect is also carved point-mirrored) ----
+  const open = new Uint8Array(W * D), carve = (x0, z0, x1, z1) => {
+    for (const s of [1, -1]) {
+      const ax = Math.min(x0 * s, x1 * s), bx = Math.max(x0 * s, x1 * s), az = Math.min(z0 * s, z1 * s), bz = Math.max(z0 * s, z1 * s);
+      for (let x = ax; x < bx; x++) for (let z = az; z < bz; z++) open[(z - B.z0) * W + (x - B.x0)] = 1;
+    }
+  };
+  carve(-41, -7, -31, 7);                                                     // spawn bay
+  carve(-31, 3, -24, 6); carve(-27, 3, -24, 16); carve(-27, 13, -20, 16);     // north route → machine room
+  carve(-20, 12, -8, 24);                                                     // machine room
+  carve(-8, 18, -5, 21);                                                      // machine room → security A
+  carve(-5, 16, 5, 25);                                                       // security room (A; mirror = C)
+  carve(-1, 9, 1, 16);                                                        // security → control (narrow)
+  carve(-31, -2, -17, 2); carve(-17, -2, -13, 5); carve(-13, 2, -8, 5);       // middle zig-zag → control room
+  carve(-9, -9, 9, 9);                                                        // control room (B), octagon below
+  carve(-10, 8, -7, 12); carve(-10, -12, -7, -8);                             // side doors control ↔ machine / generator
+  carve(-31, -6, -24, -3); carve(-27, -16, -24, -3); carve(-27, -16, -20, -13); // south route → generator room
+  carve(-20, -24, -8, -12);                                                   // generator room
+  carve(-8, -21, -5, -18);                                                    // generator room → security C
+  for (let x = -9; x < 9; x++) for (let z = -9; z < 9; z++) if (Math.abs(x + 0.5) + Math.abs(z + 0.5) > 13) open[(z - B.z0) * W + (x - B.x0)] = 0; // octagon corners
+  return { H, B, W, D, open };
+}
+
 const MAPS = [
   {
     id: 'warehouse', name: '廢棄倉庫', en: 'WAREHOUSE', desc: '室內 · 貨櫃巷道與二樓鐵網走廊 · 60×40', slogan: 'CLOSE QUARTERS · 室內近戰與中距離交火',
@@ -807,29 +833,11 @@ const MAPS = [
     fog: { color: 0x14181c, near: 30, far: 100 }, acoustics: 'office', ambience: 'warehouse',
     shot: { pos: [-6, 2.6, -6], target: [6, 1.2, 6] },
     objectives: { dom: [[0, 0, 20.5], [0, 0, 0], [0, 0, -20.5]], relic: [0, 0, 0], domRadius: 3.2 },
+    preload() { return satPreload(this); }, // v52 Blender dressing (src/07t_satellite.js)
     build(b) {
       const L = (x, y, z, c, i, d) => b.light(x, y, z, c, i * 1.8, d * 1.4); // v37: brighter rooms — soldiers must read against concrete
-      const H = 3.6, B = { x0: -42, z0: -26, x1: 42, z1: 26 }, W = B.x1 - B.x0, D = B.z1 - B.z0;
-      // ---- carve the walkable space (alpha half; every rect is also carved point-mirrored) ----
-      const open = new Uint8Array(W * D), carve = (x0, z0, x1, z1) => {
-        for (const s of [1, -1]) {
-          const ax = Math.min(x0 * s, x1 * s), bx = Math.max(x0 * s, x1 * s), az = Math.min(z0 * s, z1 * s), bz = Math.max(z0 * s, z1 * s);
-          for (let x = ax; x < bx; x++) for (let z = az; z < bz; z++) open[(z - B.z0) * W + (x - B.x0)] = 1;
-        }
-      };
-      carve(-41, -7, -31, 7);                                                     // spawn bay
-      carve(-31, 3, -24, 6); carve(-27, 3, -24, 16); carve(-27, 13, -20, 16);     // north route → machine room
-      carve(-20, 12, -8, 24);                                                     // machine room
-      carve(-8, 18, -5, 21);                                                      // machine room → security A
-      carve(-5, 16, 5, 25);                                                       // security room (A; mirror = C)
-      carve(-1, 9, 1, 16);                                                        // security → control (narrow)
-      carve(-31, -2, -17, 2); carve(-17, -2, -13, 5); carve(-13, 2, -8, 5);       // middle zig-zag → control room
-      carve(-9, -9, 9, 9);                                                        // control room (B), octagon below
-      carve(-10, 8, -7, 12); carve(-10, -12, -7, -8);                             // side doors control ↔ machine / generator
-      carve(-31, -6, -24, -3); carve(-27, -16, -24, -3); carve(-27, -16, -20, -13); // south route → generator room
-      carve(-20, -24, -8, -12);                                                   // generator room
-      carve(-8, -21, -5, -18);                                                    // generator room → security C
-      for (let x = -9; x < 9; x++) for (let z = -9; z < 9; z++) if (Math.abs(x + 0.5) + Math.abs(z + 0.5) > 13) open[(z - B.z0) * W + (x - B.x0)] = 0; // octagon corners
+      const glb = !b.dry && !!b.def._glb; // v52: the Blender control room replaces some placeholder visuals (colliders stay)
+      const { H, B, W, D, open } = satellitePlan();
       // ---- floor, ceiling, then the rock: greedy rectangles over the solid cells ----
       b.box(B.x0 - 1, -1, B.z0 - 1, B.x1 + 1, 0, B.z1 + 1, 'concrete', { cast: false, radar: false });
       b.box(B.x0 - 1, H, B.z0 - 1, B.x1 + 1, H + 0.3, B.z1 + 1, 'ceiling', { radar: false });
@@ -841,6 +849,7 @@ const MAPS = [
         for (let zz = z; zz <= z1; zz++) for (let k = x; k <= x1; k++) used[zz * W + k] = 1;
         b.box(B.x0 + x, 0, B.z0 + z, B.x0 + x1 + 1, H, B.z0 + z1 + 1, 'concreteWall', { radar: 'wall' });
       }
+      L(0, 3.2, 0, glb ? 0xbfe4ff : 0xcfe6ff, glb ? 30 : 40, 16); // control room (B) — first of the 3-light budget
       // ---- dressing (mirrored) ----
       b.sym((s) => {
         const X = (x) => x * s, Z = (z) => z * s, bx = (x0, y0, z0, x1, y1, z1, m, o) => b.box(Math.min(X(x0), X(x1)), y0, Math.min(Z(z0), Z(z1)), Math.max(X(x0), X(x1)), y1, Math.max(Z(z0), Z(z1)), m, o);
@@ -859,17 +868,18 @@ const MAPS = [
         // corridor cover
         b.crate(X(-25.5), Z(10), 1.0); b.crate(X(-22), Z(0), 1.0); b.crate(X(-15), Z(3.6), 0.9); b.crate(X(-25.5), Z(-10.5), 1.0);
         // control room: consoles in a ring around the dish pedestal
-        bx(-6.5, 0, -1.2, -5.7, 1.1, 1.2, 'darkSteel', { material: 'metal', radar: 'crate' }); bx(-1.2, 0, 5.7, 1.2, 1.1, 6.5, 'darkSteel', { material: 'metal', radar: 'crate' });
-        // lights
-        L(X(-36), 3.2, 0, 0xdfe8ff, 30, 14); L(X(-14), 3.2, Z(18), 0xcfe0ff, 26, 13); L(X(-14), 3.2, Z(-18), 0xffe2c0, 26, 13);
-        L(0, 3.2, Z(20.5), 0xfff0dc, 24, 12); L(X(-25.5), 3.2, Z(9), 0xdfe8ff, 14, 9); L(X(-20), 3.2, 0, 0xdfe8ff, 14, 9); L(X(-25.5), 3.2, Z(-9), 0xdfe8ff, 14, 9);
+        bx(-6.5, 0, -1.2, -5.7, 1.1, 1.2, glb ? null : 'darkSteel', { material: 'metal', radar: 'crate' }); bx(-1.2, 0, 5.7, 1.2, 1.1, 6.5, glb ? null : 'darkSteel', { material: 'metal', radar: 'crate' });
+        // lights — v52: the builder keeps only 3 point lights (see MapBuilder.light); one per spawn bay (the control room
+        // takes the first). Before, the first three calls all landed on the Alpha half and Bravo's rooms got none.
+        L(X(-36), 3.2, 0, 0xdfe8ff, 30, 14);
         b.sign(s > 0 ? 'ALPHA' : 'BRAVO', s > 0 ? '#6fb6ff' : '#ff6a5f', X(-40.8), 2.6, 0, s > 0 ? Math.PI / 2 : -Math.PI / 2, 3.2, 0.8);
         b.paint(Math.min(X(-41), X(-40.6)), -7, Math.max(X(-41), X(-40.6)), 7, s > 0 ? 0x3a7fd0 : 0xd0453a);
       });
-      b.cyl(0, 0, 1.3, 0, 0.9, 'whiteSteel', { seg: 20, radar: 'crate' }); // dish pedestal (B)
-      for (let x = -40; x <= 40; x += 4) for (let z = -24; z <= 24; z += 4) { const i = (z - B.z0) * W + (x - B.x0); if (open[i]) b.panel(x, z, H, 1.1, 0.5); }
-      L(0, 3.3, 0, 0xcfe6ff, 40, 16);
+      if (glb) b.box(-1.144, 0, -1.144, 1.144, 0.9, 1.144, null, { material: 'metal', radar: 'crate' }); // tracking table (B): the pedestal's collider
+      else b.cyl(0, 0, 1.3, 0, 0.9, 'whiteSteel', { seg: 20, radar: 'crate' }); // dish pedestal (B)
+      for (let x = -40; x <= 40; x += 4) for (let z = -24; z <= 24; z += 4) { const i = (z - B.z0) * W + (x - B.x0); if (open[i] && !(glb && Math.abs(x) <= 9 && Math.abs(z) <= 9)) b.panel(x, z, H, 1.1, 0.5); }
       b.spawnZone('alpha', -40.4, -6, -35.5, 6, -Math.PI / 2); b.spawnZone('bravo', 35.5, -6, 40.4, 6, Math.PI / 2);
+      if (glb) satDressing(b);
     },
   },
   {

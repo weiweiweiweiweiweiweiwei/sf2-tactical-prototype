@@ -41,7 +41,18 @@ const HIT_SOUNDS = {
 for (const [k, v] of Object.entries(HIT_SOUNDS)) v.key = k;
 const AMB_LEVEL = 0.55; // v34 master level of the recorded ambience (user: too loud)
 const GUN_KICK = { m4: 0.7, scar: 0.75, ak: 0.85, mp5: 0.5, ump: 0.55, vector: 0.45, mp7: 0.4, p90: 0.45, m249: 0.85, pkm: 0.95, mg42: 0.8,
+  g36: 0.65, famas: 0.6, m40: 1.1, cz700: 1.0,
   m870: 1.15, saiga: 1.05, awp: 1.2, m200: 1.25, barrett: 1.4, kar98: 1.1, svd: 1.0, p226: 0.5, m1911: 0.6, deagle: 0.85 };
+// v47 own-voice guns without a far-perspective recording borrow the nearest one's
+const GUN_FAR = { g36: 'm4', famas: 'm4', m40: 'kar98', cz700: 'kar98' };
+// v54 recorded mechanics (assets/sfx_mech.js, tools/sfx_mech.mjs): mech type → [sample bank, gain, playback rate]. A type
+// without its bank loaded falls back to the synthesized clicks in AudioEngine.mech; '_p' = the pistol variant.
+const MECH_REC = {
+  magout: ['mech_magout', 0.5, 1], magin: ['mech_magin', 0.75, 1], charge: ['mech_charge', 0.7, 1],
+  magout_p: ['mech_magout_p', 0.5, 1.05], magin_p: ['mech_magin_p', 0.7, 1.05], slide: ['mech_slide', 0.65, 1],
+  boltback: ['mech_boltback', 0.65, 1], boltfwd: ['mech_boltfwd', 0.75, 1], pump: ['mech_pump', 0.8, 1], shell: ['mech_shell', 0.55, 1],
+  dry: ['mech_dry', 0.45, 1.1], draw_rifle: ['mech_draw', 0.35, 1], draw_pistol: ['mech_draw', 0.3, 1.2],
+};
 const GUN_PROFILES = {
   m4:   { dur: 1.0, crack: { g: 1.0, hp: 2200, tau: 0.004 }, body: { g: 1.0, f: 950, q: 0.7, tau: 0.05, drive: 3.5 },
           low: { g: 1.0, f0: 150, f1: 48, sweep: 0.08, tau: 0.085, drive: 2.2 }, punch: { g: 0.55, f0: 600, f1: 170, tau: 0.028 },
@@ -77,7 +88,15 @@ const GUN_PROFILES = {
   // ---- v5 arsenal ----
   ak:   { dur: 1.1, crack: { g: 1.05, hp: 1900, tau: 0.004 }, body: { g: 1.15, f: 780, q: 0.6, tau: 0.06, drive: 4.2 },
           low: { g: 1.3, f0: 125, f1: 40, sweep: 0.1, tau: 0.1, drive: 2.8 }, punch: { g: 0.7, f0: 480, f1: 130, tau: 0.035 },
-          mech: { g: 0.26, t: 0.02, f: [2800, 1700], q: 8 }, refl: 1.0, tail: { g: 0.4, lp: 600, tau: 0.26 } },
+          mech: { g: 0.34, t: 0.022, f: [2500, 1500, 3300], q: 6 }, refl: 1.0, tail: { g: 0.4, lp: 600, tau: 0.26 } }, // v47 loose, rattly 7.62 action
+  // v47 G36C: 5.56 from a 9" barrel — louder, sharper blast; hollow polymer clack instead of a metal ring
+  g36:  { dur: 0.95, crack: { g: 1.15, hp: 2700, tau: 0.0035 }, body: { g: 1.05, f: 1180, q: 0.75, tau: 0.042, drive: 3.8 },
+          low: { g: 0.85, f0: 165, f1: 55, sweep: 0.07, tau: 0.07, drive: 2.0 }, punch: { g: 0.5, f0: 680, f1: 200, tau: 0.024 },
+          mech: { g: 0.3, t: 0.016, f: [1900, 3000], q: 5 }, refl: 0.95, tail: { g: 0.3, lp: 760, tau: 0.18 } },
+  // v47 FAMAS: bullpup bark (muzzle by the cheek), tight 1000 RPM — short body, high steel ping from the lever-delayed bolt
+  famas:{ dur: 0.85, crack: { g: 1.05, hp: 2500, tau: 0.003 }, body: { g: 1.0, f: 1050, q: 0.95, tau: 0.034, drive: 3.4 },
+          low: { g: 0.8, f0: 160, f1: 58, sweep: 0.05, tau: 0.055, drive: 2.0 }, punch: { g: 0.55, f0: 720, f1: 230, tau: 0.02 },
+          mech: { g: 0.3, t: 0.011, f: [4300, 2700], q: 13 }, ring: { g: 0.05, f: 5200, tau: 0.05 }, refl: 0.9, tail: { g: 0.26, lp: 820, tau: 0.15 } },
   scar: { dur: 1.0, crack: { g: 1.0, hp: 2100, tau: 0.004 }, body: { g: 1.05, f: 880, q: 0.7, tau: 0.05, drive: 3.6 },
           low: { g: 1.05, f0: 140, f1: 46, sweep: 0.08, tau: 0.085, drive: 2.3 }, punch: { g: 0.6, f0: 560, f1: 150, tau: 0.03 },
           mech: { g: 0.24, t: 0.018, f: [3200, 2000], q: 9 }, refl: 1.0, tail: { g: 0.35, lp: 680, tau: 0.22 } },
@@ -104,9 +123,18 @@ const GUN_PROFILES = {
           mech: { g: 0.12, t: 0.03, f: [2400], q: 6 }, refl: 1.5, tail: { g: 0.75, lp: 400, tau: 0.65 } },
   barrett: { dur: 2.4, crack: { g: 2.0, hp: 1500, tau: 0.008 }, body: { g: 1.8, f: 420, q: 0.45, tau: 0.16, drive: 6 },
           low: { g: 2.4, f0: 90, f1: 22, sweep: 0.35, tau: 0.35, drive: 4 }, punch: { g: 1.1, f0: 300, f1: 60, tau: 0.08 }, refl: 1.7, tail: { g: 1.0, lp: 320, tau: 0.9 } },
-  kar98: { dur: 1.6, crack: { g: 1.5, hp: 2200, tau: 0.005 }, body: { g: 1.2, f: 700, q: 0.6, tau: 0.09, drive: 4 },
-          low: { g: 1.5, f0: 125, f1: 34, sweep: 0.2, tau: 0.2, drive: 2.8 }, punch: { g: 0.75, f0: 440, f1: 110, tau: 0.05 },
-          mech: { g: 0.12, t: 0.03, f: [2300], q: 6 }, refl: 1.4, tail: { g: 0.65, lp: 440, tau: 0.55 } },
+  // v47 Kar98k 8 mm Mauser: warm, woody boom — softer crack, low round body, long rolling tail
+  kar98: { dur: 1.7, crack: { g: 1.3, hp: 1900, tau: 0.006 }, body: { g: 1.3, f: 600, q: 0.55, tau: 0.1, drive: 4 },
+          low: { g: 1.55, f0: 120, f1: 32, sweep: 0.22, tau: 0.22, drive: 2.8 }, punch: { g: 0.85, f0: 400, f1: 100, tau: 0.055 },
+          mech: { g: 0.14, t: 0.03, f: [1400], q: 4 }, refl: 1.4, tail: { g: 0.72, lp: 400, tau: 0.6 } },
+  // v47 M40A1 .308 heavy barrel: hard, tight whip-crack, punchy mid body, medium tail
+  m40:  { dur: 1.6, crack: { g: 1.7, hp: 2600, tau: 0.0042 }, body: { g: 1.25, f: 760, q: 0.65, tau: 0.08, drive: 4.4 },
+          low: { g: 1.5, f0: 130, f1: 34, sweep: 0.18, tau: 0.18, drive: 3 }, punch: { g: 0.85, f0: 480, f1: 120, tau: 0.045 },
+          mech: { g: 0.12, t: 0.028, f: [2700], q: 7 }, refl: 1.35, tail: { g: 0.6, lp: 470, tau: 0.5 } },
+  // v47 CZ 700 .308 shorter sporter barrel: brighter, drier, sharper than the M40
+  cz700:{ dur: 1.4, crack: { g: 1.6, hp: 2900, tau: 0.0038 }, body: { g: 1.15, f: 880, q: 0.7, tau: 0.07, drive: 4 },
+          low: { g: 1.3, f0: 140, f1: 38, sweep: 0.15, tau: 0.15, drive: 2.8 }, punch: { g: 0.75, f0: 540, f1: 140, tau: 0.04 },
+          mech: { g: 0.16, t: 0.024, f: [3100, 2000], q: 8 }, refl: 1.25, tail: { g: 0.5, lp: 520, tau: 0.42 } },
   svd:  { dur: 1.4, crack: { g: 1.5, hp: 2400, tau: 0.004 }, body: { g: 1.15, f: 760, q: 0.6, tau: 0.075, drive: 4 },
           low: { g: 1.3, f0: 130, f1: 38, sweep: 0.14, tau: 0.14, drive: 2.8 }, punch: { g: 0.7, f0: 480, f1: 130, tau: 0.04 },
           mech: { g: 0.2, t: 0.02, f: [2800, 1800], q: 8 }, refl: 1.3, tail: { g: 0.55, lp: 480, tau: 0.45 } },
@@ -142,8 +170,13 @@ class AudioEngine {
       if (window.SF2_SFX) { res(); return; }
       const s = document.createElement('script'); s.src = 'assets/sfx.js'; s.async = true; s.onload = () => res(); s.onerror = () => res();
       document.head.appendChild(s);
-    }).then(async () => {
+    }).then(() => new Promise((res) => { // v54 recorded gun mechanics: a second, small pack merged into the main one
+      if (window.SF2_SFX_MECH) { res(); return; }
+      const s = document.createElement('script'); s.src = 'assets/sfx_mech.js'; s.async = true; s.onload = () => res(); s.onerror = () => res();
+      document.head.appendChild(s);
+    })).then(async () => {
       const pack = window.SF2_SFX;
+      if (pack && window.SF2_SFX_MECH) { Object.assign(pack, window.SF2_SFX_MECH); delete window.SF2_SFX_MECH; }
       if (!pack || !window.OfflineAudioContext) { console.warn('[audio] recorded sound pack not available — procedural sounds'); return false; }
       const oc = new OfflineAudioContext(1, 1, 48000), jobs = [];
       AudioEngine.sampleRate = pack._rate || {};
@@ -423,8 +456,9 @@ class AudioEngine {
   // Room reverb / echo scale with distance: up close it is almost dry.
   gunshot(sound, pos = null, rate = 1) {
     if (!this.ctx) return;
-    const d = pos ? this.listener.distanceTo(pos) : 0, far = d > 30 && AudioEngine.samplesReady ? this._s('gunfar_' + sound) : null;
-    if (far) { this._playBuf(far, pos, { gain: 1.35, rate: (AudioEngine.sampleRate[sound] || 1) * rate, lpDist: 95, send: 0.75 }); return; }
+    const fs = this._s('gunfar_' + sound) ? sound : GUN_FAR[sound] || sound; // v47 own-voice guns borrow a far recording
+    const d = pos ? this.listener.distanceTo(pos) : 0, far = d > 30 && AudioEngine.samplesReady ? this._s('gunfar_' + fs) : null;
+    if (far) { this._playBuf(far, pos, { gain: 1.35, rate: (AudioEngine.sampleRate[fs] || 1) * rate, lpDist: 95, send: 0.75 }); return; }
     const wet = clamp(d / 30, 0, 1);
     this.playBank(sound, pos, { gain: pos ? 1.1 : 0.95, rate, send: 0.12 + wet * 0.6, echo: 0.15 + wet * 0.7 });
     const k = GUN_KICK[sound]; if (k && d < 22) this._kick(pos, k * (pos ? 0.7 : 1));
@@ -576,6 +610,9 @@ class AudioEngine {
   mech(type, pos = null) {
     if (!this.ctx) return;
     const t = this.ctx.currentTime, out = this._bus(pos, 0.06, 2);
+    const R = MECH_REC[type], rec = R && this._s(R[0]);
+    if (rec) { this._one(pick(rec), out, R[1], R[2] * (0.96 + Math.random() * 0.08)); return; } // v54 real recording first
+    if (type.endsWith('_p')) type = type.slice(0, -2);
     const click = (dt, f, q, pk, dec) => this._nb(t + dt, out, 'bandpass', f, q, pk, 0.001, dec);
     switch (type) {
       case 'magout': // release button → magazine slides out of the well

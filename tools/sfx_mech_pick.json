@@ -1,0 +1,14 @@
+{
+  "mech_magout":   [["rifle", 0], ["clip1", 0]],
+  "mech_magin":    [["rifle", 1], ["clip1", 0], ["clip2", 0]],
+  "mech_charge":   [["rifle", 2, 3], ["rifle2", 0]],
+  "mech_magout_p": [["pistol", 0]],
+  "mech_magin_p":  [["pistol", 1, 2]],
+  "mech_slide":    [["pistol", 3]],
+  "mech_boltback": [["clicks", 2], ["clicks", 28]],
+  "mech_boltfwd":  [["clicks", 4], ["clicks", 29]],
+  "mech_pump":     [["cock", 0, 2], ["rack", 0, 2]],
+  "mech_shell":    [["shell1", 0], ["shell1", 2], ["shellN", 1], ["shellN", 2]],
+  "mech_dry":      [["clicks", 8]],
+  "mech_draw":     [["clicks", 23], ["clicks", 5]]
+}

@@ -52,17 +52,22 @@ class GunMats {
 /* v45 Blender gun models: assets/guns/guns.js sets window.GUN_GLB[id] = base64 GLB (file:// friendly). Meshes are named
    '<node>__<material>' in gun space; empties SIGHT / MUZZLE / MUZZLE_S mark the sight axis and the two muzzle ends. */
 const GUN_MODELS = {};
+// v53 reload pose of the Blender guns: cant the other way (bottom toward the middle of the screen), swing in and lift, so the
+// magazine well and the left hand working it stay in view (the procedural guns keep RELOAD_POSE, which rolls them away)
+const GLB_RELOAD_POSE = { roll: -0.5, pitch: 0.32, drop: -0.09, shift: 0.08 };
 function loadGunModels() {
   if (loadGunModels.p) return loadGunModels.p;
   return (loadGunModels.p = (async () => {
     try {
       if (!window.GUN_GLB) await new Promise((res) => { const s = document.createElement('script'); s.src = 'assets/guns/guns.js'; s.async = true; s.onload = res; s.onerror = res; document.head.appendChild(s); });
+      const L = new GLTFLoader(), D = new DRACOLoader(); // v49 gunlib exports Draco-compressed GLBs (older ones are plain; both load)
+      D.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/libs/draco/gltf/'); L.setDRACOLoader(D);
       for (const [id, b64] of Object.entries(window.GUN_GLB || {})) {
-        const bin = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0)).buffer, gltf = await new GLTFLoader().parseAsync(bin, ''), parts = [], marks = {};
+        const bin = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0)).buffer, gltf = await L.parseAsync(bin, ''), parts = [], marks = {};
         gltf.scene.updateMatrixWorld(true);
         gltf.scene.traverse((o) => {
           if (o.isMesh) { const g = o.geometry.clone(); g.applyMatrix4(o.matrixWorld); const nm = o.name.split('__'); parts.push({ node: nm[0], mat: ((o.material && o.material.name) || '').replace('gun:', '') || (nm[1] || '').replace(/_\d+$/, ''), geo: g }); }
-          else if (/^(SIGHT|HOOD|MUZZLE|MUZZLE_S|SUPPORT|GRIP)$/.test(o.name)) marks[o.name] = o.getWorldPosition(new THREE.Vector3());
+          else if (/^(SIGHT|HOOD|MUZZLE|MUZZLE_S|SUPPORT|GRIP|MAGPIV|CHARGEPIV|BOLTPIV)$/.test(o.name)) marks[o.name] = o.getWorldPosition(new THREE.Vector3());
         });
         GUN_MODELS[id] = { parts, marks };
       }
@@ -243,12 +248,12 @@ class WeaponModels {
     gb.add(c, this.M.glove, node);
   }
   // Gloved hand wrapped around a vertical grip (pistol grip).
-  gripHand(gb, x, y, u, tilt, trigger = true) {
+  gripHand(gb, x, y, u, tilt, trigger = true, node = 'body') {
     const M = this.M;
-    gb.box(0.05, 0.075, 0.07, x + 0.004, y, -u, M.glove, 'body', 0.018, tilt, 0, 0);
-    for (let i = 0; i < 3; i++) gb.box(0.056, 0.017, 0.028, x, y - 0.024 + i * 0.019, -(u + 0.036), M.glove, 'body', 0.007, tilt, 0, 0);
-    gb.box(0.018, 0.018, 0.05, x - 0.022, y + 0.03, -(u + 0.012), M.glove, 'body', 0.008, 0.3, 0.25, 0);
-    if (trigger) gb.box(0.014, 0.014, 0.045, x - 0.004, y + 0.04, -(u + 0.05), M.glove, 'body', 0.006, 0.15, 0, 0);
+    gb.box(0.05, 0.075, 0.07, x + 0.004, y, -u, M.glove, node, 0.018, tilt, 0, 0);
+    for (let i = 0; i < 3; i++) gb.box(0.056, 0.017, 0.028, x, y - 0.024 + i * 0.019, -(u + 0.036), M.glove, node, 0.007, tilt, 0, 0);
+    gb.box(0.018, 0.018, 0.05, x - 0.022, y + 0.03, -(u + 0.012), M.glove, node, 0.008, 0.3, 0.25, 0);
+    if (trigger) gb.box(0.014, 0.014, 0.045, x - 0.004, y + 0.04, -(u + 0.05), M.glove, node, 0.006, 0.15, 0, 0);
   }
   // Support hand under a handguard, fingers wrapping the left side.
   supportHand(gb, x, y, u, w = 0.046, node = 'body') {
@@ -258,8 +263,45 @@ class WeaponModels {
     gb.box(0.016, 0.03, 0.05, x + w / 2 + 0.004, y - 0.004, -(u + 0.01), M.glove, node, 0.007, 0, 0, -0.2);
   }
 
+  // v49 any Blender gun built with tools/blender/gunlib.py: '<node>__<material>' parts, hands on GRIP / SUPPORT, sight axis at
+  // SIGHT, eye relief from HOOD, mag / charge / bolt pivots at MAGPIV / CHARGEPIV / BOLTPIV. o: skip(node) drops a variant
+  // node, muzzle ('MUZZLE_S' …), hip, eye, flash, reticle (false for scopes), reticleScale, eyeRelief, supportW (handguard
+  // width the left hand wraps), supportGrip (left hand on a vertical front grip instead of under a handguard), magMove /
+  // magRot (reload path of the mag node), reloadPose / boltPose, chargePiv (when the GLB has no CHARGEPIV), magGrip /
+  // chargeGrip (where the left hand takes hold, relative to those pivots). Returns null until the GLB has loaded.
+  fromGLB(id, o = {}) {
+    const G = GUN_MODELS[id]; if (!G || !G.marks.SIGHT) return null;
+    const M = this.M, gb = new GunBuilder(M), K = G.marks;
+    const V = THREE.Vector3, magPiv = K.MAGPIV || new V(0, -0.035, -0.03), chPiv = o.chargePiv ? new V(...o.chargePiv) : K.CHARGEPIV || new V(0, 0.024, 0.13);
+    gb.node('mag', magPiv).node('charge', chPiv);
+    if (K.BOLTPIV) gb.node('bolt', K.BOLTPIV); // v50 bolt action: rolls up around the bore and slides back (SniperRifle.animate)
+    const MOVING = new Set(['mag', 'charge', ...(K.BOLTPIV ? ['bolt'] : [])]);
+    const MAT = { tan: M.tan, magClear: M.magClear, gold: M.goldSatin, goldDark: M.goldDark, polymer: M.polymer, rubber: M.rubber, steel: M.steel, black: M.black, bright: M.bright, magBlack: M.magBlack, brass: M.brass, suppressor: M.suppressor, dotW: M.dotW, dotR: M.dotR };
+    for (const p of G.parts) {
+      if (p.mat === 'lens' || (o.skip && o.skip(p.node))) continue;
+      gb.add(p.geo.clone(), MAT[p.mat] || M.black, MOVING.has(p.node) ? p.node : 'body');
+    }
+    const sightY = K.SIGHT.y, mz = K[o.muzzle || 'MUZZLE'] || K.MUZZLE, gu = K.GRIP ? -K.GRIP.z : 0.078, su = K.SUPPORT ? -K.SUPPORT.z : 0.3, sv = K.SUPPORT ? K.SUPPORT.y : -0.028;
+    this.arm(gb, [0.02, -0.115, gu + 0.03], [0.19, -0.3, gu + 0.36]); this.gripHand(gb, 0.001, -0.082, -gu, -0.36);
+    gb.node('lhand', new V(0, sv, -su)); // v53 left hand + forearm on their own node: reloads move them (Weapon.animate)
+    if (o.supportGrip) { this.arm(gb, [-0.036, sv - 0.035, -su + 0.03], [-0.3, -0.32, -su + 0.3], 0.033, 'lhand'); this.gripHand(gb, -0.004, sv, su, -0.08, false, 'lhand'); }
+    else { this.arm(gb, [-0.038, sv - 0.032, -su], [-0.3, -0.3, -su + 0.3], 0.033, 'lhand'); this.supportHand(gb, 0, sv + 0.028, su, o.supportW || 0.046, 'lhand'); }
+    const b = gb.build(), hoodU = K.HOOD ? -K.HOOD.z : -K.SIGHT.z - 0.025;
+    const vm = this._finish(b, { muzzleU: -mz.z, sightY, hipPos: o.hip || [0.14, -0.175, -0.36], adsPos: [0, -sightY, hoodU - (o.eye ?? 0.08)], flash: o.flash ?? 0.2, reticle: o.reticle ?? true, reticleScale: o.reticleScale ?? 0.75, magMove: o.magMove, magRot: o.magRot });
+    if (o.eyeRelief) vm.eyeRelief = o.eyeRelief;
+    vm.reloadPose = o.reloadPose || GLB_RELOAD_POSE;
+    if (o.boltPose) vm.boltPose = o.boltPose;
+    vm.lhand = b.nodes.lhand || null;
+    const mg = o.magGrip || [0, -0.1, 0], cg = o.chargeGrip || [-0.035, 0, 0];
+    vm.lhandMag = new V(magPiv.x + mg[0], magPiv.y + mg[1], magPiv.z + mg[2]);
+    vm.lhandCharge = b.nodes.charge && b.nodes.charge.children.length ? new V(chPiv.x + cg[0], chPiv.y + cg[1], chPiv.z + cg[2]) : null; // no handle: the hand goes straight back
+    return vm;
+  }
+
   /* ------------------------------------------------------------------ */
-  m4() {
+  // v49 M4A1 from Blender (tools/blender/m4a1_build.py); the procedural one below stays as the fallback
+  m4() { return this.fromGLB('m4a1', { eye: 0.2, eyeRelief: 0.03 }) || this.m4Proc(); } // eye 20 cm behind the hood: the holo frame fills about a quarter of the view
+  m4Proc() {
     const M = this.M, gb = new GunBuilder(M);
     gb.node('mag', new THREE.Vector3(0, -0.035, -0.03)).node('charge', new THREE.Vector3(0, 0.024, 0.13));
     gb.prof([[-0.13, -0.012], [0.12, -0.012], [0.12, 0.026], [0.1, 0.029], [-0.11, 0.029], [-0.13, 0.024]], 0.03, M.black);
@@ -298,24 +340,9 @@ class WeaponModels {
   // v45 Gold G36C from Blender (tools/blender/g36c_build.py): flat-top rail + gold EOTech 552, vented handguard,
   // skeleton side-folder, black magazine; def.suppressed picks the engraved can or the four-prong flash hider.
   g36c(def) {
-    const G = GUN_MODELS.g36c; if (!G || !G.marks.SIGHT) return this.g36cProc(def);
-    const M = this.M, gb = new GunBuilder(M), sup = !def || def.suppressed !== false;
-    gb.node('mag', new THREE.Vector3(0, -0.035, -0.03)).node('charge', new THREE.Vector3(0, 0.045, -0.07));
-    const MAT = { gold: M.goldSatin, goldDark: M.goldDark, polymer: M.polymer, rubber: M.rubber, steel: M.steel, black: M.black, bright: M.bright, magBlack: M.magBlack, brass: M.brass, suppressor: M.suppressor, dotW: M.dotW, dotR: M.dotR };
-    for (const p of G.parts) {
-      if ((p.node === 'supp' && !sup) || (p.node === 'hider' && sup)) continue;
-      const node = p.node === 'mag' || p.node === 'charge' ? p.node : 'body';
-      if (p.mat === 'lens') continue; // v45: no tinted glass layer — SF2's holo window is clean
-      gb.add(p.geo.clone(), MAT[p.mat] || M.gold, node);
-    }
-    const K = G.marks, sightY = K.SIGHT.y, mz = sup ? K.MUZZLE_S : K.MUZZLE, gu = K.GRIP ? -K.GRIP.z : 0.078, su = K.SUPPORT ? -K.SUPPORT.z : 0.3, sv = K.SUPPORT ? K.SUPPORT.y : -0.028;
-    this.arm(gb, [0.02, -0.115, gu + 0.03], [0.19, -0.3, gu + 0.36]); this.gripHand(gb, 0.001, -0.082, -gu, -0.36);
-    this.arm(gb, [-0.038, sv - 0.032, -su], [-0.3, -0.3, -su + 0.3], 0.033); this.supportHand(gb, 0, sv + 0.028, su, 0.046);
-    const b = gb.build();
-    // SF2 EOTech ADS: the eye sits a few cm behind the hood so its gold rim frames the view (adsPos.z puts the hood rear at EYE)
-    const EYE = 0.08, hoodU = K.HOOD ? -K.HOOD.z : -K.SIGHT.z - 0.025;
-    const vm = this._finish(b, { muzzleU: -mz.z, sightY, hipPos: [0.14, -0.175, -0.36], adsPos: [0, -sightY, hoodU - EYE], flash: sup ? 0.08 : 0.2, reticle: true, reticleScale: 0.75 });
-    vm.eyeRelief = 0.03; return vm;
+    const sup = !def || def.suppressed !== false; // def.suppressed picks the engraved can or the four-prong flash hider
+    return this.fromGLB('g36c', { skip: (n) => (n === 'supp' && !sup) || (n === 'hider' && sup), muzzle: sup ? 'MUZZLE_S' : 'MUZZLE', eye: 0.08, flash: sup ? 0.08 : 0.2,
+      eyeRelief: 0.03, chargePiv: [0, 0.045, -0.07] }) || this.g36cProc(def); // SF2 EOTech ADS: the eye sits 8 cm behind the hood so its gold rim frames the view
   }
   g36cProc() {
     const M = this.M, gb = new GunBuilder(M);
@@ -388,7 +415,9 @@ class WeaponModels {
     return this._finish(b, { muzzleU: 0.37, sightY: 0.045, hipPos: [0.125, -0.13, -0.32], adsPos: [0, -0.045, -0.13], flash: 0.17 });
   }
 
-  m200() {
+  // v50 CheyTac M200 from Blender (tools/blender/m200_build.py): bolt node with its own pivot; procedural one kept as fallback
+  m200() { return this.fromGLB('m200', { hip: [0.14, -0.15, -0.36], eye: 0.06, flash: 0.32, reticle: false, supportW: 0.056, boltPose: { roll: 0.34, drop: 0.004, shift: 0.07 } }) || this.m200Proc(); }
+  m200Proc() {
     const M = this.M, gb = new GunBuilder(M);
     gb.node('mag', new THREE.Vector3(0, -0.04, -0.02)).node('bolt', new THREE.Vector3(0.03, 0.02, 0.11));
     gb.prof([[-0.15, -0.035], [0.2, -0.035], [0.2, 0.03], [-0.15, 0.03]], 0.05, M.black, 'body', { bevel: 0.005 });
@@ -445,7 +474,13 @@ class WeaponModels {
     return this._finish(b, { muzzleU: 0.11, sightY: 0.0365, hipPos: [0.095, -0.1, -0.27], adsPos: [0, -0.0365, -0.25], flash: 0.13, slide: true });
   }
 
-  p90() { // bullpup PDW: tan shell, thumbhole grips, translucent 50-round top magazine, integrated reflex sight
+  // v51 FN P90 from Blender (tools/blender/p90_build.py). Top magazine: pivot at its FRONT end, the rear lifts first and the
+  // mag slides back off (magRot < 0 raises the rear); the gun tips its muzzle up so the top stays in view while reloading.
+  p90() {
+    return this.fromGLB('p90', { hip: [0.125, -0.13, -0.3], eye: 0.11, flash: 0.14, reticle: 'dot', supportGrip: true, magMove: [0, 0.06, 0.08], magRot: -0.28, magGrip: [0, 0.035, 0.11],
+      reloadPose: { roll: 0.12, pitch: 0.42, drop: -0.015, shift: 0.05 } }) || this.p90Proc();
+  }
+  p90Proc() { // bullpup PDW: tan shell, thumbhole grips, translucent 50-round top magazine, integrated reflex sight
     const M = this.M, gb = new GunBuilder(M);
     gb.node('mag', new THREE.Vector3(0, 0.056, 0.05)).node('charge', new THREE.Vector3(0.03, 0.02, -0.13));
     gb.prof([[-0.26, -0.05], [-0.26, 0.028], [-0.2, 0.042], [0.12, 0.042], [0.168, 0.022], [0.178, -0.02], [0.16, -0.05]], 0.056, M.tan, 'body', { bevel: 0.007 });

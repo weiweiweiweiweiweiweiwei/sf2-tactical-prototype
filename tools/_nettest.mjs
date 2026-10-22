@@ -7,8 +7,11 @@ const srv = http.createServer((q, s) => { const p = path.join(ROOT, decodeURICom
 await new Promise((r) => srv.listen(0, '127.0.0.1', r));
 const RTC = process.argv[2] === 'rtc', [lag = '40', jitter = '10', loss = '0.02'] = process.argv.slice(RTC ? 3 : 2), base = `http://127.0.0.1:${srv.address().port}/index.html`, net = `&lag=${lag}&jitter=${jitter}&loss=${loss}`;
 const b = await chromium.launch({ channel: 'chrome', args: ['--use-angle=d3d11', '--enable-gpu', '--autoplay-policy=no-user-gesture-required', '--disable-renderer-backgrounding', '--disable-background-timer-throttling', '--disable-backgrounding-occluded-windows'] });
-// rtc: two separate browser contexts (like two computers) linked through Supabase signalling + WebRTC; loop: two tabs, BroadcastChannel
-const ctx = await b.newContext({ viewport: { width: 800, height: 450 } }), ctx2 = RTC ? await b.newContext({ viewport: { width: 800, height: 450 } }) : ctx, errs = { host: [], client: [] };
+// rtc: two separate browser PROCESSES (like two computers) linked through Supabase signalling + WebRTC; loop: two tabs,
+// BroadcastChannel. (v48: rtc used to open two contexts of one browser; the one not in front got throttled frames, so the
+// friend ran at a third of real time and his hits / movement numbers were skewed — see _hostload.mjs.)
+const b2 = RTC ? await chromium.launch({ channel: 'chrome', args: ['--use-angle=d3d11', '--enable-gpu', '--autoplay-policy=no-user-gesture-required', '--disable-renderer-backgrounding', '--disable-background-timer-throttling', '--disable-backgrounding-occluded-windows'] }) : null;
+const ctx = await b.newContext({ viewport: { width: 800, height: 450 } }), ctx2 = RTC ? await b2.newContext({ viewport: { width: 800, height: 450 } }) : ctx, errs = { host: [], client: [] };
 const H = await ctx.newPage(), C = await ctx2.newPage();
 for (const [pg, k] of [[H, 'host'], [C, 'client']]) { pg.on('pageerror', (e) => errs[k].push('uncaught: ' + e.message)); pg.on('console', (m) => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) errs[k].push(m.text()); }); }
 const log = (...a) => console.log(...a);
@@ -123,4 +126,4 @@ log('respawn: client', JSON.stringify(cBack), 'host', JSON.stringify(hBack));
 const stats = { client: await C.evaluate(() => ({ corr: app.match.net.corr, tr: app.match.net.t.stats })), host: await H.evaluate(() => ({ tr: app.match.net.t.stats, pending: app.match.humans[0] && app.match.humans[0].pending.size, stalls: app.match.humans[0] && app.match.humans[0].stalls })) };
 log('net stats', JSON.stringify(stats));
 for (const k of ['host', 'client']) if (errs[k].length) log(k.toUpperCase(), 'ERRORS', errs[k].slice(0, 8));
-await b.close(); srv.close();
+await b.close(); if (b2) await b2.close(); srv.close();

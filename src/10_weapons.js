@@ -15,13 +15,19 @@ class Weapon {
     this.queued = 0; this.autoReloadT = 0; this.flashT = 0; this.slideKick = 0; this.cur = 0;
     this.magBase = vm.mag ? vm.mag.position.clone() : null;
     this.chargeBase = vm.charge ? vm.charge.position.clone() : null;
+    this.lhandBase = vm.lhand ? vm.lhand.position.clone() : null;
   }
   get local() { return this.owner === this.game.player; }
   get scoped() { return this.adsType === '2d_scope_overlay'; }
-  resetAmmo() { this.ammo = this.def.mag || 0; this.reserveAmmo = this.def.reserve || 0; this.shotN = 0; }
+  resetAmmo() { this.ammo = this.def.mag || 0; this.reserveAmmo = this.def.reserve || 0; this.shotN = 0; this.cooldown = 0; this.bloom = 0; this.cur = 0; this.shots = 0; }
+  // v47: drawing keeps a pending fire cooldown (it runs down while holstered too, see Arsenal.tick), so swapping out and
+  // back can no longer skip a bolt / pump / semi-auto interval. Only respawn (resetAmmo) clears it. A negative auto-fire
+  // carry is dropped so the draw never fires a catch-up burst.
+  // v48: likewise the spray state (bloom, cur, spray index) is kept and keeps recovering while holstered (recover()).
   equip() {
-    this.cooldown = 0; this.reloading = false; this.reloadT = 0; this.bloom = 0; this.cur = 0; this.shots = 0; this.queued = 0; this.autoReloadT = 0; this.flashT = 0;
+    this.cooldown = Math.max(this.cooldown, 0); this.reloading = false; this.reloadT = 0; this.queued = 0; this.autoReloadT = 0; this.flashT = 0;
     if (this.vm.mag) { this.vm.mag.position.copy(this.magBase); this.vm.mag.rotation.set(0, 0, 0); }
+    if (this.vm.lhand && this.lhandBase) this.vm.lhand.position.copy(this.lhandBase);
     if (this.vm.cover) this.vm.cover.rotation.x = 0;
     if (this.ammo === 0 && this.reserveAmmo > 0) this.autoReloadT = 0.2; // auto reload an empty gun on draw
   }
@@ -140,11 +146,15 @@ class Weapon {
   tick(h, ws) {
     this.cooldown -= h;
     if (!ws.trigger && this.cooldown < 0) this.cooldown = 0;
+    this.recover(h, ws);
+    if (this.autoReloadT > 0) { this.autoReloadT -= h; if (this.autoReloadT <= 0 && this.tryReload()) ws.setAds(false, true); }
+    this._reload(h);
+  }
+  // spread recovery; Arsenal.tick also runs it for holstered guns, so a swap neither resets nor freezes the spray state
+  recover(h, ws) {
     const spraying = ws.clock - this.lastShot < (this.interval || 0.1) * 1.6; // bloom only recovers once you stop spraying
     this.bloom = damp(this.bloom, 0, spraying ? 1 : (this.spreadRecover || 5), h);
     if (!spraying) { this.cur = damp(this.cur, 0, 11, h); if (this.cur < 2e-4) this.cur = 0; } // quick recenter to a perfect first shot
-    if (this.autoReloadT > 0) { this.autoReloadT -= h; if (this.autoReloadT <= 0 && this.tryReload()) ws.setAds(false, true); }
-    this._reload(h);
   }
   // local viewmodel, once per rendered frame
   animate(dt, ws) {
@@ -152,17 +162,28 @@ class Weapon {
     this.slideKick = damp(this.slideKick, 0, 18, dt);
     const vm = this.vm, p = this.reloadPhase;
     if (vm.mag && this.magBase) {
-      let off = 0;
-      if (p > 0.15 && p < 0.35) off = (p - 0.15) / 0.2; else if (p >= 0.35 && p < 0.55) off = 1; else if (p >= 0.55 && p < 0.72) off = 1 - (p - 0.55) / 0.17;
+      const off = this.magOff(p);
       vm.mag.position.copy(this.magBase).addScaledVector(vm.magMove, off);
       vm.mag.rotation.x = off * vm.magRot;
     }
     if (vm.cover) { const k = p > 0.08 && p < 0.9 ? Math.min(1, (p - 0.08) / 0.1, (0.9 - p) / 0.1) : 0; vm.cover.rotation.x = k * 0.9; }
+    if (vm.lhand && this.lhandBase && vm.lhandMag) { // v53 the left hand fetches the mag, rides it out and back in, then works the charging handle
+      const L = vm.lhand.position, sm = (t) => t * t * (3 - 2 * t), magAt = (o) => TMP_V1.copy(vm.lhandMag).addScaledVector(vm.magMove, o), ch = vm.lhandCharge;
+      if (p <= 0) L.copy(this.lhandBase);
+      else if (p < 0.12) L.lerpVectors(this.lhandBase, magAt(0), sm(p / 0.12));
+      else if (p < 0.72) L.copy(magAt(this.magOff(p)));
+      else if (!ch) L.lerpVectors(magAt(0), this.lhandBase, sm(Math.min(1, (p - 0.72) / 0.12)));
+      else if (p < 0.8) L.lerpVectors(magAt(0), ch, sm((p - 0.72) / 0.08));
+      else if (p < 0.92) { L.copy(ch); L.z += Math.sin((p - 0.8) / 0.12 * Math.PI) * 0.05; } // pulls with the handle (see vm.charge below)
+      else L.lerpVectors(ch, this.lhandBase, sm((p - 0.92) / 0.08));
+    }
     if (vm.charge && this.chargeBase) {
       const k = p > 0.8 && p < 0.92 ? Math.sin((p - 0.8) / 0.12 * Math.PI) : 0;
       vm.charge.position.z = this.chargeBase.z + k * 0.05;
     }
   }
+  // magazine travel over the reload: out 0.15–0.35, away 0.35–0.55, back in 0.55–0.72
+  magOff(p) { return p > 0.15 && p < 0.35 ? (p - 0.15) / 0.2 : p >= 0.35 && p < 0.55 ? 1 : p >= 0.55 && p < 0.72 ? 1 - (p - 0.55) / 0.17 : 0; }
   _reload(h) {
     if (!this.reloading) return;
     this.reloadT += h;
@@ -313,7 +334,7 @@ class Knife extends Weapon {
 const THROW = { base: 7.2, lobBase: 4.6, chargeTime: 0.7, pinTime: 0.25, maxPower: 3.0, loft: 0.16 }; // full charge ≈ 1.0 s (pin 0.25 + draw 0.7)
 class GrenadeWeapon extends Weapon {
   constructor(game, def, vm, owner) { super(game, def, vm, owner); this.count = def.count; this.state = 'idle'; this.t = 0; this.lob = false; this.releaseQueued = false; this.chargeT = 0; }
-  resetAmmo() { this.count = this.def.count; this.shotN = 0; }
+  resetAmmo() { this.count = this.def.count; this.shotN = 0; this.cooldown = 0; }
   equip() { super.equip(); this.state = 'idle'; this.t = 0; this.releaseQueued = false; this.chargeT = 0; if (this.vm.pin) this.vm.pin.visible = true; }
   holster() { super.holster(); this.state = 'idle'; this.chargeT = 0; }
   spread() { return 0.01; }

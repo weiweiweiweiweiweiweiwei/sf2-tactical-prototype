@@ -579,3 +579,196 @@
   - 瓦當改成透明貼圖長條，椽木只做看得到的三面，面數從 23 萬降到 9 萬。
   - GTX 1650 Ti 60 FPS（垂直同步上限）；Intel 內顯 51–52 FPS（失落神殿 56）。
 - **工具**：`_ryokanshot.mjs`（固定攝影機巡覽）、`_ryokannav.mjs`（路徑長度）、`_ryokanclimb.mjs`（屋簷攀爬）、`_ryokanrelic.mjs`（奪取／據點位置）。
+
+## v47（2026-10-21）：切槍不再重設射擊冷卻
+- 問題：`Weapon.equip()` 無條件把 `cooldown` 歸零，所以切走再切回（Q、Q）就能跳過拉栓、泵動和半自動的射擊間隔。
+  - 實測（修正前）：CheyTac M200、Remington 870、Desert Eagle 都在 42 ms 後開第二槍；M4A1 每秒 25 發（按住連發是 12 發）。
+  - 主機重播和朋友的預測結果完全一致，代表兩邊**一起**被繞過。
+- 修正（`src/10_weapons.js`、`src/11_weaponsystem.js`）：
+  - `equip()` 保留尚未結束的冷卻，只把自動連發留下的負值歸零。
+  - `Arsenal.tick` 讓收起來的槍也繼續倒數冷卻，所以不是切回來後才重新開始等。
+  - 只有重生時（`resetAmmo()`）才清空冷卻。
+- 不變的行為：
+  - 切槍仍然是瞬間完成：同一個 tick 切槍並開火，用的是新槍。
+  - 切槍取消換彈，不補彈。
+  - 切槍取消拉栓、泵動動畫，並重設後座力。
+  - 按住扳機時，全自動槍會繼續射，半自動槍要重新按一次。
+  - 沒有加入切槍延遲，也沒有改任何武器數值。
+- 測試：`node tools/_swapcd.mjs [file] [net]`，13 項全部通過（含主機重播和預測的逐發比對）。
+  - `_feel.mjs` 修正前後比對：射擊、彈藥、時間都一樣，只有隨機的出生位置不同。
+  - `_nettest.mjs` 正常。
+- 另外發現、尚未處理：
+  - 兩次 Q 如果落在連續兩個 tick（間隔小於 8 ms），第二次會被當成按住而不會觸發（latched 邊緣，`12b_cmd.js:38` 和 `11_weaponsystem.js:125`）。真人按鍵不會這麼快。
+  - 切槍會重設後座力，所以「開一槍、Q、Q」循環可以用正常射速打出每發都是第一發的精準度。這是 Quick Change 原本設計的一部分，要不要改由使用者決定。
+
+## v48（2026-10-21）：切槍不再重設後座力
+- 問題：`switchTo` 會呼叫 `Player.resetRecoil()` 清空鏡頭後座力，`equip()` 也會清空這把槍的散布（`cur`、`bloom`）和後座力圖案索引（`shots`）。所以「連射 → Q → Q → 開火」會立刻恢復第一發的精準度。
+  - 實測（修正前）：連射 8 發後切槍再切回，第 9 發的散布 0、圖案索引 1、鏡頭後座力 0。不切槍時的第 9 發是散布 0.028、索引 9、鏡頭 0.093。
+- 修正（`src/10_weapons.js`、`src/11_weaponsystem.js`）：
+  - 切槍不再呼叫 `resetRecoil()`，鏡頭後座力照原本 `Player.update` 的機制恢復（用手上那把槍的 `recoilRecovery`）。
+  - `equip()` 不再清空 `cur`、`bloom`、`shots`。
+  - 恢復的程式拆成 `Weapon.recover()`，`Arsenal.tick` 讓收起來的槍也持續恢復，所以後座力不會永久保留。
+  - 重生時（`resetAmmo()`）才全部清空。
+- 實測（修正後）：
+  - 切槍後的第 9 發：散布 0.028、索引 9、鏡頭 0.091，和不切槍時一樣。
+  - 連射後等 1 秒再開火，不論中間有沒有切槍，都恢復成第一發（散布 0、索引 1）。
+- 連續 Q：用 Playwright 真實鍵盤事件測過，`InputManager`、`CmdBuilder`、`Arsenal` 三層都完整收到兩次按鍵（即時迴圈下，按鍵間隔 40–130 ms）。
+  - 只有兩次按下的間隔短於一個 tick（8.3 ms）才會合併成一次。真人按不出這種速度，所以只需要修正測試腳本（v47 已改），遊戲輸入邏輯不改。
+- 測試：
+  - `node tools/_swapcd.mjs index.html net`：20 項全部通過，新增 R1–R4（後座力）和 K1–K2（真實鍵盤）。
+  - T5 改成「M4 連射後切槍」加上「Deagle 開火、Q、Q 連點」，主機重播和朋友的預測逐發一致（包含散布和後座力造成的方向差異）。
+  - `_feel.mjs` 修正前後一致；`_nettest.mjs` 正常。
+- 沒有改任何武器數值，也沒有加入切槍延遲。
+
+## v48b（2026-10-21）：可遊玩版本盤點、線上對戰測試改用兩個瀏覽器程序
+- 方向調整（使用者）：停止擴張原作參數研究，改做能和朋友一起玩的垂直切片。原作數值先用可調整的預設值，證據整理在 `docs/sf2-evidence/`。
+- 依實際建置驗證的現況（2026-10-21）：
+  - 單機：`check.mjs --map 0 --gpu intel` PASS，倉庫 48 fps，出生點視線 0/256，沒有錯誤。
+  - 房間（真實 Supabase 加 WebRTC，兩個瀏覽器設定檔）：`_room.mjs` 26 項全部通過。涵蓋建房、6 碼邀請碼和連結、加入、換隊、地圖同步、倒數、兩場對戰、主機離開時移交房主、中途加入、公開房間列表。
+  - 對戰（`_nettest.mjs`）：移動預測和主機位置差 2 cm 左右；射擊方向逐發一致；擊殺、陣亡、重生都正常。
+  - 切槍修正（v47、v48）已經編進目前的 `index.html`，但**還沒有 commit 和 push**。朋友開的 GitHub Pages 版本停在 2026-10-06（origin/master 落後本機 6 個 commit）。
+- `_nettest.mjs rtc` 修正：原本是同一個瀏覽器裡的兩個 context，朋友那頁不在前景，畫面更新被降速，朋友只用到約三分之一的即時時間，命中量出只有 0–1/10。現在改成兩個獨立的 Chrome 程序（和 `_hostload.mjs` 一樣），連跑兩次朋友打 bot 都是 6/6 命中，其中一次擊殺。
+- 垂直切片缺口（詳見對話報告）：
+  - 必須先做：發佈目前版本到 GitHub Pages、真人雙機對戰測試。
+  - 可以平行做：錄音版的換彈、拉栓、泵動、切槍機械音（目前是合成的，需要先下載 CC0 素材）；M4A1、M200、P90 的 Blender 正式槍模（目前只有 G36C 是正式模型）。
+  - 延後：原作數值核對、其他武器平衡、更多地圖。
+
+## v49（2026-10-21）：M4A1 正式 Blender 槍模、可重複使用的槍模流程
+- 新增 M4A1 第一人稱模型（`tools/blender/m4a1_build.py`，原創，CC0），比例照真槍 ×1.0：
+  - 平頂上機匣，整條皮卡汀尼導軌。
+  - 八角形四面導軌護木（側邊有防滑片和散熱槽）。
+  - 低矮型導氣座、14.5 吋槍管（含 M203 段差）、A2 鳥籠消焰器。
+  - 輔助推栓器、防塵蓋、彈殼偏向器。
+  - 卡榫、彈匣釋放鈕、快慢機。
+  - A2 握把、伸縮槍托。
+  - 30 發 STANAG 彈匣（`mag` 部件）、T 型拉柄（`charge` 部件）。
+  - 黑色 EOTech 式全息瞄具，前後折疊備用照門。
+- 標準流程（`docs/GUN_PIPELINE.md`）：
+  - `tools/blender/gunlib.py`：共用的建模函式，加上 `export()`（合併、UV、平滑、Draco 壓縮）。
+  - `gun_preview.py`：改成自動取景，長槍不會再被裁掉槍口。
+  - `glb_draco.py`：重新壓縮舊的 GLB。
+  - `tools/_gunreload.mjs`：換彈姿勢截圖。
+  - 遊戲端（`src/09_models.js`）新增 `fromGLB(id, o)`：依 `部件__材質` 套材質、用 GRIP 和 SUPPORT 裝上程序化的手、從 SIGHT 和 HOOD 算開鏡、從 MAGPIV 和 CHARGEPIV 設定動畫中心。
+  - 槍模載入改用 DRACOLoader（沒壓縮的 GLB 一樣可以讀）。
+  - `m4()` 改成 `fromGLB('m4a1', { eye: 0.2, eyeRelief: 0.03 })`，原本的程序化模型改名 `m4Proc()` 當備用。
+- 檔案大小：
+  - `m4a1.glb` 140 KB（未壓縮 913 KB）。
+  - `g36c.glb` 用 Draco 重新壓縮，1.1 MB → 186 KB。
+  - `assets/guns/guns.js` 1.47 MB → 424 KB，朋友第一次載入更快。
+- 驗證：
+  - 腰射和開鏡截圖：全息框約佔畫面四分之一，準心置中，下方看得到後照門和拉柄。
+  - 換彈截圖：零件跟著動，沒有脫落。
+  - `check.mjs`：倉庫地圖 Intel 50 fps，沒有錯誤；`_feel.mjs` 正常。
+  - G36C 重新壓縮後畫面一樣。
+- 待調整：M4 的開鏡框比 G36C 小（G36C 用 `vmAdsFov 17` 讓框變大），要統一成哪一種，等真人測試的意見。
+
+## v50（2026-10-21）：CheyTac M200 正式 Blender 槍模、拉栓姿勢看得到槍機
+- 新增 M200 第一人稱模型（`tools/blender/m200_build.py`，用 gunlib 建模，原創，CC0），比例照真槍 ×1.0：
+  - 長方形機匣，兩側有銑削減重面；一體式導軌延伸到護木上。
+  - 粗護木管，有散熱孔，下方收著兩腳架；凹槽槍管；雙側孔方形制退器。
+  - 雙桿伸縮槍托，有貼腮板和單腳架；接近垂直的握把。
+  - 5 發彈匣（`mag` 部件）。
+  - 槍機（`bolt` 部件）：尾罩、可以從拋殼口看見的機體、連桿、大型球形握把；中心點 BOLTPIV 在槍膛軸上。
+  - Nightforce 式狙擊鏡，有三個旋鈕和高鏡環。
+- `fromGLB` 擴充：
+  - 支援 `bolt` 部件和 BOLTPIV。
+  - 新增 `reticle`（狙擊鏡設成 false）和 `supportW`（護木寬度）。
+  - `m200()` 改用正式模型，原本的程序化模型改名 `m200Proc()` 當備用。
+- 拉栓姿勢（`src/11_weaponsystem.js`，所有栓動槍共用）：拉栓時槍身往左移 7 cm、多翻轉，右側的槍機和握把會進入畫面。
+- `_gunreload.mjs` 新增栓動槍的拉栓截圖。
+- 修改前後對照：`tools/out/m200_compare.jpg`（腰射、拉栓、換彈）。開鏡是 2D 狙擊鏡畫面，沒有變。
+- `guns.js` 577 KB（3 把槍）；M200 的 GLB 117 KB。
+- `check.mjs`：倉庫地圖 44–48 fps，沒有錯誤；`_feel.mjs` 正常。
+- 原作封包資源盤點：`docs/SF2_ASSET_INVENTORY.md`。
+
+## v51（2026-10-21）：FN P90 正式 Blender 槍模（上置彈匣換彈）、持槍姿勢改成依槍設定
+- 新增 P90 第一人稱模型（`tools/blender/p90_build.py`，原創，CC0），比例照真槍 ×1.0（全長 500 mm、寬 55 mm）：
+  - 沙色無托上槍身，黑色下框架有前後兩個握把孔。
+  - 50 發透明上置彈匣：子彈橫向排成兩列交錯，看得到（`mag` 部件）。
+  - 環形瞄具座跨在彈匣上方（中空鏡管，兩側有備用機械瞄具）。
+  - 兩側拉柄（`charge` 部件）、開槽消焰器、槍托底板。
+- 上置彈匣換彈：MAGPIV 放在彈匣**前端**，換彈時後端先抬起，再往後上方滑出（`magMove [0, 0.06, 0.08]`、`magRot −0.28`）。換彈時槍口上揚 0.42，讓頂部保持在畫面裡（`reloadPose`）。
+- 前手用握把式（`supportGrip`），抓在前握把上。
+- `fromGLB` 新增參數：`supportGrip`、`magMove`、`magRot`、`reloadPose`、`boltPose`；材質對照加上 `tan`、`magClear`。`p90()` 改用正式模型，原本的改名 `p90Proc()` 當備用。
+- 持槍姿勢改成依槍設定（`src/11_weaponsystem.js`）：
+  - 預設 `RELOAD_POSE` 和 `BOLT_POSE` 是原本的數值；槍模可以帶自己的 `vm.reloadPose` 和 `vm.boltPose`。
+  - v50 把 M200 的拉栓姿勢套到所有栓動槍，結果 AWP、Kar98k、M40A1、FR-F2、CZ700 的程序化槍機握把會飄在槍外（它們的旋轉中心不在槍膛上）。現在只有 M200 用新姿勢，其他槍恢復原本的姿勢，截圖確認正常。
+- `_gunreload.mjs` 新增全自動槍的連射截圖。`gun_preview.py` 加上 `tan`、`magClear` 顏色。
+- 修改前後對照：`tools/out/p90_compare.jpg`（腰射、開鏡、換彈、連射）。
+- `guns.js` 711 KB（4 把槍）；P90 的 GLB 105 KB。
+- `check.mjs`：倉庫地圖 48–49 fps，沒有錯誤；`_feel.mjs` 正常。
+- 原作封包檔名清單另存在 `docs/sf2_package_list.txt`。
+
+## v52（2026-10-21）：衛星基地美術第一區：控制室（B 點）Blender 細節
+- 視覺方向：原作公開資料只能確認以下幾點：
+  - 室內設施，有彎曲走廊和房間（Fandom 俯視圖，見 `docs/SF2_RESEARCH.md`）。
+  - 爆破模式，雙方各有一個鎖定出生區（Fandom 摘要）。
+  - 有 Ranger 變體版本。
+- 牆面、材質、道具等原作截圖都讀不到（Fandom、SEA wiki 被擋），以下細節都是依「軍事衛星通訊設施」的功能自行補完。
+- 流程（沿用櫻花客棧的做法）：
+  - 平面配置抽成 `satellitePlan()`（`src/07_maps.js`），由 `tools/satellite/export_plan.mjs` 匯出成 `plan.json`。
+  - `tools/blender/sat_build.py` 用新的共用函式庫 `tools/blender/scenelib.py` 建模（遊戲座標、依材質換算 UV、圖片自動校正左右方向）。
+  - `tools/satellite/pack.mjs` 打包成 `assets/maps/satellite.js`（98 KB，2485 個面）。
+  - `src/07t_satellite.js` 負責載入，並把 `sat:` 材質換成遊戲材質或特殊材質。
+- 控制室內容：
+  - **牆面**：深色腰板、扶手飾條、淺灰鋼板（每 1.2 m 一道接縫）、上方飾帶、踢腳板。
+  - **八角形角落的階梯牆面**：變成一整排設備櫃，有通風條、LED 狀態燈、小螢幕。
+  - **四面長牆**：監控螢幕牆（全球軌道追蹤、天線追蹤雷達、會捲動的遙測數據），上方有雙語模版字「SATCOM CONTROL · 衛星通訊管制室」和「UPLINK CONTROL · B」，地面有青色光暈。
+  - **門口**：鋼製門框，邊框有黃黑警示條；地面門檻也有警示條；門上有紅色緊急燈和紅色地面光暈；上方掛標示（保全室 A／C、西側走廊 ALPHA、東側走廊 BRAVO）。
+  - **地面**：環氧樹脂地板，從各門口到中央環有黃色走道線，中央桌周圍有黃黑警示環。
+  - **控制台**：4 座放在原本掩體的位置，斜面上嵌三個螢幕，附鍵盤。
+  - **中央衛星追蹤桌**（B 點）：會旋轉的全像地球，有兩條軌道環。
+  - **天花板**：燈環、8 盞嵌入式燈具、兩條鍍鋅風管（每 1.5 m 有法蘭和吊帶）、兩條線槽和電纜。
+- 新增 7 個材質預設：`sat_wall`、`sat_wainscot`、`sat_trim`、`sat_cabinet`、`sat_epoxy`、`sat_duct`、`sat_tray`（`src/03_textures.js`）。
+- 有 GLB 時，原本的控制台方塊和白色圓柱只保留碰撞，控制室內的天花板燈格不再產生。
+- 光照：地圖最多只能有 3 盞點光源。原本程式寫了十幾盞，實際只有 Alpha 那半邊的前 3 盞生效，控制室的燈和 Bravo 那半邊都沒有亮。現在改成控制室中央 1 盞、兩個出生區各 1 盞（兩隊對稱）。其他房間暫時靠發光燈板照明，之後的區域再處理。
+- 驗證：
+  - `tools/_satcollide.mjs`：同一個建置下，有 GLB 和強制退回舊外觀的碰撞盒（123 個）、雷達輪廓（121 個）、導航節點（158 個）、出生點完全一致，結果是 GAMEPLAY UNCHANGED。
+  - `check.mjs --map 7 --gpu intel`：50–51 fps（上一個 commit 是 49–50 fps），繪製呼叫約 90 → 155，出生點視線 0/256。
+- 固定視角截圖工具：`tools/_satshot.mjs <tag>`。修改前後對照：`tools/out/sat_compare.jpg`。
+
+## v53（2026-10-21）：射擊手感數值、換彈時左手跟著動
+- **射擊數值**（`src/01_core.js`，只改 8 把有來源數值的步槍，傷害和其他槍都沒動）：數值依 `docs/sf2-evidence` 的 EU wiki 摘要（未驗證），程式裡標了「SF2 EU wiki (unverified)」，玩起來不對可以直接再調。
+  - **射速（RPM）**：
+    - AK-47：600 → 531
+    - SCAR-L、M16A3、Type 89：→ 583
+    - FAMAS：1000 → 690（說明文字同步修改）
+    - XM8：800 → 561
+    - SG 551：682 → 619
+    - M14 EBR：231 → 214
+  - **換彈時間**：AK-47 2.4 s、M16A3 2.3 s、XM8 2.2 s、M14 EBR 3.5 s。
+  - **開鏡速度**：AK-47、SCAR-L、M16A3、XM8 的 `adsSpeed` 設 12（約 0.25 s），Type 89 設 10（約 0.30 s）。
+  - M4A1 只有推估值，沒有改。
+  - `tools/_rpm.mjs` 實測：AK 532、SCAR-L 585、FAMAS 692、M16A3 585、XM8 561、SG 551 621、Type 89 585，換彈時間和設定一致。
+- **換彈時左手會動**（4 把 Blender 正式槍）：
+  - `fromGLB` 把左手和前臂放到獨立的 `lhand` 部件。動作依換彈進度：
+    - 先伸向彈匣（`magGrip`）。
+    - 跟著彈匣抽出、拿開、插回（共用新的 `Weapon.magOff()`）。
+    - 再去拉拉柄，跟著拉柄一起往後拉（`chargeGrip`）；沒有拉柄的槍（M200）直接回到護木。
+  - 換彈姿勢改成 `GLB_RELOAD_POSE`：槍往反方向翻（槍底朝畫面中央）、往中間移並抬高，讓彈匣口和左手留在畫面裡。程序化的槍維持原本的姿勢。
+  - G36C 改用通用的 `fromGLB()`（消音器和消焰器用 `skip` 切換，拉柄中心點用 `chargePiv`），外觀和以前一樣。
+  - P90 的左手從上方抓彈匣（`magGrip [0, 0.035, 0.11]`）。
+  - `gripHand` 新增 `node` 參數。`_gunreload.mjs` 可以指定要拍的換彈階段。
+- 回歸測試：`_swapcd` 全部通過、`_feel` 正常、`check.mjs` 倉庫地圖 45 fps，沒有錯誤。
+
+## v54（2026-10-21）：換彈、拉栓、泵動、切槍改用真實錄音；整合另一個 session 的槍聲修改
+- 使用者同意下載 CC0 素材。從 OpenGameArt 下載 5 包（約 3.5 MB，授權逐頁確認，見 `assets/CREDITS.md`）。原檔放在暫存資料夾，不進專案。
+- `tools/sfx_mech.mjs`：
+  - 用 headless Chrome 解碼 wav 和 mp3（電腦上沒有 ffmpeg 和 numpy）。
+  - 依每個檔案自己的底噪偵測事件（門檻是「底噪到峰值」的 20%；聲音在 20 ms 內變大 2.5 倍就切成新事件）。
+  - `scan` 模式：把每個事件匯出到 `tools/out/mech/<檔名>_<編號>.wav` 試聽。
+  - `build` 模式：依 `tools/sfx_mech_pick.json`（可以指定連續的事件範圍，例如拉柄的「拉＋撞回」）剪輯成 `assets/sfx_mech.js`（24 kHz、單聲道、16-bit WAV，175 KB）。
+  - 共 12 種音效、23 段：magout、magin、charge、手槍專用的 magout_p 和 magin_p、slide、boltback、boltfwd、pump、shell、dry、draw。
+- 遊戲端（`src/02_audio.js`）：
+  - `loadSamples` 會再載入 `sfx_mech.js`，合併進主音效包。
+  - `mech()` 先查 `MECH_REC`（音效庫、音量、音高）播放錄音，每次音高隨機 ±4%；沒有錄音才退回原本的合成音。
+  - 手槍的 `reloadSounds` 改用 `magout_p` 和 `magin_p`（`src/01_core.js`）。
+- 實測：15 種機械聲裡有 14 種走錄音（`pin` 拉保險還是合成音）。M4、P226、870 換彈觸發的音效名稱都正確。
+- 選用的錄音匯出到 `tools/out/mech_pack/` 方便試聽；栓動那組（真槍拉栓混著釘書機和捲尺）是依波形判斷的，最需要人工確認。
+- **整合另一個 session 的槍聲修改**（2026-10-11 留下、還沒提交）：
+  - G36C、FAMAS、M40A1、CZ 700 改成各自的合成槍聲（新的 `GUN_PROFILES` 和 `GUN_KICK`）；沒有遠距離錄音的槍借用最接近的（`GUN_FAR`）。
+  - AK、Kar98k 的機械聲參數微調。
+  - `window.SF2` 加入 `AudioEngine` 和 `GUN_PROFILES`（`tools/_gunsfx.mjs` 會用到）。
+  - `_gunsfx.mjs` 已經成功輸出 `tools/out/gunsfx/*.wav`。
+  - 那份修改的程式註解寫的是「v47」，和本檔的 v47（切槍冷卻）撞號；內容以這一段為準。
+- 回歸測試：`_swapcd` 全部通過、`_feel` 正常、`check.mjs` 倉庫地圖 46–47 fps（有沒有開 `--audio` 都一樣），沒有錯誤。

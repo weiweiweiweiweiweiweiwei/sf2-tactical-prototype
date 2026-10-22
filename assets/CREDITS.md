@@ -22,4 +22,14 @@
 | 命中音試聽：刀刺悶響 | [stabs.wav](https://freesound.org/people/nicktermer/sounds/259542/) | nicktermer（Freesound） | CC0 |
 | 海鷗 | [Solo Seagull Sound Effects](https://opengameart.org/content/solo-seagull-sound-effects) | OpenGameArt | CC0 |
 
+## 槍械機械聲（v54，`assets/sfx_mech.js`，由 `tools/sfx_mech.mjs` 依 `tools/sfx_mech_pick.json` 剪輯）
+
+| 用途 | 來源 | 作者 | 授權 |
+|---|---|---|---|
+| 步槍退彈匣、插彈匣、拉柄（空氣槍錄音）；霰彈槍泵動 | [Gun reload sounds](https://opengameart.org/content/gun-reload-sounds) | SpringySpringo | CC0 |
+| 手槍退彈匣、插彈匣、拉滑套 | [Handgun Reload Sound Effect](https://opengameart.org/content/handgun-reload-sound-effect) | zer0_sol | CC0 |
+| 霰彈槍泵動、逐發裝填 | [Shotgun Reload Sound effects](https://opengameart.org/content/shotgun-reload-sound-effects) | zer0_sol | CC0 |
+| 插彈匣（第二、三種變化） | [Gun Reload Sound Effects](https://opengameart.org/content/gun-reload-sound-effects) | BMacZero（Brian MacIntosh） | CC0 |
+| 栓動拉栓（真槍錄音）、空槍擊發聲、切槍金屬聲 | [Equipment clicks III](https://opengameart.org/content/equipment-clicks-iii) | LFA | CC0 |
+
 遊戲裡沒有使用任何《特種部隊 2》的原始音效檔。

@@ -51,6 +51,8 @@ const PART_LABEL = { head: '頭部', chest: '胸部', stomach: '腹部', thigh: 
      • v21 damage model (CLAUDE.md §4.2): damageNear / damageFar with linear falloff between falloffStart and
        falloffEnd (m); parts head ×2.5 · chest 1 · abdomen 0.9 · limbs 0.75; sniper headshot = kill.
      • Rifles 25–34 near → 3–4 chest hits close, 4–5 far; rifle headshots need 2.
+     • v53 fire rate / reload / ADS speed of the rifles marked 'SF2 EU wiki (unverified)' follow docs/sf2-evidence/sf2_params.json
+       (adsSpeed 12 ≈ 0.25 s, 10 ≈ 0.30 s to 95 %). Unverified search-snippet values: tune freely if they play wrong.
    ------------------------------------------------------------------- */
 const WEAPON_DATABASE = {
   m4a1: {
@@ -69,7 +71,7 @@ const WEAPON_DATABASE = {
     name: 'G36C 黃金', type: 'assault', slot: 'primary', damageNear: 25, damageFar: 19, falloffStart: 25, falloffEnd: 60, fireRate: 0.08,
     recoilPitch: 0.011, recoilYaw: 0.012, recoilRecovery: 10,
     hipSpread: 0.07, adsSpread: 0.0018, adsFov: 42, vmAdsFov: 17, adsVertical: 0.075, adsType: 'red_dot', mobility: 0.95, maxAmmo: 30, reloadTime: 2.0, modelUrl: null,
-    model: 'g36c', sound: 'm4', rate: 1.07, tracerEvery: 2, penetration: 1, desc: 'EOTech 全息瞄具 + 四叉消焰器，5.56 清脆槍聲，開火會上敵方雷達。',
+    model: 'g36c', sound: 'g36', tracerEvery: 2, penetration: 1, desc: 'EOTech 全息瞄具 + 四叉消焰器，5.56 清脆槍聲，開火會上敵方雷達。',
   },
   mp5: {
     name: 'MP5', type: 'smg', slot: 'primary', damageNear: 25, damageFar: 16, falloffStart: 10, falloffEnd: 35, fireRate: 0.07,
@@ -115,19 +117,19 @@ const WEAPON_DATABASE = {
   },
   /* ------------------------------ v5 arsenal (31 guns, ≥5 per class) ------------------------------ */
   ak47: {
-    name: 'AK-47', type: 'assault', slot: 'primary', damageNear: 34, damageFar: 25, falloffStart: 25, falloffEnd: 60, fireRate: 0.1, recoilPitch: 0.016, recoilYaw: 0.012, recoilRecovery: 7,
-    hipSpread: 0.08, adsSpread: 0.0028, adsFov: 58, adsType: '3d_sight', mobility: 0.93, maxAmmo: 30, reloadTime: 2.5, modelUrl: null,
-    sound: 'ak', penetration: 2, bloomPerShot: 0.005, bloomMax: 0.032, tp: { len: 0.9, body: 'wood', mag: 'curve' }, desc: '7.62mm 重火力，後座力大、穿透強，機械瞄具。',
+    name: 'AK-47', type: 'assault', slot: 'primary', damageNear: 34, damageFar: 25, falloffStart: 25, falloffEnd: 60, fireRate: 0.113, recoilPitch: 0.016, recoilYaw: 0.012, recoilRecovery: 7,
+    hipSpread: 0.08, adsSpread: 0.0028, adsFov: 58, adsType: '3d_sight', mobility: 0.93, maxAmmo: 30, reloadTime: 2.4, modelUrl: null, adsSpeed: 12,
+    sound: 'ak', penetration: 2, bloomPerShot: 0.005, bloomMax: 0.032, tp: { len: 0.9, body: 'wood', mag: 'curve' }, desc: '7.62mm 重火力，後座力大、穿透強，機械瞄具。', // v53 SF2 EU wiki (unverified): RPM/reload/ADS
   },
   scarl: {
-    name: 'SCAR-L', type: 'assault', slot: 'primary', damageNear: 28, damageFar: 21, falloffStart: 25, falloffEnd: 60, fireRate: 0.096, recoilPitch: 0.011, recoilYaw: 0.008, recoilRecovery: 10,
-    hipSpread: 0.072, adsSpread: 0.0019, adsFov: 52, adsType: '3d_sight', mobility: 0.94, maxAmmo: 30, reloadTime: 2.3, modelUrl: null,
-    sound: 'scar', penetration: 1, tp: { len: 0.88, body: 'tan', mag: 'box' }, desc: '沙色模組化步槍，後座柔和、全息瞄具。',
+    name: 'SCAR-L', type: 'assault', slot: 'primary', damageNear: 28, damageFar: 21, falloffStart: 25, falloffEnd: 60, fireRate: 0.103, recoilPitch: 0.011, recoilYaw: 0.008, recoilRecovery: 10,
+    hipSpread: 0.072, adsSpread: 0.0019, adsFov: 52, adsType: '3d_sight', mobility: 0.94, maxAmmo: 30, reloadTime: 2.3, modelUrl: null, adsSpeed: 12,
+    sound: 'scar', penetration: 1, tp: { len: 0.88, body: 'tan', mag: 'box' }, desc: '沙色模組化步槍，後座柔和、全息瞄具。', // v53 SF2 EU wiki (unverified): RPM/reload/ADS
   },
   famas: {
-    name: 'FAMAS', type: 'assault', slot: 'primary', damageNear: 25, damageFar: 18, falloffStart: 25, falloffEnd: 60, fireRate: 0.06, recoilPitch: 0.0105, recoilYaw: 0.013, recoilRecovery: 11,
+    name: 'FAMAS', type: 'assault', slot: 'primary', damageNear: 25, damageFar: 18, falloffStart: 25, falloffEnd: 60, fireRate: 0.087, recoilPitch: 0.0105, recoilYaw: 0.013, recoilRecovery: 11,
     hipSpread: 0.07, adsSpread: 0.0028, adsFov: 56, adsType: '3d_sight', mobility: 0.96, maxAmmo: 25, reloadTime: 2.7, modelUrl: null,
-    sound: 'm4', rate: 1.12, tp: { len: 0.76, body: 'dark', mag: 'box', bull: true }, desc: '法國無托步槍，射速 1000 RPM，提把機械瞄具。',
+    sound: 'famas', tp: { len: 0.76, body: 'dark', mag: 'box', bull: true }, desc: '法國無托步槍，射速快、精準，提把機械瞄具。', // v53 SF2 EU wiki (unverified): RPM
   },
   aug: {
     name: 'Steyr AUG', type: 'assault', slot: 'primary', damageNear: 27, damageFar: 22, falloffStart: 25, falloffEnd: 70, fireRate: 0.085, recoilPitch: 0.0095, recoilYaw: 0.007, recoilRecovery: 11,
@@ -226,9 +228,9 @@ const WEAPON_DATABASE = {
   },
   // ---------------- v40 SF2 arsenal, batch 1 (models reused from the closest existing gun; stats from namu.wiki hand-feel notes) ----------------
   m16a3: {
-    name: 'M16A3', type: 'assault', slot: 'primary', damageNear: 28, damageFar: 22, falloffStart: 30, falloffEnd: 70, fireRate: 0.08, recoilPitch: 0.0135, recoilYaw: 0.008, recoilRecovery: 9,
-    hipSpread: 0.08, adsSpread: 0.0018, adsFov: 54, adsType: '3d_sight', mobility: 0.93, maxAmmo: 30, reloadTime: 2.4, modelUrl: null,
-    sound: 'm4', rate: 0.95, penetration: 1, tp: { len: 0.98, body: 'dark', mag: 'box' }, desc: '長槍管 M16，射程與精度高於 M4，後座略大。',
+    name: 'M16A3', type: 'assault', slot: 'primary', damageNear: 28, damageFar: 22, falloffStart: 30, falloffEnd: 70, fireRate: 0.103, recoilPitch: 0.0135, recoilYaw: 0.008, recoilRecovery: 9,
+    hipSpread: 0.08, adsSpread: 0.0018, adsFov: 54, adsType: '3d_sight', mobility: 0.93, maxAmmo: 30, reloadTime: 2.3, modelUrl: null, adsSpeed: 12,
+    sound: 'm4', rate: 0.95, penetration: 1, tp: { len: 0.98, body: 'dark', mag: 'box' }, desc: '長槍管 M16，射程與精度高於 M4，後座略大。', // v53 SF2 EU wiki (unverified): RPM/reload/ADS
   },
   k2: {
     name: 'K2', type: 'assault', slot: 'primary', damageNear: 27, damageFar: 20, falloffStart: 25, falloffEnd: 60, fireRate: 0.084, recoilPitch: 0.0115, recoilYaw: 0.0095, recoilRecovery: 10,
@@ -236,9 +238,9 @@ const WEAPON_DATABASE = {
     sound: 'm4', rate: 1.04, penetration: 1, tp: { len: 0.9, body: 'dark', mag: 'box' }, desc: '韓國制式步槍，平衡好用、機動性佳。',
   },
   xm8: {
-    name: 'XM8', type: 'assault', slot: 'primary', damageNear: 25, damageFar: 19, falloffStart: 25, falloffEnd: 60, fireRate: 0.075, recoilPitch: 0.0095, recoilYaw: 0.0075, recoilRecovery: 11,
-    hipSpread: 0.068, adsSpread: 0.0019, adsFov: 50, adsType: 'red_dot', mobility: 0.98, maxAmmo: 30, reloadTime: 2.1, modelUrl: null,
-    sound: 'scar', rate: 1.1, penetration: 1, tp: { len: 0.82, body: 'tan', mag: 'box' }, desc: '一體成形的未來步槍，後座柔和、射速快。',
+    name: 'XM8', type: 'assault', slot: 'primary', damageNear: 25, damageFar: 19, falloffStart: 25, falloffEnd: 60, fireRate: 0.107, recoilPitch: 0.0095, recoilYaw: 0.0075, recoilRecovery: 11,
+    hipSpread: 0.068, adsSpread: 0.0019, adsFov: 50, adsType: 'red_dot', mobility: 0.98, maxAmmo: 30, reloadTime: 2.2, modelUrl: null, adsSpeed: 12,
+    sound: 'scar', rate: 1.1, penetration: 1, tp: { len: 0.82, body: 'tan', mag: 'box' }, desc: '一體成形的未來步槍，後座柔和、射速快。', // v53 SF2 EU wiki (unverified): RPM/reload/ADS
   },
   galil: {
     name: 'GALIL', type: 'assault', slot: 'primary', damageNear: 31, damageFar: 23, falloffStart: 25, falloffEnd: 60, fireRate: 0.092, recoilPitch: 0.0145, recoilYaw: 0.011, recoilRecovery: 8,
@@ -246,9 +248,9 @@ const WEAPON_DATABASE = {
     sound: 'ak', rate: 1.06, penetration: 1, tp: { len: 0.95, body: 'wood', mag: 'curved' }, desc: '以色列 AK 系步槍，35 發大彈匣，威力與後座介於 M4 和 AK 之間。',
   },
   sg551: {
-    name: 'SG 551', type: 'assault', slot: 'primary', damageNear: 27, damageFar: 22, falloffStart: 30, falloffEnd: 70, fireRate: 0.088, recoilPitch: 0.0105, recoilYaw: 0.0065, recoilRecovery: 11,
+    name: 'SG 551', type: 'assault', slot: 'primary', damageNear: 27, damageFar: 22, falloffStart: 30, falloffEnd: 70, fireRate: 0.097, recoilPitch: 0.0105, recoilYaw: 0.0065, recoilRecovery: 11,
     hipSpread: 0.074, adsSpread: 0.0014, adsFov: 46, adsType: 'red_dot', mobility: 0.94, maxAmmo: 30, reloadTime: 2.5, modelUrl: null,
-    sound: 'scar', rate: 1.04, penetration: 1, tp: { len: 0.86, body: 'dark', mag: 'box' }, desc: '瑞士精準步槍，開鏡極穩，適合中距離點射。',
+    sound: 'scar', rate: 1.04, penetration: 1, tp: { len: 0.86, body: 'dark', mag: 'box' }, desc: '瑞士精準步槍，開鏡極穩，適合中距離點射。', // v53 SF2 EU wiki (unverified): RPM
   },
   hk417: {
     name: 'HK417', type: 'assault', slot: 'primary', damageNear: 36, damageFar: 29, falloffStart: 30, falloffEnd: 80, fireRate: 0.11, recoilPitch: 0.017, recoilYaw: 0.01, recoilRecovery: 8,
@@ -278,7 +280,7 @@ const WEAPON_DATABASE = {
   m40a1: {
     name: 'M40A1', type: 'sniper', slot: 'primary', damageNear: 110, damageFar: 96, falloffStart: 60, falloffEnd: 200, fireRate: 1.35, recoilPitch: 0.065, recoilYaw: 0.01, recoilRecovery: 6,
     hipSpread: 0.14, adsSpread: 0.0, adsFov: 20, adsType: '2d_scope_overlay', mobility: 0.82, maxAmmo: 5, reloadTime: 3.3, modelUrl: null,
-    sound: 'kar98', rate: 1.04, zoomFovs: [20, 9], penetration: 2, range: 420, adsSpeed: 17, tracerEvery: 1, tp: { len: 1.12, body: 'green', mag: 'none', scope: true }, desc: '美軍陸戰隊栓動狙擊槍，身體 1 發，移動較 AWP 靈活。',
+    sound: 'm40', zoomFovs: [20, 9], penetration: 2, range: 420, adsSpeed: 17, tracerEvery: 1, tp: { len: 1.12, body: 'green', mag: 'none', scope: true }, desc: '美軍陸戰隊栓動狙擊槍，身體 1 發，移動較 AWP 靈活。',
   },
   sr25: {
     name: 'SR-25', type: 'sniper', slot: 'primary', damageNear: 62, damageFar: 52, falloffStart: 50, falloffEnd: 180, fireRate: 0.3, recoilPitch: 0.042, recoilYaw: 0.011, recoilRecovery: 7,
@@ -327,14 +329,14 @@ const WEAPON_DATABASE = {
   },
   // ---------------- v40 batch 2 ----------------
   m14ebr: {
-    name: 'M14 EBR', type: 'sniper', slot: 'primary', damageNear: 58, damageFar: 48, falloffStart: 45, falloffEnd: 160, fireRate: 0.26, recoilPitch: 0.04, recoilYaw: 0.012, recoilRecovery: 8,
-    hipSpread: 0.09, adsSpread: 0.001, adsFov: 30, adsType: '2d_scope_overlay', mobility: 0.89, maxAmmo: 20, reloadTime: 2.8, modelUrl: null,
-    sound: 'svd', rate: 1.02, bolt: false, zoomFovs: [30, 15], penetration: 2, range: 380, adsSpeed: 18, tracerEvery: 1, tp: { len: 1.05, body: 'dark', mag: 'box', scope: true }, desc: '半自動精確射手步槍，射速最快的狙擊選項。',
+    name: 'M14 EBR', type: 'sniper', slot: 'primary', damageNear: 58, damageFar: 48, falloffStart: 45, falloffEnd: 160, fireRate: 0.28, recoilPitch: 0.04, recoilYaw: 0.012, recoilRecovery: 8,
+    hipSpread: 0.09, adsSpread: 0.001, adsFov: 30, adsType: '2d_scope_overlay', mobility: 0.89, maxAmmo: 20, reloadTime: 3.5, modelUrl: null,
+    sound: 'svd', rate: 1.02, bolt: false, zoomFovs: [30, 15], penetration: 2, range: 380, adsSpeed: 18, tracerEvery: 1, tp: { len: 1.05, body: 'dark', mag: 'box', scope: true }, desc: '半自動精確射手步槍，射速最快的狙擊選項。', // v53 SF2 EU wiki (unverified): RPM/reload
   },
   type89: {
-    name: 'Howa Type 89', type: 'assault', slot: 'primary', damageNear: 26, damageFar: 20, falloffStart: 25, falloffEnd: 65, fireRate: 0.08, recoilPitch: 0.0098, recoilYaw: 0.0078, recoilRecovery: 11,
-    hipSpread: 0.07, adsSpread: 0.0019, adsFov: 54, adsType: '3d_sight', mobility: 0.95, maxAmmo: 30, reloadTime: 2.3, modelUrl: null,
-    sound: 'm4', rate: 1.06, penetration: 1, tp: { len: 0.92, body: 'dark', mag: 'box' }, desc: '日本自衛隊步槍，後座低、連射穩定。',
+    name: 'Howa Type 89', type: 'assault', slot: 'primary', damageNear: 26, damageFar: 20, falloffStart: 25, falloffEnd: 65, fireRate: 0.103, recoilPitch: 0.0098, recoilYaw: 0.0078, recoilRecovery: 11,
+    hipSpread: 0.07, adsSpread: 0.0019, adsFov: 54, adsType: '3d_sight', mobility: 0.95, maxAmmo: 30, reloadTime: 2.3, modelUrl: null, adsSpeed: 10,
+    sound: 'm4', rate: 1.06, penetration: 1, tp: { len: 0.92, body: 'dark', mag: 'box' }, desc: '日本自衛隊步槍，後座低、連射穩定。', // v53 SF2 EU wiki (unverified): RPM/reload/ADS
   },
   l86a1: {
     name: 'L86A1 LSW', type: 'lmg', slot: 'primary', damageNear: 27, damageFar: 22, falloffStart: 35, falloffEnd: 85, fireRate: 0.085, recoilPitch: 0.009, recoilYaw: 0.008, recoilRecovery: 10,
@@ -354,7 +356,7 @@ const WEAPON_DATABASE = {
   cz700: {
     name: 'CZ 700', type: 'sniper', slot: 'primary', damageNear: 108, damageFar: 94, falloffStart: 60, falloffEnd: 200, fireRate: 1.3, recoilPitch: 0.062, recoilYaw: 0.01, recoilRecovery: 6,
     hipSpread: 0.13, adsSpread: 0.0, adsFov: 20, adsType: '2d_scope_overlay', mobility: 0.84, maxAmmo: 10, reloadTime: 3.2, modelUrl: null,
-    sound: 'kar98', rate: 1.08, zoomFovs: [20, 9], penetration: 2, range: 420, adsSpeed: 18, tracerEvery: 1, tp: { len: 1.1, body: 'dark', mag: 'box', scope: true }, desc: '捷克栓動狙擊槍，拉栓快、移動靈活。',
+    sound: 'cz700', zoomFovs: [20, 9], penetration: 2, range: 420, adsSpeed: 18, tracerEvery: 1, tp: { len: 1.1, body: 'dark', mag: 'box', scope: true }, desc: '捷克栓動狙擊槍，拉栓快、移動靈活。',
   },
   infinity: {
     name: 'Infinity', type: 'pistol', slot: 'secondary', damageNear: 29, damageFar: 19, falloffStart: 10, falloffEnd: 35, fireRate: 0.13, recoilPitch: 0.024, recoilYaw: 0.005, recoilRecovery: 14,
@@ -369,7 +371,7 @@ const TYPE_TUNING = { // spread growth / movement penalties per weapon family
   lmg: { kind: 'lmg', bloomPerShot: 0.0036, bloomMax: 0.034, spreadMove: 0.06, adsMoveSpread: 0.04, spreadSprint: 0.12, spreadAir: 0.2, spreadPerShot: 0.009, spreadMax: 0.07, adsBloomMult: 0.35, spreadRecover: 4, noise: 46, reloadSounds: [[0.12, 'boltback'], [0.35, 'magout'], [0.65, 'magin'], [0.88, 'charge']], kick: { z: 0.05, y: 0.012, rx: 0.065 }, adsMove: 0.6 },
   shotgun: { kind: 'shotgun', bloomPerShot: 0, bloomMax: 0, spreadMove: 0.02, adsMoveSpread: 0.015, spreadSprint: 0.04, spreadAir: 0.06, spreadPerShot: 0, spreadMax: 0, adsBloomMult: 0, spreadRecover: 6, noise: 48, reloadSounds: [], kick: { z: 0.1, y: 0.02, rx: 0.2 }, adsMove: 0.8 },
   sniper: { kind: 'sniper', bloomPerShot: 0, bloomMax: 0, spreadMove: 0.1, adsMoveSpread: 0, spreadSprint: 0.14, spreadAir: 0.26, spreadPerShot: 0, spreadMax: 0, adsBloomMult: 0, spreadRecover: 5, noise: 60, reloadSounds: [[0.16, 'magout'], [0.52, 'magin'], [0.74, 'boltback'], [0.88, 'boltfwd']], kick: { z: 0.12, y: 0.02, rx: 0.22 }, adsMove: 0.5 },
-  pistol: { kind: 'pistol', bloomPerShot: 0.0065, bloomMax: 0.03, spreadMove: 0.028, adsMoveSpread: 0.018, spreadSprint: 0.06, spreadAir: 0.1, spreadPerShot: 0.018, spreadMax: 0.06, adsBloomMult: 0.5, spreadRecover: 6, noise: 30, reloadSounds: [[0.18, 'magout'], [0.58, 'magin'], [0.84, 'slide']], kick: { z: 0.035, y: 0.01, rx: 0.14 }, adsMove: 0.85 },
+  pistol: { kind: 'pistol', bloomPerShot: 0.0065, bloomMax: 0.03, spreadMove: 0.028, adsMoveSpread: 0.018, spreadSprint: 0.06, spreadAir: 0.1, spreadPerShot: 0.018, spreadMax: 0.06, adsBloomMult: 0.5, spreadRecover: 6, noise: 30, reloadSounds: [[0.18, 'magout_p'], [0.58, 'magin_p'], [0.84, 'slide']], kick: { z: 0.035, y: 0.01, rx: 0.14 }, adsMove: 0.85 }, // v54 '_p': pistol recordings
 };
 
 function compileWeapon(id, s) {

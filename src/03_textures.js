@@ -676,6 +676,14 @@ const MAT_PRESETS = {
   sakuraBloom:  { s: 'fabric', rough: 0.9, metal: 0, tile: 1, color: 0xf3c5d0 },
   vending:      { s: 'metal', rough: 0.5, metal: 0.2, tile: 2, color: 0xd9dde0 },
   // v44 Sakura Inn GLB materials ('ry:<name>' in the Blender export; tile = TILE in tools/blender/ryokan_build.py)
+  // v52 Satellite Base dressing (tools/blender/sat_build.py; keep the tiles in sync with its TILE table)
+  sat_wall:     { s: 'metal', rough: 0.62, metal: 0.25, tile: 1.2, color: 0x939ca1 },     // painted steel wall panels
+  sat_wainscot: { s: 'metal', rough: 0.6, metal: 0.25, tile: 1.2, color: 0x3d4d57 },      // dark blue-grey lower band
+  sat_trim:     { s: 'metal', rough: 0.55, metal: 0.4, tile: 1, color: 0x2c3135 },        // frames, skirting, seams
+  sat_cabinet:  { s: 'metal', rough: 0.5, metal: 0.35, tile: 1, color: 0x545d63 },        // equipment cabinets, consoles
+  sat_epoxy:    { s: 'polished', rough: 0.4, metal: 0, tile: 6, clearcoat: 0.35, clearcoatRoughness: 0.35, env: 0.8, color: 0x5d6a72 },
+  sat_duct:     { s: 'metal', rough: 0.42, metal: 0.75, tile: 1.5, color: 0xa3a9ad, env: 1.1 }, // galvanised ducts
+  sat_tray:     { s: 'plate', rough: 0.55, metal: 0.8, tile: 1.6, env: 1.0, color: 0x8d9398 },
   ry_shikkui:   { s: 'shikkui', rough: 1, metal: 0, tile: 2.4 },
   ry_kabe:      { s: 'kabe', rough: 1, metal: 0, tile: 2 },
   ry_hashira:   { s: 'hashira', rough: 0.85, metal: 0, tile: 0.9 },

@@ -8,7 +8,7 @@ bpy.ops.wm.read_factory_settings(use_empty=True)
 bpy.ops.import_scene.gltf(filepath=os.path.abspath(GLB))
 COL = {'gold': (0.89, 0.66, 0.25), 'goldDark': (0.62, 0.45, 0.16), 'polymer': (0.09, 0.09, 0.1), 'rubber': (0.05, 0.05, 0.05), 'steel': (0.35, 0.37, 0.4),
        'black': (0.12, 0.12, 0.13), 'bright': (0.7, 0.72, 0.75), 'magBlack': (0.08, 0.08, 0.09), 'brass': (0.8, 0.6, 0.25), 'suppressor': (0.1, 0.1, 0.1),
-       'lens': (0.4, 0.7, 0.8), 'dotW': (1, 1, 1), 'dotR': (0.9, 0.1, 0.1)}
+       'lens': (0.4, 0.7, 0.8), 'tan': (0.54, 0.46, 0.33), 'magClear': (0.3, 0.26, 0.2), 'dotW': (1, 1, 1), 'dotR': (0.9, 0.1, 0.1)}
 for o in bpy.data.objects:
     if o.type != 'MESH': continue
     node = o.name.split('__')[0]
@@ -22,11 +22,16 @@ world = bpy.data.worlds.new('w'); sc.world = world; world.color = (0.82, 0.84, 0
 cam = bpy.data.objects.new('cam', bpy.data.cameras.new('cam')); sc.collection.objects.link(cam); sc.camera = cam
 # imported glTF: game space (x, v, −u) → Blender (x, u, v) again
 tgt = bpy.data.objects.new('tgt', None); sc.collection.objects.link(tgt)
-for name, loc, look, ortho in (('side', (0.75, 0.0, 0.0), (0, 0.0, 0.0), 0.86), ('left', (-0.75, 0.0, 0.0), (0, 0.0, 0.0), 0.86),
-                               ('34', (0.42, 0.5, 0.22), (0, 0.04, -0.02), 0), ('rear34', (0.3, -0.5, 0.2), (0, 0.0, 0.0), 0), ('top', (0.0, 0.03, 0.8), (0, 0.03, 0.0), 0.86)):
+# v49 frame the whole gun: ortho views centred on its bounds (long rifles no longer lose the muzzle)
+from mathutils import Vector
+pts = [o.matrix_world @ Vector(c) for o in bpy.data.objects if o.type == 'MESH' and not o.hide_render for c in o.bound_box]
+y0, y1 = min(p.y for p in pts), max(p.y for p in pts); z0, z1 = min(p.z for p in pts), max(p.z for p in pts)
+cy, cz, span = (y0 + y1) / 2, (z0 + z1) / 2, max(0.5, (y1 - y0) * 1.08)
+for name, loc, look, ortho in (('side', (0.75, cy, cz), (0, cy, cz), span), ('left', (-0.75, cy, cz), (0, cy, cz), span),
+                               ('34', (0.42, 0.5, 0.22), (0, 0.04, -0.02), 0), ('rear34', (0.3, -0.5, 0.2), (0, 0.0, 0.0), 0), ('top', (0.0, cy, 0.8), (0, cy, 0.0), span)):
     cam.constraints.clear(); cam.location = loc; tgt.location = look
     c = cam.constraints.new('TRACK_TO'); c.target = tgt; c.track_axis = 'TRACK_NEGATIVE_Z'; c.up_axis = 'UP_Y' if name == 'top' else 'UP_Y'
-    if name == 'top': cam.location = (0.0001, 0.03, 0.8)
+    if name == 'top': cam.location = (0.0001, cy, 0.8)
     if ortho: cam.data.type = 'ORTHO'; cam.data.ortho_scale = ortho
     else: cam.data.type = 'PERSP'; cam.data.lens = 50
     sc.render.filepath = os.path.abspath(f'{OUT}_{name}.png'); bpy.ops.render.render(write_still=True)

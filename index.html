@@ -1015,6 +1015,8 @@ const PART_LABEL = { head: '頭部', chest: '胸部', stomach: '腹部', thigh: 
      • v21 damage model (CLAUDE.md §4.2): damageNear / damageFar with linear falloff between falloffStart and
        falloffEnd (m); parts head ×2.5 · chest 1 · abdomen 0.9 · limbs 0.75; sniper headshot = kill.
      • Rifles 25–34 near → 3–4 chest hits close, 4–5 far; rifle headshots need 2.
+     • v53 fire rate / reload / ADS speed of the rifles marked 'SF2 EU wiki (unverified)' follow docs/sf2-evidence/sf2_params.json
+       (adsSpeed 12 ≈ 0.25 s, 10 ≈ 0.30 s to 95 %). Unverified search-snippet values: tune freely if they play wrong.
    ------------------------------------------------------------------- */
 const WEAPON_DATABASE = {
   m4a1: {
@@ -1033,7 +1035,7 @@ const WEAPON_DATABASE = {
     name: 'G36C 黃金', type: 'assault', slot: 'primary', damageNear: 25, damageFar: 19, falloffStart: 25, falloffEnd: 60, fireRate: 0.08,
     recoilPitch: 0.011, recoilYaw: 0.012, recoilRecovery: 10,
     hipSpread: 0.07, adsSpread: 0.0018, adsFov: 42, vmAdsFov: 17, adsVertical: 0.075, adsType: 'red_dot', mobility: 0.95, maxAmmo: 30, reloadTime: 2.0, modelUrl: null,
-    model: 'g36c', sound: 'm4', rate: 1.07, tracerEvery: 2, penetration: 1, desc: 'EOTech 全息瞄具 + 四叉消焰器，5.56 清脆槍聲，開火會上敵方雷達。',
+    model: 'g36c', sound: 'g36', tracerEvery: 2, penetration: 1, desc: 'EOTech 全息瞄具 + 四叉消焰器，5.56 清脆槍聲，開火會上敵方雷達。',
   },
   mp5: {
     name: 'MP5', type: 'smg', slot: 'primary', damageNear: 25, damageFar: 16, falloffStart: 10, falloffEnd: 35, fireRate: 0.07,
@@ -1079,19 +1081,19 @@ const WEAPON_DATABASE = {
   },
   /* ------------------------------ v5 arsenal (31 guns, ≥5 per class) ------------------------------ */
   ak47: {
-    name: 'AK-47', type: 'assault', slot: 'primary', damageNear: 34, damageFar: 25, falloffStart: 25, falloffEnd: 60, fireRate: 0.1, recoilPitch: 0.016, recoilYaw: 0.012, recoilRecovery: 7,
-    hipSpread: 0.08, adsSpread: 0.0028, adsFov: 58, adsType: '3d_sight', mobility: 0.93, maxAmmo: 30, reloadTime: 2.5, modelUrl: null,
-    sound: 'ak', penetration: 2, bloomPerShot: 0.005, bloomMax: 0.032, tp: { len: 0.9, body: 'wood', mag: 'curve' }, desc: '7.62mm 重火力，後座力大、穿透強，機械瞄具。',
+    name: 'AK-47', type: 'assault', slot: 'primary', damageNear: 34, damageFar: 25, falloffStart: 25, falloffEnd: 60, fireRate: 0.113, recoilPitch: 0.016, recoilYaw: 0.012, recoilRecovery: 7,
+    hipSpread: 0.08, adsSpread: 0.0028, adsFov: 58, adsType: '3d_sight', mobility: 0.93, maxAmmo: 30, reloadTime: 2.4, modelUrl: null, adsSpeed: 12,
+    sound: 'ak', penetration: 2, bloomPerShot: 0.005, bloomMax: 0.032, tp: { len: 0.9, body: 'wood', mag: 'curve' }, desc: '7.62mm 重火力，後座力大、穿透強，機械瞄具。', // v53 SF2 EU wiki (unverified): RPM/reload/ADS
   },
   scarl: {
-    name: 'SCAR-L', type: 'assault', slot: 'primary', damageNear: 28, damageFar: 21, falloffStart: 25, falloffEnd: 60, fireRate: 0.096, recoilPitch: 0.011, recoilYaw: 0.008, recoilRecovery: 10,
-    hipSpread: 0.072, adsSpread: 0.0019, adsFov: 52, adsType: '3d_sight', mobility: 0.94, maxAmmo: 30, reloadTime: 2.3, modelUrl: null,
-    sound: 'scar', penetration: 1, tp: { len: 0.88, body: 'tan', mag: 'box' }, desc: '沙色模組化步槍，後座柔和、全息瞄具。',
+    name: 'SCAR-L', type: 'assault', slot: 'primary', damageNear: 28, damageFar: 21, falloffStart: 25, falloffEnd: 60, fireRate: 0.103, recoilPitch: 0.011, recoilYaw: 0.008, recoilRecovery: 10,
+    hipSpread: 0.072, adsSpread: 0.0019, adsFov: 52, adsType: '3d_sight', mobility: 0.94, maxAmmo: 30, reloadTime: 2.3, modelUrl: null, adsSpeed: 12,
+    sound: 'scar', penetration: 1, tp: { len: 0.88, body: 'tan', mag: 'box' }, desc: '沙色模組化步槍，後座柔和、全息瞄具。', // v53 SF2 EU wiki (unverified): RPM/reload/ADS
   },
   famas: {
-    name: 'FAMAS', type: 'assault', slot: 'primary', damageNear: 25, damageFar: 18, falloffStart: 25, falloffEnd: 60, fireRate: 0.06, recoilPitch: 0.0105, recoilYaw: 0.013, recoilRecovery: 11,
+    name: 'FAMAS', type: 'assault', slot: 'primary', damageNear: 25, damageFar: 18, falloffStart: 25, falloffEnd: 60, fireRate: 0.087, recoilPitch: 0.0105, recoilYaw: 0.013, recoilRecovery: 11,
     hipSpread: 0.07, adsSpread: 0.0028, adsFov: 56, adsType: '3d_sight', mobility: 0.96, maxAmmo: 25, reloadTime: 2.7, modelUrl: null,
-    sound: 'm4', rate: 1.12, tp: { len: 0.76, body: 'dark', mag: 'box', bull: true }, desc: '法國無托步槍，射速 1000 RPM，提把機械瞄具。',
+    sound: 'famas', tp: { len: 0.76, body: 'dark', mag: 'box', bull: true }, desc: '法國無托步槍，射速快、精準，提把機械瞄具。', // v53 SF2 EU wiki (unverified): RPM
   },
   aug: {
     name: 'Steyr AUG', type: 'assault', slot: 'primary', damageNear: 27, damageFar: 22, falloffStart: 25, falloffEnd: 70, fireRate: 0.085, recoilPitch: 0.0095, recoilYaw: 0.007, recoilRecovery: 11,
@@ -1190,9 +1192,9 @@ const WEAPON_DATABASE = {
   },
   // ---------------- v40 SF2 arsenal, batch 1 (models reused from the closest existing gun; stats from namu.wiki hand-feel notes) ----------------
   m16a3: {
-    name: 'M16A3', type: 'assault', slot: 'primary', damageNear: 28, damageFar: 22, falloffStart: 30, falloffEnd: 70, fireRate: 0.08, recoilPitch: 0.0135, recoilYaw: 0.008, recoilRecovery: 9,
-    hipSpread: 0.08, adsSpread: 0.0018, adsFov: 54, adsType: '3d_sight', mobility: 0.93, maxAmmo: 30, reloadTime: 2.4, modelUrl: null,
-    sound: 'm4', rate: 0.95, penetration: 1, tp: { len: 0.98, body: 'dark', mag: 'box' }, desc: '長槍管 M16，射程與精度高於 M4，後座略大。',
+    name: 'M16A3', type: 'assault', slot: 'primary', damageNear: 28, damageFar: 22, falloffStart: 30, falloffEnd: 70, fireRate: 0.103, recoilPitch: 0.0135, recoilYaw: 0.008, recoilRecovery: 9,
+    hipSpread: 0.08, adsSpread: 0.0018, adsFov: 54, adsType: '3d_sight', mobility: 0.93, maxAmmo: 30, reloadTime: 2.3, modelUrl: null, adsSpeed: 12,
+    sound: 'm4', rate: 0.95, penetration: 1, tp: { len: 0.98, body: 'dark', mag: 'box' }, desc: '長槍管 M16，射程與精度高於 M4，後座略大。', // v53 SF2 EU wiki (unverified): RPM/reload/ADS
   },
   k2: {
     name: 'K2', type: 'assault', slot: 'primary', damageNear: 27, damageFar: 20, falloffStart: 25, falloffEnd: 60, fireRate: 0.084, recoilPitch: 0.0115, recoilYaw: 0.0095, recoilRecovery: 10,
@@ -1200,9 +1202,9 @@ const WEAPON_DATABASE = {
     sound: 'm4', rate: 1.04, penetration: 1, tp: { len: 0.9, body: 'dark', mag: 'box' }, desc: '韓國制式步槍，平衡好用、機動性佳。',
   },
   xm8: {
-    name: 'XM8', type: 'assault', slot: 'primary', damageNear: 25, damageFar: 19, falloffStart: 25, falloffEnd: 60, fireRate: 0.075, recoilPitch: 0.0095, recoilYaw: 0.0075, recoilRecovery: 11,
-    hipSpread: 0.068, adsSpread: 0.0019, adsFov: 50, adsType: 'red_dot', mobility: 0.98, maxAmmo: 30, reloadTime: 2.1, modelUrl: null,
-    sound: 'scar', rate: 1.1, penetration: 1, tp: { len: 0.82, body: 'tan', mag: 'box' }, desc: '一體成形的未來步槍，後座柔和、射速快。',
+    name: 'XM8', type: 'assault', slot: 'primary', damageNear: 25, damageFar: 19, falloffStart: 25, falloffEnd: 60, fireRate: 0.107, recoilPitch: 0.0095, recoilYaw: 0.0075, recoilRecovery: 11,
+    hipSpread: 0.068, adsSpread: 0.0019, adsFov: 50, adsType: 'red_dot', mobility: 0.98, maxAmmo: 30, reloadTime: 2.2, modelUrl: null, adsSpeed: 12,
+    sound: 'scar', rate: 1.1, penetration: 1, tp: { len: 0.82, body: 'tan', mag: 'box' }, desc: '一體成形的未來步槍，後座柔和、射速快。', // v53 SF2 EU wiki (unverified): RPM/reload/ADS
   },
   galil: {
     name: 'GALIL', type: 'assault', slot: 'primary', damageNear: 31, damageFar: 23, falloffStart: 25, falloffEnd: 60, fireRate: 0.092, recoilPitch: 0.0145, recoilYaw: 0.011, recoilRecovery: 8,
@@ -1210,9 +1212,9 @@ const WEAPON_DATABASE = {
     sound: 'ak', rate: 1.06, penetration: 1, tp: { len: 0.95, body: 'wood', mag: 'curved' }, desc: '以色列 AK 系步槍，35 發大彈匣，威力與後座介於 M4 和 AK 之間。',
   },
   sg551: {
-    name: 'SG 551', type: 'assault', slot: 'primary', damageNear: 27, damageFar: 22, falloffStart: 30, falloffEnd: 70, fireRate: 0.088, recoilPitch: 0.0105, recoilYaw: 0.0065, recoilRecovery: 11,
+    name: 'SG 551', type: 'assault', slot: 'primary', damageNear: 27, damageFar: 22, falloffStart: 30, falloffEnd: 70, fireRate: 0.097, recoilPitch: 0.0105, recoilYaw: 0.0065, recoilRecovery: 11,
     hipSpread: 0.074, adsSpread: 0.0014, adsFov: 46, adsType: 'red_dot', mobility: 0.94, maxAmmo: 30, reloadTime: 2.5, modelUrl: null,
-    sound: 'scar', rate: 1.04, penetration: 1, tp: { len: 0.86, body: 'dark', mag: 'box' }, desc: '瑞士精準步槍，開鏡極穩，適合中距離點射。',
+    sound: 'scar', rate: 1.04, penetration: 1, tp: { len: 0.86, body: 'dark', mag: 'box' }, desc: '瑞士精準步槍，開鏡極穩，適合中距離點射。', // v53 SF2 EU wiki (unverified): RPM
   },
   hk417: {
     name: 'HK417', type: 'assault', slot: 'primary', damageNear: 36, damageFar: 29, falloffStart: 30, falloffEnd: 80, fireRate: 0.11, recoilPitch: 0.017, recoilYaw: 0.01, recoilRecovery: 8,
@@ -1242,7 +1244,7 @@ const WEAPON_DATABASE = {
   m40a1: {
     name: 'M40A1', type: 'sniper', slot: 'primary', damageNear: 110, damageFar: 96, falloffStart: 60, falloffEnd: 200, fireRate: 1.35, recoilPitch: 0.065, recoilYaw: 0.01, recoilRecovery: 6,
     hipSpread: 0.14, adsSpread: 0.0, adsFov: 20, adsType: '2d_scope_overlay', mobility: 0.82, maxAmmo: 5, reloadTime: 3.3, modelUrl: null,
-    sound: 'kar98', rate: 1.04, zoomFovs: [20, 9], penetration: 2, range: 420, adsSpeed: 17, tracerEvery: 1, tp: { len: 1.12, body: 'green', mag: 'none', scope: true }, desc: '美軍陸戰隊栓動狙擊槍，身體 1 發，移動較 AWP 靈活。',
+    sound: 'm40', zoomFovs: [20, 9], penetration: 2, range: 420, adsSpeed: 17, tracerEvery: 1, tp: { len: 1.12, body: 'green', mag: 'none', scope: true }, desc: '美軍陸戰隊栓動狙擊槍，身體 1 發，移動較 AWP 靈活。',
   },
   sr25: {
     name: 'SR-25', type: 'sniper', slot: 'primary', damageNear: 62, damageFar: 52, falloffStart: 50, falloffEnd: 180, fireRate: 0.3, recoilPitch: 0.042, recoilYaw: 0.011, recoilRecovery: 7,
@@ -1291,14 +1293,14 @@ const WEAPON_DATABASE = {
   },
   // ---------------- v40 batch 2 ----------------
   m14ebr: {
-    name: 'M14 EBR', type: 'sniper', slot: 'primary', damageNear: 58, damageFar: 48, falloffStart: 45, falloffEnd: 160, fireRate: 0.26, recoilPitch: 0.04, recoilYaw: 0.012, recoilRecovery: 8,
-    hipSpread: 0.09, adsSpread: 0.001, adsFov: 30, adsType: '2d_scope_overlay', mobility: 0.89, maxAmmo: 20, reloadTime: 2.8, modelUrl: null,
-    sound: 'svd', rate: 1.02, bolt: false, zoomFovs: [30, 15], penetration: 2, range: 380, adsSpeed: 18, tracerEvery: 1, tp: { len: 1.05, body: 'dark', mag: 'box', scope: true }, desc: '半自動精確射手步槍，射速最快的狙擊選項。',
+    name: 'M14 EBR', type: 'sniper', slot: 'primary', damageNear: 58, damageFar: 48, falloffStart: 45, falloffEnd: 160, fireRate: 0.28, recoilPitch: 0.04, recoilYaw: 0.012, recoilRecovery: 8,
+    hipSpread: 0.09, adsSpread: 0.001, adsFov: 30, adsType: '2d_scope_overlay', mobility: 0.89, maxAmmo: 20, reloadTime: 3.5, modelUrl: null,
+    sound: 'svd', rate: 1.02, bolt: false, zoomFovs: [30, 15], penetration: 2, range: 380, adsSpeed: 18, tracerEvery: 1, tp: { len: 1.05, body: 'dark', mag: 'box', scope: true }, desc: '半自動精確射手步槍，射速最快的狙擊選項。', // v53 SF2 EU wiki (unverified): RPM/reload
   },
   type89: {
-    name: 'Howa Type 89', type: 'assault', slot: 'primary', damageNear: 26, damageFar: 20, falloffStart: 25, falloffEnd: 65, fireRate: 0.08, recoilPitch: 0.0098, recoilYaw: 0.0078, recoilRecovery: 11,
-    hipSpread: 0.07, adsSpread: 0.0019, adsFov: 54, adsType: '3d_sight', mobility: 0.95, maxAmmo: 30, reloadTime: 2.3, modelUrl: null,
-    sound: 'm4', rate: 1.06, penetration: 1, tp: { len: 0.92, body: 'dark', mag: 'box' }, desc: '日本自衛隊步槍，後座低、連射穩定。',
+    name: 'Howa Type 89', type: 'assault', slot: 'primary', damageNear: 26, damageFar: 20, falloffStart: 25, falloffEnd: 65, fireRate: 0.103, recoilPitch: 0.0098, recoilYaw: 0.0078, recoilRecovery: 11,
+    hipSpread: 0.07, adsSpread: 0.0019, adsFov: 54, adsType: '3d_sight', mobility: 0.95, maxAmmo: 30, reloadTime: 2.3, modelUrl: null, adsSpeed: 10,
+    sound: 'm4', rate: 1.06, penetration: 1, tp: { len: 0.92, body: 'dark', mag: 'box' }, desc: '日本自衛隊步槍，後座低、連射穩定。', // v53 SF2 EU wiki (unverified): RPM/reload/ADS
   },
   l86a1: {
     name: 'L86A1 LSW', type: 'lmg', slot: 'primary', damageNear: 27, damageFar: 22, falloffStart: 35, falloffEnd: 85, fireRate: 0.085, recoilPitch: 0.009, recoilYaw: 0.008, recoilRecovery: 10,
@@ -1318,7 +1320,7 @@ const WEAPON_DATABASE = {
   cz700: {
     name: 'CZ 700', type: 'sniper', slot: 'primary', damageNear: 108, damageFar: 94, falloffStart: 60, falloffEnd: 200, fireRate: 1.3, recoilPitch: 0.062, recoilYaw: 0.01, recoilRecovery: 6,
     hipSpread: 0.13, adsSpread: 0.0, adsFov: 20, adsType: '2d_scope_overlay', mobility: 0.84, maxAmmo: 10, reloadTime: 3.2, modelUrl: null,
-    sound: 'kar98', rate: 1.08, zoomFovs: [20, 9], penetration: 2, range: 420, adsSpeed: 18, tracerEvery: 1, tp: { len: 1.1, body: 'dark', mag: 'box', scope: true }, desc: '捷克栓動狙擊槍，拉栓快、移動靈活。',
+    sound: 'cz700', zoomFovs: [20, 9], penetration: 2, range: 420, adsSpeed: 18, tracerEvery: 1, tp: { len: 1.1, body: 'dark', mag: 'box', scope: true }, desc: '捷克栓動狙擊槍，拉栓快、移動靈活。',
   },
   infinity: {
     name: 'Infinity', type: 'pistol', slot: 'secondary', damageNear: 29, damageFar: 19, falloffStart: 10, falloffEnd: 35, fireRate: 0.13, recoilPitch: 0.024, recoilYaw: 0.005, recoilRecovery: 14,
@@ -1333,7 +1335,7 @@ const TYPE_TUNING = { // spread growth / movement penalties per weapon family
   lmg: { kind: 'lmg', bloomPerShot: 0.0036, bloomMax: 0.034, spreadMove: 0.06, adsMoveSpread: 0.04, spreadSprint: 0.12, spreadAir: 0.2, spreadPerShot: 0.009, spreadMax: 0.07, adsBloomMult: 0.35, spreadRecover: 4, noise: 46, reloadSounds: [[0.12, 'boltback'], [0.35, 'magout'], [0.65, 'magin'], [0.88, 'charge']], kick: { z: 0.05, y: 0.012, rx: 0.065 }, adsMove: 0.6 },
   shotgun: { kind: 'shotgun', bloomPerShot: 0, bloomMax: 0, spreadMove: 0.02, adsMoveSpread: 0.015, spreadSprint: 0.04, spreadAir: 0.06, spreadPerShot: 0, spreadMax: 0, adsBloomMult: 0, spreadRecover: 6, noise: 48, reloadSounds: [], kick: { z: 0.1, y: 0.02, rx: 0.2 }, adsMove: 0.8 },
   sniper: { kind: 'sniper', bloomPerShot: 0, bloomMax: 0, spreadMove: 0.1, adsMoveSpread: 0, spreadSprint: 0.14, spreadAir: 0.26, spreadPerShot: 0, spreadMax: 0, adsBloomMult: 0, spreadRecover: 5, noise: 60, reloadSounds: [[0.16, 'magout'], [0.52, 'magin'], [0.74, 'boltback'], [0.88, 'boltfwd']], kick: { z: 0.12, y: 0.02, rx: 0.22 }, adsMove: 0.5 },
-  pistol: { kind: 'pistol', bloomPerShot: 0.0065, bloomMax: 0.03, spreadMove: 0.028, adsMoveSpread: 0.018, spreadSprint: 0.06, spreadAir: 0.1, spreadPerShot: 0.018, spreadMax: 0.06, adsBloomMult: 0.5, spreadRecover: 6, noise: 30, reloadSounds: [[0.18, 'magout'], [0.58, 'magin'], [0.84, 'slide']], kick: { z: 0.035, y: 0.01, rx: 0.14 }, adsMove: 0.85 },
+  pistol: { kind: 'pistol', bloomPerShot: 0.0065, bloomMax: 0.03, spreadMove: 0.028, adsMoveSpread: 0.018, spreadSprint: 0.06, spreadAir: 0.1, spreadPerShot: 0.018, spreadMax: 0.06, adsBloomMult: 0.5, spreadRecover: 6, noise: 30, reloadSounds: [[0.18, 'magout_p'], [0.58, 'magin_p'], [0.84, 'slide']], kick: { z: 0.035, y: 0.01, rx: 0.14 }, adsMove: 0.85 }, // v54 '_p': pistol recordings
 };
 
 function compileWeapon(id, s) {
@@ -1651,7 +1653,18 @@ const HIT_SOUNDS = {
 for (const [k, v] of Object.entries(HIT_SOUNDS)) v.key = k;
 const AMB_LEVEL = 0.55; // v34 master level of the recorded ambience (user: too loud)
 const GUN_KICK = { m4: 0.7, scar: 0.75, ak: 0.85, mp5: 0.5, ump: 0.55, vector: 0.45, mp7: 0.4, p90: 0.45, m249: 0.85, pkm: 0.95, mg42: 0.8,
+  g36: 0.65, famas: 0.6, m40: 1.1, cz700: 1.0,
   m870: 1.15, saiga: 1.05, awp: 1.2, m200: 1.25, barrett: 1.4, kar98: 1.1, svd: 1.0, p226: 0.5, m1911: 0.6, deagle: 0.85 };
+// v47 own-voice guns without a far-perspective recording borrow the nearest one's
+const GUN_FAR = { g36: 'm4', famas: 'm4', m40: 'kar98', cz700: 'kar98' };
+// v54 recorded mechanics (assets/sfx_mech.js, tools/sfx_mech.mjs): mech type → [sample bank, gain, playback rate]. A type
+// without its bank loaded falls back to the synthesized clicks in AudioEngine.mech; '_p' = the pistol variant.
+const MECH_REC = {
+  magout: ['mech_magout', 0.5, 1], magin: ['mech_magin', 0.75, 1], charge: ['mech_charge', 0.7, 1],
+  magout_p: ['mech_magout_p', 0.5, 1.05], magin_p: ['mech_magin_p', 0.7, 1.05], slide: ['mech_slide', 0.65, 1],
+  boltback: ['mech_boltback', 0.65, 1], boltfwd: ['mech_boltfwd', 0.75, 1], pump: ['mech_pump', 0.8, 1], shell: ['mech_shell', 0.55, 1],
+  dry: ['mech_dry', 0.45, 1.1], draw_rifle: ['mech_draw', 0.35, 1], draw_pistol: ['mech_draw', 0.3, 1.2],
+};
 const GUN_PROFILES = {
   m4:   { dur: 1.0, crack: { g: 1.0, hp: 2200, tau: 0.004 }, body: { g: 1.0, f: 950, q: 0.7, tau: 0.05, drive: 3.5 },
           low: { g: 1.0, f0: 150, f1: 48, sweep: 0.08, tau: 0.085, drive: 2.2 }, punch: { g: 0.55, f0: 600, f1: 170, tau: 0.028 },
@@ -1687,7 +1700,15 @@ const GUN_PROFILES = {
   // ---- v5 arsenal ----
   ak:   { dur: 1.1, crack: { g: 1.05, hp: 1900, tau: 0.004 }, body: { g: 1.15, f: 780, q: 0.6, tau: 0.06, drive: 4.2 },
           low: { g: 1.3, f0: 125, f1: 40, sweep: 0.1, tau: 0.1, drive: 2.8 }, punch: { g: 0.7, f0: 480, f1: 130, tau: 0.035 },
-          mech: { g: 0.26, t: 0.02, f: [2800, 1700], q: 8 }, refl: 1.0, tail: { g: 0.4, lp: 600, tau: 0.26 } },
+          mech: { g: 0.34, t: 0.022, f: [2500, 1500, 3300], q: 6 }, refl: 1.0, tail: { g: 0.4, lp: 600, tau: 0.26 } }, // v47 loose, rattly 7.62 action
+  // v47 G36C: 5.56 from a 9" barrel — louder, sharper blast; hollow polymer clack instead of a metal ring
+  g36:  { dur: 0.95, crack: { g: 1.15, hp: 2700, tau: 0.0035 }, body: { g: 1.05, f: 1180, q: 0.75, tau: 0.042, drive: 3.8 },
+          low: { g: 0.85, f0: 165, f1: 55, sweep: 0.07, tau: 0.07, drive: 2.0 }, punch: { g: 0.5, f0: 680, f1: 200, tau: 0.024 },
+          mech: { g: 0.3, t: 0.016, f: [1900, 3000], q: 5 }, refl: 0.95, tail: { g: 0.3, lp: 760, tau: 0.18 } },
+  // v47 FAMAS: bullpup bark (muzzle by the cheek), tight 1000 RPM — short body, high steel ping from the lever-delayed bolt
+  famas:{ dur: 0.85, crack: { g: 1.05, hp: 2500, tau: 0.003 }, body: { g: 1.0, f: 1050, q: 0.95, tau: 0.034, drive: 3.4 },
+          low: { g: 0.8, f0: 160, f1: 58, sweep: 0.05, tau: 0.055, drive: 2.0 }, punch: { g: 0.55, f0: 720, f1: 230, tau: 0.02 },
+          mech: { g: 0.3, t: 0.011, f: [4300, 2700], q: 13 }, ring: { g: 0.05, f: 5200, tau: 0.05 }, refl: 0.9, tail: { g: 0.26, lp: 820, tau: 0.15 } },
   scar: { dur: 1.0, crack: { g: 1.0, hp: 2100, tau: 0.004 }, body: { g: 1.05, f: 880, q: 0.7, tau: 0.05, drive: 3.6 },
           low: { g: 1.05, f0: 140, f1: 46, sweep: 0.08, tau: 0.085, drive: 2.3 }, punch: { g: 0.6, f0: 560, f1: 150, tau: 0.03 },
           mech: { g: 0.24, t: 0.018, f: [3200, 2000], q: 9 }, refl: 1.0, tail: { g: 0.35, lp: 680, tau: 0.22 } },
@@ -1714,9 +1735,18 @@ const GUN_PROFILES = {
           mech: { g: 0.12, t: 0.03, f: [2400], q: 6 }, refl: 1.5, tail: { g: 0.75, lp: 400, tau: 0.65 } },
   barrett: { dur: 2.4, crack: { g: 2.0, hp: 1500, tau: 0.008 }, body: { g: 1.8, f: 420, q: 0.45, tau: 0.16, drive: 6 },
           low: { g: 2.4, f0: 90, f1: 22, sweep: 0.35, tau: 0.35, drive: 4 }, punch: { g: 1.1, f0: 300, f1: 60, tau: 0.08 }, refl: 1.7, tail: { g: 1.0, lp: 320, tau: 0.9 } },
-  kar98: { dur: 1.6, crack: { g: 1.5, hp: 2200, tau: 0.005 }, body: { g: 1.2, f: 700, q: 0.6, tau: 0.09, drive: 4 },
-          low: { g: 1.5, f0: 125, f1: 34, sweep: 0.2, tau: 0.2, drive: 2.8 }, punch: { g: 0.75, f0: 440, f1: 110, tau: 0.05 },
-          mech: { g: 0.12, t: 0.03, f: [2300], q: 6 }, refl: 1.4, tail: { g: 0.65, lp: 440, tau: 0.55 } },
+  // v47 Kar98k 8 mm Mauser: warm, woody boom — softer crack, low round body, long rolling tail
+  kar98: { dur: 1.7, crack: { g: 1.3, hp: 1900, tau: 0.006 }, body: { g: 1.3, f: 600, q: 0.55, tau: 0.1, drive: 4 },
+          low: { g: 1.55, f0: 120, f1: 32, sweep: 0.22, tau: 0.22, drive: 2.8 }, punch: { g: 0.85, f0: 400, f1: 100, tau: 0.055 },
+          mech: { g: 0.14, t: 0.03, f: [1400], q: 4 }, refl: 1.4, tail: { g: 0.72, lp: 400, tau: 0.6 } },
+  // v47 M40A1 .308 heavy barrel: hard, tight whip-crack, punchy mid body, medium tail
+  m40:  { dur: 1.6, crack: { g: 1.7, hp: 2600, tau: 0.0042 }, body: { g: 1.25, f: 760, q: 0.65, tau: 0.08, drive: 4.4 },
+          low: { g: 1.5, f0: 130, f1: 34, sweep: 0.18, tau: 0.18, drive: 3 }, punch: { g: 0.85, f0: 480, f1: 120, tau: 0.045 },
+          mech: { g: 0.12, t: 0.028, f: [2700], q: 7 }, refl: 1.35, tail: { g: 0.6, lp: 470, tau: 0.5 } },
+  // v47 CZ 700 .308 shorter sporter barrel: brighter, drier, sharper than the M40
+  cz700:{ dur: 1.4, crack: { g: 1.6, hp: 2900, tau: 0.0038 }, body: { g: 1.15, f: 880, q: 0.7, tau: 0.07, drive: 4 },
+          low: { g: 1.3, f0: 140, f1: 38, sweep: 0.15, tau: 0.15, drive: 2.8 }, punch: { g: 0.75, f0: 540, f1: 140, tau: 0.04 },
+          mech: { g: 0.16, t: 0.024, f: [3100, 2000], q: 8 }, refl: 1.25, tail: { g: 0.5, lp: 520, tau: 0.42 } },
   svd:  { dur: 1.4, crack: { g: 1.5, hp: 2400, tau: 0.004 }, body: { g: 1.15, f: 760, q: 0.6, tau: 0.075, drive: 4 },
           low: { g: 1.3, f0: 130, f1: 38, sweep: 0.14, tau: 0.14, drive: 2.8 }, punch: { g: 0.7, f0: 480, f1: 130, tau: 0.04 },
           mech: { g: 0.2, t: 0.02, f: [2800, 1800], q: 8 }, refl: 1.3, tail: { g: 0.55, lp: 480, tau: 0.45 } },
@@ -1752,8 +1782,13 @@ class AudioEngine {
       if (window.SF2_SFX) { res(); return; }
       const s = document.createElement('script'); s.src = 'assets/sfx.js'; s.async = true; s.onload = () => res(); s.onerror = () => res();
       document.head.appendChild(s);
-    }).then(async () => {
+    }).then(() => new Promise((res) => { // v54 recorded gun mechanics: a second, small pack merged into the main one
+      if (window.SF2_SFX_MECH) { res(); return; }
+      const s = document.createElement('script'); s.src = 'assets/sfx_mech.js'; s.async = true; s.onload = () => res(); s.onerror = () => res();
+      document.head.appendChild(s);
+    })).then(async () => {
       const pack = window.SF2_SFX;
+      if (pack && window.SF2_SFX_MECH) { Object.assign(pack, window.SF2_SFX_MECH); delete window.SF2_SFX_MECH; }
       if (!pack || !window.OfflineAudioContext) { console.warn('[audio] recorded sound pack not available — procedural sounds'); return false; }
       const oc = new OfflineAudioContext(1, 1, 48000), jobs = [];
       AudioEngine.sampleRate = pack._rate || {};
@@ -2033,8 +2068,9 @@ class AudioEngine {
   // Room reverb / echo scale with distance: up close it is almost dry.
   gunshot(sound, pos = null, rate = 1) {
     if (!this.ctx) return;
-    const d = pos ? this.listener.distanceTo(pos) : 0, far = d > 30 && AudioEngine.samplesReady ? this._s('gunfar_' + sound) : null;
-    if (far) { this._playBuf(far, pos, { gain: 1.35, rate: (AudioEngine.sampleRate[sound] || 1) * rate, lpDist: 95, send: 0.75 }); return; }
+    const fs = this._s('gunfar_' + sound) ? sound : GUN_FAR[sound] || sound; // v47 own-voice guns borrow a far recording
+    const d = pos ? this.listener.distanceTo(pos) : 0, far = d > 30 && AudioEngine.samplesReady ? this._s('gunfar_' + fs) : null;
+    if (far) { this._playBuf(far, pos, { gain: 1.35, rate: (AudioEngine.sampleRate[fs] || 1) * rate, lpDist: 95, send: 0.75 }); return; }
     const wet = clamp(d / 30, 0, 1);
     this.playBank(sound, pos, { gain: pos ? 1.1 : 0.95, rate, send: 0.12 + wet * 0.6, echo: 0.15 + wet * 0.7 });
     const k = GUN_KICK[sound]; if (k && d < 22) this._kick(pos, k * (pos ? 0.7 : 1));
@@ -2186,6 +2222,9 @@ class AudioEngine {
   mech(type, pos = null) {
     if (!this.ctx) return;
     const t = this.ctx.currentTime, out = this._bus(pos, 0.06, 2);
+    const R = MECH_REC[type], rec = R && this._s(R[0]);
+    if (rec) { this._one(pick(rec), out, R[1], R[2] * (0.96 + Math.random() * 0.08)); return; } // v54 real recording first
+    if (type.endsWith('_p')) type = type.slice(0, -2);
     const click = (dt, f, q, pk, dec) => this._nb(t + dt, out, 'bandpass', f, q, pk, 0.001, dec);
     switch (type) {
       case 'magout': // release button → magazine slides out of the well
@@ -3041,6 +3080,14 @@ const MAT_PRESETS = {
   sakuraBloom:  { s: 'fabric', rough: 0.9, metal: 0, tile: 1, color: 0xf3c5d0 },
   vending:      { s: 'metal', rough: 0.5, metal: 0.2, tile: 2, color: 0xd9dde0 },
   // v44 Sakura Inn GLB materials ('ry:<name>' in the Blender export; tile = TILE in tools/blender/ryokan_build.py)
+  // v52 Satellite Base dressing (tools/blender/sat_build.py; keep the tiles in sync with its TILE table)
+  sat_wall:     { s: 'metal', rough: 0.62, metal: 0.25, tile: 1.2, color: 0x939ca1 },     // painted steel wall panels
+  sat_wainscot: { s: 'metal', rough: 0.6, metal: 0.25, tile: 1.2, color: 0x3d4d57 },      // dark blue-grey lower band
+  sat_trim:     { s: 'metal', rough: 0.55, metal: 0.4, tile: 1, color: 0x2c3135 },        // frames, skirting, seams
+  sat_cabinet:  { s: 'metal', rough: 0.5, metal: 0.35, tile: 1, color: 0x545d63 },        // equipment cabinets, consoles
+  sat_epoxy:    { s: 'polished', rough: 0.4, metal: 0, tile: 6, clearcoat: 0.35, clearcoatRoughness: 0.35, env: 0.8, color: 0x5d6a72 },
+  sat_duct:     { s: 'metal', rough: 0.42, metal: 0.75, tile: 1.5, color: 0xa3a9ad, env: 1.1 }, // galvanised ducts
+  sat_tray:     { s: 'plate', rough: 0.55, metal: 0.8, tile: 1.6, env: 1.0, color: 0x8d9398 },
   ry_shikkui:   { s: 'shikkui', rough: 1, metal: 0, tile: 2.4 },
   ry_kabe:      { s: 'kabe', rough: 1, metal: 0, tile: 2 },
   ry_hashira:   { s: 'hashira', rough: 0.85, metal: 0, tile: 0.9 },
@@ -5048,6 +5095,32 @@ function makeLaneTerrain(L) {
   };
   return { sample, floorAt: (x, z) => carve(x, z).fy };
 }
+// v52 Satellite Base walkable grid (1 m cells, point-symmetric), shared by the map build and tools/satellite/export_plan.mjs
+function satellitePlan() {
+  const H = 3.6, B = { x0: -42, z0: -26, x1: 42, z1: 26 }, W = B.x1 - B.x0, D = B.z1 - B.z0;
+  // ---- carve the walkable space (alpha half; every rect is also carved point-mirrored) ----
+  const open = new Uint8Array(W * D), carve = (x0, z0, x1, z1) => {
+    for (const s of [1, -1]) {
+      const ax = Math.min(x0 * s, x1 * s), bx = Math.max(x0 * s, x1 * s), az = Math.min(z0 * s, z1 * s), bz = Math.max(z0 * s, z1 * s);
+      for (let x = ax; x < bx; x++) for (let z = az; z < bz; z++) open[(z - B.z0) * W + (x - B.x0)] = 1;
+    }
+  };
+  carve(-41, -7, -31, 7);                                                     // spawn bay
+  carve(-31, 3, -24, 6); carve(-27, 3, -24, 16); carve(-27, 13, -20, 16);     // north route → machine room
+  carve(-20, 12, -8, 24);                                                     // machine room
+  carve(-8, 18, -5, 21);                                                      // machine room → security A
+  carve(-5, 16, 5, 25);                                                       // security room (A; mirror = C)
+  carve(-1, 9, 1, 16);                                                        // security → control (narrow)
+  carve(-31, -2, -17, 2); carve(-17, -2, -13, 5); carve(-13, 2, -8, 5);       // middle zig-zag → control room
+  carve(-9, -9, 9, 9);                                                        // control room (B), octagon below
+  carve(-10, 8, -7, 12); carve(-10, -12, -7, -8);                             // side doors control ↔ machine / generator
+  carve(-31, -6, -24, -3); carve(-27, -16, -24, -3); carve(-27, -16, -20, -13); // south route → generator room
+  carve(-20, -24, -8, -12);                                                   // generator room
+  carve(-8, -21, -5, -18);                                                    // generator room → security C
+  for (let x = -9; x < 9; x++) for (let z = -9; z < 9; z++) if (Math.abs(x + 0.5) + Math.abs(z + 0.5) > 13) open[(z - B.z0) * W + (x - B.x0)] = 0; // octagon corners
+  return { H, B, W, D, open };
+}
+
 const MAPS = [
   {
     id: 'warehouse', name: '廢棄倉庫', en: 'WAREHOUSE', desc: '室內 · 貨櫃巷道與二樓鐵網走廊 · 60×40', slogan: 'CLOSE QUARTERS · 室內近戰與中距離交火',
@@ -5634,29 +5707,11 @@ const MAPS = [
     fog: { color: 0x14181c, near: 30, far: 100 }, acoustics: 'office', ambience: 'warehouse',
     shot: { pos: [-6, 2.6, -6], target: [6, 1.2, 6] },
     objectives: { dom: [[0, 0, 20.5], [0, 0, 0], [0, 0, -20.5]], relic: [0, 0, 0], domRadius: 3.2 },
+    preload() { return satPreload(this); }, // v52 Blender dressing (src/07t_satellite.js)
     build(b) {
       const L = (x, y, z, c, i, d) => b.light(x, y, z, c, i * 1.8, d * 1.4); // v37: brighter rooms — soldiers must read against concrete
-      const H = 3.6, B = { x0: -42, z0: -26, x1: 42, z1: 26 }, W = B.x1 - B.x0, D = B.z1 - B.z0;
-      // ---- carve the walkable space (alpha half; every rect is also carved point-mirrored) ----
-      const open = new Uint8Array(W * D), carve = (x0, z0, x1, z1) => {
-        for (const s of [1, -1]) {
-          const ax = Math.min(x0 * s, x1 * s), bx = Math.max(x0 * s, x1 * s), az = Math.min(z0 * s, z1 * s), bz = Math.max(z0 * s, z1 * s);
-          for (let x = ax; x < bx; x++) for (let z = az; z < bz; z++) open[(z - B.z0) * W + (x - B.x0)] = 1;
-        }
-      };
-      carve(-41, -7, -31, 7);                                                     // spawn bay
-      carve(-31, 3, -24, 6); carve(-27, 3, -24, 16); carve(-27, 13, -20, 16);     // north route → machine room
-      carve(-20, 12, -8, 24);                                                     // machine room
-      carve(-8, 18, -5, 21);                                                      // machine room → security A
-      carve(-5, 16, 5, 25);                                                       // security room (A; mirror = C)
-      carve(-1, 9, 1, 16);                                                        // security → control (narrow)
-      carve(-31, -2, -17, 2); carve(-17, -2, -13, 5); carve(-13, 2, -8, 5);       // middle zig-zag → control room
-      carve(-9, -9, 9, 9);                                                        // control room (B), octagon below
-      carve(-10, 8, -7, 12); carve(-10, -12, -7, -8);                             // side doors control ↔ machine / generator
-      carve(-31, -6, -24, -3); carve(-27, -16, -24, -3); carve(-27, -16, -20, -13); // south route → generator room
-      carve(-20, -24, -8, -12);                                                   // generator room
-      carve(-8, -21, -5, -18);                                                    // generator room → security C
-      for (let x = -9; x < 9; x++) for (let z = -9; z < 9; z++) if (Math.abs(x + 0.5) + Math.abs(z + 0.5) > 13) open[(z - B.z0) * W + (x - B.x0)] = 0; // octagon corners
+      const glb = !b.dry && !!b.def._glb; // v52: the Blender control room replaces some placeholder visuals (colliders stay)
+      const { H, B, W, D, open } = satellitePlan();
       // ---- floor, ceiling, then the rock: greedy rectangles over the solid cells ----
       b.box(B.x0 - 1, -1, B.z0 - 1, B.x1 + 1, 0, B.z1 + 1, 'concrete', { cast: false, radar: false });
       b.box(B.x0 - 1, H, B.z0 - 1, B.x1 + 1, H + 0.3, B.z1 + 1, 'ceiling', { radar: false });
@@ -5668,6 +5723,7 @@ const MAPS = [
         for (let zz = z; zz <= z1; zz++) for (let k = x; k <= x1; k++) used[zz * W + k] = 1;
         b.box(B.x0 + x, 0, B.z0 + z, B.x0 + x1 + 1, H, B.z0 + z1 + 1, 'concreteWall', { radar: 'wall' });
       }
+      L(0, 3.2, 0, glb ? 0xbfe4ff : 0xcfe6ff, glb ? 30 : 40, 16); // control room (B) — first of the 3-light budget
       // ---- dressing (mirrored) ----
       b.sym((s) => {
         const X = (x) => x * s, Z = (z) => z * s, bx = (x0, y0, z0, x1, y1, z1, m, o) => b.box(Math.min(X(x0), X(x1)), y0, Math.min(Z(z0), Z(z1)), Math.max(X(x0), X(x1)), y1, Math.max(Z(z0), Z(z1)), m, o);
@@ -5686,17 +5742,18 @@ const MAPS = [
         // corridor cover
         b.crate(X(-25.5), Z(10), 1.0); b.crate(X(-22), Z(0), 1.0); b.crate(X(-15), Z(3.6), 0.9); b.crate(X(-25.5), Z(-10.5), 1.0);
         // control room: consoles in a ring around the dish pedestal
-        bx(-6.5, 0, -1.2, -5.7, 1.1, 1.2, 'darkSteel', { material: 'metal', radar: 'crate' }); bx(-1.2, 0, 5.7, 1.2, 1.1, 6.5, 'darkSteel', { material: 'metal', radar: 'crate' });
-        // lights
-        L(X(-36), 3.2, 0, 0xdfe8ff, 30, 14); L(X(-14), 3.2, Z(18), 0xcfe0ff, 26, 13); L(X(-14), 3.2, Z(-18), 0xffe2c0, 26, 13);
-        L(0, 3.2, Z(20.5), 0xfff0dc, 24, 12); L(X(-25.5), 3.2, Z(9), 0xdfe8ff, 14, 9); L(X(-20), 3.2, 0, 0xdfe8ff, 14, 9); L(X(-25.5), 3.2, Z(-9), 0xdfe8ff, 14, 9);
+        bx(-6.5, 0, -1.2, -5.7, 1.1, 1.2, glb ? null : 'darkSteel', { material: 'metal', radar: 'crate' }); bx(-1.2, 0, 5.7, 1.2, 1.1, 6.5, glb ? null : 'darkSteel', { material: 'metal', radar: 'crate' });
+        // lights — v52: the builder keeps only 3 point lights (see MapBuilder.light); one per spawn bay (the control room
+        // takes the first). Before, the first three calls all landed on the Alpha half and Bravo's rooms got none.
+        L(X(-36), 3.2, 0, 0xdfe8ff, 30, 14);
         b.sign(s > 0 ? 'ALPHA' : 'BRAVO', s > 0 ? '#6fb6ff' : '#ff6a5f', X(-40.8), 2.6, 0, s > 0 ? Math.PI / 2 : -Math.PI / 2, 3.2, 0.8);
         b.paint(Math.min(X(-41), X(-40.6)), -7, Math.max(X(-41), X(-40.6)), 7, s > 0 ? 0x3a7fd0 : 0xd0453a);
       });
-      b.cyl(0, 0, 1.3, 0, 0.9, 'whiteSteel', { seg: 20, radar: 'crate' }); // dish pedestal (B)
-      for (let x = -40; x <= 40; x += 4) for (let z = -24; z <= 24; z += 4) { const i = (z - B.z0) * W + (x - B.x0); if (open[i]) b.panel(x, z, H, 1.1, 0.5); }
-      L(0, 3.3, 0, 0xcfe6ff, 40, 16);
+      if (glb) b.box(-1.144, 0, -1.144, 1.144, 0.9, 1.144, null, { material: 'metal', radar: 'crate' }); // tracking table (B): the pedestal's collider
+      else b.cyl(0, 0, 1.3, 0, 0.9, 'whiteSteel', { seg: 20, radar: 'crate' }); // dish pedestal (B)
+      for (let x = -40; x <= 40; x += 4) for (let z = -24; z <= 24; z += 4) { const i = (z - B.z0) * W + (x - B.x0); if (open[i] && !(glb && Math.abs(x) <= 9 && Math.abs(z) <= 9)) b.panel(x, z, H, 1.1, 0.5); }
       b.spawnZone('alpha', -40.4, -6, -35.5, 6, -Math.PI / 2); b.spawnZone('bravo', 35.5, -6, 40.4, 6, Math.PI / 2);
+      if (glb) satDressing(b);
     },
   },
   {
@@ -7326,6 +7383,154 @@ MAPS.push({
   },
 });
 /* =====================================================================
+   v52 SATELLITE BASE — Blender dressing (tools/blender/sat_build.py → assets/maps/satellite.js = base64 GLB) and its
+   special materials. The GLB is visual only: it sits on collider faces, on existing cover-box footprints and overhead,
+   so the grid in satellitePlan() still decides movement, cover and sight lines. Placeholders 'sat:<name>' become the
+   game PBR preset of that name (sat_wall, sat_trim, … in src/03_textures.js) or one of the materials below.
+   ===================================================================== */
+const SAT_HAS_GLB = true;
+
+async function satPreload(def) {
+  if (def._glb !== undefined) return;
+  def._glb = null;
+  try {
+    if (!SAT_HAS_GLB) return;
+    if (!window.SAT_GLB) await new Promise((res) => { const s = document.createElement('script'); s.src = 'assets/maps/satellite.js'; s.async = true; s.onload = res; s.onerror = res; document.head.appendChild(s); });
+    if (window.SAT_GLB) {
+      const bin = Uint8Array.from(atob(window.SAT_GLB), (c) => c.charCodeAt(0)).buffer, L = new GLTFLoader(), D = new DRACOLoader();
+      D.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/libs/draco/gltf/'); L.setDRACOLoader(D);
+      def._glb = await L.parseAsync(bin, ''); D.dispose();
+    }
+  } catch (e) { console.warn('Satellite GLB unavailable, using fallback visuals', e && e.message); def._glb = null; }
+}
+
+// screen / sign pictures (canvas) — repeat wrapping: the GLB V is negated by the glTF flip
+function satCanvas(tf, key, w, h, draw) {
+  return tf.simple(key, w, (ctx, S) => { ctx.save(); ctx.scale(S / w, S / h); draw(ctx, w, h); ctx.restore(); }, true, true);
+}
+function satScreen(ctx, w, h, title) {
+  ctx.fillStyle = '#04121b'; ctx.fillRect(0, 0, w, h);
+  ctx.strokeStyle = 'rgba(70,170,210,.18)'; ctx.lineWidth = 1;
+  for (let x = 0; x < w; x += w / 16) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke(); }
+  for (let y = 0; y < h; y += h / 8) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke(); }
+  ctx.fillStyle = 'rgba(40,120,160,.55)'; ctx.fillRect(0, 0, w, h * 0.09);
+  ctx.fillStyle = '#bfefff'; ctx.font = `bold ${Math.round(h * 0.06)}px monospace`; ctx.textBaseline = 'middle'; ctx.fillText(title, w * 0.02, h * 0.045);
+  ctx.strokeStyle = 'rgba(120,210,240,.7)'; ctx.lineWidth = 2; ctx.strokeRect(1, 1, w - 2, h - 2);
+}
+function satText(ctx, w, h, lines, o = {}) {
+  ctx.clearRect(0, 0, w, h);
+  if (o.bg) { ctx.fillStyle = o.bg; ctx.fillRect(0, 0, w, h); ctx.strokeStyle = o.edge || '#d9b43a'; ctx.lineWidth = h * 0.06; ctx.strokeRect(h * 0.03, h * 0.03, w - h * 0.06, h - h * 0.06); }
+  ctx.fillStyle = o.color || '#f1f1ea'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  lines.forEach(([t, size, y], i) => { ctx.font = `bold ${Math.round(h * size)}px "Segoe UI", "Microsoft JhengHei", sans-serif`; ctx.fillText(t, w / 2, h * y); });
+}
+function satGlow(ctx, w, h, rgb, radial) {
+  const img = ctx.createImageData(w, h);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const u = x / (w - 1), v = 1 - y / (h - 1); // v = 0 at the bottom row (= the quad's first edge)
+    let a;
+    if (radial) { const d = Math.hypot(u - 0.5, v - 0.5) * 2; a = Math.max(0, 1 - d) ** 2; }
+    else { const e = Math.min(1, Math.min(u, 1 - u) * 6); a = (1 - v) ** 2.2 * e; }
+    const i = (y * w + x) * 4; img.data[i] = rgb[0]; img.data[i + 1] = rgb[1]; img.data[i + 2] = rgb[2]; img.data[i + 3] = Math.round(a * 255);
+  }
+  ctx.putImageData(img, 0, 0);
+}
+
+function satSpecialMat(b, name) {
+  const tf = b.tf, lib = b.lib, basic = (key, opts) => lib.basic('sat:' + key, () => new THREE.MeshBasicMaterial(opts));
+  const glow = (key, rgb, radial, op) => lib.basic('sat:' + key, () => new THREE.MeshBasicMaterial({ map: satCanvas(tf, 'sat_' + key, 128, 128, (c, w, h) => satGlow(c, w, h, rgb, radial)), transparent: true, opacity: op, blending: THREE.AdditiveBlending, depthWrite: false }));
+  switch (name) {
+    case 'screenMap': return basic('screenMap', { color: new THREE.Color(1.25, 1.25, 1.25), map: satCanvas(tf, 'sat_screenMap', 512, 256, (c, w, h) => {
+      satScreen(c, w, h, 'SATCOM // GLOBAL TRACK   ORBIT 03');
+      const rnd = mulberry32(5203); c.fillStyle = 'rgba(60,150,120,.55)';
+      for (const [cx, cy, rx, ry] of [[0.2, 0.38, 0.11, 0.13], [0.27, 0.68, 0.06, 0.12], [0.49, 0.36, 0.07, 0.09], [0.53, 0.6, 0.06, 0.13], [0.7, 0.36, 0.16, 0.12], [0.82, 0.72, 0.06, 0.06]]) {
+        c.beginPath(); for (let k = 0; k < 18; k++) { const a = k / 18 * 6.283, r = 0.75 + rnd() * 0.4; c.lineTo(w * (cx + Math.cos(a) * rx * r), h * (cy + Math.sin(a) * ry * r)); } c.closePath(); c.fill();
+      }
+      for (const [ph, amp, col] of [[0, 0.22, '#5fe3ff'], [1.7, 0.3, '#ffd75a'], [3.6, 0.15, '#ff7a6a']]) {
+        c.strokeStyle = col; c.lineWidth = 2; c.setLineDash([6, 4]); c.beginPath();
+        for (let x = 0; x <= w; x += 4) c.lineTo(x, h * (0.55 + Math.sin(x / w * 6.283 * 1.0 + ph) * amp)); c.stroke(); c.setLineDash([]);
+        const sx = ((ph * 97) % 1) * w * 0.8 + w * 0.1, sy = h * (0.55 + Math.sin(sx / w * 6.283 + ph) * amp); c.fillStyle = col; c.fillRect(sx - 5, sy - 5, 10, 10);
+      }
+      c.fillStyle = '#9fe6ff'; c.font = `${Math.round(h * 0.045)}px monospace`; ['UPLINK  ●  LOCKED', 'AZ 214.6  EL 38.2', 'SIG -71.4 dBm'].forEach((t, i) => c.fillText(t, w * 0.02, h * (0.84 + i * 0.055)));
+    }) });
+    case 'screenRadar': return basic('screenRadar', { color: new THREE.Color(1.25, 1.25, 1.25), map: satCanvas(tf, 'sat_screenRadar', 512, 256, (c, w, h) => {
+      satScreen(c, w, h, 'DISH TRACKING // AZ-EL');
+      const cx = w * 0.3, cy = h * 0.56, R = h * 0.38;
+      c.strokeStyle = 'rgba(90,240,170,.6)'; c.lineWidth = 1.5; for (let k = 1; k <= 4; k++) { c.beginPath(); c.arc(cx, cy, R * k / 4, 0, 7); c.stroke(); }
+      c.beginPath(); c.moveTo(cx - R, cy); c.lineTo(cx + R, cy); c.moveTo(cx, cy - R); c.lineTo(cx, cy + R); c.stroke();
+      const g = c.createLinearGradient(cx, cy, cx + R, cy - R * 0.4); g.addColorStop(0, 'rgba(90,255,170,.55)'); g.addColorStop(1, 'rgba(90,255,170,0)');
+      c.fillStyle = g; c.beginPath(); c.moveTo(cx, cy); c.arc(cx, cy, R, -0.9, -0.35); c.closePath(); c.fill();
+      c.fillStyle = '#ffe36a'; for (const [a, d] of [[-0.6, 0.7], [1.9, 0.45], [3.6, 0.82]]) c.fillRect(cx + Math.cos(a) * R * d - 3, cy + Math.sin(a) * R * d - 3, 6, 6);
+      c.fillStyle = '#9fffd0'; c.font = `${Math.round(h * 0.05)}px monospace`;
+      ['TARGET  KOMPSAT-5', 'RANGE   1 284 km', 'DOPPLER +2.41 kHz', 'LINK    GREEN'].forEach((t, i) => c.fillText(t, w * 0.62, h * (0.3 + i * 0.12)));
+    }) });
+    case 'screenData': return lib.basic('sat:screenData', () => {
+      const map = satCanvas(tf, 'sat_screenData', 512, 256, (c, w, h) => {
+        satScreen(c, w, h, 'TELEMETRY // BUS 2');
+        const rnd = mulberry32(5207); c.font = `${Math.round(h * 0.045)}px monospace`;
+        for (let row = 0; row < 16; row++) for (let col = 0; col < 3; col++) {
+          const v = (rnd() * 999).toFixed(1).padStart(6, ' '), warn = rnd() < 0.08;
+          c.fillStyle = warn ? '#ff8a5a' : col === 1 ? '#ffd76a' : '#8ff0c8'; c.fillText(`CH${String(row * 3 + col).padStart(2, '0')} ${v}`, w * (0.03 + col * 0.33), h * (0.14 + row * 0.054));
+        }
+      });
+      const m = new THREE.MeshBasicMaterial({ color: new THREE.Color(1.2, 1.2, 1.2), map }); m.userData.scroll = 0.02; return m;
+    });
+    case 'screenConsole': return basic('screenConsole', { color: new THREE.Color(1.15, 1.15, 1.15), map: satCanvas(tf, 'sat_screenConsole', 256, 128, (c, w, h) => {
+      satScreen(c, w, h, 'OPS');
+      const rnd = mulberry32(5209);
+      for (let k = 0; k < 7; k++) { const v = 0.2 + rnd() * 0.7; c.fillStyle = v > 0.8 ? '#ff8a5a' : '#5fe3ff'; c.fillRect(w * (0.06 + k * 0.08), h * (0.92 - v * 0.7), w * 0.05, h * v * 0.7); }
+      c.strokeStyle = '#ffd76a'; c.lineWidth = 2; c.beginPath(); for (let x = 0; x <= w * 0.36; x += 4) c.lineTo(w * 0.62 + x, h * (0.55 + Math.sin(x * 0.12) * 0.16)); c.stroke();
+    }) });
+    case 'led': return basic('led', { color: new THREE.Color(1.6, 1.6, 1.6), map: satCanvas(tf, 'sat_led', 256, 16, (c, w, h) => {
+      c.fillStyle = '#0b0e10'; c.fillRect(0, 0, w, h); const rnd = mulberry32(5211);
+      for (let k = 0; k < 16; k++) { const p = rnd(); c.fillStyle = p < 0.62 ? '#3dff8a' : p < 0.86 ? '#ffc23d' : '#ff4a3a'; c.beginPath(); c.arc(w * (k + 0.5) / 16, h / 2, h * 0.32, 0, 7); c.fill(); }
+    }) });
+    case 'hazard': return lib.basic('sat:hazard', () => new THREE.MeshStandardMaterial({ roughness: 0.7, map: satCanvas(tf, 'sat_hazard', 128, 128, (c, w, h) => {
+      c.fillStyle = '#e1b52c'; c.fillRect(0, 0, w, h); c.fillStyle = '#16171a';
+      for (let k = -2; k < 4; k++) { c.beginPath(); c.moveTo(k * w / 2, h); c.lineTo(k * w / 2 + w / 4, h); c.lineTo(k * w / 2 + w / 4 + h, 0); c.lineTo(k * w / 2 + h, 0); c.closePath(); c.fill(); }
+    }) }));
+    case 'linePaint': return lib.basic('sat:linePaint', () => new THREE.MeshStandardMaterial({ color: 0xd9b32e, roughness: 0.6 }));
+    case 'signA': case 'signC': case 'signW': case 'signE': {
+      const T = { signA: [['保全室 A', 0.42, 0.38], ['SECURITY · A', 0.22, 0.75]], signC: [['保全室 C', 0.42, 0.38], ['SECURITY · C', 0.22, 0.75]],
+        signW: [['◀ 西側走廊', 0.4, 0.38], ['WEST CORRIDOR · ALPHA', 0.2, 0.75]], signE: [['東側走廊 ▶', 0.4, 0.38], ['EAST CORRIDOR · BRAVO', 0.2, 0.75]] }[name];
+      return lib.basic('sat:' + name, () => new THREE.MeshStandardMaterial({ roughness: 0.6, emissive: 0xffffff, emissiveIntensity: 0.35,
+        map: satCanvas(tf, 'sat_' + name, 512, 128, (c, w, h) => satText(c, w, h, T, { bg: '#1b2a33' })), emissiveMap: satCanvas(tf, 'sat_' + name, 512, 128, () => {}) }));
+    }
+    case 'stencilSat': case 'stencilB': {
+      const T = name === 'stencilSat' ? [['SATCOM CONTROL  ·  衛星通訊管制室', 0.62, 0.52]] : [['UPLINK CONTROL  ·  B', 0.62, 0.52]];
+      return lib.basic('sat:' + name, () => new THREE.MeshStandardMaterial({ roughness: 0.8, transparent: true, alphaTest: 0.3, map: satCanvas(tf, 'sat_' + name, 1024, 64, (c, w, h) => satText(c, w, h, T, { color: 'rgba(232,236,232,.85)' })) }));
+    }
+    case 'glowCyan': return glow('glowCyan', [70, 190, 255], false, 0.38);
+    case 'glowRed': return glow('glowRed', [255, 60, 40], false, 0.32);
+    case 'glowWhite': return glow('glowWhite', [200, 230, 255], true, 0.22);
+    case 'lightPanel': return basic('lightPanel', { color: new THREE.Color(0.92, 0.97, 1).multiplyScalar(2.3) });
+    case 'emRed': return basic('emRed', { color: new THREE.Color(3, 0.35, 0.25) });
+    case 'holo': return basic('holo', { color: new THREE.Color(0.35, 0.95, 1.4), transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
+    case 'holoBase': return basic('holoBase', { color: new THREE.Color(0.5, 1.4, 2.0) });
+    case 'glassDark': return lib.basic('sat:glassDark', () => new THREE.MeshStandardMaterial({ color: 0x0b141a, roughness: 0.08, metalness: 0.3, emissive: 0x0c3a4a, emissiveIntensity: 0.8 }));
+    case 'keyboard': return lib.basic('sat:keyboard', () => new THREE.MeshStandardMaterial({ color: 0x1c2125, roughness: 0.75 }));
+    case 'cable': return lib.basic('sat:cable', () => new THREE.MeshStandardMaterial({ color: 0x15171a, roughness: 0.7 }));
+  }
+  return null;
+}
+
+// Swap the placeholders, add the GLB to the scene; the holo globe turns and the telemetry scrolls (per-frame animation).
+function satDressing(b) {
+  const glb = !b.dry && b.def._glb; if (!glb) return false;
+  const sc = glb.scene, holo = [], scroll = new Set();
+  sc.traverse((o) => {
+    if (!o.isMesh) return;
+    const nm = ((o.material && o.material.name) || '').replace(/^sat:/, ''), sp = satSpecialMat(b, nm);
+    o.userData.srcMat = 'sat:' + nm;
+    if (sp) { o.material = sp; if (sp.transparent) { o.renderOrder = 2; o.userData.noAO = true; } if (sp.userData.scroll) scroll.add(sp); }
+    else if (MAT_PRESETS[nm]) o.material = b.lib.get(nm);
+    o.castShadow = !/^(glow|holo|ceil|sign|floor)/.test(o.name); o.receiveShadow = true;
+    if (/^holo/.test(o.name)) holo.push(o); else { o.matrixAutoUpdate = false; o.updateMatrix(); }
+  });
+  sc.updateMatrixWorld(true); b.scene.add(sc);
+  b.animated.push((dt, t) => { for (const o of holo) o.rotation.y = t * 0.35; for (const m of scroll) if (m.map) m.map.offset.y = (t * m.userData.scroll) % 1; });
+  return true;
+}
+/* =====================================================================
    NAV GRAPH — multi-level walkable grid (auto-sampled at every nav
    level), door nodes, stair/ramp chains, largest-component pruning,
    binary-heap A* and string-pulling.
@@ -7627,17 +7832,22 @@ class GunMats {
 /* v45 Blender gun models: assets/guns/guns.js sets window.GUN_GLB[id] = base64 GLB (file:// friendly). Meshes are named
    '<node>__<material>' in gun space; empties SIGHT / MUZZLE / MUZZLE_S mark the sight axis and the two muzzle ends. */
 const GUN_MODELS = {};
+// v53 reload pose of the Blender guns: cant the other way (bottom toward the middle of the screen), swing in and lift, so the
+// magazine well and the left hand working it stay in view (the procedural guns keep RELOAD_POSE, which rolls them away)
+const GLB_RELOAD_POSE = { roll: -0.5, pitch: 0.32, drop: -0.09, shift: 0.08 };
 function loadGunModels() {
   if (loadGunModels.p) return loadGunModels.p;
   return (loadGunModels.p = (async () => {
     try {
       if (!window.GUN_GLB) await new Promise((res) => { const s = document.createElement('script'); s.src = 'assets/guns/guns.js'; s.async = true; s.onload = res; s.onerror = res; document.head.appendChild(s); });
+      const L = new GLTFLoader(), D = new DRACOLoader(); // v49 gunlib exports Draco-compressed GLBs (older ones are plain; both load)
+      D.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/libs/draco/gltf/'); L.setDRACOLoader(D);
       for (const [id, b64] of Object.entries(window.GUN_GLB || {})) {
-        const bin = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0)).buffer, gltf = await new GLTFLoader().parseAsync(bin, ''), parts = [], marks = {};
+        const bin = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0)).buffer, gltf = await L.parseAsync(bin, ''), parts = [], marks = {};
         gltf.scene.updateMatrixWorld(true);
         gltf.scene.traverse((o) => {
           if (o.isMesh) { const g = o.geometry.clone(); g.applyMatrix4(o.matrixWorld); const nm = o.name.split('__'); parts.push({ node: nm[0], mat: ((o.material && o.material.name) || '').replace('gun:', '') || (nm[1] || '').replace(/_\d+$/, ''), geo: g }); }
-          else if (/^(SIGHT|HOOD|MUZZLE|MUZZLE_S|SUPPORT|GRIP)$/.test(o.name)) marks[o.name] = o.getWorldPosition(new THREE.Vector3());
+          else if (/^(SIGHT|HOOD|MUZZLE|MUZZLE_S|SUPPORT|GRIP|MAGPIV|CHARGEPIV|BOLTPIV)$/.test(o.name)) marks[o.name] = o.getWorldPosition(new THREE.Vector3());
         });
         GUN_MODELS[id] = { parts, marks };
       }
@@ -7818,12 +8028,12 @@ class WeaponModels {
     gb.add(c, this.M.glove, node);
   }
   // Gloved hand wrapped around a vertical grip (pistol grip).
-  gripHand(gb, x, y, u, tilt, trigger = true) {
+  gripHand(gb, x, y, u, tilt, trigger = true, node = 'body') {
     const M = this.M;
-    gb.box(0.05, 0.075, 0.07, x + 0.004, y, -u, M.glove, 'body', 0.018, tilt, 0, 0);
-    for (let i = 0; i < 3; i++) gb.box(0.056, 0.017, 0.028, x, y - 0.024 + i * 0.019, -(u + 0.036), M.glove, 'body', 0.007, tilt, 0, 0);
-    gb.box(0.018, 0.018, 0.05, x - 0.022, y + 0.03, -(u + 0.012), M.glove, 'body', 0.008, 0.3, 0.25, 0);
-    if (trigger) gb.box(0.014, 0.014, 0.045, x - 0.004, y + 0.04, -(u + 0.05), M.glove, 'body', 0.006, 0.15, 0, 0);
+    gb.box(0.05, 0.075, 0.07, x + 0.004, y, -u, M.glove, node, 0.018, tilt, 0, 0);
+    for (let i = 0; i < 3; i++) gb.box(0.056, 0.017, 0.028, x, y - 0.024 + i * 0.019, -(u + 0.036), M.glove, node, 0.007, tilt, 0, 0);
+    gb.box(0.018, 0.018, 0.05, x - 0.022, y + 0.03, -(u + 0.012), M.glove, node, 0.008, 0.3, 0.25, 0);
+    if (trigger) gb.box(0.014, 0.014, 0.045, x - 0.004, y + 0.04, -(u + 0.05), M.glove, node, 0.006, 0.15, 0, 0);
   }
   // Support hand under a handguard, fingers wrapping the left side.
   supportHand(gb, x, y, u, w = 0.046, node = 'body') {
@@ -7833,8 +8043,45 @@ class WeaponModels {
     gb.box(0.016, 0.03, 0.05, x + w / 2 + 0.004, y - 0.004, -(u + 0.01), M.glove, node, 0.007, 0, 0, -0.2);
   }
 
+  // v49 any Blender gun built with tools/blender/gunlib.py: '<node>__<material>' parts, hands on GRIP / SUPPORT, sight axis at
+  // SIGHT, eye relief from HOOD, mag / charge / bolt pivots at MAGPIV / CHARGEPIV / BOLTPIV. o: skip(node) drops a variant
+  // node, muzzle ('MUZZLE_S' …), hip, eye, flash, reticle (false for scopes), reticleScale, eyeRelief, supportW (handguard
+  // width the left hand wraps), supportGrip (left hand on a vertical front grip instead of under a handguard), magMove /
+  // magRot (reload path of the mag node), reloadPose / boltPose, chargePiv (when the GLB has no CHARGEPIV), magGrip /
+  // chargeGrip (where the left hand takes hold, relative to those pivots). Returns null until the GLB has loaded.
+  fromGLB(id, o = {}) {
+    const G = GUN_MODELS[id]; if (!G || !G.marks.SIGHT) return null;
+    const M = this.M, gb = new GunBuilder(M), K = G.marks;
+    const V = THREE.Vector3, magPiv = K.MAGPIV || new V(0, -0.035, -0.03), chPiv = o.chargePiv ? new V(...o.chargePiv) : K.CHARGEPIV || new V(0, 0.024, 0.13);
+    gb.node('mag', magPiv).node('charge', chPiv);
+    if (K.BOLTPIV) gb.node('bolt', K.BOLTPIV); // v50 bolt action: rolls up around the bore and slides back (SniperRifle.animate)
+    const MOVING = new Set(['mag', 'charge', ...(K.BOLTPIV ? ['bolt'] : [])]);
+    const MAT = { tan: M.tan, magClear: M.magClear, gold: M.goldSatin, goldDark: M.goldDark, polymer: M.polymer, rubber: M.rubber, steel: M.steel, black: M.black, bright: M.bright, magBlack: M.magBlack, brass: M.brass, suppressor: M.suppressor, dotW: M.dotW, dotR: M.dotR };
+    for (const p of G.parts) {
+      if (p.mat === 'lens' || (o.skip && o.skip(p.node))) continue;
+      gb.add(p.geo.clone(), MAT[p.mat] || M.black, MOVING.has(p.node) ? p.node : 'body');
+    }
+    const sightY = K.SIGHT.y, mz = K[o.muzzle || 'MUZZLE'] || K.MUZZLE, gu = K.GRIP ? -K.GRIP.z : 0.078, su = K.SUPPORT ? -K.SUPPORT.z : 0.3, sv = K.SUPPORT ? K.SUPPORT.y : -0.028;
+    this.arm(gb, [0.02, -0.115, gu + 0.03], [0.19, -0.3, gu + 0.36]); this.gripHand(gb, 0.001, -0.082, -gu, -0.36);
+    gb.node('lhand', new V(0, sv, -su)); // v53 left hand + forearm on their own node: reloads move them (Weapon.animate)
+    if (o.supportGrip) { this.arm(gb, [-0.036, sv - 0.035, -su + 0.03], [-0.3, -0.32, -su + 0.3], 0.033, 'lhand'); this.gripHand(gb, -0.004, sv, su, -0.08, false, 'lhand'); }
+    else { this.arm(gb, [-0.038, sv - 0.032, -su], [-0.3, -0.3, -su + 0.3], 0.033, 'lhand'); this.supportHand(gb, 0, sv + 0.028, su, o.supportW || 0.046, 'lhand'); }
+    const b = gb.build(), hoodU = K.HOOD ? -K.HOOD.z : -K.SIGHT.z - 0.025;
+    const vm = this._finish(b, { muzzleU: -mz.z, sightY, hipPos: o.hip || [0.14, -0.175, -0.36], adsPos: [0, -sightY, hoodU - (o.eye ?? 0.08)], flash: o.flash ?? 0.2, reticle: o.reticle ?? true, reticleScale: o.reticleScale ?? 0.75, magMove: o.magMove, magRot: o.magRot });
+    if (o.eyeRelief) vm.eyeRelief = o.eyeRelief;
+    vm.reloadPose = o.reloadPose || GLB_RELOAD_POSE;
+    if (o.boltPose) vm.boltPose = o.boltPose;
+    vm.lhand = b.nodes.lhand || null;
+    const mg = o.magGrip || [0, -0.1, 0], cg = o.chargeGrip || [-0.035, 0, 0];
+    vm.lhandMag = new V(magPiv.x + mg[0], magPiv.y + mg[1], magPiv.z + mg[2]);
+    vm.lhandCharge = b.nodes.charge && b.nodes.charge.children.length ? new V(chPiv.x + cg[0], chPiv.y + cg[1], chPiv.z + cg[2]) : null; // no handle: the hand goes straight back
+    return vm;
+  }
+
   /* ------------------------------------------------------------------ */
-  m4() {
+  // v49 M4A1 from Blender (tools/blender/m4a1_build.py); the procedural one below stays as the fallback
+  m4() { return this.fromGLB('m4a1', { eye: 0.2, eyeRelief: 0.03 }) || this.m4Proc(); } // eye 20 cm behind the hood: the holo frame fills about a quarter of the view
+  m4Proc() {
     const M = this.M, gb = new GunBuilder(M);
     gb.node('mag', new THREE.Vector3(0, -0.035, -0.03)).node('charge', new THREE.Vector3(0, 0.024, 0.13));
     gb.prof([[-0.13, -0.012], [0.12, -0.012], [0.12, 0.026], [0.1, 0.029], [-0.11, 0.029], [-0.13, 0.024]], 0.03, M.black);
@@ -7873,24 +8120,9 @@ class WeaponModels {
   // v45 Gold G36C from Blender (tools/blender/g36c_build.py): flat-top rail + gold EOTech 552, vented handguard,
   // skeleton side-folder, black magazine; def.suppressed picks the engraved can or the four-prong flash hider.
   g36c(def) {
-    const G = GUN_MODELS.g36c; if (!G || !G.marks.SIGHT) return this.g36cProc(def);
-    const M = this.M, gb = new GunBuilder(M), sup = !def || def.suppressed !== false;
-    gb.node('mag', new THREE.Vector3(0, -0.035, -0.03)).node('charge', new THREE.Vector3(0, 0.045, -0.07));
-    const MAT = { gold: M.goldSatin, goldDark: M.goldDark, polymer: M.polymer, rubber: M.rubber, steel: M.steel, black: M.black, bright: M.bright, magBlack: M.magBlack, brass: M.brass, suppressor: M.suppressor, dotW: M.dotW, dotR: M.dotR };
-    for (const p of G.parts) {
-      if ((p.node === 'supp' && !sup) || (p.node === 'hider' && sup)) continue;
-      const node = p.node === 'mag' || p.node === 'charge' ? p.node : 'body';
-      if (p.mat === 'lens') continue; // v45: no tinted glass layer — SF2's holo window is clean
-      gb.add(p.geo.clone(), MAT[p.mat] || M.gold, node);
-    }
-    const K = G.marks, sightY = K.SIGHT.y, mz = sup ? K.MUZZLE_S : K.MUZZLE, gu = K.GRIP ? -K.GRIP.z : 0.078, su = K.SUPPORT ? -K.SUPPORT.z : 0.3, sv = K.SUPPORT ? K.SUPPORT.y : -0.028;
-    this.arm(gb, [0.02, -0.115, gu + 0.03], [0.19, -0.3, gu + 0.36]); this.gripHand(gb, 0.001, -0.082, -gu, -0.36);
-    this.arm(gb, [-0.038, sv - 0.032, -su], [-0.3, -0.3, -su + 0.3], 0.033); this.supportHand(gb, 0, sv + 0.028, su, 0.046);
-    const b = gb.build();
-    // SF2 EOTech ADS: the eye sits a few cm behind the hood so its gold rim frames the view (adsPos.z puts the hood rear at EYE)
-    const EYE = 0.08, hoodU = K.HOOD ? -K.HOOD.z : -K.SIGHT.z - 0.025;
-    const vm = this._finish(b, { muzzleU: -mz.z, sightY, hipPos: [0.14, -0.175, -0.36], adsPos: [0, -sightY, hoodU - EYE], flash: sup ? 0.08 : 0.2, reticle: true, reticleScale: 0.75 });
-    vm.eyeRelief = 0.03; return vm;
+    const sup = !def || def.suppressed !== false; // def.suppressed picks the engraved can or the four-prong flash hider
+    return this.fromGLB('g36c', { skip: (n) => (n === 'supp' && !sup) || (n === 'hider' && sup), muzzle: sup ? 'MUZZLE_S' : 'MUZZLE', eye: 0.08, flash: sup ? 0.08 : 0.2,
+      eyeRelief: 0.03, chargePiv: [0, 0.045, -0.07] }) || this.g36cProc(def); // SF2 EOTech ADS: the eye sits 8 cm behind the hood so its gold rim frames the view
   }
   g36cProc() {
     const M = this.M, gb = new GunBuilder(M);
@@ -7963,7 +8195,9 @@ class WeaponModels {
     return this._finish(b, { muzzleU: 0.37, sightY: 0.045, hipPos: [0.125, -0.13, -0.32], adsPos: [0, -0.045, -0.13], flash: 0.17 });
   }
 
-  m200() {
+  // v50 CheyTac M200 from Blender (tools/blender/m200_build.py): bolt node with its own pivot; procedural one kept as fallback
+  m200() { return this.fromGLB('m200', { hip: [0.14, -0.15, -0.36], eye: 0.06, flash: 0.32, reticle: false, supportW: 0.056, boltPose: { roll: 0.34, drop: 0.004, shift: 0.07 } }) || this.m200Proc(); }
+  m200Proc() {
     const M = this.M, gb = new GunBuilder(M);
     gb.node('mag', new THREE.Vector3(0, -0.04, -0.02)).node('bolt', new THREE.Vector3(0.03, 0.02, 0.11));
     gb.prof([[-0.15, -0.035], [0.2, -0.035], [0.2, 0.03], [-0.15, 0.03]], 0.05, M.black, 'body', { bevel: 0.005 });
@@ -8020,7 +8254,13 @@ class WeaponModels {
     return this._finish(b, { muzzleU: 0.11, sightY: 0.0365, hipPos: [0.095, -0.1, -0.27], adsPos: [0, -0.0365, -0.25], flash: 0.13, slide: true });
   }
 
-  p90() { // bullpup PDW: tan shell, thumbhole grips, translucent 50-round top magazine, integrated reflex sight
+  // v51 FN P90 from Blender (tools/blender/p90_build.py). Top magazine: pivot at its FRONT end, the rear lifts first and the
+  // mag slides back off (magRot < 0 raises the rear); the gun tips its muzzle up so the top stays in view while reloading.
+  p90() {
+    return this.fromGLB('p90', { hip: [0.125, -0.13, -0.3], eye: 0.11, flash: 0.14, reticle: 'dot', supportGrip: true, magMove: [0, 0.06, 0.08], magRot: -0.28, magGrip: [0, 0.035, 0.11],
+      reloadPose: { roll: 0.12, pitch: 0.42, drop: -0.015, shift: 0.05 } }) || this.p90Proc();
+  }
+  p90Proc() { // bullpup PDW: tan shell, thumbhole grips, translucent 50-round top magazine, integrated reflex sight
     const M = this.M, gb = new GunBuilder(M);
     gb.node('mag', new THREE.Vector3(0, 0.056, 0.05)).node('charge', new THREE.Vector3(0.03, 0.02, -0.13));
     gb.prof([[-0.26, -0.05], [-0.26, 0.028], [-0.2, 0.042], [0.12, 0.042], [0.168, 0.022], [0.178, -0.02], [0.16, -0.05]], 0.056, M.tan, 'body', { bevel: 0.007 });
@@ -9316,13 +9556,19 @@ class Weapon {
     this.queued = 0; this.autoReloadT = 0; this.flashT = 0; this.slideKick = 0; this.cur = 0;
     this.magBase = vm.mag ? vm.mag.position.clone() : null;
     this.chargeBase = vm.charge ? vm.charge.position.clone() : null;
+    this.lhandBase = vm.lhand ? vm.lhand.position.clone() : null;
   }
   get local() { return this.owner === this.game.player; }
   get scoped() { return this.adsType === '2d_scope_overlay'; }
-  resetAmmo() { this.ammo = this.def.mag || 0; this.reserveAmmo = this.def.reserve || 0; this.shotN = 0; }
+  resetAmmo() { this.ammo = this.def.mag || 0; this.reserveAmmo = this.def.reserve || 0; this.shotN = 0; this.cooldown = 0; this.bloom = 0; this.cur = 0; this.shots = 0; }
+  // v47: drawing keeps a pending fire cooldown (it runs down while holstered too, see Arsenal.tick), so swapping out and
+  // back can no longer skip a bolt / pump / semi-auto interval. Only respawn (resetAmmo) clears it. A negative auto-fire
+  // carry is dropped so the draw never fires a catch-up burst.
+  // v48: likewise the spray state (bloom, cur, spray index) is kept and keeps recovering while holstered (recover()).
   equip() {
-    this.cooldown = 0; this.reloading = false; this.reloadT = 0; this.bloom = 0; this.cur = 0; this.shots = 0; this.queued = 0; this.autoReloadT = 0; this.flashT = 0;
+    this.cooldown = Math.max(this.cooldown, 0); this.reloading = false; this.reloadT = 0; this.queued = 0; this.autoReloadT = 0; this.flashT = 0;
     if (this.vm.mag) { this.vm.mag.position.copy(this.magBase); this.vm.mag.rotation.set(0, 0, 0); }
+    if (this.vm.lhand && this.lhandBase) this.vm.lhand.position.copy(this.lhandBase);
     if (this.vm.cover) this.vm.cover.rotation.x = 0;
     if (this.ammo === 0 && this.reserveAmmo > 0) this.autoReloadT = 0.2; // auto reload an empty gun on draw
   }
@@ -9441,11 +9687,15 @@ class Weapon {
   tick(h, ws) {
     this.cooldown -= h;
     if (!ws.trigger && this.cooldown < 0) this.cooldown = 0;
+    this.recover(h, ws);
+    if (this.autoReloadT > 0) { this.autoReloadT -= h; if (this.autoReloadT <= 0 && this.tryReload()) ws.setAds(false, true); }
+    this._reload(h);
+  }
+  // spread recovery; Arsenal.tick also runs it for holstered guns, so a swap neither resets nor freezes the spray state
+  recover(h, ws) {
     const spraying = ws.clock - this.lastShot < (this.interval || 0.1) * 1.6; // bloom only recovers once you stop spraying
     this.bloom = damp(this.bloom, 0, spraying ? 1 : (this.spreadRecover || 5), h);
     if (!spraying) { this.cur = damp(this.cur, 0, 11, h); if (this.cur < 2e-4) this.cur = 0; } // quick recenter to a perfect first shot
-    if (this.autoReloadT > 0) { this.autoReloadT -= h; if (this.autoReloadT <= 0 && this.tryReload()) ws.setAds(false, true); }
-    this._reload(h);
   }
   // local viewmodel, once per rendered frame
   animate(dt, ws) {
@@ -9453,17 +9703,28 @@ class Weapon {
     this.slideKick = damp(this.slideKick, 0, 18, dt);
     const vm = this.vm, p = this.reloadPhase;
     if (vm.mag && this.magBase) {
-      let off = 0;
-      if (p > 0.15 && p < 0.35) off = (p - 0.15) / 0.2; else if (p >= 0.35 && p < 0.55) off = 1; else if (p >= 0.55 && p < 0.72) off = 1 - (p - 0.55) / 0.17;
+      const off = this.magOff(p);
       vm.mag.position.copy(this.magBase).addScaledVector(vm.magMove, off);
       vm.mag.rotation.x = off * vm.magRot;
     }
     if (vm.cover) { const k = p > 0.08 && p < 0.9 ? Math.min(1, (p - 0.08) / 0.1, (0.9 - p) / 0.1) : 0; vm.cover.rotation.x = k * 0.9; }
+    if (vm.lhand && this.lhandBase && vm.lhandMag) { // v53 the left hand fetches the mag, rides it out and back in, then works the charging handle
+      const L = vm.lhand.position, sm = (t) => t * t * (3 - 2 * t), magAt = (o) => TMP_V1.copy(vm.lhandMag).addScaledVector(vm.magMove, o), ch = vm.lhandCharge;
+      if (p <= 0) L.copy(this.lhandBase);
+      else if (p < 0.12) L.lerpVectors(this.lhandBase, magAt(0), sm(p / 0.12));
+      else if (p < 0.72) L.copy(magAt(this.magOff(p)));
+      else if (!ch) L.lerpVectors(magAt(0), this.lhandBase, sm(Math.min(1, (p - 0.72) / 0.12)));
+      else if (p < 0.8) L.lerpVectors(magAt(0), ch, sm((p - 0.72) / 0.08));
+      else if (p < 0.92) { L.copy(ch); L.z += Math.sin((p - 0.8) / 0.12 * Math.PI) * 0.05; } // pulls with the handle (see vm.charge below)
+      else L.lerpVectors(ch, this.lhandBase, sm((p - 0.92) / 0.08));
+    }
     if (vm.charge && this.chargeBase) {
       const k = p > 0.8 && p < 0.92 ? Math.sin((p - 0.8) / 0.12 * Math.PI) : 0;
       vm.charge.position.z = this.chargeBase.z + k * 0.05;
     }
   }
+  // magazine travel over the reload: out 0.15–0.35, away 0.35–0.55, back in 0.55–0.72
+  magOff(p) { return p > 0.15 && p < 0.35 ? (p - 0.15) / 0.2 : p >= 0.35 && p < 0.55 ? 1 : p >= 0.55 && p < 0.72 ? 1 - (p - 0.55) / 0.17 : 0; }
   _reload(h) {
     if (!this.reloading) return;
     this.reloadT += h;
@@ -9614,7 +9875,7 @@ class Knife extends Weapon {
 const THROW = { base: 7.2, lobBase: 4.6, chargeTime: 0.7, pinTime: 0.25, maxPower: 3.0, loft: 0.16 }; // full charge ≈ 1.0 s (pin 0.25 + draw 0.7)
 class GrenadeWeapon extends Weapon {
   constructor(game, def, vm, owner) { super(game, def, vm, owner); this.count = def.count; this.state = 'idle'; this.t = 0; this.lob = false; this.releaseQueued = false; this.chargeT = 0; }
-  resetAmmo() { this.count = this.def.count; this.shotN = 0; }
+  resetAmmo() { this.count = this.def.count; this.shotN = 0; this.cooldown = 0; }
   equip() { super.equip(); this.state = 'idle'; this.t = 0; this.releaseQueued = false; this.chargeT = 0; if (this.vm.pin) this.vm.pin.visible = true; }
   holster() { super.holster(); this.state = 'idle'; this.chargeT = 0; }
   spread() { return 0.01; }
@@ -9712,13 +9973,14 @@ class Arsenal {
   // Force-leave ADS on the CURRENT weapon.
   exitADS() { this.zoomLevel = 0; this.ads = false; this.adsT = 0; this.unscopeT = 0; this.scopedIn = false; this.scopeLevel = 0; }
 
-  // QUICK CHANGE: instant swap, cancels cooldown/bolt/reload, resets recoil.
+  // QUICK CHANGE: instant swap, cancels the reload (no refill) and the bolt / pump animation. v47: a pending fire cooldown
+  // is NOT cancelled; it keeps running down while the gun is holstered. v48: neither is recoil: the camera kick recovers
+  // as usual (Player.update) and each gun's spread / spray index keeps recovering while holstered (Weapon.recover).
   switchTo(i) {
     if (i === this.index || !this.selectable(i) || !this.owner.alive) return;
     this.exitADS(); // scope bug fix: leave ADS BEFORE the index changes (wheel / number keys / Q)
     const old = this.current; old.holster(); old.vm.group.visible = false;
     this.lastIndex = this.index; this.index = i;
-    if (this.owner.resetRecoil) this.owner.resetRecoil();
     const w = this.current; w.equip(); w.vm.group.visible = true; this.drawT = 1; this.trigger = false;
     this.onSwitch();
   }
@@ -9800,6 +10062,7 @@ class Arsenal {
     } else this.trigger = false;
     const w = this.current;
     w.tick(h, this);
+    for (const o of this.weapons) if (o !== w) { if (o.cooldown > 0) o.cooldown = Math.max(0, o.cooldown - h); o.recover(h, this); } // holstered guns still finish their cooldown and recover
     if (this.grabCd > 0) this.grabCd -= h;
     if (this.grabT > 0) { this.grabT += h; if (!this.grabHit && this.grabT >= 0.12) { this.grabHit = true; this._grabHit(); } if (this.grabT >= 0.45) this.grabT = 0; }
     if (w.kind !== 'knife' && w.kind !== 'grenade' && this.grabT <= 0) {
@@ -9822,6 +10085,8 @@ class Arsenal {
    walls, but at the camera's WORLD transform and sharing the world sun's shadow map), ADS FOV, scope overlay, sprint pose,
    spring-damper kick, bob/sway, reload/bolt/knife/grenade animations, crosshair.
    ===================================================================== */
+// v50/v51 default reload and bolt-cycle poses; a viewmodel may carry its own (vm.reloadPose / vm.boltPose, see ViewModels.fromGLB)
+const RELOAD_POSE = { roll: 0.55, pitch: 0.2, drop: 0.03, shift: 0.02 }, BOLT_POSE = { roll: 0.22, drop: 0.012, shift: 0 };
 class WeaponSystem extends Arsenal {
   constructor(game, defs) {
     super(game, game.player);
@@ -10011,8 +10276,10 @@ class WeaponSystem extends Arsenal {
     const sk = this.game.player.slideK || 0; if (sk > 0.01) { pos.x -= 0.025 * sk * (1 - this.adsT); pos.y -= 0.015 * sk; ez += 0.32 * sk * (1 - this.adsT * 0.7); } // v14 slide tilt
     if (this.sprintT > 0.01 && w.kind !== 'knife') { const s = this.sprintT; pos.x -= 0.03 * s; pos.y -= 0.045 * s; pos.z += 0.02 * s; ex -= 0.32 * s; ey += 0.62 * s; ez += 0.28 * s; }
     if (this.drawT > 0) { this.drawT = Math.max(0, this.drawT - dt / 0.22); const e = this.drawT * this.drawT; pos.y -= 0.13 * e; ex -= 0.7 * e; ez += 0.2 * e; }
-    if (w.reloading && !(w.kind === 'shotgun' && w.shellReload)) { const s = Math.sin(Math.PI * w.reloadPhase); ez += 0.55 * s; ex += 0.2 * s; pos.y -= 0.03 * s; pos.x -= 0.02 * s; }
-    if (w.kind === 'sniper' && w.boltPhase > 0) { const b = w.boltPhase; ez += 0.22 * b; ex += 0.06 * b; pos.y -= 0.012 * b; }
+    if (w.reloading && !(w.kind === 'shotgun' && w.shellReload)) { const s = Math.sin(Math.PI * w.reloadPhase), rp = vm.reloadPose || RELOAD_POSE; ez += rp.roll * s; ex += rp.pitch * s; pos.y -= rp.drop * s; pos.x -= rp.shift * s; } // v51: per viewmodel (vm.reloadPose)
+    if (w.kind === 'sniper' && w.boltPhase > 0) { // bolt cycle pose; v50: per viewmodel (vm.boltPose) — the M200 swings in so its bolt shows
+      const b = w.boltPhase, bp = vm.boltPose || BOLT_POSE; ez += bp.roll * b; ex += 0.06 * b; pos.y -= bp.drop * b; pos.x -= bp.shift * b;
+    }
     if (w.kind === 'shotgun') {
       const k = w.pumpPhase; ex += 0.05 * k; pos.z += 0.012 * k;
       if (w.reloading && w.shellReload) { ez += 0.45; ex += 0.22; pos.y -= 0.03 + (w.shellBob || 0) * 0.012; pos.x -= 0.02; }
@@ -15217,7 +15484,7 @@ class App {
 try {
   const app = new App();
   window.app = app;
-  window.SF2 = { THREE, Settings, MAPS, WEAPON_DEFS, WEAPON_DATABASE, CFG, MODES, RULES, calcDamage, loadoutDefs, LOOK_DEFAULT, resolveLook, CAO }; // debug handle for the console
+  window.SF2 = { THREE, Settings, MAPS, WEAPON_DEFS, WEAPON_DATABASE, CFG, MODES, RULES, calcDamage, loadoutDefs, LOOK_DEFAULT, resolveLook, CAO, AudioEngine, GUN_PROFILES }; // debug handle for the console
   window.SF2net = { Friends, NetHost, NetClient, LoopbackTransport, NetCodec, RoomDirectory, RtcHostTransport, RtcClientTransport, BackgroundTicker, RoomHost, RoomGuest, RoomLink, inviteLink, parseCode, fmtCode, roomCode, roomCfgSafe, ONLINE, host: (room, o = {}) => new NetHost(app, app.match, new LoopbackTransport(room, o)), join: (room, o = {}) => app.netJoin(room, o) }; // v25 tests
   window.__gameReady = true;
   document.getElementById('boot').classList.add('done');

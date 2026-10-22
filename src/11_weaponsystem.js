@@ -54,13 +54,14 @@ class Arsenal {
   // Force-leave ADS on the CURRENT weapon.
   exitADS() { this.zoomLevel = 0; this.ads = false; this.adsT = 0; this.unscopeT = 0; this.scopedIn = false; this.scopeLevel = 0; }
 
-  // QUICK CHANGE: instant swap, cancels cooldown/bolt/reload, resets recoil.
+  // QUICK CHANGE: instant swap, cancels the reload (no refill) and the bolt / pump animation. v47: a pending fire cooldown
+  // is NOT cancelled; it keeps running down while the gun is holstered. v48: neither is recoil: the camera kick recovers
+  // as usual (Player.update) and each gun's spread / spray index keeps recovering while holstered (Weapon.recover).
   switchTo(i) {
     if (i === this.index || !this.selectable(i) || !this.owner.alive) return;
     this.exitADS(); // scope bug fix: leave ADS BEFORE the index changes (wheel / number keys / Q)
     const old = this.current; old.holster(); old.vm.group.visible = false;
     this.lastIndex = this.index; this.index = i;
-    if (this.owner.resetRecoil) this.owner.resetRecoil();
     const w = this.current; w.equip(); w.vm.group.visible = true; this.drawT = 1; this.trigger = false;
     this.onSwitch();
   }
@@ -142,6 +143,7 @@ class Arsenal {
     } else this.trigger = false;
     const w = this.current;
     w.tick(h, this);
+    for (const o of this.weapons) if (o !== w) { if (o.cooldown > 0) o.cooldown = Math.max(0, o.cooldown - h); o.recover(h, this); } // holstered guns still finish their cooldown and recover
     if (this.grabCd > 0) this.grabCd -= h;
     if (this.grabT > 0) { this.grabT += h; if (!this.grabHit && this.grabT >= 0.12) { this.grabHit = true; this._grabHit(); } if (this.grabT >= 0.45) this.grabT = 0; }
     if (w.kind !== 'knife' && w.kind !== 'grenade' && this.grabT <= 0) {
@@ -164,6 +166,8 @@ class Arsenal {
    walls, but at the camera's WORLD transform and sharing the world sun's shadow map), ADS FOV, scope overlay, sprint pose,
    spring-damper kick, bob/sway, reload/bolt/knife/grenade animations, crosshair.
    ===================================================================== */
+// v50/v51 default reload and bolt-cycle poses; a viewmodel may carry its own (vm.reloadPose / vm.boltPose, see ViewModels.fromGLB)
+const RELOAD_POSE = { roll: 0.55, pitch: 0.2, drop: 0.03, shift: 0.02 }, BOLT_POSE = { roll: 0.22, drop: 0.012, shift: 0 };
 class WeaponSystem extends Arsenal {
   constructor(game, defs) {
     super(game, game.player);
@@ -353,8 +357,10 @@ class WeaponSystem extends Arsenal {
     const sk = this.game.player.slideK || 0; if (sk > 0.01) { pos.x -= 0.025 * sk * (1 - this.adsT); pos.y -= 0.015 * sk; ez += 0.32 * sk * (1 - this.adsT * 0.7); } // v14 slide tilt
     if (this.sprintT > 0.01 && w.kind !== 'knife') { const s = this.sprintT; pos.x -= 0.03 * s; pos.y -= 0.045 * s; pos.z += 0.02 * s; ex -= 0.32 * s; ey += 0.62 * s; ez += 0.28 * s; }
     if (this.drawT > 0) { this.drawT = Math.max(0, this.drawT - dt / 0.22); const e = this.drawT * this.drawT; pos.y -= 0.13 * e; ex -= 0.7 * e; ez += 0.2 * e; }
-    if (w.reloading && !(w.kind === 'shotgun' && w.shellReload)) { const s = Math.sin(Math.PI * w.reloadPhase); ez += 0.55 * s; ex += 0.2 * s; pos.y -= 0.03 * s; pos.x -= 0.02 * s; }
-    if (w.kind === 'sniper' && w.boltPhase > 0) { const b = w.boltPhase; ez += 0.22 * b; ex += 0.06 * b; pos.y -= 0.012 * b; }
+    if (w.reloading && !(w.kind === 'shotgun' && w.shellReload)) { const s = Math.sin(Math.PI * w.reloadPhase), rp = vm.reloadPose || RELOAD_POSE; ez += rp.roll * s; ex += rp.pitch * s; pos.y -= rp.drop * s; pos.x -= rp.shift * s; } // v51: per viewmodel (vm.reloadPose)
+    if (w.kind === 'sniper' && w.boltPhase > 0) { // bolt cycle pose; v50: per viewmodel (vm.boltPose) — the M200 swings in so its bolt shows
+      const b = w.boltPhase, bp = vm.boltPose || BOLT_POSE; ez += bp.roll * b; ex += 0.06 * b; pos.y -= bp.drop * b; pos.x -= bp.shift * b;
+    }
     if (w.kind === 'shotgun') {
       const k = w.pumpPhase; ex += 0.05 * k; pos.z += 0.012 * k;
       if (w.reloading && w.shellReload) { ez += 0.45; ex += 0.22; pos.y -= 0.03 + (w.shellBob || 0) * 0.012; pos.x -= 0.02; }

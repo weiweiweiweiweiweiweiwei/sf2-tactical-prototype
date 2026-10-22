@@ -1,0 +1,2166 @@
+{
+  "schemaVersion": 2,
+  "updated": "2026-10-21",
+  "audit": "Round 2: every value re-graded by how its source was actually read. No src/ change.",
+  "about": "Evidence-backed reference values for Special Force 2. Research data only; nothing here is applied to src/ automatically.",
+  "legend": {
+    "status": {
+      "confirmed": "Original source read directly AND either an official text or two independent directly-read sources agree.",
+      "provisional": "Original source read directly, but only one source (or a pre-release build).",
+      "unverified": "Only seen through a search-engine or model summary; the original page was not opened.",
+      "estimated": "Our own calculation; carries a stated error. Never SF2 data.",
+      "unknown": "No usable evidence. Do not fill with assumptions."
+    },
+    "access": {
+      "direct-read": "raw page text read by us",
+      "search-snippet": "search-engine result summary",
+      "model-summary": "page fetched but read through a summarising model"
+    },
+    "uiRating": "SF2 shows four 0-100 bars per gun. They are relative UI scores; no evidence ties them to HP damage or RPM. EU wiki shows recoil as 100 − real; Inven 반동 is the real value.",
+    "origin": {
+      "sf2Data": "confirmed / provisional / unverified values",
+      "ourEstimate": "estimated values",
+      "designDefault": "values in src/ that have no SF2 evidence"
+    }
+  },
+  "sources": {
+    "inven-2011-weapons": {
+      "title": "스페셜포스2에는 어떤 무기가? | 웹진 인벤",
+      "url": "https://www.inven.co.kr/webzine/news/?news=37641",
+      "author": "인벤팀",
+      "published": "2011-08-04 11:12",
+      "version": "KR build shown before the 2011-08-11 open beta",
+      "access": "direct-read (raw HTML via curl, 2026-10-21)",
+      "independence": "Press article, probably from publisher material; KR pre-OBT."
+    },
+    "eu-wiki": {
+      "title": "S.K.I.L.L. Special Force 2 Wiki (Fandom)",
+      "url": "https://skill-special-force-2.fandom.com/wiki/S.K.I.L.L._Special_Force_2_Wiki",
+      "published": "pages about 2022-2024 per search metadata",
+      "version": "EU S.K.I.L.L. live client",
+      "access": "search-snippet only (WebFetch HTTP 402; browser blocked by site permissions; not bypassed)",
+      "independence": "Fan wiki, EU build. Could have copied KR data, so agreement with Inven is not proof of independence.",
+      "license": "CC-BY-SA"
+    },
+    "inven-2011-preview": {
+      "title": "더 쉽고 더 빠르고 리얼한 FPS, 스페셜포스2 프리뷰 (Inven)",
+      "url": "https://www.inven.co.kr/webzine/news/?news=37628",
+      "access": "search-snippet only"
+    },
+    "local-twn-client": {
+      "title": "TWN client notice files",
+      "url": "file:///D:/SpecialForce2/SFGame/Publishing/",
+      "version": "TWN (樂意傳播), files dated 2021-2024",
+      "access": "direct-read"
+    }
+  },
+  "weapons": {
+    "m4a1": {
+      "sf2Name": "M4A1",
+      "class": "assault",
+      "ourId": "m4a1",
+      "modelMatch": "same model",
+      "uiRating": {
+        "damage": {
+          "value": 56,
+          "status": "provisional",
+          "evidence": [
+            {
+              "source": "inven-2011-weapons",
+              "url": "https://www.inven.co.kr/webzine/news/?news=37641",
+              "access": "direct-read",
+              "quote": "● M4A1 … 능력치 : 데미지 56, 연사력 73, 반동 46, 정확도 73"
+            },
+            {
+              "source": "eu-wiki",
+              "url": "https://skill-special-force-2.fandom.com/wiki/M4A1",
+              "access": "search-snippet",
+              "quote": "Damage: 56; Recoil: 54 (46 Real number); Fire Rate: 73; Accuracy: 76",
+              "note": "Search-engine summary of the page; the page itself was not opened."
+            }
+          ],
+          "confidence": "medium",
+          "crossCheck": "EU wiki snippet shows the same value (unverified, so this does not raise the status)"
+        },
+        "fireRate": {
+          "value": 73,
+          "status": "provisional",
+          "evidence": [
+            {
+              "source": "inven-2011-weapons",
+              "url": "https://www.inven.co.kr/webzine/news/?news=37641",
+              "access": "direct-read",
+              "quote": "● M4A1 … 능력치 : 데미지 56, 연사력 73, 반동 46, 정확도 73"
+            },
+            {
+              "source": "eu-wiki",
+              "url": "https://skill-special-force-2.fandom.com/wiki/M4A1",
+              "access": "search-snippet",
+              "quote": "Damage: 56; Recoil: 54 (46 Real number); Fire Rate: 73; Accuracy: 76",
+              "note": "Search-engine summary of the page; the page itself was not opened."
+            }
+          ],
+          "confidence": "medium",
+          "crossCheck": "EU wiki snippet shows the same value (unverified, so this does not raise the status)"
+        },
+        "recoilReal": {
+          "value": 46,
+          "status": "provisional",
+          "evidence": [
+            {
+              "source": "inven-2011-weapons",
+              "url": "https://www.inven.co.kr/webzine/news/?news=37641",
+              "access": "direct-read",
+              "quote": "● M4A1 … 능력치 : 데미지 56, 연사력 73, 반동 46, 정확도 73"
+            },
+            {
+              "source": "eu-wiki",
+              "url": "https://skill-special-force-2.fandom.com/wiki/M4A1",
+              "access": "search-snippet",
+              "quote": "Damage: 56; Recoil: 54 (46 Real number); Fire Rate: 73; Accuracy: 76",
+              "note": "Search-engine summary of the page; the page itself was not opened."
+            }
+          ],
+          "confidence": "medium",
+          "crossCheck": "EU wiki snippet shows the same value (unverified, so this does not raise the status)"
+        },
+        "accuracy": {
+          "value": 73,
+          "status": "provisional",
+          "evidence": [
+            {
+              "source": "inven-2011-weapons",
+              "url": "https://www.inven.co.kr/webzine/news/?news=37641",
+              "access": "direct-read",
+              "quote": "● M4A1 … 능력치 : 데미지 56, 연사력 73, 반동 46, 정확도 73"
+            },
+            {
+              "source": "eu-wiki",
+              "url": "https://skill-special-force-2.fandom.com/wiki/M4A1",
+              "access": "search-snippet",
+              "quote": "Damage: 56; Recoil: 54 (46 Real number); Fire Rate: 73; Accuracy: 76",
+              "note": "Search-engine summary of the page; the page itself was not opened."
+            }
+          ],
+          "confidence": "medium",
+          "crossCheck": "EU wiki snippet shows 76 (later EU build; unverified)"
+        }
+      },
+      "rpm": {
+        "value": 637,
+        "status": "estimated",
+        "method": "regression on fireRate rating 73 (assault-rifle interpolation)",
+        "error": "±25 RPM (leave-one-out)",
+        "inputStatus": "rating provisional; regression inputs unverified",
+        "confidence": "low"
+      },
+      "speed": {
+        "value": {
+          "standard": 5.9,
+          "heavyArmor": 4,
+          "heavyBoots": 5.2,
+          "lightArmor": 5,
+          "lightBoots": 6.2
+        },
+        "unit": "unknown",
+        "status": "unverified",
+        "evidence": [
+          {
+            "source": "eu-wiki",
+            "url": "https://skill-special-force-2.fandom.com/wiki/M4A1",
+            "access": "search-snippet",
+            "quote": "Speed (Weight) Standard: 5.9 Heavy Armor: 4.0 (+SB: 5.2) Light Armor: 5.0 (+SB: 6.2)",
+            "note": "Search-engine summary of the page; the page itself was not opened."
+          }
+        ],
+        "confidence": "low"
+      },
+      "reloadTime": {
+        "status": "unknown",
+        "why": "EU wiki field reported blank"
+      },
+      "readyTime": {
+        "status": "unknown",
+        "why": "EU wiki field reported blank"
+      },
+      "adsTime": {
+        "status": "unknown",
+        "why": "EU wiki field reported blank"
+      },
+      "magazine": {
+        "value": "30/90",
+        "status": "unverified",
+        "evidence": [
+          {
+            "source": "eu-wiki",
+            "url": "https://skill-special-force-2.fandom.com/wiki/M4A1",
+            "access": "search-snippet",
+            "quote": "magazine 30/90",
+            "note": "Search-engine summary of the page; the page itself was not opened."
+          }
+        ],
+        "confidence": "low"
+      }
+    },
+    "ak103": {
+      "sf2Name": "AK-103",
+      "class": "assault",
+      "ourId": "ak47",
+      "modelMatch": "different model: our AK-47 stands in for SF2 AK-103",
+      "uiRating": {
+        "damage": {
+          "value": 70,
+          "status": "provisional",
+          "evidence": [
+            {
+              "source": "inven-2011-weapons",
+              "url": "https://www.inven.co.kr/webzine/news/?news=37641",
+              "access": "direct-read",
+              "quote": "● AK103 … 능력치 : 데미지 70, 연사력 61, 반동 71, 정확도 66"
+            },
+            {
+              "source": "eu-wiki",
+              "url": "https://skill-special-force-2.fandom.com/wiki/AK-103",
+              "access": "search-snippet",
+              "quote": "Damage: 70; Recoil 29 (71 Real value); Fire Rate: 61; Accuracy: 65",
+              "note": "Search-engine summary of the page; the page itself was not opened."
+            }
+          ],
+          "confidence": "medium",
+          "crossCheck": "EU wiki snippet shows the same value (unverified, so this does not raise the status)"
+        },
+        "fireRate": {
+          "value": 61,
+          "status": "provisional",
+          "evidence": [
+            {
+              "source": "inven-2011-weapons",
+              "url": "https://www.inven.co.kr/webzine/news/?news=37641",
+              "access": "direct-read",
+              "quote": "● AK103 … 능력치 : 데미지 70, 연사력 61, 반동 71, 정확도 66"
+            },
+            {
+              "source": "eu-wiki",
+              "url": "https://skill-special-force-2.fandom.com/wiki/AK-103",
+              "access": "search-snippet",
+              "quote": "Damage: 70; Recoil 29 (71 Real value); Fire Rate: 61; Accuracy: 65",
+              "note": "Search-engine summary of the page; the page itself was not opened."
+            }
+          ],
+          "confidence": "medium",
+          "crossCheck": "EU wiki snippet shows the same value (unverified, so this does not raise the status)"
+        },
+        "recoilReal": {
+          "value": 71,
+          "status": "provisional",
+          "evidence": [
+            {
+              "source": "inven-2011-weapons",
+              "url": "https://www.inven.co.kr/webzine/news/?news=37641",
+              "access": "direct-read",
+              "quote": "● AK103 … 능력치 : 데미지 70, 연사력 61, 반동 71, 정확도 66"
+            },
+            {
+              "source": "eu-wiki",
+              "url": "https://skill-special-force-2.fandom.com/wiki/AK-103",
+              "access": "search-snippet",
+              "quote": "Damage: 70; Recoil 29 (71 Real value); Fire Rate: 61; Accuracy: 65",
+              "note": "Search-engine summary of the page; the page itself was not opened."
+            }
+          ],
+          "confidence": "medium",
+          "crossCheck": "EU wiki snippet shows the same value (unverified, so this does not raise the status)"
+        },
+        "accuracy": {
+          "value": 66,
+          "status": "provisional",
+          "evidence": [
+            {
+              "source": "inven-2011-weapons",
+              "url": "https://www.inven.co.kr/webzine/news/?news=37641",
+              "access": "direct-read",
+              "quote": "● AK103 … 능력치 : 데미지 70, 연사력 61, 반동 71, 정확도 66"
+            },
+            {
+              "source": "eu-wiki",
+              "url": "https://skill-special-force-2.fandom.com/wiki/AK-103",
+              "access": "search-snippet",
+              "quote": "Damage: 70; Recoil 29 (71 Real value); Fire Rate: 61; Accuracy: 65",
+              "note": "Search-engine summary of the page; the page itself was not opened."
+            }
+          ],
+          "confidence": "medium",
+          "crossCheck": "EU wiki snippet shows 65 (later EU build; unverified)"
+        }
+      },
+      "rpm": {
+        "value": 529,
+        "status": "unverified",
+        "evidence": [
+          {
+            "source": "eu-wiki",
+            "url": "https://skill-special-force-2.fandom.com/wiki/AK-103",
+            "access": "search-snippet",
+            "quote": "Reload Time: 2.4 sec, Ready Time: 1 sec, ADS Time: 0.25 sec, RPM: 529",
+            "note": "Search-engine summary of the page; the page itself was not opened."
+          }
+        ],
+        "confidence": "low"
+      },
+      "reloadTime": {
+        "value": 2.4,
+        "unit": "s",
+        "status": "unverified",
+        "evidence": [
+          {
+            "source": "eu-wiki",
+            "url": "https://skill-special-force-2.fandom.com/wiki/AK-103",
+            "access": "search-snippet",
+            "quote": "Reload Time: 2.4 sec, Ready Time: 1 sec, ADS Time: 0.25 sec, RPM: 529",
+            "note": "Search-engine summary of the page; the page itself was not opened."
+          }
+        ],
+        "confidence": "low"
+      },
+      "readyTime": {
+        "value": 1,
+        "unit": "s",
+        "status": "unverified",
+        "evidence": [
+          {
+            "source": "eu-wiki",
+            "url": "https://skill-special-force-2.fandom.com/wiki/AK-103",
+            "access": "search-snippet",
+            "quote": "Reload Time: 2.4 sec, Ready Time: 1 sec, ADS Time: 0.25 sec, RPM: 529",
+            "note": "Search-engine summary of the page; the page itself was not opened."
+          }
+        ],
+        "confidence": "low"
+      },
+      "adsTime": {
+        "value": 0.25,
+        "unit": "s",
+        "status": "unverified",
+        "evidence": [
+          {
+            "source": "eu-wiki",
+            "url": "https://skill-special-force-2.fandom.com/wiki/AK-103",
+            "access": "search-snippet",
+            "quote": "Reload Time: 2.4 sec, Ready Time: 1 sec, ADS Time: 0.25 sec, RPM: 529",
+            "note": "Search-engine summary of the page; the page itself was not opened."
+          }
+        ],
+        "confidence": "low"
+      }
+    },
+    "hk417": {
+      "sf2Name": "HK417",
+      "class": "assault",
+      "ourId": "hk417",
+      "modelMatch": "same model",
+      "uiRating": {
+        "damage": {
+          "value": 61,
+          "status": "provisional",
+          "evidence": [
+            {
+              "source": "inven-2011-weapons",
+              "url": "https://www.inven.co.kr/webzine/news/?news=37641",
+              "access": "direct-read",
+              "quote": "● HK417 … 능력치 : 데미지 61, 연사력 67, 반동 55, 정확도 67"
+            }
+          ],
+          "confidence": "medium"
+        },
+        "fireRate": {
+          "value": 67,
+          "status": "provisional",
+          "evidence": [
+            {
+              "source": "inven-2011-weapons",
+              "url": "https://www.inven.co.kr/webzine/news/?news=37641",
+              "access": "direct-read",
+              "quote": "● HK417 … 능력치 : 데미지 61, 연사력 67, 반동 55, 정확도 67"
+            }
+          ],
+          "confidence": "medium"
+        },
+        "recoilReal": {
+          "value": 55,
+          "status": "provisional",
+          "evidence": [
+            {
+              "source": "inven-2011-weapons",
+              "url": "https://www.inven.co.kr/webzine/news/?news=37641",
+              "access": "direct-read",
+              "quote": "● HK417 … 능력치 : 데미지 61, 연사력 67, 반동 55, 정확도 67"
+            }
+          ],
+          "confidence": "medium"
+        },
+        "accuracy": {
+          "value": 67,
+          "status": "provisional",
+          "evidence": [
+            {
+              "source": "inven-2011-weapons",
+              "url": "https://www.inven.co.kr/webzine/news/?news=37641",
+              "access": "direct-read",
+              "quote": "● HK417 … 능력치 : 데미지 61, 연사력 67, 반동 55, 정확도 67"
+            }
+          ],
+          "confidence": "medium"
+        }
+      },
+      "rpm": {
+        "value": 586,
+        "status": "estimated",
+        "method": "regression on fireRate rating 67 (assault-rifle interpolation)",
+        "error": "±25 RPM (leave-one-out)",
+        "inputStatus": "rating provisional; regression inputs unverified",
+        "confidence": "low"
+      }
+    },
+    "g36c": {
+      "sf2Name": "G36C",
+      "class": "assault",
+      "ourId": "g36c",
+      "modelMatch": "same model (ours is a gold variant)",
+      "uiRating": {
+        "damage": {
+          "value": 64,
+          "status": "unverified",
+          "evidence": [
+            {
+              "source": "eu-wiki",
+              "url": "https://skill-special-force-2.fandom.com/wiki/G36C",
+              "access": "search-snippet",
+              "quote": "Damage 64, Recoil 42 (58 real value), Fire Rate 64, Accuracy 72",
+              "note": "Search-engine summary of the page; the page itself was not opened."
+            }
+          ],
+          "confidence": "low"
+        },
+        "fireRate": {
+          "value": 64,
+          "status": "unverified",
+          "evidence": [
+            {
+              "source": "eu-wiki",
+              "url": "https://skill-special-force-2.fandom.com/wiki/G36C",
+              "access": "search-snippet",
+              "quote": "Damage 64, Recoil 42 (58 real value), Fire Rate 64, Accuracy 72",
+              "note": "Search-engine summary of the page; the page itself was not opened."
+            }
+          ],
+          "confidence": "low"
+        },
+        "recoilReal": {
+          "value": 58,
+          "status": "unverified",
+          "evidence": [
+            {
+              "source": "eu-wiki",
+              "url": "https://skill-special-force-2.fandom.com/wiki/G36C",
+              "access": "search-snippet",
+              "quote": "Damage 64, Recoil 42 (58 real value), Fire Rate 64, Accuracy 72",
+              "note": "Search-engine summary of the page; the page itself was not opened."
+            }
+          ],
+          "confidence": "low"
+        },
+        "accuracy": {
+          "value": 72,
+          "status": "unverified",
+          "evidence": [
+            {
+              "source": "eu-wiki",
+              "url": "https://skill-special-force-2.fandom.com/wiki/G36C",
+              "access": "search-snippet",
+              "quote": "Damage 64, Recoil 42 (58 real value), Fire Rate 64, Accuracy 72",
+              "note": "Search-engine summary of the page; the page itself was not opened."
+            }
+          ],
+          "confidence": "low"
+        }
+      },
+      "rpm": {
+        "value": 782,
+        "status": "unknown",
+        "evidence": [
+          {
+            "source": "eu-wiki",
+            "url": "https://skill-special-force-2.fandom.com/wiki/G36C",
+            "access": "search-snippet",
+            "quote": "DPS of 581 and an RPM of 782",
+            "note": "Search-engine summary of the page; the page itself was not opened."
+          }
+        ],
+        "why": "Self-contradictory: 581 × 60 / 64 ≈ 545 RPM; rating 64 interpolates to ≈561."
+      }
+    },
+    "sg551": {
+      "sf2Name": "SG 551",
+      "class": "assault",
+      "ourId": "sg551",
+      "modelMatch": "same model",
+      "uiRating": {
+        "damage": {
+          "value": 57,
+          "status": "unverified",
+          "evidence": [
+            {
+              "source": "eu-wiki",
+              "url": "https://skill-special-force-2.fandom.com/wiki/SG_551",
+              "access": "search-snippet",
+              "quote": "Damage: 57; Recoil: 82 (18 Real value); Fire Rate: 72; Accuracy: 72",
+              "note": "Search-engine summary of the page; the page itself was not opened."
+            }
+          ],
+          "confidence": "low"
+        },
+        "fireRate": {
+          "value": 72,
+          "status": "unverified",
+          "evidence": [
+            {
+              "source": "eu-wiki",
+              "url": "https://skill-special-force-2.fandom.com/wiki/SG_551",
+              "access": "search-snippet",
+              "quote": "Damage: 57; Recoil: 82 (18 Real value); Fire Rate: 72; Accuracy: 72",
+              "note": "Search-engine summary of the page; the page itself was not opened."
+            }
+          ],
+          "confidence": "low"
+        },
+        "recoilReal": {
+          "value": 18,
+          "status": "unverified",
+          "evidence": [
+            {
+              "source": "eu-wiki",
+              "url": "https://skill-special-force-2.fandom.com/wiki/SG_551",
+              "access": "search-snippet",
+              "quote": "Damage: 57; Recoil: 82 (18 Real value); Fire Rate: 72; Accuracy: 72",
+              "note": "Search-engine summary of the page; the page itself was not opened."
+            }
+          ],
+          "confidence": "low"
+        },
+        "accuracy": {
+          "value": 72,
+          "status": "unverified",
+          "evidence": [
+            {
+              "source": "eu-wiki",
+              "url": "https://skill-special-force-2.fandom.com/wiki/SG_551",
+              "access": "search-snippet",
+              "quote": "Damage: 57; Recoil: 82 (18 Real value); Fire Rate: 72; Accuracy: 72",
+              "note": "Search-engine summary of the page; the page itself was not opened."
+            }
+          ],
+          "confidence": "low"
+        }
+      },
+      "rpm": {
+        "value": 620,
+        "status": "unverified",
+        "evidence": [
+          {
+            "source": "eu-wiki",
+            "url": "https://skill-special-force-2.fandom.com/wiki/SG_551",
+            "access": "search-snippet",
+            "quote": "Reload Time: — sec, Ready Time: — sec, ADS Time: — sec, RPM: 620",
+            "note": "Search-engine summary of the page; the page itself was not opened."
+          }
+        ],
+        "confidence": "low"
+      },
+      "reloadTime": {
+        "status": "unknown",
+        "why": "no source"
+      },
+      "readyTime": {
+        "status": "unknown",
+        "why": "no source"
+      },
+      "adsTime": {
+        "status": "unknown",
+        "why": "no source"
+      }
+    },
+    "famas": {
+      "sf2Name": "FAMAS (G2)",
+      "class": "assault",
+      "ourId": "famas",
+      "modelMatch": "same family (ours unspecified F1/G2)",
+      "uiRating": {
+        "damage": {
+          "value": 53,
+          "status": "unverified",
+          "evidence": [
+            {
+              "source": "eu-wiki",
+              "url": "https://skill-special-force-2.fandom.com/wiki/FAMAS",
+              "access": "search-snippet",
+              "quote": "Damage 53, Fire Rate 78, Accuracy 85, Recoil 62 (38 real)",
+              "note": "Search-engine summary of the page; the page itself was not opened."
+            }
+          ],
+          "confidence": "low"
+        },
+        "fireRate": {
+          "value": 78,
+          "status": "unverified",
+          "evidence": [
+            {
+              "source": "eu-wiki",
+              "url": "https://skill-special-force-2.fandom.com/wiki/FAMAS",
+              "access": "search-snippet",
+              "quote": "Damage 53, Fire Rate 78, Accuracy 85, Recoil 62 (38 real)",
+              "note": "Search-engine summary of the page; the page itself was not opened."
+            }
+          ],
+          "confidence": "low"
+        },
+        "recoilReal": {
+          "value": 38,
+          "status": "unverified",
+          "evidence": [
+            {
+              "source": "eu-wiki",
+              "url": "https://skill-special-force-2.fandom.com/wiki/FAMAS",
+              "access": "search-snippet",
+              "quote": "Damage 53, Fire Rate 78, Accuracy 85, Recoil 62 (38 real)",
+              "note": "Search-engine summary of the page; the page itself was not opened."
+            }
+          ],
+          "confidence": "low"
+        },
+        "accuracy": {
+          "value": 85,
+          "status": "unverified",
+          "evidence": [
+            {
+              "source": "eu-wiki",
+              "url": "https://skill-special-force-2.fandom.com/wiki/FAMAS",
+              "access": "search-snippet",
+              "quote": "Damage 53, Fire Rate 78, Accuracy 85, Recoil 62 (38 real)",
+              "note": "Search-engine summary of the page; the page itself was not opened."
+            }
+          ],
+          "confidence": "low"
+        }
+      },
+      "rpm": {
+        "value": 692,
+        "status": "unverified",
+        "evidence": [
+          {
+            "source": "eu-wiki",
+            "url": "https://skill-special-force-2.fandom.com/wiki/FAMAS",
+            "access": "search-snippet",
+            "quote": "Reload Time: — sec, Ready Time: — sec, ADS Time: — sec, RPM: 692",
+            "note": "Search-engine summary of the page; the page itself was not opened."
+          }
+        ],
+        "confidence": "low"
+      },
+      "reloadTime": {
+        "status": "unknown",
+        "why": "no source"
+      },
+      "readyTime": {
+        "status": "unknown",
+        "why": "no source"
+      },
+      "adsTime": {
+        "status": "unknown",
+        "why": "no source"
+      }
+    },
+    "m16a3": {
+      "sf2Name": "M16A3",
+      "class": "assault",
+      "ourId": "m16a3",
+      "modelMatch": "same model",
+      "rpm": {
+        "value": 580,
+        "status": "unverified",
+        "evidence": [
+          {
+            "source": "eu-wiki",
+            "url": "https://skill-special-force-2.fandom.com/wiki/M16A3",
+            "access": "search-snippet",
+            "quote": "Reload Time: 2.3 sec, Ready Time: 0.9 sec, ADS Time: 0.25 sec, RPM: 580",
+            "note": "Search-engine summary of the page; the page itself was not opened."
+          }
+        ],
+        "confidence": "low"
+      },
+      "reloadTime": {
+        "value": 2.3,
+        "unit": "s",
+        "status": "unverified",
+        "evidence": [
+          {
+            "source": "eu-wiki",
+            "url": "https://skill-special-force-2.fandom.com/wiki/M16A3",
+            "access": "search-snippet",
+            "quote": "Reload Time: 2.3 sec, Ready Time: 0.9 sec, ADS Time: 0.25 sec, RPM: 580",
+            "note": "Search-engine summary of the page; the page itself was not opened."
+          }
+        ],
+        "confidence": "low"
+      },
+      "readyTime": {
+        "value": 0.9,
+        "unit": "s",
+        "status": "unverified",
+        "evidence": [
+          {
+            "source": "eu-wiki",
+            "url": "https://skill-special-force-2.fandom.com/wiki/M16A3",
+            "access": "search-snippet",
+            "quote": "Reload Time: 2.3 sec, Ready Time: 0.9 sec, ADS Time: 0.25 sec, RPM: 580",
+            "note": "Search-engine summary of the page; the page itself was not opened."
+          }
+        ],
+        "confidence": "low"
+      },
+      "adsTime": {
+        "value": 0.25,
+        "unit": "s",
+        "status": "unverified",
+        "evidence": [
+          {
+            "source": "eu-wiki",
+            "url": "https://skill-special-force-2.fandom.com/wiki/M16A3",
+            "access": "search-snippet",
+            "quote": "Reload Time: 2.3 sec, Ready Time: 0.9 sec, ADS Time: 0.25 sec, RPM: 580",
+            "note": "Search-engine summary of the page; the page itself was not opened."
+          }
+        ],
+        "confidence": "low"
+      }
+    },
+    "xm8": {
+      "sf2Name": "XM8",
+      "class": "assault",
+      "ourId": "xm8",
+      "modelMatch": "same model",
+      "rpm": {
+        "value": 562,
+        "status": "unverified",
+        "evidence": [
+          {
+            "source": "eu-wiki",
+            "url": "https://skill-special-force-2.fandom.com/wiki/XM8",
+            "access": "search-snippet",
+            "quote": "Reload Time: 2.2 sec, Ready Time: 0.9 sec, ADS Time: 0.25 sec, RPM: 562",
+            "note": "Search-engine summary of the page; the page itself was not opened."
+          }
+        ],
+        "confidence": "low"
+      },
+      "reloadTime": {
+        "value": 2.2,
+        "unit": "s",
+        "status": "unverified",
+        "evidence": [
+          {
+            "source": "eu-wiki",
+            "url": "https://skill-special-force-2.fandom.com/wiki/XM8",
+            "access": "search-snippet",
+            "quote": "Reload Time: 2.2 sec, Ready Time: 0.9 sec, ADS Time: 0.25 sec, RPM: 562",
+            "note": "Search-engine summary of the page; the page itself was not opened."
+          }
+        ],
+        "confidence": "low"
+      },
+      "readyTime": {
+        "value": 0.9,
+        "unit": "s",
+        "status": "unverified",
+        "evidence": [
+          {
+            "source": "eu-wiki",
+            "url": "https://skill-special-force-2.fandom.com/wiki/XM8",
+            "access": "search-snippet",
+            "quote": "Reload Time: 2.2 sec, Ready Time: 0.9 sec, ADS Time: 0.25 sec, RPM: 562",
+            "note": "Search-engine summary of the page; the page itself was not opened."
+          }
+        ],
+        "confidence": "low"
+      },
+      "adsTime": {
+        "value": 0.25,
+        "unit": "s",
+        "status": "unverified",
+        "evidence": [
+          {
+            "source": "eu-wiki",
+            "url": "https://skill-special-force-2.fandom.com/wiki/XM8",
+            "access": "search-snippet",
+            "quote": "Reload Time: 2.2 sec, Ready Time: 0.9 sec, ADS Time: 0.25 sec, RPM: 562",
+            "note": "Search-engine summary of the page; the page itself was not opened."
+          }
+        ],
+        "confidence": "low"
+      }
+    },
+    "scarl": {
+      "sf2Name": "SCAR-L",
+      "class": "assault",
+      "ourId": "scarl",
+      "modelMatch": "same model",
+      "rpm": {
+        "value": 580,
+        "status": "unverified",
+        "evidence": [
+          {
+            "source": "eu-wiki",
+            "url": "https://skill-special-force-2.fandom.com/wiki/SCAR-L",
+            "access": "search-snippet",
+            "quote": "Reload Time: 2.3 sec, Ready Time: 1 sec, ADS Time: 0.25 sec, RPM: 580",
+            "note": "Search-engine summary of the page; the page itself was not opened."
+          }
+        ],
+        "confidence": "low"
+      },
+      "reloadTime": {
+        "value": 2.3,
+        "unit": "s",
+        "status": "unverified",
+        "evidence": [
+          {
+            "source": "eu-wiki",
+            "url": "https://skill-special-force-2.fandom.com/wiki/SCAR-L",
+            "access": "search-snippet",
+            "quote": "Reload Time: 2.3 sec, Ready Time: 1 sec, ADS Time: 0.25 sec, RPM: 580",
+            "note": "Search-engine summary of the page; the page itself was not opened."
+          }
+        ],
+        "confidence": "low"
+      },
+      "readyTime": {
+        "value": 1,
+        "unit": "s",
+        "status": "unverified",
+        "evidence": [
+          {
+            "source": "eu-wiki",
+            "url": "https://skill-special-force-2.fandom.com/wiki/SCAR-L",
+            "access": "search-snippet",
+            "quote": "Reload Time: 2.3 sec, Ready Time: 1 sec, ADS Time: 0.25 sec, RPM: 580",
+            "note": "Search-engine summary of the page; the page itself was not opened."
+          }
+        ],
+        "confidence": "low"
+      },
+      "adsTime": {
+        "value": 0.25,
+        "unit": "s",
+        "status": "unverified",
+        "evidence": [
+          {
+            "source": "eu-wiki",
+            "url": "https://skill-special-force-2.fandom.com/wiki/SCAR-L",
+            "access": "search-snippet",
+            "quote": "Reload Time: 2.3 sec, Ready Time: 1 sec, ADS Time: 0.25 sec, RPM: 580",
+            "note": "Search-engine summary of the page; the page itself was not opened."
+          }
+        ],
+        "confidence": "low"
+      }
+    },
+    "type89": {
+      "sf2Name": "Howa Type 89",
+      "class": "assault",
+      "ourId": "type89",
+      "modelMatch": "same model",
+      "rpm": {
+        "value": 580,
+        "status": "unverified",
+        "evidence": [
+          {
+            "source": "eu-wiki",
+            "url": "https://skill-special-force-2.fandom.com/wiki/Howa_Type_89",
+            "access": "search-snippet",
+            "quote": "Reload Time: 2.3 sec, Ready Time: 0.9 sec, ADS Time: 0.3 sec, RPM: 580",
+            "note": "Search-engine summary of the page; the page itself was not opened."
+          }
+        ],
+        "confidence": "low"
+      },
+      "reloadTime": {
+        "value": 2.3,
+        "unit": "s",
+        "status": "unverified",
+        "evidence": [
+          {
+            "source": "eu-wiki",
+            "url": "https://skill-special-force-2.fandom.com/wiki/Howa_Type_89",
+            "access": "search-snippet",
+            "quote": "Reload Time: 2.3 sec, Ready Time: 0.9 sec, ADS Time: 0.3 sec, RPM: 580",
+            "note": "Search-engine summary of the page; the page itself was not opened."
+          }
+        ],
+        "confidence": "low"
+      },
+      "readyTime": {
+        "value": 0.9,
+        "unit": "s",
+        "status": "unverified",
+        "evidence": [
+          {
+            "source": "eu-wiki",
+            "url": "https://skill-special-force-2.fandom.com/wiki/Howa_Type_89",
+            "access": "search-snippet",
+            "quote": "Reload Time: 2.3 sec, Ready Time: 0.9 sec, ADS Time: 0.3 sec, RPM: 580",
+            "note": "Search-engine summary of the page; the page itself was not opened."
+          }
+        ],
+        "confidence": "low"
+      },
+      "adsTime": {
+        "value": 0.3,
+        "unit": "s",
+        "status": "unverified",
+        "evidence": [
+          {
+            "source": "eu-wiki",
+            "url": "https://skill-special-force-2.fandom.com/wiki/Howa_Type_89",
+            "access": "search-snippet",
+            "quote": "Reload Time: 2.3 sec, Ready Time: 0.9 sec, ADS Time: 0.3 sec, RPM: 580",
+            "note": "Search-engine summary of the page; the page itself was not opened."
+          }
+        ],
+        "confidence": "low"
+      }
+    },
+    "k2": {
+      "sf2Name": "K2",
+      "class": "assault",
+      "ourId": "k2",
+      "modelMatch": "same model",
+      "uiRating": {
+        "damage": {
+          "value": 54,
+          "status": "unverified",
+          "evidence": [
+            {
+              "source": "eu-wiki",
+              "url": "https://skill-special-force-2.fandom.com/wiki/K2",
+              "access": "search-snippet",
+              "quote": "K2 entry lists Damage 54, Fire Rate 70, and a Standard speed of 6.0",
+              "note": "Search-engine summary of the page; the page itself was not opened."
+            }
+          ],
+          "confidence": "low"
+        },
+        "fireRate": {
+          "value": 70,
+          "status": "unverified",
+          "evidence": [
+            {
+              "source": "eu-wiki",
+              "url": "https://skill-special-force-2.fandom.com/wiki/K2",
+              "access": "search-snippet",
+              "quote": "K2 entry lists Damage 54, Fire Rate 70, and a Standard speed of 6.0",
+              "note": "Search-engine summary of the page; the page itself was not opened."
+            }
+          ],
+          "confidence": "low"
+        }
+      },
+      "rpm": {
+        "value": 612,
+        "status": "estimated",
+        "method": "regression on fireRate rating 70 (assault-rifle interpolation)",
+        "error": "±25 RPM (leave-one-out)",
+        "inputStatus": "rating provisional; regression inputs unverified",
+        "confidence": "low"
+      }
+    },
+    "m14ebr": {
+      "sf2Name": "M14EBR",
+      "class": "dmr",
+      "ourId": "m14ebr",
+      "modelMatch": "same model (ours is in the sniper class)",
+      "uiRating": {
+        "fireRate": {
+          "value": 23,
+          "status": "unverified",
+          "evidence": [
+            {
+              "source": "eu-wiki",
+              "url": "https://skill-special-force-2.fandom.com/wiki/M14EBR",
+              "access": "search-snippet",
+              "quote": "Fire Rate: 23 … Recoil in-game: Very High",
+              "note": "Search-engine summary of the page; the page itself was not opened."
+            }
+          ],
+          "confidence": "low"
+        }
+      },
+      "rpm": {
+        "value": 214,
+        "status": "unverified",
+        "evidence": [
+          {
+            "source": "eu-wiki",
+            "url": "https://skill-special-force-2.fandom.com/wiki/M14EBR",
+            "access": "search-snippet",
+            "quote": "Reload Time: 3.5 sec, Ready Time: — sec, ADS Time: 0.3 sec, RPM: 214",
+            "note": "Search-engine summary of the page; the page itself was not opened."
+          }
+        ],
+        "confidence": "low"
+      },
+      "reloadTime": {
+        "value": 3.5,
+        "unit": "s",
+        "status": "unverified",
+        "evidence": [
+          {
+            "source": "eu-wiki",
+            "url": "https://skill-special-force-2.fandom.com/wiki/M14EBR",
+            "access": "search-snippet",
+            "quote": "Reload Time: 3.5 sec, Ready Time: — sec, ADS Time: 0.3 sec, RPM: 214",
+            "note": "Search-engine summary of the page; the page itself was not opened."
+          }
+        ],
+        "confidence": "low"
+      },
+      "readyTime": {
+        "status": "unknown",
+        "why": "no source"
+      },
+      "adsTime": {
+        "value": 0.3,
+        "unit": "s",
+        "status": "unverified",
+        "evidence": [
+          {
+            "source": "eu-wiki",
+            "url": "https://skill-special-force-2.fandom.com/wiki/M14EBR",
+            "access": "search-snippet",
+            "quote": "Reload Time: 3.5 sec, Ready Time: — sec, ADS Time: 0.3 sec, RPM: 214",
+            "note": "Search-engine summary of the page; the page itself was not opened."
+          }
+        ],
+        "confidence": "low"
+      }
+    },
+    "p90": {
+      "sf2Name": "P90",
+      "class": "smg",
+      "ourId": "p90",
+      "modelMatch": "same model",
+      "uiRating": {
+        "damage": {
+          "value": 51,
+          "status": "provisional",
+          "evidence": [
+            {
+              "source": "inven-2011-weapons",
+              "url": "https://www.inven.co.kr/webzine/news/?news=37641",
+              "access": "direct-read",
+              "quote": "● P90 … 능력치 : 데미지 51, 연사력 86, 반동 44, 정확도 65"
+            }
+          ],
+          "confidence": "medium"
+        },
+        "fireRate": {
+          "value": 86,
+          "status": "provisional",
+          "evidence": [
+            {
+              "source": "inven-2011-weapons",
+              "url": "https://www.inven.co.kr/webzine/news/?news=37641",
+              "access": "direct-read",
+              "quote": "● P90 … 능력치 : 데미지 51, 연사력 86, 반동 44, 정확도 65"
+            }
+          ],
+          "confidence": "medium"
+        },
+        "recoilReal": {
+          "value": 44,
+          "status": "provisional",
+          "evidence": [
+            {
+              "source": "inven-2011-weapons",
+              "url": "https://www.inven.co.kr/webzine/news/?news=37641",
+              "access": "direct-read",
+              "quote": "● P90 … 능력치 : 데미지 51, 연사력 86, 반동 44, 정확도 65"
+            }
+          ],
+          "confidence": "medium"
+        },
+        "accuracy": {
+          "value": 65,
+          "status": "provisional",
+          "evidence": [
+            {
+              "source": "inven-2011-weapons",
+              "url": "https://www.inven.co.kr/webzine/news/?news=37641",
+              "access": "direct-read",
+              "quote": "● P90 … 능력치 : 데미지 51, 연사력 86, 반동 44, 정확도 65"
+            }
+          ],
+          "confidence": "medium"
+        }
+      },
+      "magazine": {
+        "value": 50,
+        "status": "provisional",
+        "evidence": [
+          {
+            "source": "inven-2011-weapons",
+            "url": "https://www.inven.co.kr/webzine/news/?news=37641",
+            "access": "direct-read",
+            "quote": "5.7mm. 50발 들이 탄창을 사용하며"
+          }
+        ],
+        "confidence": "medium",
+        "note": "From the weapon blurb; may describe the real gun rather than the game."
+      },
+      "rpm": {
+        "status": "unknown",
+        "why": "SMG: outside the regression range; no source"
+      }
+    },
+    "mp5k": {
+      "sf2Name": "MP5K",
+      "class": "smg",
+      "ourId": "mp5",
+      "modelMatch": "different model: our MP5 stands in for SF2 MP5K",
+      "uiRating": {
+        "damage": {
+          "value": 48,
+          "status": "provisional",
+          "evidence": [
+            {
+              "source": "inven-2011-weapons",
+              "url": "https://www.inven.co.kr/webzine/news/?news=37641",
+              "access": "direct-read",
+              "quote": "● MP5K … 능력치 : 데미지 48, 연사력 92, 반동 34, 정확도 70"
+            }
+          ],
+          "confidence": "medium"
+        },
+        "fireRate": {
+          "value": 92,
+          "status": "provisional",
+          "evidence": [
+            {
+              "source": "inven-2011-weapons",
+              "url": "https://www.inven.co.kr/webzine/news/?news=37641",
+              "access": "direct-read",
+              "quote": "● MP5K … 능력치 : 데미지 48, 연사력 92, 반동 34, 정확도 70"
+            }
+          ],
+          "confidence": "medium"
+        },
+        "recoilReal": {
+          "value": 34,
+          "status": "provisional",
+          "evidence": [
+            {
+              "source": "inven-2011-weapons",
+              "url": "https://www.inven.co.kr/webzine/news/?news=37641",
+              "access": "direct-read",
+              "quote": "● MP5K … 능력치 : 데미지 48, 연사력 92, 반동 34, 정확도 70"
+            }
+          ],
+          "confidence": "medium"
+        },
+        "accuracy": {
+          "value": 70,
+          "status": "provisional",
+          "evidence": [
+            {
+              "source": "inven-2011-weapons",
+              "url": "https://www.inven.co.kr/webzine/news/?news=37641",
+              "access": "direct-read",
+              "quote": "● MP5K … 능력치 : 데미지 48, 연사력 92, 반동 34, 정확도 70"
+            }
+          ],
+          "confidence": "medium"
+        }
+      },
+      "rpm": {
+        "status": "unknown",
+        "why": "SMG: outside the regression range; no source"
+      }
+    },
+    "hk23e": {
+      "sf2Name": "HK23E",
+      "class": "lmg",
+      "ourId": "hk23e",
+      "modelMatch": "same model",
+      "uiRating": {
+        "damage": {
+          "value": 57,
+          "status": "provisional",
+          "evidence": [
+            {
+              "source": "inven-2011-weapons",
+              "url": "https://www.inven.co.kr/webzine/news/?news=37641",
+              "access": "direct-read",
+              "quote": "● HK23E … 능력치 : 데미지 57, 연사력 67, 반동 39, 정확도 28"
+            }
+          ],
+          "confidence": "medium"
+        },
+        "fireRate": {
+          "value": 67,
+          "status": "provisional",
+          "evidence": [
+            {
+              "source": "inven-2011-weapons",
+              "url": "https://www.inven.co.kr/webzine/news/?news=37641",
+              "access": "direct-read",
+              "quote": "● HK23E … 능력치 : 데미지 57, 연사력 67, 반동 39, 정확도 28"
+            }
+          ],
+          "confidence": "medium"
+        },
+        "recoilReal": {
+          "value": 39,
+          "status": "provisional",
+          "evidence": [
+            {
+              "source": "inven-2011-weapons",
+              "url": "https://www.inven.co.kr/webzine/news/?news=37641",
+              "access": "direct-read",
+              "quote": "● HK23E … 능력치 : 데미지 57, 연사력 67, 반동 39, 정확도 28"
+            }
+          ],
+          "confidence": "medium"
+        },
+        "accuracy": {
+          "value": 28,
+          "status": "provisional",
+          "evidence": [
+            {
+              "source": "inven-2011-weapons",
+              "url": "https://www.inven.co.kr/webzine/news/?news=37641",
+              "access": "direct-read",
+              "quote": "● HK23E … 능력치 : 데미지 57, 연사력 67, 반동 39, 정확도 28"
+            }
+          ],
+          "confidence": "medium"
+        }
+      },
+      "rpm": {
+        "status": "unknown",
+        "why": "LMG: no LMG sample in the regression"
+      }
+    },
+    "l86a1": {
+      "sf2Name": "L86A1",
+      "class": "lmg",
+      "ourId": "l86a1",
+      "modelMatch": "same model",
+      "uiRating": {
+        "damage": {
+          "value": 60,
+          "status": "provisional",
+          "evidence": [
+            {
+              "source": "inven-2011-weapons",
+              "url": "https://www.inven.co.kr/webzine/news/?news=37641",
+              "access": "direct-read",
+              "quote": "● L86A1 … 능력치 : 데미지 60, 연사력 64, 반동 44, 정확도 50"
+            }
+          ],
+          "confidence": "medium"
+        },
+        "fireRate": {
+          "value": 64,
+          "status": "provisional",
+          "evidence": [
+            {
+              "source": "inven-2011-weapons",
+              "url": "https://www.inven.co.kr/webzine/news/?news=37641",
+              "access": "direct-read",
+              "quote": "● L86A1 … 능력치 : 데미지 60, 연사력 64, 반동 44, 정확도 50"
+            }
+          ],
+          "confidence": "medium"
+        },
+        "recoilReal": {
+          "value": 44,
+          "status": "provisional",
+          "evidence": [
+            {
+              "source": "inven-2011-weapons",
+              "url": "https://www.inven.co.kr/webzine/news/?news=37641",
+              "access": "direct-read",
+              "quote": "● L86A1 … 능력치 : 데미지 60, 연사력 64, 반동 44, 정확도 50"
+            }
+          ],
+          "confidence": "medium"
+        },
+        "accuracy": {
+          "value": 50,
+          "status": "provisional",
+          "evidence": [
+            {
+              "source": "inven-2011-weapons",
+              "url": "https://www.inven.co.kr/webzine/news/?news=37641",
+              "access": "direct-read",
+              "quote": "● L86A1 … 능력치 : 데미지 60, 연사력 64, 반동 44, 정확도 50"
+            }
+          ],
+          "confidence": "medium"
+        }
+      },
+      "rpm": {
+        "status": "unknown",
+        "why": "LMG: no LMG sample in the regression"
+      }
+    },
+    "psg1": {
+      "sf2Name": "PSG-1",
+      "class": "sniper",
+      "ourId": "psg1",
+      "modelMatch": "same model",
+      "uiRating": {
+        "damage": {
+          "value": 87,
+          "status": "provisional",
+          "evidence": [
+            {
+              "source": "inven-2011-weapons",
+              "url": "https://www.inven.co.kr/webzine/news/?news=37641",
+              "access": "direct-read",
+              "quote": "● PSG-1 … 능력치 : 데미지 87, 연사력 0, 반동 100, 정확도 100"
+            }
+          ],
+          "confidence": "medium"
+        },
+        "fireRate": {
+          "value": 0,
+          "status": "provisional",
+          "evidence": [
+            {
+              "source": "inven-2011-weapons",
+              "url": "https://www.inven.co.kr/webzine/news/?news=37641",
+              "access": "direct-read",
+              "quote": "● PSG-1 … 능력치 : 데미지 87, 연사력 0, 반동 100, 정확도 100"
+            }
+          ],
+          "confidence": "medium",
+          "note": "Semi-auto / bolt / pump guns show 0 on the fire-rate bar; it is not a rate."
+        },
+        "recoilReal": {
+          "value": 100,
+          "status": "provisional",
+          "evidence": [
+            {
+              "source": "inven-2011-weapons",
+              "url": "https://www.inven.co.kr/webzine/news/?news=37641",
+              "access": "direct-read",
+              "quote": "● PSG-1 … 능력치 : 데미지 87, 연사력 0, 반동 100, 정확도 100"
+            }
+          ],
+          "confidence": "medium"
+        },
+        "accuracy": {
+          "value": 100,
+          "status": "provisional",
+          "evidence": [
+            {
+              "source": "inven-2011-weapons",
+              "url": "https://www.inven.co.kr/webzine/news/?news=37641",
+              "access": "direct-read",
+              "quote": "● PSG-1 … 능력치 : 데미지 87, 연사력 0, 반동 100, 정확도 100"
+            }
+          ],
+          "confidence": "medium"
+        }
+      }
+    },
+    "cz700": {
+      "sf2Name": "CZ700",
+      "class": "sniper",
+      "ourId": "cz700",
+      "modelMatch": "same model",
+      "uiRating": {
+        "damage": {
+          "value": 93,
+          "status": "provisional",
+          "evidence": [
+            {
+              "source": "inven-2011-weapons",
+              "url": "https://www.inven.co.kr/webzine/news/?news=37641",
+              "access": "direct-read",
+              "quote": "● CZ700 … 능력치 : 데미지 93, 연사력 0, 반동 100, 정확도 100"
+            }
+          ],
+          "confidence": "medium"
+        },
+        "fireRate": {
+          "value": 0,
+          "status": "provisional",
+          "evidence": [
+            {
+              "source": "inven-2011-weapons",
+              "url": "https://www.inven.co.kr/webzine/news/?news=37641",
+              "access": "direct-read",
+              "quote": "● CZ700 … 능력치 : 데미지 93, 연사력 0, 반동 100, 정확도 100"
+            }
+          ],
+          "confidence": "medium",
+          "note": "Semi-auto / bolt / pump guns show 0 on the fire-rate bar; it is not a rate."
+        },
+        "recoilReal": {
+          "value": 100,
+          "status": "provisional",
+          "evidence": [
+            {
+              "source": "inven-2011-weapons",
+              "url": "https://www.inven.co.kr/webzine/news/?news=37641",
+              "access": "direct-read",
+              "quote": "● CZ700 … 능력치 : 데미지 93, 연사력 0, 반동 100, 정확도 100"
+            }
+          ],
+          "confidence": "medium"
+        },
+        "accuracy": {
+          "value": 100,
+          "status": "provisional",
+          "evidence": [
+            {
+              "source": "inven-2011-weapons",
+              "url": "https://www.inven.co.kr/webzine/news/?news=37641",
+              "access": "direct-read",
+              "quote": "● CZ700 … 능력치 : 데미지 93, 연사력 0, 반동 100, 정확도 100"
+            }
+          ],
+          "confidence": "medium"
+        }
+      }
+    },
+    "m92fs": {
+      "sf2Name": "Beretta 92FS",
+      "class": "pistol",
+      "ourId": "m92fs",
+      "modelMatch": "same model",
+      "uiRating": {
+        "damage": {
+          "value": 50,
+          "status": "provisional",
+          "evidence": [
+            {
+              "source": "inven-2011-weapons",
+              "url": "https://www.inven.co.kr/webzine/news/?news=37641",
+              "access": "direct-read",
+              "quote": "● Beretta 92FS … 능력치 : 데미지 50, 연사력 0, 반동 46, 정확도 66"
+            }
+          ],
+          "confidence": "medium"
+        },
+        "fireRate": {
+          "value": 0,
+          "status": "provisional",
+          "evidence": [
+            {
+              "source": "inven-2011-weapons",
+              "url": "https://www.inven.co.kr/webzine/news/?news=37641",
+              "access": "direct-read",
+              "quote": "● Beretta 92FS … 능력치 : 데미지 50, 연사력 0, 반동 46, 정확도 66"
+            }
+          ],
+          "confidence": "medium",
+          "note": "Semi-auto / bolt / pump guns show 0 on the fire-rate bar; it is not a rate."
+        },
+        "recoilReal": {
+          "value": 46,
+          "status": "provisional",
+          "evidence": [
+            {
+              "source": "inven-2011-weapons",
+              "url": "https://www.inven.co.kr/webzine/news/?news=37641",
+              "access": "direct-read",
+              "quote": "● Beretta 92FS … 능력치 : 데미지 50, 연사력 0, 반동 46, 정확도 66"
+            }
+          ],
+          "confidence": "medium"
+        },
+        "accuracy": {
+          "value": 66,
+          "status": "provisional",
+          "evidence": [
+            {
+              "source": "inven-2011-weapons",
+              "url": "https://www.inven.co.kr/webzine/news/?news=37641",
+              "access": "direct-read",
+              "quote": "● Beretta 92FS … 능력치 : 데미지 50, 연사력 0, 반동 46, 정확도 66"
+            }
+          ],
+          "confidence": "medium"
+        }
+      },
+      "note": "Inven lists the pistols under a mislabelled 머신건 heading."
+    },
+    "cz75bd": {
+      "sf2Name": "CZ75BD",
+      "class": "pistol",
+      "ourId": "cz75",
+      "modelMatch": "same model",
+      "uiRating": {
+        "damage": {
+          "value": 42,
+          "status": "provisional",
+          "evidence": [
+            {
+              "source": "inven-2011-weapons",
+              "url": "https://www.inven.co.kr/webzine/news/?news=37641",
+              "access": "direct-read",
+              "quote": "● CZ75BD … 능력치 : 데미지 42, 연사력 0, 반동 45, 정확도 72"
+            }
+          ],
+          "confidence": "medium"
+        },
+        "fireRate": {
+          "value": 0,
+          "status": "provisional",
+          "evidence": [
+            {
+              "source": "inven-2011-weapons",
+              "url": "https://www.inven.co.kr/webzine/news/?news=37641",
+              "access": "direct-read",
+              "quote": "● CZ75BD … 능력치 : 데미지 42, 연사력 0, 반동 45, 정확도 72"
+            }
+          ],
+          "confidence": "medium",
+          "note": "Semi-auto / bolt / pump guns show 0 on the fire-rate bar; it is not a rate."
+        },
+        "recoilReal": {
+          "value": 45,
+          "status": "provisional",
+          "evidence": [
+            {
+              "source": "inven-2011-weapons",
+              "url": "https://www.inven.co.kr/webzine/news/?news=37641",
+              "access": "direct-read",
+              "quote": "● CZ75BD … 능력치 : 데미지 42, 연사력 0, 반동 45, 정확도 72"
+            }
+          ],
+          "confidence": "medium"
+        },
+        "accuracy": {
+          "value": 72,
+          "status": "provisional",
+          "evidence": [
+            {
+              "source": "inven-2011-weapons",
+              "url": "https://www.inven.co.kr/webzine/news/?news=37641",
+              "access": "direct-read",
+              "quote": "● CZ75BD … 능력치 : 데미지 42, 연사력 0, 반동 45, 정확도 72"
+            }
+          ],
+          "confidence": "medium"
+        }
+      }
+    },
+    "m870": {
+      "sf2Name": "Remington M870",
+      "class": "shotgun",
+      "ourId": "remington870",
+      "modelMatch": "same model",
+      "uiRating": {
+        "damage": {
+          "value": 53,
+          "status": "provisional",
+          "evidence": [
+            {
+              "source": "inven-2011-weapons",
+              "url": "https://www.inven.co.kr/webzine/news/?news=37641",
+              "access": "direct-read",
+              "quote": "● Remington M870 … 능력치 : 데미지 53, 연사력 0, 반동 90, 정확도 25"
+            }
+          ],
+          "confidence": "medium"
+        },
+        "fireRate": {
+          "value": 0,
+          "status": "provisional",
+          "evidence": [
+            {
+              "source": "inven-2011-weapons",
+              "url": "https://www.inven.co.kr/webzine/news/?news=37641",
+              "access": "direct-read",
+              "quote": "● Remington M870 … 능력치 : 데미지 53, 연사력 0, 반동 90, 정확도 25"
+            }
+          ],
+          "confidence": "medium",
+          "note": "Semi-auto / bolt / pump guns show 0 on the fire-rate bar; it is not a rate."
+        },
+        "recoilReal": {
+          "value": 90,
+          "status": "provisional",
+          "evidence": [
+            {
+              "source": "inven-2011-weapons",
+              "url": "https://www.inven.co.kr/webzine/news/?news=37641",
+              "access": "direct-read",
+              "quote": "● Remington M870 … 능력치 : 데미지 53, 연사력 0, 반동 90, 정확도 25"
+            }
+          ],
+          "confidence": "medium"
+        },
+        "accuracy": {
+          "value": 25,
+          "status": "provisional",
+          "evidence": [
+            {
+              "source": "inven-2011-weapons",
+              "url": "https://www.inven.co.kr/webzine/news/?news=37641",
+              "access": "direct-read",
+              "quote": "● Remington M870 … 능력치 : 데미지 53, 연사력 0, 반동 90, 정확도 25"
+            }
+          ],
+          "confidence": "medium"
+        }
+      }
+    },
+    "benelli_m4": {
+      "sf2Name": "Benelli M4",
+      "class": "shotgun",
+      "ourId": "benelli_m4",
+      "modelMatch": "same model",
+      "uiRating": {
+        "damage": {
+          "value": 96,
+          "status": "provisional",
+          "evidence": [
+            {
+              "source": "inven-2011-weapons",
+              "url": "https://www.inven.co.kr/webzine/news/?news=37641",
+              "access": "direct-read",
+              "quote": "● Benelli M4 … 능력치 : 데미지 96, 연사력 0, 반동 100, 정확도 42"
+            }
+          ],
+          "confidence": "medium"
+        },
+        "fireRate": {
+          "value": 0,
+          "status": "provisional",
+          "evidence": [
+            {
+              "source": "inven-2011-weapons",
+              "url": "https://www.inven.co.kr/webzine/news/?news=37641",
+              "access": "direct-read",
+              "quote": "● Benelli M4 … 능력치 : 데미지 96, 연사력 0, 반동 100, 정확도 42"
+            }
+          ],
+          "confidence": "medium",
+          "note": "Semi-auto / bolt / pump guns show 0 on the fire-rate bar; it is not a rate."
+        },
+        "recoilReal": {
+          "value": 100,
+          "status": "provisional",
+          "evidence": [
+            {
+              "source": "inven-2011-weapons",
+              "url": "https://www.inven.co.kr/webzine/news/?news=37641",
+              "access": "direct-read",
+              "quote": "● Benelli M4 … 능력치 : 데미지 96, 연사력 0, 반동 100, 정확도 42"
+            }
+          ],
+          "confidence": "medium"
+        },
+        "accuracy": {
+          "value": 42,
+          "status": "provisional",
+          "evidence": [
+            {
+              "source": "inven-2011-weapons",
+              "url": "https://www.inven.co.kr/webzine/news/?news=37641",
+              "access": "direct-read",
+              "quote": "● Benelli M4 … 능력치 : 데미지 96, 연사력 0, 반동 100, 정확도 42"
+            }
+          ],
+          "confidence": "medium"
+        }
+      }
+    }
+  },
+  "regression": {
+    "model": "RPM = b × fireRateRating + a (ordinary least squares)",
+    "status": "estimated",
+    "inputStatus": "All four RPM samples are unverified (EU wiki search snippets).",
+    "samples": [
+      {
+        "weapon": "M14EBR",
+        "class": "dmr",
+        "rating": 23,
+        "rpm": 214,
+        "predicted": 211.2,
+        "residual": 2.8,
+        "looPredicted": 167.5,
+        "looError": 46.5
+      },
+      {
+        "weapon": "AK-103",
+        "class": "assault",
+        "rating": 61,
+        "rpm": 529,
+        "predicted": 535.1,
+        "residual": -6.1,
+        "looPredicted": 537.1,
+        "looError": -8.1
+      },
+      {
+        "weapon": "SG 551",
+        "class": "assault",
+        "rating": 72,
+        "rpm": 620,
+        "predicted": 628.8,
+        "residual": -8.8,
+        "looPredicted": 633.6,
+        "looError": -13.6
+      },
+      {
+        "weapon": "FAMAS",
+        "class": "assault",
+        "rating": 78,
+        "rpm": 692,
+        "predicted": 680,
+        "residual": 12,
+        "looPredicted": 669.8,
+        "looError": 22.2
+      }
+    ],
+    "coefficients": {
+      "b": 8.5235,
+      "a": 15.125
+    },
+    "stats": {
+      "n": 4,
+      "ratingMin": 23,
+      "ratingMax": 78,
+      "rpmMin": 214,
+      "rpmMax": 692,
+      "r2": 0.998,
+      "mae": 7.44,
+      "rmse": 8.18,
+      "maxAbsResidual": 12.04,
+      "residualSE_df2": 11.56,
+      "looMae": 22.6,
+      "looRmse": 26.9
+    },
+    "sensitivity": {
+      "riflesOnly": {
+        "n": 3,
+        "b": 9.43,
+        "a": -49.3,
+        "residuals": [
+          3.3,
+          -9.4,
+          6.1
+        ],
+        "note": "Dropping the single DMR changes the slope by 11%: M14EBR is a high-leverage point and inflates R²."
+      },
+      "withG36C": {
+        "r2": 0.796,
+        "note": "The G36C wiki RPM (782) sits 221 RPM above the line; its own DPS implies ≈545. Excluded as a likely wiki error."
+      }
+    },
+    "byClass": {
+      "assault": {
+        "samples": 3,
+        "note": "Only class with more than one point; LOO errors −8 to +22 RPM."
+      },
+      "dmr": {
+        "samples": 1,
+        "note": "One point; it anchors the low end of the line."
+      },
+      "smg": {
+        "samples": 0,
+        "note": "No data. P90 (86) and MP5K (92) are above the fitted range."
+      },
+      "lmg": {
+        "samples": 0,
+        "note": "No data. Ratings 64-67 are inside the numeric range, but there is no evidence LMGs follow the rifle line."
+      },
+      "sniper": {
+        "samples": 0
+      },
+      "pistol": {
+        "samples": 0
+      },
+      "shotgun": {
+        "samples": 0,
+        "note": "These show fire-rate 0; the formula does not apply."
+      }
+    },
+    "allowedUse": "Interpolation for assault rifles with ratings 61-78 only, labelled estimated, error ±25 RPM (LOO). Never for SMG, LMG, sniper, pistol or shotgun; never presented as SF2 data."
+  },
+  "rules": {
+    "teamDeathmatch": {
+      "teamSize": {
+        "value": 8,
+        "status": "unverified",
+        "evidence": [
+          {
+            "source": "eu-wiki",
+            "url": "https://skill-special-force-2.fandom.com/wiki/Game_Modes",
+            "access": "search-snippet",
+            "quote": "Two teams of up to 8 players",
+            "note": "Search-engine summary of the page; the page itself was not opened."
+          }
+        ]
+      },
+      "timeLimitMin": {
+        "value": 10,
+        "status": "unverified",
+        "evidence": [
+          {
+            "source": "eu-wiki",
+            "url": "https://skill-special-force-2.fandom.com/wiki/Game_Modes",
+            "access": "search-snippet",
+            "quote": "10-minute limit",
+            "note": "Search-engine summary of the page; the page itself was not opened."
+          }
+        ]
+      },
+      "scoreTargets": {
+        "value": [
+          3000,
+          4000,
+          5000
+        ],
+        "status": "unverified",
+        "evidence": [
+          {
+            "source": "eu-wiki",
+            "url": "https://skill-special-force-2.fandom.com/wiki/Game_Modes",
+            "access": "search-snippet",
+            "quote": "win target of 3000, 4000, or 5000 points",
+            "note": "Search-engine summary of the page; the page itself was not opened."
+          }
+        ]
+      },
+      "spawnShieldSec": {
+        "value": 3,
+        "status": "unverified",
+        "evidence": [
+          {
+            "source": "eu-wiki",
+            "url": "https://skill-special-force-2.fandom.com/wiki/Game_Modes",
+            "access": "search-snippet",
+            "quote": "3-second spawn shield",
+            "note": "Search-engine summary of the page; the page itself was not opened."
+          }
+        ]
+      },
+      "pointsPerKill": {
+        "status": "unknown",
+        "why": "targets known, points per kill not"
+      }
+    },
+    "freeForAll": {
+      "maxPlayers": {
+        "value": 16,
+        "status": "unverified",
+        "evidence": [
+          {
+            "source": "eu-wiki",
+            "url": "https://skill-special-force-2.fandom.com/wiki/Game_Modes",
+            "access": "search-snippet",
+            "quote": "Up to 16 players",
+            "note": "Search-engine summary of the page; the page itself was not opened."
+          }
+        ]
+      },
+      "timeLimitMin": {
+        "value": 10,
+        "status": "unverified",
+        "evidence": [
+          {
+            "source": "eu-wiki",
+            "url": "https://skill-special-force-2.fandom.com/wiki/Game_Modes",
+            "access": "search-snippet",
+            "quote": "10 minutes maximum",
+            "note": "Search-engine summary of the page; the page itself was not opened."
+          }
+        ]
+      },
+      "scoreTargets": {
+        "value": [
+          500,
+          1000,
+          1500
+        ],
+        "status": "unverified",
+        "evidence": [
+          {
+            "source": "eu-wiki",
+            "url": "https://skill-special-force-2.fandom.com/wiki/Game_Modes",
+            "access": "search-snippet",
+            "quote": "win target of 500, 1000, or 1500 points",
+            "note": "Search-engine summary of the page; the page itself was not opened."
+          }
+        ]
+      }
+    },
+    "blasting": {
+      "roundsToWin": {
+        "value": [
+          5,
+          10
+        ],
+        "status": "unverified",
+        "evidence": [
+          {
+            "source": "eu-wiki",
+            "url": "https://skill-special-force-2.fandom.com/wiki/Game_Modes",
+            "access": "search-snippet",
+            "quote": "5 to 10 rounds to win",
+            "note": "Search-engine summary of the page; the page itself was not opened."
+          }
+        ],
+        "note": "range"
+      },
+      "roundTimeSec": {
+        "value": 150,
+        "status": "unverified",
+        "evidence": [
+          {
+            "source": "eu-wiki",
+            "url": "https://skill-special-force-2.fandom.com/wiki/Game_Modes",
+            "access": "search-snippet",
+            "quote": "2.30 minutes per round",
+            "note": "Search-engine summary of the page; the page itself was not opened."
+          }
+        ]
+      },
+      "bombTimerSec": {
+        "value": 30,
+        "status": "unverified",
+        "evidence": [
+          {
+            "source": "eu-wiki",
+            "url": "https://skill-special-force-2.fandom.com/wiki/Game_Modes",
+            "access": "search-snippet",
+            "quote": "30-second bomb timer",
+            "note": "Search-engine summary of the page; the page itself was not opened."
+          }
+        ]
+      },
+      "defuseSec": {
+        "value": 7,
+        "status": "unverified",
+        "evidence": [
+          {
+            "source": "eu-wiki",
+            "url": "https://skill-special-force-2.fandom.com/wiki/Game_Modes",
+            "access": "search-snippet",
+            "quote": "7-second defuse timer",
+            "note": "Search-engine summary of the page; the page itself was not opened."
+          }
+        ]
+      }
+    },
+    "seizure": {
+      "roundTimeSec": {
+        "value": 150,
+        "status": "unverified",
+        "evidence": [
+          {
+            "source": "eu-wiki",
+            "url": "https://skill-special-force-2.fandom.com/wiki/Game_Modes",
+            "access": "search-snippet",
+            "quote": "5 to 10 rounds, 2.30 minutes per round",
+            "note": "Search-engine summary of the page; the page itself was not opened."
+          }
+        ]
+      }
+    },
+    "capture": {
+      "flags": {
+        "value": 3,
+        "status": "unverified",
+        "evidence": [
+          {
+            "source": "eu-wiki",
+            "url": "https://skill-special-force-2.fandom.com/wiki/Game_Modes",
+            "access": "search-snippet",
+            "quote": "capture and hold 3 flags",
+            "note": "Search-engine summary of the page; the page itself was not opened."
+          }
+        ]
+      },
+      "scoreTarget": {
+        "value": 1400,
+        "status": "unverified",
+        "evidence": [
+          {
+            "source": "eu-wiki",
+            "url": "https://skill-special-force-2.fandom.com/wiki/Game_Modes",
+            "access": "search-snippet",
+            "quote": "single 1400-point round",
+            "note": "Search-engine summary of the page; the page itself was not opened."
+          }
+        ]
+      },
+      "timeLimitMin": {
+        "value": 10,
+        "status": "unverified",
+        "evidence": [
+          {
+            "source": "eu-wiki",
+            "url": "https://skill-special-force-2.fandom.com/wiki/Game_Modes",
+            "access": "search-snippet",
+            "quote": "10-minute limit",
+            "note": "Search-engine summary of the page; the page itself was not opened."
+          }
+        ]
+      },
+      "captureTimeSec": {
+        "status": "unknown",
+        "why": "no source"
+      }
+    },
+    "clanLeague": {
+      "teamSize": {
+        "value": 5,
+        "status": "confirmed",
+        "evidence": [
+          {
+            "source": "local-twn-client",
+            "url": "file:///D:/SpecialForce2/SFGame/Publishing/guide1.txt",
+            "access": "direct-read",
+            "quote": "軍團聯盟賽參賽人數為 ５vs５"
+          }
+        ],
+        "note": "official TWN notice"
+      },
+      "leaguePoints": {
+        "value": {
+          "win": 3,
+          "loss": 1,
+          "leave": 0
+        },
+        "status": "confirmed",
+        "evidence": [
+          {
+            "source": "local-twn-client",
+            "url": "file:///D:/SpecialForce2/SFGame/Publishing/guide1.txt",
+            "access": "direct-read",
+            "quote": "勝：３分／敗：１分／中途離場：不獲得積分"
+          }
+        ]
+      },
+      "startCountdownSec": {
+        "value": 3,
+        "status": "confirmed",
+        "evidence": [
+          {
+            "source": "local-twn-client",
+            "url": "file:///D:/SpecialForce2/SFGame/Publishing/guide1.txt",
+            "access": "direct-read",
+            "quote": "３秒倒數計時後比賽將自動開始"
+          }
+        ]
+      },
+      "reconnect": {
+        "value": true,
+        "status": "confirmed",
+        "evidence": [
+          {
+            "source": "local-twn-client",
+            "url": "file:///D:/SpecialForce2/SFGame/Publishing/guide1.txt",
+            "access": "direct-read",
+            "quote": "若發生「部分」成員退出、斷線的情況，可重新連線進入比賽"
+          }
+        ]
+      }
+    },
+    "sprint": {
+      "value": true,
+      "status": "unverified",
+      "evidence": [
+        {
+          "source": "inven-2011-preview",
+          "access": "search-snippet",
+          "quote": "스프린트 기능이라는 새로운 시스템"
+        }
+      ]
+    }
+  },
+  "grenades": {
+    "m67": {
+      "damageRating": {
+        "value": 100,
+        "status": "provisional",
+        "evidence": [
+          {
+            "source": "inven-2011-weapons",
+            "url": "https://www.inven.co.kr/webzine/news/?news=37641",
+            "access": "direct-read",
+            "quote": "● M67 … 능력치 : 데미지 100"
+          }
+        ]
+      },
+      "lethalRadius": {
+        "value": 5,
+        "unit": "m",
+        "status": "provisional",
+        "evidence": [
+          {
+            "source": "inven-2011-weapons",
+            "url": "https://www.inven.co.kr/webzine/news/?news=37641",
+            "access": "direct-read",
+            "quote": "살상 반경은 5M가량 된다"
+          }
+        ],
+        "note": "Weapon blurb; may describe the real grenade."
+      }
+    }
+  },
+  "camera": {
+    "hipFov": {
+      "status": "unknown",
+      "why": "no source"
+    },
+    "adsZoom": {
+      "status": "unknown",
+      "why": "no source"
+    },
+    "scopeZoomLevels": {
+      "status": "unknown",
+      "why": "no source"
+    }
+  },
+  "movement": {
+    "jump": {
+      "status": "unknown",
+      "why": "no source"
+    },
+    "crouchSpeed": {
+      "status": "unknown",
+      "why": "no source"
+    }
+  },
+  "damageModel": {
+    "hpDamagePerShot": {
+      "status": "unknown",
+      "why": "No evidence ties the 0-100 damage bar to HP. EU wiki DPS = rating × RPM / 60 is an editors' assumption."
+    },
+    "bodyPartMultipliers": {
+      "status": "unknown",
+      "why": "no source"
+    },
+    "armor": {
+      "status": "unknown",
+      "why": "Heavy / light armor change speed (unverified); damage reduction undocumented"
+    }
+  }
+}
