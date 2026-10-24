@@ -1467,8 +1467,6 @@ const DEFAULT_LOADOUTS = [
 
 const STAR_BADGE = '<svg viewBox="0 0 24 24"><defs><linearGradient id="sbg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff3b0"/><stop offset=".55" stop-color="#f5c542"/><stop offset="1" stop-color="#b8801a"/></linearGradient></defs><circle cx="12" cy="12" r="11" fill="#2a1d05" stroke="#e6b23a" stroke-width="1.4"/><path d="M12 3.6l2.5 5.3 5.8.7-4.3 4 1.1 5.7L12 16.5l-5.1 2.8 1.1-5.7-4.3-4 5.8-.7z" fill="url(#sbg)" stroke="#fff2b8" stroke-width=".5"/></svg>'; // v45 host badge
 const mapThumb = (def) => `assets/maps/thumbs/${def.id}.jpg`; // v46 room map pictures
-// maps that fetch their data (def.server) cannot load from a double-clicked index.html (file://) — 開始遊戲.bat serves the folder
-const needsServer = (def) => !!def.server && location.protocol === 'file:';
 const LOADOUT_KEYS = 'ABC'; // v45: three loadout sets A–C (SF2 armory tabs), F1–F3 queue them in a match
 
 const MODES = {
@@ -7568,11 +7566,36 @@ function satDressing(b) {
   return true;
 }
 // Local imported test region: visual batches and separately baked collision columns.
+// Both Apex maps ship as script chunks (tools/pack-apex-js.mjs): a double-clicked index.html (file://) blocks fetch, not
+// <script>. pack/index.js gives the bundle layout, each chunk decodes straight into one buffer, the parts come back as ArrayBuffers.
+const APEX_PACK = window.APEX_PACK = {
+  maps: {},
+  layout(id, L) { this.maps[id] = Object.assign(L, { buf: new Uint8Array(L.bytes), got: 0 }); },
+  chunk(id, i, b64) {
+    const L = this.maps[id], at = i * L.chunk;
+    if (Uint8Array.fromBase64) L.buf.set(Uint8Array.fromBase64(b64), at);
+    else { const s = atob(b64); for (let j = 0; j < s.length; j++) L.buf[at + j] = s.charCodeAt(j); }
+    L.got++;
+  },
+};
+const apexScript = (src) => new Promise((res, rej) => {
+  const s = document.createElement('script'); s.src = src; s.async = true;
+  s.onload = () => { s.remove(); res(); }; s.onerror = () => { s.remove(); rej(new Error('Apex map data missing: ' + src)); };
+  document.head.appendChild(s);
+});
+async function apexPack(id, dir) {
+  await apexScript(dir + 'pack/index.js');
+  const L = APEX_PACK.maps[id];
+  await Promise.all(Array.from({ length: L.chunks }, (_, i) => apexScript(dir + 'pack/' + i + '.js')));
+  delete APEX_PACK.maps[id];
+  if (L.got !== L.chunks) throw new Error('Apex map data incomplete: ' + id);
+  const parts = {}; for (const [k, [o, n]] of Object.entries(L.parts)) parts[k] = L.buf.buffer.slice(o, o + n);
+  return parts;
+}
 // Packed collision (tools/pack-apex-collision.mjs): 'APXC', version 1, header length, JSON header, then Int16 boxes
 // x0 y0 z0 x1 y1 z1 (x/z in 1/xz m, y in 1/y m) → the header plus boxes as one Float32Array for CollisionWorld.addPacked.
-async function apexCollision(url) {
-  const r = await fetch(url); if (!r.ok) throw new Error('Apex collision data unavailable');
-  const buf = await r.arrayBuffer(), v = new DataView(buf);
+function apexCollision(buf) {
+  const v = new DataView(buf);
   if (v.getUint32(0, true) !== 0x43585041 || v.getUint32(4, true) !== 1) throw new Error('Apex collision: unknown format');
   const n = v.getUint32(8, true), head = JSON.parse(new TextDecoder().decode(new Uint8Array(buf, 12, n)));
   const q = new Int16Array(buf, (12 + n + 3) & ~3, head.count * 6), boxes = new Float32Array(q.length);
@@ -7581,12 +7604,8 @@ async function apexCollision(url) {
 }
 async function apexPreload(def) {
   if (def._apex) return;
-  const root = 'assets/maps/apex-test/';
-  const [data, gltf] = await Promise.all([
-    fetch(root + 'collision.json').then(r => { if (!r.ok) throw new Error('Apex collision data unavailable'); return r.json(); }),
-    new GLTFLoader().loadAsync(root + 'region.glb?v=materials2'),
-  ]);
-  def._apex = { data, gltf };
+  const p = await apexPack('apex_test', 'assets/maps/apex-test/');
+  def._apex = { data: JSON.parse(new TextDecoder().decode(p.collision)), gltf: await new GLTFLoader().parseAsync(p.glb, '') };
 }
 function apexSpawns(team, game) {
   if (!game._apexSpawns) {
@@ -7613,7 +7632,7 @@ function apexSpawns(team, game) {
 MAPS.push({
   id:'apex_test',name:'Apex 訓練場・測試區',en:'APEX IMPORT TEST',
   desc:'本機測試 · 部分材質 · 近似碰撞 · 80×80',slogan:'匯入驗證 · 建築與地形移動測試',
-  bounds:{minX:-40,maxX:40,minZ:-40,maxZ:40},indoor:false,navLevels:[],killY:-18,traversal:true,server:true,
+  bounds:{minX:-40,maxX:40,minZ:-40,maxZ:40},indoor:false,navLevels:[],killY:-18,traversal:true,
   background:0x9daeb9,envIntensity:.6,exposure:.8,
   sun:{pos:[-20,70,25],color:0xfff0d5,intensity:2},hemi:[0xdce8f2,0x665b49,1.2],
   fog:{color:0x9daeb9,near:100,far:220},acoustics:'outdoor',ambience:'wind',
@@ -7766,7 +7785,7 @@ class ApexStreaming {
 MAPS.push({
   id: 'apex_full', name: 'Apex 訓練場・全場景', en: 'APEX FULL RANGE',
   desc: '全場景探索 · E 電動門 · 二段跳／滑鏟／攀爬', slogan: '完整匯入範圍 · 近似碰撞',
-  bounds: { minX: -909, maxX: 208, minZ: -780, maxZ: 244 }, indoor: false, navLevels: [], killY: -284, killOutside: true, traversal: true, server: true,
+  bounds: { minX: -909, maxX: 208, minZ: -780, maxZ: 244 }, indoor: false, navLevels: [], killY: -284, killOutside: true, traversal: true,
   background: 0x9daeb9, envIntensity: 0.6, exposure: 0.8,
   sun: { pos: [-20, 70, 25], color: 0xfff0d5, intensity: 2 }, hemi: [0xdce8f2, 0x665b49, 1.2],
   fog: { color: 0x9daeb9, near: 400, far: 1400 }, acoustics: 'outdoor', ambience: 'wind',
@@ -7776,9 +7795,8 @@ MAPS.push({
   spawnPoints: apexSpawns,
   async preload() {
     if (this._full) return;
-    const root = 'assets/maps/apex-full/', json = async (p) => { const r = await fetch(root + p); if (!r.ok) throw Error('Full range asset: ' + p); return r.json(); };
-    const [manifest, data, gltf] = await Promise.all([json('manifest.json'), apexCollision(root + 'collision.bin'), new GLTFLoader().loadAsync(root + 'scene.gltf')]);
-    this._full = { manifest, data, gltf }; this.killY = manifest.killY;
+    const p = await apexPack('apex_full', 'assets/maps/apex-full/'), manifest = JSON.parse(new TextDecoder().decode(p.manifest));
+    this._full = { manifest, data: apexCollision(p.collision), gltf: await new GLTFLoader().parseAsync(p.glb, '') }; this.killY = manifest.killY;
   },
   build(b) {
     b.spawnZone('alpha', -30, -30, -24, -24, 0); b.spawnZone('bravo', 24, 24, 30, 30, Math.PI); if (b.dry) return;
@@ -15091,7 +15109,7 @@ class App {
       // v46: the real scene from the map's best angle (assets/maps/thumbs, made by tools/_mapthumbs.mjs); the floor plan if it is missing
       const bt = document.createElement('button'), img = document.createElement('img'); img.className = 'th'; img.alt = ''; img.loading = 'lazy';
       img.onerror = () => { const cv = document.createElement('canvas'); cv.width = 176; cv.height = 88; drawMapPreview(cv, def, this.dry[i], { labels: false }); img.replaceWith(cv); };
-      img.src = mapThumb(def); bt.append(img, document.createTextNode(`${i + 1}. ${def.name}${needsServer(def) ? '（需本機伺服器）' : ''}`));
+      img.src = mapThumb(def); bt.append(img, document.createTextNode(`${i + 1}. ${def.name}`));
       bt.onclick = () => { if (this.isGuest()) return; L.map = i; this.audio.init(); this.audio.uiClick(); $('lbMapModal').classList.remove('on'); this.refreshLobby(); this.warm(i); };
       maps.appendChild(bt);
     });
@@ -15307,12 +15325,12 @@ class App {
       await m.build((p, label) => { this.loadTarget = p * 0.85; this.loadLabel = label; });
     } catch (e) {
       console.error(e);
-      const msg = needsServer(def) ? '這張地圖要用本機伺服器開啟：請關閉此頁，改用專案資料夾裡的「開始遊戲.bat」' : '載入失敗：' + e.message;
+      const msg = '地圖載入失敗：' + e.message;
       this.loadLabel = msg; await sleep(6000); // then back out of the loader instead of leaving it hanging
       if (this.match !== m) return;
       try { m.dispose(); } catch (err) { /* the map failed half-built */ }
       this.match = null; ld.classList.remove('on');
-      if (this.room) this.enterRoomScreen(); else this.showHub(msg);
+      if (this.room) { this.enterRoomScreen(); this.roomToast(msg); } else this.showHub(msg);
       return;
     }
     if (net) { // v27: wait until the host's match takes us in (it may still be building its map)

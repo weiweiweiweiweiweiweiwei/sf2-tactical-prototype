@@ -1,9 +1,34 @@
 // Local imported test region: visual batches and separately baked collision columns.
+// Both Apex maps ship as script chunks (tools/pack-apex-js.mjs): a double-clicked index.html (file://) blocks fetch, not
+// <script>. pack/index.js gives the bundle layout, each chunk decodes straight into one buffer, the parts come back as ArrayBuffers.
+const APEX_PACK = window.APEX_PACK = {
+  maps: {},
+  layout(id, L) { this.maps[id] = Object.assign(L, { buf: new Uint8Array(L.bytes), got: 0 }); },
+  chunk(id, i, b64) {
+    const L = this.maps[id], at = i * L.chunk;
+    if (Uint8Array.fromBase64) L.buf.set(Uint8Array.fromBase64(b64), at);
+    else { const s = atob(b64); for (let j = 0; j < s.length; j++) L.buf[at + j] = s.charCodeAt(j); }
+    L.got++;
+  },
+};
+const apexScript = (src) => new Promise((res, rej) => {
+  const s = document.createElement('script'); s.src = src; s.async = true;
+  s.onload = () => { s.remove(); res(); }; s.onerror = () => { s.remove(); rej(new Error('Apex map data missing: ' + src)); };
+  document.head.appendChild(s);
+});
+async function apexPack(id, dir) {
+  await apexScript(dir + 'pack/index.js');
+  const L = APEX_PACK.maps[id];
+  await Promise.all(Array.from({ length: L.chunks }, (_, i) => apexScript(dir + 'pack/' + i + '.js')));
+  delete APEX_PACK.maps[id];
+  if (L.got !== L.chunks) throw new Error('Apex map data incomplete: ' + id);
+  const parts = {}; for (const [k, [o, n]] of Object.entries(L.parts)) parts[k] = L.buf.buffer.slice(o, o + n);
+  return parts;
+}
 // Packed collision (tools/pack-apex-collision.mjs): 'APXC', version 1, header length, JSON header, then Int16 boxes
 // x0 y0 z0 x1 y1 z1 (x/z in 1/xz m, y in 1/y m) → the header plus boxes as one Float32Array for CollisionWorld.addPacked.
-async function apexCollision(url) {
-  const r = await fetch(url); if (!r.ok) throw new Error('Apex collision data unavailable');
-  const buf = await r.arrayBuffer(), v = new DataView(buf);
+function apexCollision(buf) {
+  const v = new DataView(buf);
   if (v.getUint32(0, true) !== 0x43585041 || v.getUint32(4, true) !== 1) throw new Error('Apex collision: unknown format');
   const n = v.getUint32(8, true), head = JSON.parse(new TextDecoder().decode(new Uint8Array(buf, 12, n)));
   const q = new Int16Array(buf, (12 + n + 3) & ~3, head.count * 6), boxes = new Float32Array(q.length);
@@ -12,12 +37,8 @@ async function apexCollision(url) {
 }
 async function apexPreload(def) {
   if (def._apex) return;
-  const root = 'assets/maps/apex-test/';
-  const [data, gltf] = await Promise.all([
-    fetch(root + 'collision.json').then(r => { if (!r.ok) throw new Error('Apex collision data unavailable'); return r.json(); }),
-    new GLTFLoader().loadAsync(root + 'region.glb?v=materials2'),
-  ]);
-  def._apex = { data, gltf };
+  const p = await apexPack('apex_test', 'assets/maps/apex-test/');
+  def._apex = { data: JSON.parse(new TextDecoder().decode(p.collision)), gltf: await new GLTFLoader().parseAsync(p.glb, '') };
 }
 function apexSpawns(team, game) {
   if (!game._apexSpawns) {
@@ -44,7 +65,7 @@ function apexSpawns(team, game) {
 MAPS.push({
   id:'apex_test',name:'Apex 訓練場・測試區',en:'APEX IMPORT TEST',
   desc:'本機測試 · 部分材質 · 近似碰撞 · 80×80',slogan:'匯入驗證 · 建築與地形移動測試',
-  bounds:{minX:-40,maxX:40,minZ:-40,maxZ:40},indoor:false,navLevels:[],killY:-18,traversal:true,server:true,
+  bounds:{minX:-40,maxX:40,minZ:-40,maxZ:40},indoor:false,navLevels:[],killY:-18,traversal:true,
   background:0x9daeb9,envIntensity:.6,exposure:.8,
   sun:{pos:[-20,70,25],color:0xfff0d5,intensity:2},hemi:[0xdce8f2,0x665b49,1.2],
   fog:{color:0x9daeb9,near:100,far:220},acoustics:'outdoor',ambience:'wind',

@@ -97,7 +97,7 @@ class ApexStreaming {
 MAPS.push({
   id: 'apex_full', name: 'Apex 訓練場・全場景', en: 'APEX FULL RANGE',
   desc: '全場景探索 · E 電動門 · 二段跳／滑鏟／攀爬', slogan: '完整匯入範圍 · 近似碰撞',
-  bounds: { minX: -909, maxX: 208, minZ: -780, maxZ: 244 }, indoor: false, navLevels: [], killY: -284, killOutside: true, traversal: true, server: true,
+  bounds: { minX: -909, maxX: 208, minZ: -780, maxZ: 244 }, indoor: false, navLevels: [], killY: -284, killOutside: true, traversal: true,
   background: 0x9daeb9, envIntensity: 0.6, exposure: 0.8,
   sun: { pos: [-20, 70, 25], color: 0xfff0d5, intensity: 2 }, hemi: [0xdce8f2, 0x665b49, 1.2],
   fog: { color: 0x9daeb9, near: 400, far: 1400 }, acoustics: 'outdoor', ambience: 'wind',
@@ -107,9 +107,8 @@ MAPS.push({
   spawnPoints: apexSpawns,
   async preload() {
     if (this._full) return;
-    const root = 'assets/maps/apex-full/', json = async (p) => { const r = await fetch(root + p); if (!r.ok) throw Error('Full range asset: ' + p); return r.json(); };
-    const [manifest, data, gltf] = await Promise.all([json('manifest.json'), apexCollision(root + 'collision.bin'), new GLTFLoader().loadAsync(root + 'scene.gltf')]);
-    this._full = { manifest, data, gltf }; this.killY = manifest.killY;
+    const p = await apexPack('apex_full', 'assets/maps/apex-full/'), manifest = JSON.parse(new TextDecoder().decode(p.manifest));
+    this._full = { manifest, data: apexCollision(p.collision), gltf: await new GLTFLoader().parseAsync(p.glb, '') }; this.killY = manifest.killY;
   },
   build(b) {
     b.spawnZone('alpha', -30, -30, -24, -24, 0); b.spawnZone('bravo', 24, 24, 30, 30, Math.PI); if (b.dry) return;

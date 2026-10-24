@@ -17,3 +17,9 @@ tools/satellite/satellite.glb
 
 # Blender MCP bridge logs (tools/blender/verify_mcp.py)
 tools/blender/mcp_*.log
+
+# Apex exports: the game reads only the script packs (assets/maps/apex-*/pack/, tools/pack-apex-js.mjs); the raw
+# exports they are built from stay local (rebuilt by the Blender scripts in docs/apex-full-checklist.md)
+assets/maps/apex-test/region.glb
+assets/maps/apex-full/*
+!assets/maps/apex-full/pack/

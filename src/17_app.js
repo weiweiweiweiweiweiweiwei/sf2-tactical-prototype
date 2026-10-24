@@ -428,7 +428,7 @@ class App {
       // v46: the real scene from the map's best angle (assets/maps/thumbs, made by tools/_mapthumbs.mjs); the floor plan if it is missing
       const bt = document.createElement('button'), img = document.createElement('img'); img.className = 'th'; img.alt = ''; img.loading = 'lazy';
       img.onerror = () => { const cv = document.createElement('canvas'); cv.width = 176; cv.height = 88; drawMapPreview(cv, def, this.dry[i], { labels: false }); img.replaceWith(cv); };
-      img.src = mapThumb(def); bt.append(img, document.createTextNode(`${i + 1}. ${def.name}${needsServer(def) ? '（需本機伺服器）' : ''}`));
+      img.src = mapThumb(def); bt.append(img, document.createTextNode(`${i + 1}. ${def.name}`));
       bt.onclick = () => { if (this.isGuest()) return; L.map = i; this.audio.init(); this.audio.uiClick(); $('lbMapModal').classList.remove('on'); this.refreshLobby(); this.warm(i); };
       maps.appendChild(bt);
     });
@@ -644,12 +644,12 @@ class App {
       await m.build((p, label) => { this.loadTarget = p * 0.85; this.loadLabel = label; });
     } catch (e) {
       console.error(e);
-      const msg = needsServer(def) ? '這張地圖要用本機伺服器開啟：請關閉此頁，改用專案資料夾裡的「開始遊戲.bat」' : '載入失敗：' + e.message;
+      const msg = '地圖載入失敗：' + e.message;
       this.loadLabel = msg; await sleep(6000); // then back out of the loader instead of leaving it hanging
       if (this.match !== m) return;
       try { m.dispose(); } catch (err) { /* the map failed half-built */ }
       this.match = null; ld.classList.remove('on');
-      if (this.room) this.enterRoomScreen(); else this.showHub(msg);
+      if (this.room) { this.enterRoomScreen(); this.roomToast(msg); } else this.showHub(msg);
       return;
     }
     if (net) { // v27: wait until the host's match takes us in (it may still be building its map)

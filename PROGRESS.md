@@ -793,3 +793,16 @@
   - 全部材質雙面渲染（GPU 成本）要逐材質確認缺面才能拿掉。
   - Bot 不會二段跳和滑鏟。
   - 全場景資產（約 99 MB）還沒加進 git，GitHub Pages 上沒有這張圖。
+
+## v56（2026-10-24）：Apex 地圖直接雙擊 index.html 就能玩、全場景資產進 git
+- v55 的作法（`開始遊戲.bat` 架本機伺服器）使用者沒有用：雙擊 `index.html` 選 Apex 地圖，畫面在 10% 後跳回房間，而且在房間模式下沒有顯示原因。
+- 改成和旅館、天空城一樣用 `<script>` 載入（`file://` 只擋 `fetch`，不擋 `<script>`）：
+  - `tools/pack-apex-js.mjs`：每張地圖打成一包，切成每塊 15 MB 原始資料的 base64 JS（`assets/maps/apex-*/pack/index.js` 記錄各部分的位置，`0.js`、`1.js`…）。全場景的 `scene.gltf`、`scene.bin`、貼圖先合成一個內嵌圖片的 GLB（85.5 MB），加上碰撞和 manifest，共 7 塊、137 MB；測試區 3 塊、46 MB。
+  - `apexPack()`（`src/07u_apex.js`）：每塊一載入就解碼進同一個 buffer（有 `Uint8Array.fromBase64` 就用，沒有就用 `atob`），再交給 `GLTFLoader.parseAsync`。http 和 `file://` 走同一條路。
+  - 移除 `開始遊戲.bat`、`server:true` 和「需本機伺服器」標示。載入失敗時，房間模式也會用 toast 顯示原因。
+- git：遊戲只讀 `pack/`。原始匯出（`apex-test/region.glb`、`apex-full/` 的 gltf／bin／貼圖／collision.bin）改為只留在本機（`.gitignore`），由 docs/apex-full-checklist.md 的步驟重建。
+- 驗證：
+  - `node tools/_fileplay.mjs`：用 `file://` 開兩張地圖，對局都有啟動，貼圖 125／174 張全部解碼，0 錯誤。
+  - `check-apex`、`check-apex-traversal`、`check-apex-full` 全過。
+  - `check.mjs` 測試區 59、全場景 55、倉庫 60、天空城 60 fps，0 錯誤。
+- 之後可做：全場景 GLB 用 Draco 壓縮（`tools/blender/glb_draco.py` 要整個重新匯入匯出 13,723 個物件，名稱和材質可能被改，需要另外驗證），預估下載量可以再少一半。

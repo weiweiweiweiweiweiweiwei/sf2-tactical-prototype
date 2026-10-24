@@ -5,7 +5,7 @@
 - [ ] C：全圖與原倉庫地圖對局通過；等待 GitHub Pages 部署驗證。
 - [x] D（10-24）：`開始遊戲.bat` 本機伺服器、`file://` 提示；碰撞二進位＋延遲展開；貼圖 JPEG；縮圖（見 PROGRESS v55）。
 
-本機遊玩：雙擊專案資料夾的 `開始遊戲.bat`（直接雙擊 index.html 是 file://，Apex 地圖的資料會被瀏覽器擋掉）。
+- [x] E（10-24）：兩張 Apex 地圖改成 script 分塊包（`assets/maps/apex-*/pack/`），直接雙擊 index.html（file://）也能玩；`開始遊戲.bat` 已移除（見 PROGRESS v56）。
 
 ## 操作
 
@@ -33,7 +33,7 @@
 1. Blender 執行 tools/blender/apex_full.py（完整視覺匯出）。
 2. Blender 執行 tools/blender/apex_full_collision_work.py、apex_collision_triangles.py（碰撞簡化／三角形串流）。
 3. PowerShell Add-Type -Path tools/apex-raster.cs；呼叫 ApexRaster.Run 將 collision-triangles.bin 轉為 full-boxes.bin。
-4. node tools/pack-apex-collision.mjs（輸出 collision.bin）；python tools/compress-apex-textures.py（不透明貼圖轉 JPEG）；npm run build。
+4. node tools/pack-apex-collision.mjs（輸出 collision.bin）；python tools/compress-apex-textures.py（不透明貼圖轉 JPEG）；node tools/pack-apex-js.mjs（遊戲實際讀的 script 分塊包）；npm run build。
 5. node tools/check-apex-traversal.mjs；node tools/check-apex-full.mjs；node tools/check.mjs --map 18,0 --seconds 12 --bots 5 --shot。
 
 本機證據：tools/out/apex/preview/traversal-report.json、full-runtime-report.json、full-final-check.log。
