@@ -962,6 +962,7 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
 } }
 </script>
 <script type="module">
+
 import * as THREE from 'three';
 import * as CANNON from 'cannon-es';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
@@ -1609,6 +1610,7 @@ function loadoutDefs(mode, loadout) {
     return WEAPON_DEFS[s];
   });
 }
+
 
 /* =====================================================================
    AUDIO ENGINE — v33: real CC0 recordings (assets/sfx.js: gunshots near + far, footsteps per surface, cloth / gear
@@ -2402,6 +2404,7 @@ class AudioEngine {
   }
 }
 
+
 /* =====================================================================
    PBR TEXTURE FACTORY — every surface is generated procedurally as an
    albedo + normal (Sobel from a height field) + roughness set.
@@ -3194,6 +3197,7 @@ function worldBox(w, h, d, tile = 2) {
   return g;
 }
 
+
 /* =====================================================================
    TERRAIN (v5) — regular heightfield for the mountain maps. Every cell
    is split along its (i,j)–(i+1,j+1) diagonal, exactly like the render
@@ -3701,6 +3705,7 @@ class CharacterMotor {
   }
 }
 
+
 /* =====================================================================
    PHYSICS WORLD (cannon-es) — static level bodies + dynamic debris:
    brass casings, ragdoll-lite corpses and bouncing grenades.
@@ -4180,6 +4185,7 @@ class Effects {
     this.sparks.update(dt); this.dust.update(dt);
   }
 }
+
 
 /* =====================================================================
    MAP BUILDER — declarative level construction. Every primitive
@@ -4871,6 +4877,7 @@ class MapBuilder {
     return topY;
   }
 }
+
 
 /* =====================================================================
    MAPS — six point-symmetric arenas (fair for both teams).
@@ -6285,6 +6292,7 @@ function drawMapPreview(canvas, def, dryData, opts = {}) {
 }
 
 
+
 /* =====================================================================
    v44 SAKURA INN (櫻花客棧 · SF2 "Ryokan", seizure map, 2012) — traced from the in-game Tab map of a 2016 KR clan
    match (the 4:3 upload is squashed horizontally; the square objective icon gives ×4/3) and checked against the
@@ -6804,6 +6812,7 @@ MAPS.push({
   },
   build(b) { buildRyokan(b); },
 });
+
 /* =====================================================================
    v46 SKY CITY (天空之城 · SF2 "Skywalker" 스카이워커 / GNN 天空之門, sniper-mode map) — two white-brick tower tops
    floating over a sea of cloud, split by a deep chasm. Alpha holds the west roof, Bravo the east roof; a clock tower
@@ -7382,6 +7391,7 @@ MAPS.push({
     buildSky(b);
   },
 });
+
 /* =====================================================================
    v52 SATELLITE BASE — Blender dressing (tools/blender/sat_build.py → assets/maps/satellite.js = base64 GLB) and its
    special materials. The GLB is visual only: it sits on collider faces, on existing cover-box footprints and overhead,
@@ -7530,6 +7540,97 @@ function satDressing(b) {
   b.animated.push((dt, t) => { for (const o of holo) o.rotation.y = t * 0.35; for (const m of scroll) if (m.map) m.map.offset.y = (t * m.userData.scroll) % 1; });
   return true;
 }
+
+// Local imported test region: visual batches and separately baked collision columns.
+async function apexPreload(def) {
+  if (def._apex) return;
+  const root = 'assets/maps/apex-test/';
+  const [data, gltf] = await Promise.all([
+    fetch(root + 'collision.json').then(r => { if (!r.ok) throw new Error('Apex collision data unavailable'); return r.json(); }),
+    new GLTFLoader().loadAsync(root + 'region.glb'),
+  ]);
+  def._apex = { data, gltf };
+}
+function apexSpawns(team, game) {
+  if (!game._apexSpawns) {
+    const nodes = game.nav.valid.map(n => n.p).filter(p => game.collision.fits(p.x,p.y+.05,p.z,.42,1.8));
+    if (nodes.length < 2) throw new Error('Apex test region has no connected safe spawn points');
+    const eye = p => new THREE.Vector3(p.x,p.y+1.6,p.z);
+    let pair = null, best = 0;
+    for (const a of nodes) for (const b of nodes) {
+      const d = a.distanceTo(b);
+      if (d < 20 || d <= best || game.collision.segmentClear(eye(a),eye(b))) continue;
+      pair = [a,b]; best = d;
+    }
+    if (!pair) throw new Error('Apex test region has no occluded spawn pair');
+    const groups = pair.map(p => [p.clone()]);
+    for (let t=0;t<2;t++) for (const p of nodes) {
+      if (groups[t].length >= 8 || p.distanceTo(pair[t])>7 || groups[t].some(q=>q.distanceTo(p)<1.1)) continue;
+      if (groups[1-t].some(q=>game.collision.segmentClear(eye(p),eye(q)))) continue;
+      groups[t].push(p.clone());
+    }
+    game._apexSpawns = groups.map((pts,t)=>({pts,yaw:Math.atan2(pair[t].x-pair[1-t].x,pair[t].z-pair[1-t].z)}));
+  }
+  return game._apexSpawns[team==='alpha'?0:1];
+}
+MAPS.push({
+  id:'apex_test',name:'Apex 訓練場・測試區',en:'APEX IMPORT TEST',
+  desc:'本機測試 · 部分材質 · 近似碰撞 · 80×80',slogan:'匯入驗證 · 建築與地形移動測試',
+  bounds:{minX:-40,maxX:40,minZ:-40,maxZ:40},indoor:false,navLevels:[],
+  background:0x9daeb9,envIntensity:.6,exposure:.8,
+  sun:{pos:[-20,70,25],color:0xfff0d5,intensity:2},hemi:[0xdce8f2,0x665b49,1.2],
+  fog:{color:0x9daeb9,near:100,far:220},acoustics:'outdoor',ambience:'wind',
+  shot:{pos:[-20,35,30],target:[0,2,0]},
+  objectives:{dom:[[-20,0,0],[0,0,0],[20,0,0]],relic:[0,0,0],domRadius:3.6},
+  preload(){return apexPreload(this);},spawnPoints:apexSpawns,
+  build(b){
+    b.spawnZone('alpha',-30,-30,-24,-24,0); b.spawnZone('bravo',24,24,30,30,Math.PI);
+    if(b.dry) return;
+    const {data,gltf}=this._apex;
+    for(const a of data.boxes) b.col.addBox(new THREE.Vector3(a[0],a[1],a[2]),new THREE.Vector3(a[3],a[4],a[5]),{material:'concrete'});
+    // Spatially grouped compound bodies keep grenades and dropped objects on the same surfaces.
+    const compounds=new Map();
+    for(const a of data.boxes){
+      const x=(a[0]+a[3])/2,y=(a[1]+a[4])/2,z=(a[2]+a[5])/2;
+      const key=Math.floor(x/4)+','+Math.floor(z/4);
+      let body=compounds.get(key);
+      if(!body){body=new CANNON.Body({mass:0,type:CANNON.Body.STATIC,material:b.phys.matDefault});body.position.set(Math.floor(x/4)*4,0,Math.floor(z/4)*4);compounds.set(key,body);}
+      body.addShape(new CANNON.Box(new CANNON.Vec3((a[3]-a[0])/2,(a[4]-a[1])/2,(a[5]-a[2])/2)),new CANNON.Vec3(x-body.position.x,y,z-body.position.z));
+    }
+    for(const body of compounds.values())b.phys.world.addBody(body);
+    // Visible perimeter marks the cropped region and prevents stepping into missing geometry.
+    for(const a of [[-41,-20,-41,-40,65,41],[40,-20,-41,41,65,41],[-40,-20,-41,40,65,-40],[-40,-20,40,40,65,41]]){
+      b.col.addBox(new THREE.Vector3(...a.slice(0,3)),new THREE.Vector3(...a.slice(3)),{material:'metal'});
+      b.box(a[0],-2,a[2],a[3],3,a[5],'darkSteel',{radar:'wall'});
+    }
+    for(const p of data.nav) b.navExtra.push(new THREE.Vector3(...p));
+    for(const p of data.nav.filter((_,i)=>i%12===0)) b.waypoints.push(new THREE.Vector3(...p));
+    gltf.scene.updateMatrixWorld(true);
+    let before=0;
+    gltf.scene.traverse(o=>{
+      if(!o.isMesh)return;
+      before++;
+      const geo=o.geometry.index?o.geometry.toNonIndexed():o.geometry.clone();
+      geo.applyMatrix4(o.matrixWorld);geo.translate(0,data.visualYOffset,0);
+      const mats=Array.isArray(o.material)?o.material:[o.material];
+      for(const mat of mats) if(!mat.map){mat.color.setRGB(.38,.4,.39);mat.roughness=.85;}
+      const groups=Array.isArray(o.material)?geo.groups:[{start:0,count:geo.attributes.position.count,materialIndex:0}];
+      for(const group of groups){
+        const part=new THREE.BufferGeometry();
+        for(const key of ['position','normal','uv']){
+          const a=geo.getAttribute(key);if(!a)continue;
+          part.setAttribute(key,new THREE.BufferAttribute(a.array.slice(group.start*a.itemSize,(group.start+group.count)*a.itemSize),a.itemSize));
+        }
+        if(!part.getAttribute('normal'))part.computeVertexNormals();
+        if(!part.getAttribute('uv'))part.setAttribute('uv',new THREE.BufferAttribute(new Float32Array(group.count*2),2));
+        b._batch(mats[group.materialIndex],part,true);
+      }
+      geo.dispose();
+    });
+    window.__apexImport={sourceMeshObjects:before,visualBatches:b.batches.size,collisionBoxes:data.boxes.length,navCandidates:data.nav.length};
+  }
+});
+
 /* =====================================================================
    NAV GRAPH — multi-level walkable grid (auto-sampled at every nav
    level), door nodes, stair/ramp chains, largest-component pruning,
@@ -7777,6 +7878,7 @@ class InputManager {
   down(code) { return this.keys.has(code); }
   endFrame() { this.wheel = 0; }
 }
+
 
 /* =====================================================================
    MODELS — procedural high-detail weapons (side-profile extrusions,
@@ -8623,6 +8725,7 @@ class SoldierFactory {
     s.gunHolder.position.set(small ? 0.03 : 0.06, small ? -0.12 : -0.1, small && id !== 'knife' ? -0.42 : -0.32);
   }
 }
+
 
 /* =====================================================================
    GUN PARTS LIBRARY (v5) — parametric receivers, stocks, grips,
@@ -9539,6 +9642,7 @@ WeaponModels.prototype.tpGeneric = function (spec) {
   const geos = list.map(([g, col]) => { const ng = g.index ? g.toNonIndexed() : g; const n = ng.attributes.position.count, c = new Float32Array(n * 3); for (let i = 0; i < n; i++) { c[i * 3] = col.r; c[i * 3 + 1] = col.g; c[i * 3 + 2] = col.b; } ng.setAttribute('color', new THREE.BufferAttribute(c, 3)); ng.deleteAttribute('uv'); return ng; });
   return mergeGeometries(geos, false);
 };
+
 /* =====================================================================
    PLAYER WEAPONS — per-class behaviour, all numbers come from the
    compiled WEAPON_DATABASE entry. Spread values are cone radii in
@@ -9917,6 +10021,7 @@ function makePlayerWeapon(game, def, vm, owner) {
   if (def.kind === 'grenade') return new GrenadeWeapon(game, def, vm, owner);
   return new AutoGun(game, def, vm, owner);
 }
+
 /* =====================================================================
    v25 ARSENAL — the gameplay half of a soldier's weapons: inventory, Quick-Change, ADS state, trigger / cooldown /
    reload, knife, grenades, left-hand grab. Stepped once per fixed tick from a UserCmd, so the local player and a remote
@@ -10305,6 +10410,7 @@ class WeaponSystem extends Arsenal {
 
   onResize() { this.camera.aspect = innerWidth / innerHeight; this.camera.updateProjectionMatrix(); }
 }
+
 const RELOAD_MOVE = 0.8, FALL_SAFE = 3.5, FALL_LETHAL = 11; // metres: below 3.5 m no damage, then linear, 11 m+ = death
 
 /* =====================================================================
@@ -10568,6 +10674,7 @@ class Player extends Human {
   }
 }
 
+
 /* =====================================================================
    v25 USER COMMANDS — everything a human does in one fixed tick (1/120 s), as plain data: movement axes, view angles,
    held buttons and one-tick edges. The local player is simulated from these, and a remote player on the host from the
@@ -10611,6 +10718,7 @@ class CmdBuilder {
     return c;
   }
 }
+
 /* =====================================================================
    BOTS — soldiers for both teams + BotAI finite-state machine.
    NO WALLHACKS: a bot only knows what it SEES (120° cone + raycast
@@ -11283,6 +11391,7 @@ class TeamIntel {
   mark(p, t) { this.seen.set(this._k(p), t); }
   stale(p, now) { const t = this.seen.get(this._k(p)); return t === undefined ? 1 : clamp((now - t) / 60, 0, 1); }
 }
+
 /* =====================================================================
    v25 NETWORK SOLDIERS
    NetPlayer — a friend's soldier inside the HOST's match. Steered by the UserCmds his client sends: the same Human
@@ -11422,6 +11531,7 @@ class Ghost extends Combatant {
   onDamaged() {}
   respawn() {}
 }
+
 /* =====================================================================
    HUD — cached DOM writes (unchanged values never touch the DOM).
    ===================================================================== */
@@ -11861,6 +11971,7 @@ class HUD {
   setFps(v, show) { this._set('fpsD', this.el.fps, 'display', show ? 'block' : 'none'); if (show) this._set('fpsV', this.el.fps, 'text', v); }
 }
 
+
 /* =====================================================================
    v34 KILL EMBLEMS (SF2 style) — a silver star-burst medal pops up top-centre with its name, and a row of small medals
    collects along the bottom for the current life. Art is drawn here as SVG (no game assets); conditions follow the
@@ -11922,6 +12033,7 @@ function emblemSVG(id) {
     `<polygon points="${star}" fill="url(#${g})" stroke="#2a2f36" stroke-width="1.2"/>${rays}<circle cx="50" cy="50" r="27" fill="url(#${g})" stroke="#2a2f36" stroke-width="1.5"/>` +
     `<circle cx="50" cy="50" r="23" fill="#1c232c"/>${icon}</svg>`;
 }
+
 /* =====================================================================
    POST-PROCESSING — EffectComposer stack per quality preset:
    World → GTAO (SSAO) → ViewModel pass →
@@ -12180,6 +12292,7 @@ class PostFX {
     if (this.r) this.r.domElement.style.filter = '';
   }
 }
+
 
 /* =====================================================================
    GAME RULES — state machine per mode. The Match drives the phases
@@ -12571,6 +12684,7 @@ function createRule(kind, m) {
   if (kind === 'dom') return new DomRule(m);
   return new TDMRule(m);
 }
+
 /* =====================================================================
    MATCH — one game session: world, lighting/IBL, teams, combat,
    scoring, grenades, freeze time. All mode-specific logic lives in
@@ -12732,6 +12846,7 @@ class Match {
     return pts;
   }
   makeSpawns(team) {
+    if (this.def.spawnPoints) return this.def.spawnPoints(team, this);
     const fz = (this.builder.fwdZones && this.builder.fwdZones[team]) || [];
     this.fwdSpawns = this.fwdSpawns || {};
     this.fwdSpawns[team] = fz.map((z) => ({ pts: this._zonePoints(z), c: new THREE.Vector3((z.x0 + z.x1) / 2, 0, (z.z0 + z.z1) / 2), yaw: z.yaw })).filter((f) => f.pts.length);
@@ -13452,6 +13567,7 @@ class Match {
     this.app.post.dispose(); CAO.uCAOOn.value = 0;
   }
 }
+
 /* =====================================================================
    v25 NETWORK — host-authoritative multiplayer.
    · The HOST runs the real match (bots, hits, kills, score). Each friend is a NetPlayer in it, steered by his UserCmds.
@@ -13829,6 +13945,7 @@ class NetClient {
     if (this._unload) removeEventListener('beforeunload', this._unload); this._welcomed({ reject: '已離開' });
   }
 }
+
 /* =====================================================================
    v26 ONLINE — play with friends on other computers, free. (v27: rooms on top of this — see 18c_room.js)
    · Supabase Realtime (project sf2-tactical, free plan) only helps two browsers FIND each other: the lobby channel lists
@@ -14060,6 +14177,7 @@ class BackgroundTicker {
   }
   set(active) { this.active = active; this.sync(active); }
 }
+
 /* =====================================================================
    v27 ROOMS — like SF2: a room exists before, between and after matches.
    · 建立房間 opens a room at once: a 6-digit code and the host's WebRTC transport listening for friends. Friends join the
@@ -14259,6 +14377,7 @@ class RoomGuest extends RoomSession {
   // who takes over when the host leaves: the member who joined first (every member decides the same from the same list)
   successor() { return this.members.filter((m) => !m.host).sort((a, b) => a.order - b.order)[0] || null; }
 }
+
 /* =====================================================================
    v28 FRIENDS — friend codes, online status, room invites. Free, no accounts.
    · The first time the friends panel is opened the game registers an anonymous player (id + random secret, kept in
@@ -14351,6 +14470,7 @@ class Friends {
   get incoming() { return this.list.filter((f) => f.state === 'incoming'); }
   get outgoing() { return this.list.filter((f) => f.state === 'outgoing'); }
 }
+
 /* =====================================================================
    APP — renderer, shared resources, room/lobby, loading flow, pause,
    settings, end screen and the main loop.

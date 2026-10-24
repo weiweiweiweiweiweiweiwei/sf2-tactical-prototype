@@ -159,6 +159,7 @@ class Match {
     return pts;
   }
   makeSpawns(team) {
+    if (this.def.spawnPoints) return this.def.spawnPoints(team, this);
     const fz = (this.builder.fwdZones && this.builder.fwdZones[team]) || [];
     this.fwdSpawns = this.fwdSpawns || {};
     this.fwdSpawns[team] = fz.map((z) => ({ pts: this._zonePoints(z), c: new THREE.Vector3((z.x0 + z.x1) / 2, 0, (z.z0 + z.z1) / 2), yaw: z.yaw })).filter((f) => f.pts.length);

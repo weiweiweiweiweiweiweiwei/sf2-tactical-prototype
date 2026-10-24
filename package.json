@@ -5,7 +5,7 @@
   "type": "module",
   "description": "Browser tactical FPS (SF2 feel x COD look). Sources in src/, build with sh src/build.sh.",
   "scripts": {
-    "build": "sh src/build.sh",
+    "build": "node tools/build.mjs",
     "check": "node tools/check.mjs"
   },
   "devDependencies": {
