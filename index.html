@@ -7547,7 +7547,7 @@ async function apexPreload(def) {
   const root = 'assets/maps/apex-test/';
   const [data, gltf] = await Promise.all([
     fetch(root + 'collision.json').then(r => { if (!r.ok) throw new Error('Apex collision data unavailable'); return r.json(); }),
-    new GLTFLoader().loadAsync(root + 'region.glb'),
+    new GLTFLoader().loadAsync(root + 'region.glb?v=materials2'),
   ]);
   def._apex = { data, gltf };
 }
@@ -7613,7 +7613,7 @@ MAPS.push({
       const geo=o.geometry.index?o.geometry.toNonIndexed():o.geometry.clone();
       geo.applyMatrix4(o.matrixWorld);geo.translate(0,data.visualYOffset,0);
       const mats=Array.isArray(o.material)?o.material:[o.material];
-      for(const mat of mats) if(!mat.map){mat.color.setRGB(.38,.4,.39);mat.roughness=.85;}
+      // Keep authored fallback colors and alpha from the material restoration pass.
       const groups=Array.isArray(o.material)?geo.groups:[{start:0,count:geo.attributes.position.count,materialIndex:0}];
       for(const group of groups){
         const part=new THREE.BufferGeometry();

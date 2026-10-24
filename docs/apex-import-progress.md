@@ -68,3 +68,7 @@ RSX 的主 `.bsp` 匯出實際是 OBJ 文字，並非 rBSP 二進位檔。腳本
 ## 2026-10-24 遊戲整合完成
 
 上述段落為各階段歷史紀錄。目前測試區已接入遊戲選單，具備碰撞、導覽及安全出生點，A／B／C 已完成；詳見 apex-abc-checklist.md。使用現有 GLB，無需重建 Blender。遊戲資產為 assets/maps/apex-test/region.glb 與 collision.json；npm run build 重新組合 index.html。完整 Blender 與中間匯出仍留在本機 tools/out/。
+
+## 2026-10-24 第二輪材質改善
+
+沿用測試區 Blender，擴充搜尋至既有 RSX exported_files。遊戲 GLB 色彩貼圖材質 39 → 130，透明材質 0 → 7；剩餘無貼圖材質按名稱採替代色彩。遊戲不再覆蓋所有無貼圖材質為灰色。幾何與擺放雜湊完全相同，保留上一輪碰撞結果；本次實際對局測試通過。詳細結果見 apex-material-checklist.md。
