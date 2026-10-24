@@ -13,7 +13,7 @@ class StaticHashBroadphase extends CANNON.Broadphase {
     this.hash.clear(); this.big.length = 0; this.nStatic = n; const c = this.cell;
     for (const b of world.bodies) {
       if (b.type !== CANNON.Body.STATIC) continue;
-      b.updateAABB(); b._bpS = 0;
+      if (b.aabbNeedsUpdate) b.updateAABB(); b._bpS = 0; // only new / moved ones: streamed maps (Apex) add and remove static bodies often
       const lo = b.aabb.lowerBound, up = b.aabb.upperBound, x0 = Math.floor(lo.x / c), x1 = Math.floor(up.x / c), z0 = Math.floor(lo.z / c), z1 = Math.floor(up.z / c);
       if ((x1 - x0 + 1) * (z1 - z0 + 1) > 48) { this.big.push(b); continue; }
       for (let ix = x0; ix <= x1; ix++) for (let iz = z0; iz <= z1; iz++) { const k = this._key(ix, iz); let l = this.hash.get(k); if (!l) this.hash.set(k, l = []); l.push(b); }

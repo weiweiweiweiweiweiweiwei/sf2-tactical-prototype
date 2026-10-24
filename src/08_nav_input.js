@@ -59,6 +59,7 @@ class NavGraph {
   }
 
   build(builder, def) {
+    if (builder.navBaked) { this._baked(builder.navBaked); return; }
     const B = def.bounds, step = 2, T = this.col.terrain;
     for (const lvl of def.navLevels || []) {
       for (let x = B.minX + 1; x <= B.maxX - 1; x += step) for (let z = B.minZ + 1; z <= B.maxZ - 1; z += step) {
@@ -117,6 +118,17 @@ class NavGraph {
     this.upperNodes = this.valid.filter((n) => this.rel(n.p) > 2.5);
   }
 
+  // v57 prebaked graph (tools/bake-apex-nav.mjs): nodes plus links as typed arrays — kind 0 both ways, bit 1 one way (a drop
+  // or a jump up), already cut to what can reach and be reached from the spawn area, so nothing is sampled at match start.
+  _baked({ pos, from, to, kind, cost }) {
+    for (let i = 0; i < pos.length; i += 3) this._add(new THREE.Vector3(pos[i], pos[i + 1], pos[i + 2]));
+    for (let i = 0; i < from.length; i++) {
+      const a = this.nodes[from[i]], b = this.nodes[to[i]];
+      a.edges.push({ to: b.id, cost: cost[i] }); if (!(kind[i] & 1)) b.edges.push({ to: a.id, cost: cost[i] });
+    }
+    this.valid = this.nodes; this.groundNodes = this.nodes; this.upperNodes = []; // no heightfield to measure "upper" against
+  }
+
   nearest(p, requireLOS = true) {
     let best = null, bestS = Infinity; const cands = [];
     for (let r = 3; r <= 24 && !cands.length; r *= 2) this.near(p, r, (n) => { if (!n.ok) return; const dx = n.p.x - p.x, dz = n.p.z - p.z, dy = (n.p.y - p.y) * 3; cands.push([dx * dx + dz * dz + dy * dy, n]); });
@@ -134,23 +146,26 @@ class NavGraph {
     const s = this.nearest(from), g = this.nearest(to);
     const noise = seed ? (id) => { const x = Math.sin(id * 12.9898 + seed * 78.233) * 43758.5453; return 1 + 0.8 * (x - Math.floor(x)); } : null;
     if (!s || !g) return [];
-    const N = this.nodes.length, gs = new Float32Array(N).fill(Infinity), came = new Int32Array(N).fill(-1), closed = new Uint8Array(N);
+    // v57: the search arrays are kept (the full Apex range has ~10⁵ nodes); a slot counts only when stamped with this search
+    const N = this.nodes.length;
+    if (!this._gs || this._gs.length !== N) { this._gs = new Float32Array(N); this._came = new Int32Array(N); this._seen = new Uint32Array(N); this._done = new Uint32Array(N); this._run = 0; }
+    const gs = this._gs, came = this._came, seen = this._seen, done = this._done, run = ++this._run;
     const heap = []; // [f, id]
     const push = (f, id) => { heap.push([f, id]); let i = heap.length - 1; while (i > 0) { const p = (i - 1) >> 1; if (heap[p][0] <= heap[i][0]) break; [heap[p], heap[i]] = [heap[i], heap[p]]; i = p; } };
     const pop = () => { const top = heap[0], last = heap.pop(); if (heap.length) { heap[0] = last; let i = 0; for (;;) { const l = i * 2 + 1, r = l + 1; let m = i; if (l < heap.length && heap[l][0] < heap[m][0]) m = l; if (r < heap.length && heap[r][0] < heap[m][0]) m = r; if (m === i) break; [heap[m], heap[i]] = [heap[i], heap[m]]; i = m; } } return top; };
-    gs[s.id] = 0; push(s.p.distanceTo(g.p), s.id);
+    gs[s.id] = 0; came[s.id] = -1; seen[s.id] = run; push(s.p.distanceTo(g.p), s.id);
     while (heap.length) {
       const [, cur] = pop();
-      if (closed[cur]) continue;
+      if (done[cur] === run) continue;
       if (cur === g.id) break;
-      closed[cur] = 1;
+      done[cur] = run;
       for (const e of this.nodes[cur].edges) {
-        if (closed[e.to] || !this.nodes[e.to].ok) continue;
+        if (done[e.to] === run || !this.nodes[e.to].ok) continue;
         const ng = gs[cur] + (noise ? e.cost * noise(e.to) : e.cost);
-        if (ng < gs[e.to]) { gs[e.to] = ng; came[e.to] = cur; push(ng + this.nodes[e.to].p.distanceTo(g.p), e.to); }
+        if (seen[e.to] !== run || ng < gs[e.to]) { seen[e.to] = run; gs[e.to] = ng; came[e.to] = cur; push(ng + this.nodes[e.to].p.distanceTo(g.p), e.to); }
       }
     }
-    if (came[g.id] === -1 && g.id !== s.id) return [];
+    if (seen[g.id] !== run) return [];
     const path = [];
     for (let c = g.id; c !== -1; c = came[c]) path.push(this.nodes[c].p);
     path.reverse();

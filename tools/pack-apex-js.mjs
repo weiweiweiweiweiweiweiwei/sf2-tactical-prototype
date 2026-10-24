@@ -65,4 +65,6 @@ pack('apex_full', 'assets/maps/apex-full', {
   glb: await compress(glbFromGltf('assets/maps/apex-full', 'scene.gltf')),
   collision: fs.readFileSync('assets/maps/apex-full/collision.bin'),
   manifest: fs.readFileSync('assets/maps/apex-full/manifest.json'),
+  nav: fs.readFileSync('assets/maps/apex-full/nav.bin'), // tools/bake-apex-nav.mjs
+  navMeta: fs.readFileSync('assets/maps/apex-full/nav.json'),
 });

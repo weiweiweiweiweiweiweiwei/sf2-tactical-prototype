@@ -38,6 +38,7 @@ const PREF_RANGE = { sniper: [30, 75], rifle: [10, 34], lmg: [12, 38], smg: [6, 
 class Bot extends Combatant {
   constructor(game, team, idx, weaponId) {
     super(game, team, BOT_NAMES[team][idx % BOT_NAMES[team].length], false);
+    this.slideT = 0; this.slideDir = new THREE.Vector3(); this.airJumpUsed = false; // v57 traversal maps
     this.idx = idx; this.isBot = true; this.aimPitch = 0; this.walkPhase = Math.random() * 6; this.stepDist = 0; this.spottedT = -10; this.stepPitch = rand(0.9, 1.12);
     this.model = game.app.soldiers.create(team, WEAPON_DEFS[weaponId].model || weaponId);
     game.scene.add(this.model.root);
@@ -109,7 +110,7 @@ class Bot extends Combatant {
   respawn(point, yaw) {
     this.motor.teleport(point); this.life = (this.life || 0) + 1;
     this.yaw = yaw + rand(-0.3, 0.3); this.hp = 100; this.alive = true; this.spawnProtect = CFG.spawnProtect; this.carrying = false;
-    this.ammo = this.def.mag || 0; this.reloadT = 0; this.damageLog.clear();
+    this.ammo = this.def.mag || 0; this.reloadT = 0; this.damageLog.clear(); this.slideT = 0;
     this.nades = this.game.mode === 'general' ? { he: 1, flash: 1 } : { he: 0, flash: 0 };
     this.model.root.visible = true; this.model.head.visible = true; this.model.root.position.copy(this.motor.pos); if (this.tag) this.tag.visible = true;
     this.ai.reset();
@@ -118,9 +119,21 @@ class Bot extends Combatant {
   fixedUpdate(h) {
     if (!this.alive) return;
     const ai = this.ai, frozen = !this.game.canMove(), m = this.motor;
-    if (!m.climbing) m.setCrouch(!frozen && ai.crouchT > 0);
-    m.step(h, frozen ? 0 : ai.wishX, frozen ? 0 : ai.wishZ, frozen ? 0 : ai.wishSpeed * (this.carrying ? 0.88 : 1));
+    if (m.grounded || m.climbing) this.airJumpUsed = false;
+    if (this.slideT > 0 && !frozen) { // v57 slide (traversal maps): crouched, fast at first, ends early once airborne
+      this.slideT -= h; m.setCrouch(true);
+      const k = 1 - Math.max(0, this.slideT) / 0.85;
+      m.step(h, this.slideDir.x, this.slideDir.z, lerp(8.2, 3.2, k * k));
+      if (!m.grounded) this.slideT = 0;
+    } else {
+      if (!m.climbing) m.setCrouch(!frozen && ai.crouchT > 0);
+      m.step(h, frozen ? 0 : ai.wishX, frozen ? 0 : ai.wishZ, frozen ? 0 : ai.wishSpeed * (this.carrying ? 0.88 : 1));
+    }
     if (!frozen && ai.wantJump) { m.requestJump(); ai.wantJump = false; }
+    if (!frozen && ai.wantAirJump) { // v57 double jump, same impulse as the player's
+      if (!this.airJumpUsed && !m.grounded && !m.climbing) { m.vel.y = CFG.player.jumpVel; this.airJumpUsed = true; }
+      ai.wantAirJump = false;
+    }
     if (m.climbing) { if (m.climbDist > 0.6) { m.climbDist = 0; this._step('ladder', 0.9); } return; }
     const hs = m.horizontalSpeed();
     if (m.grounded && hs > 2.4 && !m.crouching) {
@@ -153,9 +166,7 @@ class BotAI {
   constructor(bot, game) {
     this.bot = bot; this.game = game; this.wishX = 0; this.wishZ = 0; this.wishSpeed = 0; this.wantJump = false;
     // personality: every bot searches its own lane, at its own pace, with its own route preferences
-    const B = game.def.bounds, zSpan = (B.maxZ - B.minZ) / 2;
     this.lane = ((bot.idx * 0.618 + (bot.team === 'alpha' ? 0.13 : 0.41)) % 1) * 1.6 - 0.8; // -0.8..0.8 of the half-width
-    this.laneZ = (B.minZ + B.maxZ) / 2 + this.lane * zSpan;
     this.aggro = rand(0.35, 1); this.caution = rand(0.15, 0.85); this.pace = rand(0.82, 1.0); this.routeSeed = 1 + Math.floor(Math.random() * 9999);
     this.reset();
   }
@@ -222,7 +233,8 @@ class BotAI {
     const left = hl ? hl.t : 2.5, right = hr ? hr.t : 2.5;
     if (right > left + 0.3 || (Math.abs(right - left) <= 0.3 && Math.random() < 0.5)) { px = -px; pz = -pz; }
     this.dodgeX = px; this.dodgeZ = pz; this.dodgeT = rand(0.4, 0.65); this.strafeDir = 0; this.strafeT = 0;
-    if (Math.random() < 0.12) this.wantJump = true;
+    if (this.game.def.traversal && this.bot.motor.grounded && Math.random() < 0.35) { this.bot.slideT = 0.6; this.bot.slideDir.set(px, 0, pz).normalize(); } // v57: dive-slide out of the line of fire
+    else if (Math.random() < 0.12) this.wantJump = true;
   }
 
   // v8 NEAR MISS: no damage, but the crack gives a rough direction — fighting bots dodge, the rest turn, dodge and move on it.
@@ -332,12 +344,20 @@ class BotAI {
     const m = this.bot.motor;
     while (this.pathIdx < this.path.length) {
       const t = this.path[this.pathIdx], dx = t.x - m.pos.x, dz = t.z - m.pos.z, dy = t.y - m.pos.y;
-      if (dx * dx + dz * dz < 0.3 && Math.abs(dy) < 1.6) { this.pathIdx++; this._corner(); continue; }
+      if (dx * dx + dz * dz < 0.3 && Math.abs(dy) < 1.6 && !(this.game.def.traversal && dy > 0.5)) { this.pathIdx++; this._corner(); continue; } // (under a jump target: not there yet)
       const prev = this.pathIdx > 0 ? this.path[this.pathIdx - 1] : null;
       m.climbInput = (t.ladder || (prev && prev.ladder)) ? (dy > 0.02 ? 1 : dy < -0.3 ? -1 : m.climbing ? 1 : 0) : 0; // keep climbing until over the lip
       const d = Math.hypot(dx, dz) || 1; let wx = dx / d, wz = dz / d;
       if (!m.climbing) { const av = this._avoidance(wx, wz); wx += av.x; wz += av.z; const l = Math.hypot(wx, wz) || 1; wx /= l; wz /= l; }
       this.wishX = wx; this.wishZ = wz; this.wishSpeed = this.cornerT > 0 ? speed * 0.35 : speed;
+      // v57 traversal maps (baked jump links): jump when the ground just ahead rises past a step (at the foot of the ledge, not
+      // from afar), and after such a jump, jump again near the top of the arc while still below the waypoint
+      if (this.game.def.traversal && !m.climbing && !t.ladder && d < 2.8) {
+        if (m.grounded) {
+          this.ledgeJump = false;
+          if (dy > 0.3) { const ah = this.game.collision.groundBelow(m.pos.x + wx * 0.75, m.pos.y + 2.6, m.pos.z + wz * 0.75, 0.2, 2.6); if (ah && ah.y > m.pos.y + 0.42) this.wantJump = this.ledgeJump = true; }
+        } else if (this.ledgeJump && m.vel.y < 1.2 && m.pos.y < t.y + 0.15) this.wantAirJump = true;
+      }
       if (face) {
         let yaw = Math.atan2(-dx, -dz);
         if (scan) { this.scanPhase += dt * (0.9 + this.caution); yaw += Math.sin(this.scanPhase) * (0.45 + this.caution * 0.35); } // head on a swivel
@@ -368,11 +388,21 @@ class BotAI {
     }
   }
 
+  // The battle frame: Alpha pushes along +axis, Bravo along -axis, lanes run across it. Maps with Alpha west / Bravo east use
+  // the bounds (axis +x); v57 def.aiAxis (full Apex range) gives a diagonal one between the baked spawns, and aiBounds the
+  // reachable part of a map with void around it.
+  _frame() {
+    const d = this.game.def, A = d.aiAxis;
+    if (A) return A;
+    const B = d.aiBounds || d.bounds;
+    return { mx: (B.minX + B.maxX) / 2, mz: (B.minZ + B.maxZ) / 2, ax: 1, az: 0, half: (B.maxX - B.minX) / 2, laneHalf: (B.maxZ - B.minZ) / 2 };
+  }
+
   // Carpet search: pick an unchecked area in this bot's own lane, pushing toward the enemy side, away from teammates' goals.
   _searchGoal() {
-    const g = this.game, bot = this.bot, B = g.def.bounds, mid = (B.minX + B.maxX) / 2, halfX = (B.maxX - B.minX) / 2, side = bot.team === 'alpha' ? 1 : -1;
+    const g = this.game, bot = this.bot, F = this._frame(), side = bot.team === 'alpha' ? 1 : -1;
     const intel = g.intel[bot.team], mates = g.bots.filter((b) => b !== bot && b.alive && b.team === bot.team);
-    const push = clamp(0.25 + this.aggro * 0.5 + g.time / 240, 0, 1), sc0 = Math.max(1, halfX / 100);
+    const push = clamp(0.25 + this.aggro * 0.5 + g.time / 240, 0, 1), sc0 = Math.max(1, F.half / 100);
     const patrol = g.patrol && g.patrol.length > 4 && Math.random() < 0.7 ? g.patrol : null; // waypoint patrol network (v5)
     let best = null, bs = -Infinity;
     for (let k = 0; k < 26; k++) {
@@ -380,9 +410,9 @@ class BotAI {
       if (patrol) p = pick(patrol); else { const n = g.nav.randomNode(0.18); if (!n) break; p = n.p; }
       const d = p.distanceTo(bot.motor.pos);
       if (d < 8) continue;
-      const fwd = ((p.x - mid) * side) / halfX; // -1 own side … +1 enemy side
-      let sc = intel.stale(p, g.time) * 1.2;                            // not searched recently
-      sc -= Math.abs(p.z - this.laneZ) / ((B.maxZ - B.minZ) / 2) * 1.6; // stay in my lane
+      const ox = p.x - F.mx, oz = p.z - F.mz, fwd = ((ox * F.ax + oz * F.az) * side) / F.half; // -1 own side … +1 enemy side
+      let sc = intel.stale(p, g.time) * 1.2;                                                     // not searched recently
+      sc -= Math.abs(oz * F.ax - ox * F.az - this.lane * F.laneHalf) / F.laneHalf * 1.6;          // stay in my lane
       sc -= Math.abs(fwd - (push * 1.4 - 0.5)) * 1.3;                   // how far forward I dare to go
       sc -= clamp((d - 45 * sc0) / (40 * sc0), 0, 1.5);                 // not across the whole map
       for (const m of mates) { const gl = m.ai.goal; if (gl && gl.distanceTo(p) < 14) sc -= 1.4; if (m.motor.pos.distanceTo(p) < 8) sc -= 0.6; }
@@ -407,7 +437,7 @@ class BotAI {
     if (this.lookT > 0 && this.lookYaw !== null) { this.lookT -= dt; this._turnTo(this.lookYaw, 4.5, dt); }
     const objective = g.rules.botGoal ? g.rules.botGoal(bot) : null;
     bot.holdE = false;
-    const B = g.def.bounds, early = B.maxX - B.minX > 220 && g.time < 45; // big maps: teams jog out to their positions first
+    const early = this._frame().half > 110 && g.time < 45; // big maps: teams jog out to their positions first
     const walk = CFG.bot.patrolSpeed * this.pace * (early ? 1.3 : 1), run = CFG.bot.runSpeed;
 
     switch (this.state) {
@@ -448,7 +478,18 @@ class BotAI {
       this.dodgeT -= dt; this.wishX = this.dodgeX; this.wishZ = this.dodgeZ; this.wishSpeed = CFG.bot.runSpeed * 0.8; // v24: was ×1.22 for 0.26–0.42 s (read as a teleport)
     }
     if (bot.motor.crouching) this.wishSpeed *= 0.45;
+    if (g.def.traversal) this._slide(dt);
     this._stuckCheck(dt);
+  }
+
+  // v57 traversal maps: a running bot with a long straight stretch ahead sometimes slides (its own pace, every few seconds at most)
+  _slide(dt) {
+    const bot = this.bot, m = bot.motor;
+    this.slideCd = (this.slideCd || 0) - dt;
+    if (bot.slideT > 0 || this.slideCd > 0 || !m.grounded || m.crouching || this.wishSpeed < CFG.bot.runSpeed * 0.85 || this.pathIdx >= this.path.length) return;
+    const t = this.path[this.pathIdx];
+    if (Math.hypot(t.x - m.pos.x, t.z - m.pos.z) < 7 || Math.abs(t.y - m.pos.y) > 1 || Math.random() > dt * (0.25 + this.aggro * 0.5)) return;
+    bot.slideT = 0.85; bot.slideDir.set(this.wishX, 0, this.wishZ).normalize(); this.slideCd = rand(3, 7);
   }
 
   _scan(dt, width) { this.scanPhase += dt * (0.8 + this.caution * 0.6); this._turnTo(this.scanBase + Math.sin(this.scanPhase) * width, 2.6, dt); }

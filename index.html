@@ -3749,7 +3749,7 @@ class StaticHashBroadphase extends CANNON.Broadphase {
     this.hash.clear(); this.big.length = 0; this.nStatic = n; const c = this.cell;
     for (const b of world.bodies) {
       if (b.type !== CANNON.Body.STATIC) continue;
-      b.updateAABB(); b._bpS = 0;
+      if (b.aabbNeedsUpdate) b.updateAABB(); b._bpS = 0; // only new / moved ones: streamed maps (Apex) add and remove static bodies often
       const lo = b.aabb.lowerBound, up = b.aabb.upperBound, x0 = Math.floor(lo.x / c), x1 = Math.floor(up.x / c), z0 = Math.floor(lo.z / c), z1 = Math.floor(up.z / c);
       if ((x1 - x0 + 1) * (z1 - z0 + 1) > 48) { this.big.push(b); continue; }
       for (let ix = x0; ix <= x1; ix++) for (let iz = z0; iz <= z1; iz++) { const k = this._key(ix, iz); let l = this.hash.get(k); if (!l) this.hash.set(k, l = []); l.push(b); }
@@ -7746,9 +7746,10 @@ class ApexDoors {
 
 // Keeps the full world cheap: static physics exists only in 16 m tiles around combatants and live grenades (the whole map
 // would flood the cannon broadphase), and props farther than 110 m are hidden (the terrain shell always draws).
+// A tile body is built once and kept; tiles join within 2 tiles of someone and leave beyond 3 (no churn at a border).
 class ApexStreaming {
   constructor(b, boxes, meshes) {
-    this.b = b; this.meshes = meshes; this.active = new Map(); this.physT = 0; this.cullT = 0;
+    this.b = b; this.meshes = meshes; this.active = new Map(); this.built = new Map(); this.physT = 0; this.cullT = 0;
     // tile key -> indices of the packed boxes (x0 y0 z0 x1 y1 z1) crossing it
     this.tiles = new Map();
     for (let i = 0, n = boxes.length / 6; i < n; i++) {
@@ -7763,20 +7764,31 @@ class ApexStreaming {
   _body(key) { // one static compound per tile, each box clipped to the tile
     const [x, z] = key.split(',').map(Number), a = this.boxes, x0 = x * 16, z0 = z * 16;
     const body = new CANNON.Body({ mass: 0, material: this.b.phys.matDefault }); body.position.set(x0, 0, z0);
-    for (const i of this.tiles.get(key)) {
+    for (const i of this.tiles.get(key)) { // what Body.addShape does, with the radius / mass update once at the end (it is O(shapes) per add)
       const j = i * 6, minX = Math.max(a[j], x0), minZ = Math.max(a[j + 2], z0), maxX = Math.min(a[j + 3], x0 + 16), maxZ = Math.min(a[j + 5], z0 + 16);
-      body.addShape(new CANNON.Box(new CANNON.Vec3((maxX - minX) / 2, (a[j + 4] - a[j + 1]) / 2, (maxZ - minZ) / 2)), new CANNON.Vec3((minX + maxX) / 2 - x0, (a[j + 1] + a[j + 4]) / 2, (minZ + maxZ) / 2 - z0));
+      const s = new CANNON.Box(new CANNON.Vec3((maxX - minX) / 2, (a[j + 4] - a[j + 1]) / 2, (maxZ - minZ) / 2)); s.body = body;
+      body.shapes.push(s); body.shapeOffsets.push(new CANNON.Vec3((minX + maxX) / 2 - x0, (a[j + 1] + a[j + 4]) / 2, (minZ + maxZ) / 2 - z0)); body.shapeOrientations.push(new CANNON.Quaternion());
     }
+    body.updateMassProperties(); body.updateBoundingRadius(); body.aabbNeedsUpdate = true;
     return body;
   }
   tick(h) {
     if ((this.physT -= h) > 0) return;
-    this.physT = 0.5;
-    const g = this.b.game, world = this.b.phys.world, wanted = new Set(), pos = g.combatants.filter((c) => c.alive).map((c) => c.motor.pos);
+    this.physT = 0.25;
+    const g = this.b.game, world = this.b.phys.world, wanted = new Set(), keep = new Set(), pos = g.combatants.filter((c) => c.alive).map((c) => c.motor.pos);
     for (const gr of g.grenades) if (gr.dyn?.body) pos.push(gr.dyn.body.position);
-    for (const p of pos) for (let x = Math.floor(p.x / 16) - 2; x <= Math.floor(p.x / 16) + 2; x++) for (let z = Math.floor(p.z / 16) - 2; z <= Math.floor(p.z / 16) + 2; z++) wanted.add(x + ',' + z);
-    for (const [key, body] of this.active) if (!wanted.has(key)) { world.removeBody(body); this.active.delete(key); }
-    for (const key of wanted) if (!this.active.has(key) && this.tiles.has(key)) { const body = this._body(key); world.addBody(body); this.active.set(key, body); }
+    for (const p of pos) {
+      const tx = Math.floor(p.x / 16), tz = Math.floor(p.z / 16);
+      for (let x = tx - 3; x <= tx + 3; x++) for (let z = tz - 3; z <= tz + 3; z++) { const key = x + ',' + z; keep.add(key); if (Math.abs(x - tx) <= 2 && Math.abs(z - tz) <= 2) wanted.add(key); }
+    }
+    for (const [key, body] of this.active) if (!keep.has(key)) { world.removeBody(body); this.active.delete(key); }
+    let builds = 6; // new tiles per pass at most: the 2-tile margin is 32 m, a runner covers 1.5 m per pass
+    for (const key of wanted) {
+      if (this.active.has(key) || !this.tiles.has(key)) continue;
+      let body = this.built.get(key);
+      if (!body) { if (builds-- <= 0) continue; body = this._body(key); this.built.set(key, body); }
+      world.addBody(body); this.active.set(key, body);
+    }
   }
   render(dt) {
     if ((this.cullT -= dt) > 0) return;
@@ -7788,6 +7800,22 @@ class ApexStreaming {
   prompt() { return null; }
 }
 
+// Baked navigation (tools/bake-apex-nav.mjs): u32 nodes, u32 links, Float32 x y z per node, then per link Int32 from, to, kind
+// and Float32 cost — for NavGraph._baked.
+function apexNav(buf) {
+  const v = new DataView(buf), n = v.getUint32(0, true), m = v.getUint32(4, true), pos = new Float32Array(buf.slice(8, 8 + n * 12));
+  const from = new Int32Array(m), to = new Int32Array(m), kind = new Int32Array(m), cost = new Float32Array(m);
+  for (let i = 0, o = 8 + n * 12; i < m; i++, o += 16) { from[i] = v.getInt32(o, true); to[i] = v.getInt32(o + 4, true); kind[i] = v.getInt32(o + 8, true); cost[i] = v.getFloat32(o + 12, true); }
+  return { pos, from, to, kind, cost };
+}
+// Baked spawn groups (west / east, out of each other's sight) and forward groups the match picks when they are safe.
+function apexFullSpawns(team, game) {
+  const S = game.def._full.navMeta, v = (p) => new THREE.Vector3(p[0], p[1], p[2]);
+  game.fwdSpawns = game.fwdSpawns || {};
+  game.fwdSpawns[team] = S.forward[team].map((f) => ({ pts: f.pts.map(v), c: v(f.pts[0]), yaw: f.yaw }));
+  return { pts: S.spawns[team].pts.map(v), yaw: S.spawns[team].yaw };
+}
+
 MAPS.push({
   id: 'apex_full', name: 'Apex 訓練場・全場景', en: 'APEX FULL RANGE',
   desc: '全場景探索 · E 電動門 · 二段跳／滑鏟／攀爬', slogan: '完整匯入範圍 · 近似碰撞',
@@ -7797,21 +7825,32 @@ MAPS.push({
   fog: { color: 0x9daeb9, near: 400, far: 1400 }, acoustics: 'outdoor', ambience: 'wind',
   shot: { pos: [-350, 800, 350], target: [-350, 0, -250] },
   thumb: { pos: [65, 45, -70], target: [-10, 5, 15] }, // room picture: the village under the fog, not the overview
-  objectives: { dom: [[-20, 0, 0], [0, 0, 0], [20, 0, 0]], relic: [0, 0, 0], domRadius: 3.6 }, // the fight stays in the village (same frame as the test region)
-  spawnPoints: apexSpawns,
+  objectives: { dom: [[-20, 0, 0], [0, 0, 0], [20, 0, 0]], relic: [0, 0, 0], domRadius: 3.6 }, // replaced by the baked ones on load
+  spawnPoints: apexFullSpawns,
   async preload() {
     if (this._full) return;
-    const p = await apexPack('apex_full', 'assets/maps/apex-full/'), manifest = JSON.parse(new TextDecoder().decode(p.manifest));
-    this._full = { manifest, data: apexCollision(p.collision), gltf: await apexGLTF(p.glb) }; this.killY = manifest.killY;
+    const p = await apexPack('apex_full', 'assets/maps/apex-full/'), text = (b) => JSON.parse(new TextDecoder().decode(b));
+    const manifest = text(p.manifest), navMeta = text(p.navMeta);
+    this._full = { manifest, navMeta, nav: apexNav(p.nav), data: apexCollision(p.collision), gltf: await apexGLTF(p.glb) };
+    // the whole reachable area is the battlefield: baked objectives, and the bots' lanes / push direction use its extent
+    this.killY = manifest.killY; this.objectives = navMeta.objectives; this.aiBounds = navMeta.aiBounds;
+    const A = navMeta.spawns.alpha.pts[0], C = navMeta.spawns.bravo.pts[0], dx = C[0] - A[0], dz = C[2] - A[2], l = Math.hypot(dx, dz);
+    this.aiAxis = { mx: (A[0] + C[0]) / 2, mz: (A[2] + C[2]) / 2, ax: dx / l, az: dz / l, half: l * 0.62, laneHalf: Math.max(40, l * 0.4) }; // spawns at ±0.8 of the push
   },
   build(b) {
-    b.spawnZone('alpha', -30, -30, -24, -24, 0); b.spawnZone('bravo', 24, 24, 30, 30, Math.PI); if (b.dry) return;
+    const S = this._full && this._full.navMeta.spawns, zone = (t) => { const p = S[t].pts[0]; b.spawnZone(t, p[0] - 6, p[2] - 6, p[0] + 6, p[2] + 6, S[t].yaw); };
+    if (S) { zone('alpha'); zone('bravo'); } else { b.spawnZone('alpha', -30, -30, -24, -24, 0); b.spawnZone('bravo', 24, 24, 30, 30, Math.PI); } // (lobby preview before the first load)
+    if (b.dry) return;
     const { data, gltf, manifest } = this._full;
+    b.navBaked = this._full.nav;
     b.game.camera.far = 2200; b.game.camera.updateProjectionMatrix();
     b.col.addPacked(data.boxes, { material: 'concrete' });
     // Visual geometry retains shared prototypes and original transforms.
     gltf.scene.updateMatrixWorld(true);
-    const batches = new Map(); let objects = 0;
+    const batches = new Map(), villageMats = new Map(); let objects = 0;
+    // the village batch gets its own copy of a material: one material drawn both merged and instanced makes three.js re-pick
+    // its shader program at every switch (instancing and vertex-alpha flags differ)
+    const villageMat = (m) => { let c = villageMats.get(m); if (!c) villageMats.set(m, c = m.clone()); return c; };
     gltf.scene.traverse((o) => {
       if (!o.isMesh) return; objects++;
       // Engine-only fog cards need their depth-fade shaders; opaque substitutes obscure the map.
@@ -7825,7 +7864,7 @@ MAPS.push({
       const matrix = o.matrixWorld.clone(); matrix.elements[13] += data.visualYOffset; // same visual drop as the test region's GLB
       const p = new THREE.Vector3().setFromMatrixPosition(matrix);
       if (Math.abs(p.x) <= 40 && Math.abs(p.z) <= 40 && !Array.isArray(mat) && !mat.transparent) { // the village: merged per material
-        const geo = o.geometry.clone(); geo.applyMatrix4(matrix); b._batch(mat, geo, false); return;
+        const geo = o.geometry.clone(); geo.applyMatrix4(matrix); b._batch(villageMat(mat), geo, false); return;
       }
       const key = o.geometry.uuid + ':' + (Array.isArray(mat) ? mat.map((m) => m.uuid).join(',') : mat.uuid) + ':' + Math.floor(p.x / 64) + ',' + Math.floor(p.z / 64);
       if (!batches.has(key)) batches.set(key, { geo: o.geometry, mat, matrices: [], world: /Full_world|Full world/i.test(o.name) });
@@ -7840,7 +7879,6 @@ MAPS.push({
     }
     const doors = new ApexDoors(b, manifest.doors);
     b.mechs.push(doors, new ApexStreaming(b, data.boxes, meshes));
-    for (const p of data.nav) b.navExtra.push(new THREE.Vector3(...p));
     window.__apexFull = { objects, drawGroups: batches.size, doors: doors.doors.length, collisionBoxes: data.count, manifest };
   }
 });
@@ -7905,6 +7943,7 @@ class NavGraph {
   }
 
   build(builder, def) {
+    if (builder.navBaked) { this._baked(builder.navBaked); return; }
     const B = def.bounds, step = 2, T = this.col.terrain;
     for (const lvl of def.navLevels || []) {
       for (let x = B.minX + 1; x <= B.maxX - 1; x += step) for (let z = B.minZ + 1; z <= B.maxZ - 1; z += step) {
@@ -7963,6 +8002,17 @@ class NavGraph {
     this.upperNodes = this.valid.filter((n) => this.rel(n.p) > 2.5);
   }
 
+  // v57 prebaked graph (tools/bake-apex-nav.mjs): nodes plus links as typed arrays — kind 0 both ways, bit 1 one way (a drop
+  // or a jump up), already cut to what can reach and be reached from the spawn area, so nothing is sampled at match start.
+  _baked({ pos, from, to, kind, cost }) {
+    for (let i = 0; i < pos.length; i += 3) this._add(new THREE.Vector3(pos[i], pos[i + 1], pos[i + 2]));
+    for (let i = 0; i < from.length; i++) {
+      const a = this.nodes[from[i]], b = this.nodes[to[i]];
+      a.edges.push({ to: b.id, cost: cost[i] }); if (!(kind[i] & 1)) b.edges.push({ to: a.id, cost: cost[i] });
+    }
+    this.valid = this.nodes; this.groundNodes = this.nodes; this.upperNodes = []; // no heightfield to measure "upper" against
+  }
+
   nearest(p, requireLOS = true) {
     let best = null, bestS = Infinity; const cands = [];
     for (let r = 3; r <= 24 && !cands.length; r *= 2) this.near(p, r, (n) => { if (!n.ok) return; const dx = n.p.x - p.x, dz = n.p.z - p.z, dy = (n.p.y - p.y) * 3; cands.push([dx * dx + dz * dz + dy * dy, n]); });
@@ -7980,23 +8030,26 @@ class NavGraph {
     const s = this.nearest(from), g = this.nearest(to);
     const noise = seed ? (id) => { const x = Math.sin(id * 12.9898 + seed * 78.233) * 43758.5453; return 1 + 0.8 * (x - Math.floor(x)); } : null;
     if (!s || !g) return [];
-    const N = this.nodes.length, gs = new Float32Array(N).fill(Infinity), came = new Int32Array(N).fill(-1), closed = new Uint8Array(N);
+    // v57: the search arrays are kept (the full Apex range has ~10⁵ nodes); a slot counts only when stamped with this search
+    const N = this.nodes.length;
+    if (!this._gs || this._gs.length !== N) { this._gs = new Float32Array(N); this._came = new Int32Array(N); this._seen = new Uint32Array(N); this._done = new Uint32Array(N); this._run = 0; }
+    const gs = this._gs, came = this._came, seen = this._seen, done = this._done, run = ++this._run;
     const heap = []; // [f, id]
     const push = (f, id) => { heap.push([f, id]); let i = heap.length - 1; while (i > 0) { const p = (i - 1) >> 1; if (heap[p][0] <= heap[i][0]) break; [heap[p], heap[i]] = [heap[i], heap[p]]; i = p; } };
     const pop = () => { const top = heap[0], last = heap.pop(); if (heap.length) { heap[0] = last; let i = 0; for (;;) { const l = i * 2 + 1, r = l + 1; let m = i; if (l < heap.length && heap[l][0] < heap[m][0]) m = l; if (r < heap.length && heap[r][0] < heap[m][0]) m = r; if (m === i) break; [heap[m], heap[i]] = [heap[i], heap[m]]; i = m; } } return top; };
-    gs[s.id] = 0; push(s.p.distanceTo(g.p), s.id);
+    gs[s.id] = 0; came[s.id] = -1; seen[s.id] = run; push(s.p.distanceTo(g.p), s.id);
     while (heap.length) {
       const [, cur] = pop();
-      if (closed[cur]) continue;
+      if (done[cur] === run) continue;
       if (cur === g.id) break;
-      closed[cur] = 1;
+      done[cur] = run;
       for (const e of this.nodes[cur].edges) {
-        if (closed[e.to] || !this.nodes[e.to].ok) continue;
+        if (done[e.to] === run || !this.nodes[e.to].ok) continue;
         const ng = gs[cur] + (noise ? e.cost * noise(e.to) : e.cost);
-        if (ng < gs[e.to]) { gs[e.to] = ng; came[e.to] = cur; push(ng + this.nodes[e.to].p.distanceTo(g.p), e.to); }
+        if (seen[e.to] !== run || ng < gs[e.to]) { seen[e.to] = run; gs[e.to] = ng; came[e.to] = cur; push(ng + this.nodes[e.to].p.distanceTo(g.p), e.to); }
       }
     }
-    if (came[g.id] === -1 && g.id !== s.id) return [];
+    if (seen[g.id] !== run) return [];
     const path = [];
     for (let c = g.id; c !== -1; c = came[c]) path.push(this.nodes[c].p);
     path.reverse();
@@ -10981,6 +11034,7 @@ const PREF_RANGE = { sniper: [30, 75], rifle: [10, 34], lmg: [12, 38], smg: [6, 
 class Bot extends Combatant {
   constructor(game, team, idx, weaponId) {
     super(game, team, BOT_NAMES[team][idx % BOT_NAMES[team].length], false);
+    this.slideT = 0; this.slideDir = new THREE.Vector3(); this.airJumpUsed = false; // v57 traversal maps
     this.idx = idx; this.isBot = true; this.aimPitch = 0; this.walkPhase = Math.random() * 6; this.stepDist = 0; this.spottedT = -10; this.stepPitch = rand(0.9, 1.12);
     this.model = game.app.soldiers.create(team, WEAPON_DEFS[weaponId].model || weaponId);
     game.scene.add(this.model.root);
@@ -11052,7 +11106,7 @@ class Bot extends Combatant {
   respawn(point, yaw) {
     this.motor.teleport(point); this.life = (this.life || 0) + 1;
     this.yaw = yaw + rand(-0.3, 0.3); this.hp = 100; this.alive = true; this.spawnProtect = CFG.spawnProtect; this.carrying = false;
-    this.ammo = this.def.mag || 0; this.reloadT = 0; this.damageLog.clear();
+    this.ammo = this.def.mag || 0; this.reloadT = 0; this.damageLog.clear(); this.slideT = 0;
     this.nades = this.game.mode === 'general' ? { he: 1, flash: 1 } : { he: 0, flash: 0 };
     this.model.root.visible = true; this.model.head.visible = true; this.model.root.position.copy(this.motor.pos); if (this.tag) this.tag.visible = true;
     this.ai.reset();
@@ -11061,9 +11115,21 @@ class Bot extends Combatant {
   fixedUpdate(h) {
     if (!this.alive) return;
     const ai = this.ai, frozen = !this.game.canMove(), m = this.motor;
-    if (!m.climbing) m.setCrouch(!frozen && ai.crouchT > 0);
-    m.step(h, frozen ? 0 : ai.wishX, frozen ? 0 : ai.wishZ, frozen ? 0 : ai.wishSpeed * (this.carrying ? 0.88 : 1));
+    if (m.grounded || m.climbing) this.airJumpUsed = false;
+    if (this.slideT > 0 && !frozen) { // v57 slide (traversal maps): crouched, fast at first, ends early once airborne
+      this.slideT -= h; m.setCrouch(true);
+      const k = 1 - Math.max(0, this.slideT) / 0.85;
+      m.step(h, this.slideDir.x, this.slideDir.z, lerp(8.2, 3.2, k * k));
+      if (!m.grounded) this.slideT = 0;
+    } else {
+      if (!m.climbing) m.setCrouch(!frozen && ai.crouchT > 0);
+      m.step(h, frozen ? 0 : ai.wishX, frozen ? 0 : ai.wishZ, frozen ? 0 : ai.wishSpeed * (this.carrying ? 0.88 : 1));
+    }
     if (!frozen && ai.wantJump) { m.requestJump(); ai.wantJump = false; }
+    if (!frozen && ai.wantAirJump) { // v57 double jump, same impulse as the player's
+      if (!this.airJumpUsed && !m.grounded && !m.climbing) { m.vel.y = CFG.player.jumpVel; this.airJumpUsed = true; }
+      ai.wantAirJump = false;
+    }
     if (m.climbing) { if (m.climbDist > 0.6) { m.climbDist = 0; this._step('ladder', 0.9); } return; }
     const hs = m.horizontalSpeed();
     if (m.grounded && hs > 2.4 && !m.crouching) {
@@ -11096,9 +11162,7 @@ class BotAI {
   constructor(bot, game) {
     this.bot = bot; this.game = game; this.wishX = 0; this.wishZ = 0; this.wishSpeed = 0; this.wantJump = false;
     // personality: every bot searches its own lane, at its own pace, with its own route preferences
-    const B = game.def.bounds, zSpan = (B.maxZ - B.minZ) / 2;
     this.lane = ((bot.idx * 0.618 + (bot.team === 'alpha' ? 0.13 : 0.41)) % 1) * 1.6 - 0.8; // -0.8..0.8 of the half-width
-    this.laneZ = (B.minZ + B.maxZ) / 2 + this.lane * zSpan;
     this.aggro = rand(0.35, 1); this.caution = rand(0.15, 0.85); this.pace = rand(0.82, 1.0); this.routeSeed = 1 + Math.floor(Math.random() * 9999);
     this.reset();
   }
@@ -11165,7 +11229,8 @@ class BotAI {
     const left = hl ? hl.t : 2.5, right = hr ? hr.t : 2.5;
     if (right > left + 0.3 || (Math.abs(right - left) <= 0.3 && Math.random() < 0.5)) { px = -px; pz = -pz; }
     this.dodgeX = px; this.dodgeZ = pz; this.dodgeT = rand(0.4, 0.65); this.strafeDir = 0; this.strafeT = 0;
-    if (Math.random() < 0.12) this.wantJump = true;
+    if (this.game.def.traversal && this.bot.motor.grounded && Math.random() < 0.35) { this.bot.slideT = 0.6; this.bot.slideDir.set(px, 0, pz).normalize(); } // v57: dive-slide out of the line of fire
+    else if (Math.random() < 0.12) this.wantJump = true;
   }
 
   // v8 NEAR MISS: no damage, but the crack gives a rough direction — fighting bots dodge, the rest turn, dodge and move on it.
@@ -11275,12 +11340,20 @@ class BotAI {
     const m = this.bot.motor;
     while (this.pathIdx < this.path.length) {
       const t = this.path[this.pathIdx], dx = t.x - m.pos.x, dz = t.z - m.pos.z, dy = t.y - m.pos.y;
-      if (dx * dx + dz * dz < 0.3 && Math.abs(dy) < 1.6) { this.pathIdx++; this._corner(); continue; }
+      if (dx * dx + dz * dz < 0.3 && Math.abs(dy) < 1.6 && !(this.game.def.traversal && dy > 0.5)) { this.pathIdx++; this._corner(); continue; } // (under a jump target: not there yet)
       const prev = this.pathIdx > 0 ? this.path[this.pathIdx - 1] : null;
       m.climbInput = (t.ladder || (prev && prev.ladder)) ? (dy > 0.02 ? 1 : dy < -0.3 ? -1 : m.climbing ? 1 : 0) : 0; // keep climbing until over the lip
       const d = Math.hypot(dx, dz) || 1; let wx = dx / d, wz = dz / d;
       if (!m.climbing) { const av = this._avoidance(wx, wz); wx += av.x; wz += av.z; const l = Math.hypot(wx, wz) || 1; wx /= l; wz /= l; }
       this.wishX = wx; this.wishZ = wz; this.wishSpeed = this.cornerT > 0 ? speed * 0.35 : speed;
+      // v57 traversal maps (baked jump links): jump when the ground just ahead rises past a step (at the foot of the ledge, not
+      // from afar), and after such a jump, jump again near the top of the arc while still below the waypoint
+      if (this.game.def.traversal && !m.climbing && !t.ladder && d < 2.8) {
+        if (m.grounded) {
+          this.ledgeJump = false;
+          if (dy > 0.3) { const ah = this.game.collision.groundBelow(m.pos.x + wx * 0.75, m.pos.y + 2.6, m.pos.z + wz * 0.75, 0.2, 2.6); if (ah && ah.y > m.pos.y + 0.42) this.wantJump = this.ledgeJump = true; }
+        } else if (this.ledgeJump && m.vel.y < 1.2 && m.pos.y < t.y + 0.15) this.wantAirJump = true;
+      }
       if (face) {
         let yaw = Math.atan2(-dx, -dz);
         if (scan) { this.scanPhase += dt * (0.9 + this.caution); yaw += Math.sin(this.scanPhase) * (0.45 + this.caution * 0.35); } // head on a swivel
@@ -11311,11 +11384,21 @@ class BotAI {
     }
   }
 
+  // The battle frame: Alpha pushes along +axis, Bravo along -axis, lanes run across it. Maps with Alpha west / Bravo east use
+  // the bounds (axis +x); v57 def.aiAxis (full Apex range) gives a diagonal one between the baked spawns, and aiBounds the
+  // reachable part of a map with void around it.
+  _frame() {
+    const d = this.game.def, A = d.aiAxis;
+    if (A) return A;
+    const B = d.aiBounds || d.bounds;
+    return { mx: (B.minX + B.maxX) / 2, mz: (B.minZ + B.maxZ) / 2, ax: 1, az: 0, half: (B.maxX - B.minX) / 2, laneHalf: (B.maxZ - B.minZ) / 2 };
+  }
+
   // Carpet search: pick an unchecked area in this bot's own lane, pushing toward the enemy side, away from teammates' goals.
   _searchGoal() {
-    const g = this.game, bot = this.bot, B = g.def.bounds, mid = (B.minX + B.maxX) / 2, halfX = (B.maxX - B.minX) / 2, side = bot.team === 'alpha' ? 1 : -1;
+    const g = this.game, bot = this.bot, F = this._frame(), side = bot.team === 'alpha' ? 1 : -1;
     const intel = g.intel[bot.team], mates = g.bots.filter((b) => b !== bot && b.alive && b.team === bot.team);
-    const push = clamp(0.25 + this.aggro * 0.5 + g.time / 240, 0, 1), sc0 = Math.max(1, halfX / 100);
+    const push = clamp(0.25 + this.aggro * 0.5 + g.time / 240, 0, 1), sc0 = Math.max(1, F.half / 100);
     const patrol = g.patrol && g.patrol.length > 4 && Math.random() < 0.7 ? g.patrol : null; // waypoint patrol network (v5)
     let best = null, bs = -Infinity;
     for (let k = 0; k < 26; k++) {
@@ -11323,9 +11406,9 @@ class BotAI {
       if (patrol) p = pick(patrol); else { const n = g.nav.randomNode(0.18); if (!n) break; p = n.p; }
       const d = p.distanceTo(bot.motor.pos);
       if (d < 8) continue;
-      const fwd = ((p.x - mid) * side) / halfX; // -1 own side … +1 enemy side
-      let sc = intel.stale(p, g.time) * 1.2;                            // not searched recently
-      sc -= Math.abs(p.z - this.laneZ) / ((B.maxZ - B.minZ) / 2) * 1.6; // stay in my lane
+      const ox = p.x - F.mx, oz = p.z - F.mz, fwd = ((ox * F.ax + oz * F.az) * side) / F.half; // -1 own side … +1 enemy side
+      let sc = intel.stale(p, g.time) * 1.2;                                                     // not searched recently
+      sc -= Math.abs(oz * F.ax - ox * F.az - this.lane * F.laneHalf) / F.laneHalf * 1.6;          // stay in my lane
       sc -= Math.abs(fwd - (push * 1.4 - 0.5)) * 1.3;                   // how far forward I dare to go
       sc -= clamp((d - 45 * sc0) / (40 * sc0), 0, 1.5);                 // not across the whole map
       for (const m of mates) { const gl = m.ai.goal; if (gl && gl.distanceTo(p) < 14) sc -= 1.4; if (m.motor.pos.distanceTo(p) < 8) sc -= 0.6; }
@@ -11350,7 +11433,7 @@ class BotAI {
     if (this.lookT > 0 && this.lookYaw !== null) { this.lookT -= dt; this._turnTo(this.lookYaw, 4.5, dt); }
     const objective = g.rules.botGoal ? g.rules.botGoal(bot) : null;
     bot.holdE = false;
-    const B = g.def.bounds, early = B.maxX - B.minX > 220 && g.time < 45; // big maps: teams jog out to their positions first
+    const early = this._frame().half > 110 && g.time < 45; // big maps: teams jog out to their positions first
     const walk = CFG.bot.patrolSpeed * this.pace * (early ? 1.3 : 1), run = CFG.bot.runSpeed;
 
     switch (this.state) {
@@ -11391,7 +11474,18 @@ class BotAI {
       this.dodgeT -= dt; this.wishX = this.dodgeX; this.wishZ = this.dodgeZ; this.wishSpeed = CFG.bot.runSpeed * 0.8; // v24: was ×1.22 for 0.26–0.42 s (read as a teleport)
     }
     if (bot.motor.crouching) this.wishSpeed *= 0.45;
+    if (g.def.traversal) this._slide(dt);
     this._stuckCheck(dt);
+  }
+
+  // v57 traversal maps: a running bot with a long straight stretch ahead sometimes slides (its own pace, every few seconds at most)
+  _slide(dt) {
+    const bot = this.bot, m = bot.motor;
+    this.slideCd = (this.slideCd || 0) - dt;
+    if (bot.slideT > 0 || this.slideCd > 0 || !m.grounded || m.crouching || this.wishSpeed < CFG.bot.runSpeed * 0.85 || this.pathIdx >= this.path.length) return;
+    const t = this.path[this.pathIdx];
+    if (Math.hypot(t.x - m.pos.x, t.z - m.pos.z) < 7 || Math.abs(t.y - m.pos.y) > 1 || Math.random() > dt * (0.25 + this.aggro * 0.5)) return;
+    bot.slideT = 0.85; bot.slideDir.set(this.wishX, 0, this.wishZ).normalize(); this.slideCd = rand(3, 7);
   }
 
   _scan(dt, width) { this.scanPhase += dt * (0.8 + this.caution * 0.6); this._turnTo(this.scanBase + Math.sin(this.scanPhase) * width, 2.6, dt); }
