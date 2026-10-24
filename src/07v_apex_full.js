@@ -108,7 +108,7 @@ MAPS.push({
   async preload() {
     if (this._full) return;
     const p = await apexPack('apex_full', 'assets/maps/apex-full/'), manifest = JSON.parse(new TextDecoder().decode(p.manifest));
-    this._full = { manifest, data: apexCollision(p.collision), gltf: await new GLTFLoader().parseAsync(p.glb, '') }; this.killY = manifest.killY;
+    this._full = { manifest, data: apexCollision(p.collision), gltf: await apexGLTF(p.glb) }; this.killY = manifest.killY;
   },
   build(b) {
     b.spawnZone('alpha', -30, -30, -24, -24, 0); b.spawnZone('bravo', 24, 24, 30, 30, Math.PI); if (b.dry) return;

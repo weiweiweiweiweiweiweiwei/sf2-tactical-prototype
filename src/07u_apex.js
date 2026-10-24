@@ -25,6 +25,12 @@ async function apexPack(id, dir) {
   const parts = {}; for (const [k, [o, n]] of Object.entries(L.parts)) parts[k] = L.buf.buffer.slice(o, o + n);
   return parts;
 }
+// the packed GLBs carry Draco geometry; the decoder comes from the same three.js CDN as the other Blender maps
+async function apexGLTF(buf) {
+  const L = new GLTFLoader(), D = new DRACOLoader();
+  D.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/libs/draco/gltf/'); L.setDRACOLoader(D);
+  try { return await L.parseAsync(buf, ''); } finally { D.dispose(); }
+}
 // Packed collision (tools/pack-apex-collision.mjs): 'APXC', version 1, header length, JSON header, then Int16 boxes
 // x0 y0 z0 x1 y1 z1 (x/z in 1/xz m, y in 1/y m) → the header plus boxes as one Float32Array for CollisionWorld.addPacked.
 function apexCollision(buf) {
@@ -38,7 +44,7 @@ function apexCollision(buf) {
 async function apexPreload(def) {
   if (def._apex) return;
   const p = await apexPack('apex_test', 'assets/maps/apex-test/');
-  def._apex = { data: JSON.parse(new TextDecoder().decode(p.collision)), gltf: await new GLTFLoader().parseAsync(p.glb, '') };
+  def._apex = { data: JSON.parse(new TextDecoder().decode(p.collision)), gltf: await apexGLTF(p.glb) };
 }
 function apexSpawns(team, game) {
   if (!game._apexSpawns) {
