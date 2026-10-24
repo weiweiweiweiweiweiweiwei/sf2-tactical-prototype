@@ -962,7 +962,6 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
 } }
 </script>
 <script type="module">
-
 import * as THREE from 'three';
 import * as CANNON from 'cannon-es';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
@@ -1468,6 +1467,8 @@ const DEFAULT_LOADOUTS = [
 
 const STAR_BADGE = '<svg viewBox="0 0 24 24"><defs><linearGradient id="sbg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff3b0"/><stop offset=".55" stop-color="#f5c542"/><stop offset="1" stop-color="#b8801a"/></linearGradient></defs><circle cx="12" cy="12" r="11" fill="#2a1d05" stroke="#e6b23a" stroke-width="1.4"/><path d="M12 3.6l2.5 5.3 5.8.7-4.3 4 1.1 5.7L12 16.5l-5.1 2.8 1.1-5.7-4.3-4 5.8-.7z" fill="url(#sbg)" stroke="#fff2b8" stroke-width=".5"/></svg>'; // v45 host badge
 const mapThumb = (def) => `assets/maps/thumbs/${def.id}.jpg`; // v46 room map pictures
+// maps that fetch their data (def.server) cannot load from a double-clicked index.html (file://) — 開始遊戲.bat serves the folder
+const needsServer = (def) => !!def.server && location.protocol === 'file:';
 const LOADOUT_KEYS = 'ABC'; // v45: three loadout sets A–C (SF2 armory tabs), F1–F3 queue them in a match
 
 const MODES = {
@@ -1610,7 +1611,6 @@ function loadoutDefs(mode, loadout) {
     return WEAPON_DEFS[s];
   });
 }
-
 
 /* =====================================================================
    AUDIO ENGINE — v33: real CC0 recordings (assets/sfx.js: gunshots near + far, footsteps per surface, cloth / gear
@@ -2404,7 +2404,6 @@ class AudioEngine {
   }
 }
 
-
 /* =====================================================================
    PBR TEXTURE FACTORY — every surface is generated procedurally as an
    albedo + normal (Sobel from a height field) + roughness set.
@@ -3197,7 +3196,6 @@ function worldBox(w, h, d, tile = 2) {
   return g;
 }
 
-
 /* =====================================================================
    TERRAIN (v5) — regular heightfield for the mountain maps. Every cell
    is split along its (i,j)–(i+1,j+1) diagonal, exactly like the render
@@ -3270,6 +3268,7 @@ class CollisionWorld {
     this.boxes = []; this.ramps = []; this.ladders = []; this.terrain = null;
     this.cell = 4; this.grid = new Map(); this.stamp = 1;
     this._qf = []; this._qg = [];
+    this.packed = null;
   }
 
   _key(ix, iz) { return (ix + 4096) * 8192 + (iz + 4096); }
@@ -3281,28 +3280,60 @@ class CollisionWorld {
       blocksMove: o.blocksMove !== false, blocksShot: o.blocksShot !== false, penetrable: !!o.penetrable,
     };
     this.boxes.push(b);
-    const c = this.cell;
-    for (let ix = Math.floor(b.min.x / c); ix <= Math.floor(b.max.x / c); ix++)
-      for (let iz = Math.floor(b.min.z / c); iz <= Math.floor(b.max.z / c); iz++) {
-        const k = this._key(ix, iz);
-        let l = this.grid.get(k); if (!l) this.grid.set(k, l = []);
-        l.push(b);
-      }
+    this._cells(b, (k) => this._list(k, true).push(b));
     return b;
+  }
+
+  // Imported maps with millions of static boxes (Apex full range): they stay packed in one Float32Array (x0 y0 z0 x1 y1 z1
+  // per box, not listed in this.boxes) and a grid cell builds its box objects the first time anything touches it, so
+  // memory follows the area actually visited instead of the whole map.
+  addPacked(arr, o = {}) {
+    if (this.packed) throw new Error('CollisionWorld holds one packed box set');
+    const c = this.cell, n = arr.length / 6, slots = new Map(), counts = [];
+    const each = (i, fn) => { const j = i * 6; for (let ix = Math.floor(arr[j] / c); ix <= Math.floor(arr[j + 3] / c); ix++) for (let iz = Math.floor(arr[j + 2] / c); iz <= Math.floor(arr[j + 5] / c); iz++) fn(this._key(ix, iz)); };
+    for (let i = 0; i < n; i++) each(i, (k) => { let s = slots.get(k); if (s === undefined) { slots.set(k, s = counts.length); counts.push(0); } counts[s]++; });
+    const offs = new Int32Array(counts.length + 1);
+    for (let s = 0; s < counts.length; s++) offs[s + 1] = offs[s] + counts[s];
+    const fill = offs.slice(0, -1), refs = new Int32Array(offs[counts.length]);
+    for (let i = 0; i < n; i++) each(i, (k) => { refs[fill[slots.get(k)]++] = i; });
+    // a cell that already has listed boxes takes its packed ones now (the invariant: a listed cell is never still packed)
+    this.packed = { arr, slots, offs, refs, made: new Map(), material: o.material || 'concrete' };
+    for (const [k, l] of this.grid) { const s = slots.get(k); if (s !== undefined) { slots.delete(k); for (let j = offs[s]; j < offs[s + 1]; j++) l.push(this._packedBox(refs[j])); } }
+  }
+  _packedBox(i) {
+    const P = this.packed; let b = P.made.get(i);
+    if (!b) {
+      const a = P.arr, j = i * 6;
+      b = { kind: 'box', min: new THREE.Vector3(a[j], a[j + 1], a[j + 2]), max: new THREE.Vector3(a[j + 3], a[j + 4], a[j + 5]), _s: 0,
+        material: P.material, surface: P.material, blocksMove: true, blocksShot: true, penetrable: false };
+      P.made.set(i, b); // a box spanning several cells is one object in all of them
+    }
+    return b;
+  }
+  // the box list of one grid cell (make: create it when empty); unpacks the cell's packed boxes on first touch
+  _list(k, make = false) {
+    let l = this.grid.get(k);
+    if (l || !this.packed) { if (!l && make) this.grid.set(k, l = []); return l; }
+    const P = this.packed, s = P.slots.get(k);
+    if (s !== undefined) {
+      P.slots.delete(k); this.grid.set(k, l = []);
+      for (let j = P.offs[s]; j < P.offs[s + 1]; j++) l.push(this._packedBox(P.refs[j]));
+    } else if (make) this.grid.set(k, l = []);
+    return l;
   }
 
   // v46 map mechanisms (Sky City trams / drawbridge): a box can be moved (re-indexed in the grid) or switched off
   _cells(b, fn) { const c = this.cell; for (let ix = Math.floor(b.min.x / c); ix <= Math.floor(b.max.x / c); ix++) for (let iz = Math.floor(b.min.z / c); iz <= Math.floor(b.max.z / c); iz++) fn(this._key(ix, iz)); }
   moveBox(b, dx, dy, dz) {
-    this._cells(b, (k) => { const l = this.grid.get(k); if (l) { const i = l.indexOf(b); if (i >= 0) l.splice(i, 1); } });
+    this._cells(b, (k) => { const l = this._list(k); if (l) { const i = l.indexOf(b); if (i >= 0) l.splice(i, 1); } });
     b.min.x += dx; b.min.y += dy; b.min.z += dz; b.max.x += dx; b.max.y += dy; b.max.z += dz;
-    this._cells(b, (k) => { let l = this.grid.get(k); if (!l) this.grid.set(k, l = []); l.push(b); });
+    this._cells(b, (k) => this._list(k, true).push(b));
   }
   setSolid(b, move, shot = move) { b.blocksMove = move; b.blocksShot = shot; }
   setBox(b, x0, y0, z0, x1, y1, z1) { // re-shape a box (the turning drawbridge leaf)
-    this._cells(b, (k) => { const l = this.grid.get(k); if (l) { const i = l.indexOf(b); if (i >= 0) l.splice(i, 1); } });
+    this._cells(b, (k) => { const l = this._list(k); if (l) { const i = l.indexOf(b); if (i >= 0) l.splice(i, 1); } });
     b.min.set(x0, y0, z0); b.max.set(x1, y1, z1);
-    this._cells(b, (k) => { let l = this.grid.get(k); if (!l) this.grid.set(k, l = []); l.push(b); });
+    this._cells(b, (k) => this._list(k, true).push(b));
   }
 
   query(minX, minZ, maxX, maxZ, out) {
@@ -3310,7 +3341,7 @@ class CollisionWorld {
     out.length = 0;
     for (let ix = Math.floor(minX / c); ix <= Math.floor(maxX / c); ix++)
       for (let iz = Math.floor(minZ / c); iz <= Math.floor(maxZ / c); iz++) {
-        const l = this.grid.get(this._key(ix, iz));
+        const l = this._list(this._key(ix, iz));
         if (l) for (const b of l) if (b._s !== s) { b._s = s; out.push(b); }
       }
     return out;
@@ -3430,7 +3461,7 @@ class CollisionWorld {
     let tmx = ax > 1e-9 ? (sx > 0 ? (ix + 1) * c - o.x : o.x - ix * c) / ax : Infinity;
     let tmz = az > 1e-9 ? (sz > 0 ? (iz + 1) * c - o.z : o.z - iz * c) / az : Infinity;
     for (let guard = 0; guard < 2048; guard++) {
-      const tExit = Math.min(tmx, tmz, maxDist), l = this.grid.get(this._key(ix, iz));
+      const tExit = Math.min(tmx, tmz, maxDist), l = this._list(this._key(ix, iz));
       if (l && visit(l, tExit)) return;
       if (tExit >= maxDist) return;
       if (tmx < tmz) { tmx += tdx; ix += sx; } else { tmz += tdz; iz += sz; }
@@ -3704,7 +3735,6 @@ class CharacterMotor {
     a.nudge(-nx * push, -nz * push); b.nudge(nx * push, nz * push);
   }
 }
-
 
 /* =====================================================================
    PHYSICS WORLD (cannon-es) — static level bodies + dynamic debris:
@@ -4186,7 +4216,6 @@ class Effects {
   }
 }
 
-
 /* =====================================================================
    MAP BUILDER — declarative level construction. Every primitive
    produces batched visuals (merged per material), collision AABBs,
@@ -4252,16 +4281,18 @@ class MapBuilder {
     const cell = Math.max(sx * sz > 6000 ? 0.5 : 0.25, sx / 1024, sz / 1024), W = Math.ceil(sx / cell), H = Math.ceil(sz / cell);
     const T = this.col.terrain, gh = new Float32Array(W * H), occ = new Float32Array(W * H);
     for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) gh[i + j * W] = T ? T.heightAt(x0 + (i + 0.5) * cell, z0 + (j + 0.5) * cell) : 0;
-    for (const b of this.col.boxes) {
-      if (!b.blocksMove || !b.blocksShot || b.material === 'glass') continue;
-      const i0 = Math.max(0, Math.floor((b.min.x - x0) / cell)), i1 = Math.min(W - 1, Math.floor((b.max.x - x0) / cell));
-      const j0 = Math.max(0, Math.floor((b.min.z - z0) / cell)), j1 = Math.min(H - 1, Math.floor((b.max.z - z0) / cell));
+    const occlude = (bx0, by0, bz0, bx1, by1, bz1) => {
+      const i0 = Math.max(0, Math.floor((bx0 - x0) / cell)), i1 = Math.min(W - 1, Math.floor((bx1 - x0) / cell));
+      const j0 = Math.max(0, Math.floor((bz0 - z0) / cell)), j1 = Math.min(H - 1, Math.floor((bz1 - z0) / cell));
       for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
-        const k = i + j * W, g = gh[k], h = b.max.y - Math.max(b.min.y, g);
-        if (b.min.y > g + 0.35 || h < 0.3) continue;
+        const k = i + j * W, g = gh[k], h = by1 - Math.max(by0, g);
+        if (by0 > g + 0.35 || h < 0.3) continue;
         occ[k] = Math.max(occ[k], clamp(h / 1.2, 0.3, 1));
       }
-    }
+    };
+    for (const b of this.col.boxes) if (b.blocksMove && b.blocksShot && b.material !== 'glass') occlude(b.min.x, b.min.y, b.min.z, b.max.x, b.max.y, b.max.z);
+    const P = this.col.packed;
+    if (P) for (let j = 0, a = P.arr; j < a.length; j += 6) occlude(a[j], a[j + 1], a[j + 2], a[j + 3], a[j + 4], a[j + 5]);
     const r = Math.max(1, Math.round(0.55 / cell)), inv = 1 / (2 * r + 1), tmp = new Float32Array(W * H);
     const blur = (src, dst, horiz) => {
       const n = horiz ? W : H, lines = horiz ? H : W, st = horiz ? 1 : W, ln = horiz ? W : 1;
@@ -4877,7 +4908,6 @@ class MapBuilder {
     return topY;
   }
 }
-
 
 /* =====================================================================
    MAPS — six point-symmetric arenas (fair for both teams).
@@ -6292,7 +6322,6 @@ function drawMapPreview(canvas, def, dryData, opts = {}) {
 }
 
 
-
 /* =====================================================================
    v44 SAKURA INN (櫻花客棧 · SF2 "Ryokan", seizure map, 2012) — traced from the in-game Tab map of a 2016 KR clan
    match (the 4:3 upload is squashed horizontally; the square objective icon gives ×4/3) and checked against the
@@ -6812,7 +6841,6 @@ MAPS.push({
   },
   build(b) { buildRyokan(b); },
 });
-
 /* =====================================================================
    v46 SKY CITY (天空之城 · SF2 "Skywalker" 스카이워커 / GNN 天空之門, sniper-mode map) — two white-brick tower tops
    floating over a sea of cloud, split by a deep chasm. Alpha holds the west roof, Bravo the east roof; a clock tower
@@ -7391,7 +7419,6 @@ MAPS.push({
     buildSky(b);
   },
 });
-
 /* =====================================================================
    v52 SATELLITE BASE — Blender dressing (tools/blender/sat_build.py → assets/maps/satellite.js = base64 GLB) and its
    special materials. The GLB is visual only: it sits on collider faces, on existing cover-box footprints and overhead,
@@ -7540,8 +7567,18 @@ function satDressing(b) {
   b.animated.push((dt, t) => { for (const o of holo) o.rotation.y = t * 0.35; for (const m of scroll) if (m.map) m.map.offset.y = (t * m.userData.scroll) % 1; });
   return true;
 }
-
 // Local imported test region: visual batches and separately baked collision columns.
+// Packed collision (tools/pack-apex-collision.mjs): 'APXC', version 1, header length, JSON header, then Int16 boxes
+// x0 y0 z0 x1 y1 z1 (x/z in 1/xz m, y in 1/y m) → the header plus boxes as one Float32Array for CollisionWorld.addPacked.
+async function apexCollision(url) {
+  const r = await fetch(url); if (!r.ok) throw new Error('Apex collision data unavailable');
+  const buf = await r.arrayBuffer(), v = new DataView(buf);
+  if (v.getUint32(0, true) !== 0x43585041 || v.getUint32(4, true) !== 1) throw new Error('Apex collision: unknown format');
+  const n = v.getUint32(8, true), head = JSON.parse(new TextDecoder().decode(new Uint8Array(buf, 12, n)));
+  const q = new Int16Array(buf, (12 + n + 3) & ~3, head.count * 6), boxes = new Float32Array(q.length);
+  for (let i = 0; i < q.length; i++) boxes[i] = q[i] / (i % 3 === 1 ? head.y : head.xz);
+  return Object.assign(head, { boxes });
+}
 async function apexPreload(def) {
   if (def._apex) return;
   const root = 'assets/maps/apex-test/';
@@ -7576,7 +7613,7 @@ function apexSpawns(team, game) {
 MAPS.push({
   id:'apex_test',name:'Apex 訓練場・測試區',en:'APEX IMPORT TEST',
   desc:'本機測試 · 部分材質 · 近似碰撞 · 80×80',slogan:'匯入驗證 · 建築與地形移動測試',
-  bounds:{minX:-40,maxX:40,minZ:-40,maxZ:40},indoor:false,navLevels:[],
+  bounds:{minX:-40,maxX:40,minZ:-40,maxZ:40},indoor:false,navLevels:[],killY:-18,traversal:true,server:true,
   background:0x9daeb9,envIntensity:.6,exposure:.8,
   sun:{pos:[-20,70,25],color:0xfff0d5,intensity:2},hemi:[0xdce8f2,0x665b49,1.2],
   fog:{color:0x9daeb9,near:100,far:220},acoustics:'outdoor',ambience:'wind',
@@ -7630,7 +7667,159 @@ MAPS.push({
     window.__apexImport={sourceMeshObjects:before,visualBatches:b.batches.size,collisionBoxes:data.boxes.length,navCandidates:data.nav.length};
   }
 });
+// Full imported extent. Repeated meshes stay instanced; AI combat remains in the verified village.
+// Stand-in sliding doors at the original prop_door positions (E opens / closes; a closing door reopens on anyone in it).
+// mechs[0] on this map: the host streams netState() to clients.
+class ApexDoors {
+  constructor(b, entries) {
+    this.b = b; this.doors = [];
+    for (const d of entries) {
+      const pivot = new THREE.Group(); pivot.position.set(d.x, d.y, d.z); pivot.rotation.y = d.yaw;
+      const mat = new THREE.MeshStandardMaterial({ color: 0x854d3b, metalness: 0.45, roughness: 0.65 });
+      const leaf = new THREE.Mesh(new THREE.BoxGeometry(0.16, 2.6, 1.5), mat); leaf.position.set(0, 1.3, -0.75); leaf.castShadow = true; leaf.receiveShadow = true; pivot.add(leaf);
+      const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.15, 1.35), new THREE.MeshStandardMaterial({ color: 0xd8b057, roughness: 0.7 })); stripe.position.set(0, 1.2, -0.75); pivot.add(stripe);
+      b.scene.add(pivot); pivot.updateMatrixWorld(true);
+      const box = new THREE.Box3().setFromObject(pivot), col = b.col.addBox(box.min.clone(), box.max.clone(), { material: 'metal' });
+      const size = box.getSize(new THREE.Vector3()), mid = box.getCenter(new THREE.Vector3());
+      const body = new CANNON.Body({ mass: 0, material: b.phys.matDefault, shape: new CANNON.Box(new CANNON.Vec3(size.x / 2, size.y / 2, size.z / 2)) });
+      body.position.set(mid.x, mid.y, mid.z); b.phys.world.addBody(body);
+      this.doors.push({ pivot, col, body, base: d.y, k: 0, target: 0, box: box.clone(), center: mid });
+    }
+  }
+  nearest(c) {
+    if (!c.alive) return null;
+    const eye = c.eyePos(new THREE.Vector3()); let best = null, dist = 2.8;
+    for (const d of this.doors) {
+      const n = eye.distanceTo(d.center); if (n >= dist) continue;
+      const hit = this.b.col.raycast(eye, d.center.clone().sub(eye).normalize(), n);
+      if (hit && hit.collider !== d.col && hit.t < n - 0.25) continue; // a wall between you and the door
+      best = d; dist = n;
+    }
+    return best;
+  }
+  prompt(c) { const d = this.nearest(c); return d ? '按 [E] ' + (d.target ? '關閉' : '開啟') + '電動門' : null; }
+  interact(c) { const d = this.nearest(c); if (!d) return false; d.target = d.target ? 0 : 1; return true; }
+  _slide(d, k) { // the leaf rises 2.9 m; its collider and physics body follow
+    const dy = (k - d.k) * 2.9; d.k = k; if (!dy) return;
+    d.pivot.position.y = d.base + k * 2.9; this.b.col.moveBox(d.col, 0, dy, 0);
+    d.body.position.y += dy; d.body.aabbNeedsUpdate = true;
+  }
+  tick(h) {
+    const g = this.b.game;
+    for (const d of this.doors) {
+      if (!g.isClient && d.target === 0 && d.k > 0 && g.combatants.some((c) => c.alive && CollisionWorld.overlap(d.box, c.motor.pos.x, c.motor.pos.y, c.motor.pos.z, c.motor.radius + 0.15, c.motor.height))) d.target = 1;
+      this._slide(d, clamp(d.k + Math.sign(d.target - d.k) * h * 1.6, 0, 1));
+    }
+  }
+  render() {}
+  netState() { return this.doors.flatMap((d) => [d.k, d.target]); }
+  applyNet(s) {
+    if (!Array.isArray(s) || s.length !== this.doors.length * 2) return;
+    this.doors.forEach((d, i) => { this._slide(d, clamp(Number(s[i * 2]) || 0, 0, 1)); d.target = s[i * 2 + 1] ? 1 : 0; });
+  }
+}
 
+// Keeps the full world cheap: static physics exists only in 16 m tiles around combatants and live grenades (the whole map
+// would flood the cannon broadphase), and props farther than 110 m are hidden (the terrain shell always draws).
+class ApexStreaming {
+  constructor(b, boxes, meshes) {
+    this.b = b; this.meshes = meshes; this.active = new Map(); this.physT = 0; this.cullT = 0;
+    // tile key -> indices of the packed boxes (x0 y0 z0 x1 y1 z1) crossing it
+    this.tiles = new Map();
+    for (let i = 0, n = boxes.length / 6; i < n; i++) {
+      const j = i * 6;
+      for (let x = Math.floor(boxes[j] / 16); x <= Math.floor((boxes[j + 3] - 0.001) / 16); x++)
+        for (let z = Math.floor(boxes[j + 2] / 16); z <= Math.floor((boxes[j + 5] - 0.001) / 16); z++) {
+          const key = x + ',' + z; let t = this.tiles.get(key); if (!t) this.tiles.set(key, t = []); t.push(i);
+        }
+    }
+    this.boxes = boxes;
+  }
+  _body(key) { // one static compound per tile, each box clipped to the tile
+    const [x, z] = key.split(',').map(Number), a = this.boxes, x0 = x * 16, z0 = z * 16;
+    const body = new CANNON.Body({ mass: 0, material: this.b.phys.matDefault }); body.position.set(x0, 0, z0);
+    for (const i of this.tiles.get(key)) {
+      const j = i * 6, minX = Math.max(a[j], x0), minZ = Math.max(a[j + 2], z0), maxX = Math.min(a[j + 3], x0 + 16), maxZ = Math.min(a[j + 5], z0 + 16);
+      body.addShape(new CANNON.Box(new CANNON.Vec3((maxX - minX) / 2, (a[j + 4] - a[j + 1]) / 2, (maxZ - minZ) / 2)), new CANNON.Vec3((minX + maxX) / 2 - x0, (a[j + 1] + a[j + 4]) / 2, (minZ + maxZ) / 2 - z0));
+    }
+    return body;
+  }
+  tick(h) {
+    if ((this.physT -= h) > 0) return;
+    this.physT = 0.5;
+    const g = this.b.game, world = this.b.phys.world, wanted = new Set(), pos = g.combatants.filter((c) => c.alive).map((c) => c.motor.pos);
+    for (const gr of g.grenades) if (gr.dyn?.body) pos.push(gr.dyn.body.position);
+    for (const p of pos) for (let x = Math.floor(p.x / 16) - 2; x <= Math.floor(p.x / 16) + 2; x++) for (let z = Math.floor(p.z / 16) - 2; z <= Math.floor(p.z / 16) + 2; z++) wanted.add(x + ',' + z);
+    for (const [key, body] of this.active) if (!wanted.has(key)) { world.removeBody(body); this.active.delete(key); }
+    for (const key of wanted) if (!this.active.has(key) && this.tiles.has(key)) { const body = this._body(key); world.addBody(body); this.active.set(key, body); }
+  }
+  render(dt) {
+    if ((this.cullT -= dt) > 0) return;
+    this.cullT = 0.25;
+    const p = this.b.game.camera.position;
+    for (const m of this.meshes) m.visible = m.userData.fullWorld || m.boundingSphere.center.distanceTo(p) - m.boundingSphere.radius < 110;
+  }
+  interact() { return false; }
+  prompt() { return null; }
+}
+
+MAPS.push({
+  id: 'apex_full', name: 'Apex 訓練場・全場景', en: 'APEX FULL RANGE',
+  desc: '全場景探索 · E 電動門 · 二段跳／滑鏟／攀爬', slogan: '完整匯入範圍 · 近似碰撞',
+  bounds: { minX: -909, maxX: 208, minZ: -780, maxZ: 244 }, indoor: false, navLevels: [], killY: -284, killOutside: true, traversal: true, server: true,
+  background: 0x9daeb9, envIntensity: 0.6, exposure: 0.8,
+  sun: { pos: [-20, 70, 25], color: 0xfff0d5, intensity: 2 }, hemi: [0xdce8f2, 0x665b49, 1.2],
+  fog: { color: 0x9daeb9, near: 400, far: 1400 }, acoustics: 'outdoor', ambience: 'wind',
+  shot: { pos: [-350, 800, 350], target: [-350, 0, -250] },
+  thumb: { pos: [65, 45, -70], target: [-10, 5, 15] }, // room picture: the village under the fog, not the overview
+  objectives: { dom: [[-20, 0, 0], [0, 0, 0], [20, 0, 0]], relic: [0, 0, 0], domRadius: 3.6 }, // the fight stays in the village (same frame as the test region)
+  spawnPoints: apexSpawns,
+  async preload() {
+    if (this._full) return;
+    const root = 'assets/maps/apex-full/', json = async (p) => { const r = await fetch(root + p); if (!r.ok) throw Error('Full range asset: ' + p); return r.json(); };
+    const [manifest, data, gltf] = await Promise.all([json('manifest.json'), apexCollision(root + 'collision.bin'), new GLTFLoader().loadAsync(root + 'scene.gltf')]);
+    this._full = { manifest, data, gltf }; this.killY = manifest.killY;
+  },
+  build(b) {
+    b.spawnZone('alpha', -30, -30, -24, -24, 0); b.spawnZone('bravo', 24, 24, 30, 30, Math.PI); if (b.dry) return;
+    const { data, gltf, manifest } = this._full;
+    b.game.camera.far = 2200; b.game.camera.updateProjectionMatrix();
+    b.col.addPacked(data.boxes, { material: 'concrete' });
+    // Visual geometry retains shared prototypes and original transforms.
+    gltf.scene.updateMatrixWorld(true);
+    const batches = new Map(); let objects = 0;
+    gltf.scene.traverse((o) => {
+      if (!o.isMesh) return; objects++;
+      // Engine-only fog cards need their depth-fade shaders; opaque substitutes obscure the map.
+      if (/atmosphere|fog_volume|godray|lightshaft|vistas/i.test(o.name)) return;
+      const mat = o.material;
+      for (const m of Array.isArray(mat) ? mat : [mat]) {
+        m.side = THREE.DoubleSide; // the export has cropped and one-sided shells seen from behind
+        if (m.transparent && !/glass/i.test(m.name)) { m.alphaTest = 0.35; m.transparent = false; m.depthWrite = true; }
+        if (/decal|stain|stencil/i.test(m.name)) { m.polygonOffset = true; m.polygonOffsetFactor = -1; m.polygonOffsetUnits = -1; }
+      }
+      const matrix = o.matrixWorld.clone(); matrix.elements[13] += data.visualYOffset; // same visual drop as the test region's GLB
+      const p = new THREE.Vector3().setFromMatrixPosition(matrix);
+      if (Math.abs(p.x) <= 40 && Math.abs(p.z) <= 40 && !Array.isArray(mat) && !mat.transparent) { // the village: merged per material
+        const geo = o.geometry.clone(); geo.applyMatrix4(matrix); b._batch(mat, geo, false); return;
+      }
+      const key = o.geometry.uuid + ':' + (Array.isArray(mat) ? mat.map((m) => m.uuid).join(',') : mat.uuid) + ':' + Math.floor(p.x / 64) + ',' + Math.floor(p.z / 64);
+      if (!batches.has(key)) batches.set(key, { geo: o.geometry, mat, matrices: [], world: /Full_world|Full world/i.test(o.name) });
+      batches.get(key).matrices.push(matrix);
+    });
+    const meshes = [];
+    for (const batch of batches.values()) {
+      const mesh = new THREE.InstancedMesh(batch.geo, batch.mat, batch.matrices.length);
+      batch.matrices.forEach((m, i) => mesh.setMatrixAt(i, m)); mesh.computeBoundingSphere();
+      mesh.castShadow = false; mesh.receiveShadow = true; mesh.userData.fullWorld = batch.world; // no static shadow casters on the full map (cost)
+      b.scene.add(mesh); meshes.push(mesh);
+    }
+    const doors = new ApexDoors(b, manifest.doors);
+    b.mechs.push(doors, new ApexStreaming(b, data.boxes, meshes));
+    for (const p of data.nav) b.navExtra.push(new THREE.Vector3(...p));
+    window.__apexFull = { objects, drawGroups: batches.size, doors: doors.doors.length, collisionBoxes: data.count, manifest };
+  }
+});
 /* =====================================================================
    NAV GRAPH — multi-level walkable grid (auto-sampled at every nav
    level), door nodes, stair/ramp chains, largest-component pruning,
@@ -7878,7 +8067,6 @@ class InputManager {
   down(code) { return this.keys.has(code); }
   endFrame() { this.wheel = 0; }
 }
-
 
 /* =====================================================================
    MODELS — procedural high-detail weapons (side-profile extrusions,
@@ -8725,7 +8913,6 @@ class SoldierFactory {
     s.gunHolder.position.set(small ? 0.03 : 0.06, small ? -0.12 : -0.1, small && id !== 'knife' ? -0.42 : -0.32);
   }
 }
-
 
 /* =====================================================================
    GUN PARTS LIBRARY (v5) — parametric receivers, stocks, grips,
@@ -9642,7 +9829,6 @@ WeaponModels.prototype.tpGeneric = function (spec) {
   const geos = list.map(([g, col]) => { const ng = g.index ? g.toNonIndexed() : g; const n = ng.attributes.position.count, c = new Float32Array(n * 3); for (let i = 0; i < n; i++) { c[i * 3] = col.r; c[i * 3 + 1] = col.g; c[i * 3 + 2] = col.b; } ng.setAttribute('color', new THREE.BufferAttribute(c, 3)); ng.deleteAttribute('uv'); return ng; });
   return mergeGeometries(geos, false);
 };
-
 /* =====================================================================
    PLAYER WEAPONS — per-class behaviour, all numbers come from the
    compiled WEAPON_DATABASE entry. Spread values are cone radii in
@@ -10021,7 +10207,6 @@ function makePlayerWeapon(game, def, vm, owner) {
   if (def.kind === 'grenade') return new GrenadeWeapon(game, def, vm, owner);
   return new AutoGun(game, def, vm, owner);
 }
-
 /* =====================================================================
    v25 ARSENAL — the gameplay half of a soldier's weapons: inventory, Quick-Change, ADS state, trigger / cooldown /
    reload, knife, grenades, left-hand grab. Stepped once per fixed tick from a UserCmd, so the local player and a remote
@@ -10410,7 +10595,6 @@ class WeaponSystem extends Arsenal {
 
   onResize() { this.camera.aspect = innerWidth / innerHeight; this.camera.updateProjectionMatrix(); }
 }
-
 const RELOAD_MOVE = 0.8, FALL_SAFE = 3.5, FALL_LETHAL = 11; // metres: below 3.5 m no damage, then linear, 11 m+ = death
 
 /* =====================================================================
@@ -10478,6 +10662,13 @@ class Human extends Combatant {
       const rise = g.y - m.pos.y;
       if (rise < lo || rise > hi) continue;
       if (!w.fits(x, g.y + 0.03, z, r, m.standHeight) || !w.fits(m.pos.x, g.y + 0.03, m.pos.z, r * 0.9, 0.9)) continue; // stand on top + head room over the lip
+      let clear = true;
+      for (let i=1;i<=8;i++) {
+        const t=i/8;
+        if (!w.fits(m.pos.x, lerp(m.pos.y+.03,g.y+.03,t), m.pos.z,r,m.standHeight) ||
+            !w.fits(lerp(m.pos.x,x,t),g.y+.03,lerp(m.pos.z,z,t),r,m.standHeight)) { clear=false;break; }
+      }
+      if (!clear) continue;
       return new THREE.Vector3(x, g.y + 0.02, z);
     }
     return null;
@@ -10493,7 +10684,14 @@ class Human extends Combatant {
     if (!this.alive) { m.step(h, 0, 0, 0); this.holdE = false; return; }
     const frozen = !g.canMove(), btn = frozen ? 0 : cmd.btn;
     this.holdE = g.canAct() && !!(btn & BTN.USE);
-    if (btn & BTN.JUMP) m.requestJump();
+    const traversal = !!g.def.traversal;
+    if (m.grounded || m.climbing) this.airJumpUsed = false;
+    if (btn & BTN.JUMP) {
+      if (traversal && !m.grounded && !m.climbing && !this.airJumpUsed && this.mantleT <= 0) {
+        m.vel.y = CFG.player.jumpVel; m.jumpBufferT = 0; this.airJumpUsed = true;
+        this.slideT = 0;
+      } else m.requestJump();
+    }
     if (this.mantleT > 0) { // up first, then over the lip
       m.prevPos.copy(m.pos); this.mantleT -= h;
       const k = 1 - Math.max(0, this.mantleT) / 0.32, ky = 1 - Math.pow(1 - Math.min(1, k * 1.7), 2), kx = Math.max(0, (k - 0.3) / 0.7);
@@ -10504,8 +10702,8 @@ class Human extends Combatant {
     }
     const fwdHeld = !frozen && cmd.f > 0;
     if (!frozen && fwdHeld && !m.climbing && !m.crouching) {
-      if (m.grounded && m.jumpBufferT > 0) { const t = this._ledge(0.5, 1.45); if (t) { this._startMantle(t); return; } } // vault / mantle instead of jumping
-      else if (!m.grounded && m.vel.y < 3.5) { const t = this._ledge(0.25, 1.15); if (t) { this._startMantle(t); return; } } // jump-grab a higher ledge
+      if (m.grounded && m.jumpBufferT > 0) { const t = this._ledge(0.5, traversal ? 2.3 : 1.45); if (t) { this._startMantle(t); return; } }
+      else if (!m.grounded && m.vel.y < 3.5) { const t = this._ledge(0.25, traversal ? 1.8 : 1.15); if (t) { this._startMantle(t); return; } }
     }
     const f = frozen ? 0 : cmd.f, r = frozen ? 0 : cmd.r;
     const s = Math.sin(this.yaw), c = Math.cos(this.yaw);
@@ -10524,11 +10722,13 @@ class Human extends Combatant {
     }
     this.crouchHeld = crouchKey;
     if (this.slideT > 0) {
+      if (traversal && crouchKey && f > 0 && m.grounded) this.slideT = Math.max(this.slideT, 0.55);
+      if (traversal && !crouchKey) this.slideT = 0;
       this.slideT -= h;
       const k = 1 - Math.max(0, this.slideT) / 0.72, ang = r * 1.1 * h, cs = Math.cos(ang), sn = Math.sin(ang), dx = this.slideDir.x, dz = this.slideDir.z;
       this.slideDir.set(dx * cs - dz * sn, 0, dx * sn + dz * cs);
       m.setCrouch(true); this.sprinting = false; m.edgeGuard = false;
-      m.step(h, this.slideDir.x, this.slideDir.z, lerp(this.slideV0, 2.6, k * k));
+      m.step(h, this.slideDir.x, this.slideDir.z, traversal ? Math.max(6.2, lerp(this.slideV0, 2.6, k * k)) : lerp(this.slideV0, 2.6, k * k));
       if (m.jumped || !m.grounded || this.slideT <= 0) { this.slideT = 0; this.slideCd = 0.75; }
       return;
     }
@@ -10674,7 +10874,6 @@ class Player extends Human {
   }
 }
 
-
 /* =====================================================================
    v25 USER COMMANDS — everything a human does in one fixed tick (1/120 s), as plain data: movement axes, view angles,
    held buttons and one-tick edges. The local player is simulated from these, and a remote player on the host from the
@@ -10718,7 +10917,6 @@ class CmdBuilder {
     return c;
   }
 }
-
 /* =====================================================================
    BOTS — soldiers for both teams + BotAI finite-state machine.
    NO WALLHACKS: a bot only knows what it SEES (120° cone + raycast
@@ -11391,7 +11589,6 @@ class TeamIntel {
   mark(p, t) { this.seen.set(this._k(p), t); }
   stale(p, now) { const t = this.seen.get(this._k(p)); return t === undefined ? 1 : clamp((now - t) / 60, 0, 1); }
 }
-
 /* =====================================================================
    v25 NETWORK SOLDIERS
    NetPlayer — a friend's soldier inside the HOST's match. Steered by the UserCmds his client sends: the same Human
@@ -11531,7 +11728,6 @@ class Ghost extends Combatant {
   onDamaged() {}
   respawn() {}
 }
-
 /* =====================================================================
    HUD — cached DOM writes (unchanged values never touch the DOM).
    ===================================================================== */
@@ -11971,7 +12167,6 @@ class HUD {
   setFps(v, show) { this._set('fpsD', this.el.fps, 'display', show ? 'block' : 'none'); if (show) this._set('fpsV', this.el.fps, 'text', v); }
 }
 
-
 /* =====================================================================
    v34 KILL EMBLEMS (SF2 style) — a silver star-burst medal pops up top-centre with its name, and a row of small medals
    collects along the bottom for the current life. Art is drawn here as SVG (no game assets); conditions follow the
@@ -12033,7 +12228,6 @@ function emblemSVG(id) {
     `<polygon points="${star}" fill="url(#${g})" stroke="#2a2f36" stroke-width="1.2"/>${rays}<circle cx="50" cy="50" r="27" fill="url(#${g})" stroke="#2a2f36" stroke-width="1.5"/>` +
     `<circle cx="50" cy="50" r="23" fill="#1c232c"/>${icon}</svg>`;
 }
-
 /* =====================================================================
    POST-PROCESSING — EffectComposer stack per quality preset:
    World → GTAO (SSAO) → ViewModel pass →
@@ -12292,7 +12486,6 @@ class PostFX {
     if (this.r) this.r.domElement.style.filter = '';
   }
 }
-
 
 /* =====================================================================
    GAME RULES — state machine per mode. The Match drives the phases
@@ -12684,7 +12877,6 @@ function createRule(kind, m) {
   if (kind === 'dom') return new DomRule(m);
   return new TDMRule(m);
 }
-
 /* =====================================================================
    MATCH — one game session: world, lighting/IBL, teams, combat,
    scoring, grenades, freeze time. All mode-specific logic lives in
@@ -13456,7 +13648,10 @@ class Match {
       const ms = []; for (const c of this.combatants) if (c.alive) ms.push(c.motor);
       for (let i = 0; i < ms.length; i++) for (let j = i + 1; j < ms.length; j++) CharacterMotor.separate(ms[i], ms[j]);
       for (const mc of this.builder.mechs) mc.tick(h); // v46 trams / drawbridge carry whoever stands on them
-      if (!client && this.def.killY !== undefined) for (const c of this.combatants) if (c.alive && c.motor.pos.y < this.def.killY) { c.spawnProtect = 0; this.applyDamage(c, 999, 'legs', c, WEAPON_DEFS.fall, null, null, { fall: true }); } // fell off the map
+      if (!client && this.def.killY !== undefined) for (const c of this.combatants) {
+        const p=c.motor.pos,B=this.def.bounds,outside=this.def.killOutside&&(p.x<B.minX-2||p.x>B.maxX+2||p.z<B.minZ-2||p.z>B.maxZ+2);
+        if (c.alive && (p.y < this.def.killY || outside)) { c.spawnProtect = 0; this.applyDamage(c, 999, 'legs', c, WEAPON_DEFS.fall, null, null, { fall: true }); }
+      }
       this.acc -= h; steps++;
     }
     if (steps >= 14) this.acc = 0;
@@ -13567,7 +13762,6 @@ class Match {
     this.app.post.dispose(); CAO.uCAOOn.value = 0;
   }
 }
-
 /* =====================================================================
    v25 NETWORK — host-authoritative multiplayer.
    · The HOST runs the real match (bots, hits, kills, score). Each friend is a NetPlayer in it, steered by his UserCmds.
@@ -13945,7 +14139,6 @@ class NetClient {
     if (this._unload) removeEventListener('beforeunload', this._unload); this._welcomed({ reject: '已離開' });
   }
 }
-
 /* =====================================================================
    v26 ONLINE — play with friends on other computers, free. (v27: rooms on top of this — see 18c_room.js)
    · Supabase Realtime (project sf2-tactical, free plan) only helps two browsers FIND each other: the lobby channel lists
@@ -14177,7 +14370,6 @@ class BackgroundTicker {
   }
   set(active) { this.active = active; this.sync(active); }
 }
-
 /* =====================================================================
    v27 ROOMS — like SF2: a room exists before, between and after matches.
    · 建立房間 opens a room at once: a 6-digit code and the host's WebRTC transport listening for friends. Friends join the
@@ -14377,7 +14569,6 @@ class RoomGuest extends RoomSession {
   // who takes over when the host leaves: the member who joined first (every member decides the same from the same list)
   successor() { return this.members.filter((m) => !m.host).sort((a, b) => a.order - b.order)[0] || null; }
 }
-
 /* =====================================================================
    v28 FRIENDS — friend codes, online status, room invites. Free, no accounts.
    · The first time the friends panel is opened the game registers an anonymous player (id + random secret, kept in
@@ -14470,7 +14661,6 @@ class Friends {
   get incoming() { return this.list.filter((f) => f.state === 'incoming'); }
   get outgoing() { return this.list.filter((f) => f.state === 'outgoing'); }
 }
-
 /* =====================================================================
    APP — renderer, shared resources, room/lobby, loading flow, pause,
    settings, end screen and the main loop.
@@ -14901,7 +15091,7 @@ class App {
       // v46: the real scene from the map's best angle (assets/maps/thumbs, made by tools/_mapthumbs.mjs); the floor plan if it is missing
       const bt = document.createElement('button'), img = document.createElement('img'); img.className = 'th'; img.alt = ''; img.loading = 'lazy';
       img.onerror = () => { const cv = document.createElement('canvas'); cv.width = 176; cv.height = 88; drawMapPreview(cv, def, this.dry[i], { labels: false }); img.replaceWith(cv); };
-      img.src = mapThumb(def); bt.append(img, document.createTextNode(`${i + 1}. ${def.name}`));
+      img.src = mapThumb(def); bt.append(img, document.createTextNode(`${i + 1}. ${def.name}${needsServer(def) ? '（需本機伺服器）' : ''}`));
       bt.onclick = () => { if (this.isGuest()) return; L.map = i; this.audio.init(); this.audio.uiClick(); $('lbMapModal').classList.remove('on'); this.refreshLobby(); this.warm(i); };
       maps.appendChild(bt);
     });
@@ -15116,7 +15306,14 @@ class App {
     try {
       await m.build((p, label) => { this.loadTarget = p * 0.85; this.loadLabel = label; });
     } catch (e) {
-      console.error(e); $('ldStep').textContent = '載入失敗：' + e.message; return;
+      console.error(e);
+      const msg = needsServer(def) ? '這張地圖要用本機伺服器開啟：請關閉此頁，改用專案資料夾裡的「開始遊戲.bat」' : '載入失敗：' + e.message;
+      this.loadLabel = msg; await sleep(6000); // then back out of the loader instead of leaving it hanging
+      if (this.match !== m) return;
+      try { m.dispose(); } catch (err) { /* the map failed half-built */ }
+      this.match = null; ld.classList.remove('on');
+      if (this.room) this.enterRoomScreen(); else this.showHub(msg);
+      return;
     }
     if (net) { // v27: wait until the host's match takes us in (it may still be building its map)
       this.loadTarget = Math.max(this.loadTarget, 0.88); this.loadLabel = '等待房主進入戰場';

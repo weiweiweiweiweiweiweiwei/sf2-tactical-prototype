@@ -769,7 +769,10 @@ class Match {
       const ms = []; for (const c of this.combatants) if (c.alive) ms.push(c.motor);
       for (let i = 0; i < ms.length; i++) for (let j = i + 1; j < ms.length; j++) CharacterMotor.separate(ms[i], ms[j]);
       for (const mc of this.builder.mechs) mc.tick(h); // v46 trams / drawbridge carry whoever stands on them
-      if (!client && this.def.killY !== undefined) for (const c of this.combatants) if (c.alive && c.motor.pos.y < this.def.killY) { c.spawnProtect = 0; this.applyDamage(c, 999, 'legs', c, WEAPON_DEFS.fall, null, null, { fall: true }); } // fell off the map
+      if (!client && this.def.killY !== undefined) for (const c of this.combatants) {
+        const p=c.motor.pos,B=this.def.bounds,outside=this.def.killOutside&&(p.x<B.minX-2||p.x>B.maxX+2||p.z<B.minZ-2||p.z>B.maxZ+2);
+        if (c.alive && (p.y < this.def.killY || outside)) { c.spawnProtect = 0; this.applyDamage(c, 999, 'legs', c, WEAPON_DEFS.fall, null, null, { fall: true }); }
+      }
       this.acc -= h; steps++;
     }
     if (steps >= 14) this.acc = 0;

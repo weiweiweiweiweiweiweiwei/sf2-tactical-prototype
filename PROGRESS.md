@@ -772,3 +772,24 @@
   - `_gunsfx.mjs` 已經成功輸出 `tools/out/gunsfx/*.wav`。
   - 那份修改的程式註解寫的是「v47」，和本檔的 v47（切槍冷卻）撞號；內容以這一段為準。
 - 回歸測試：`_swapcd` 全部通過、`_feel` 正常、`check.mjs` 倉庫地圖 46–47 fps（有沒有開 `--audio` 都一樣），沒有錯誤。
+
+## v55（2026-10-24）：Apex 地圖可以開了（本機伺服器啟動器）、碰撞改二進位延遲展開、貼圖轉 JPEG
+- **打不開的原因**：雙擊 `index.html` 是 `file://`，Chrome 擋掉所有 `fetch()`。舊地圖用 `<script>` 載入所以沒事，兩張 Apex 地圖用 `fetch`／`GLTFLoader` 讀 `.json`／`.glb`／`.gltf`。`check.mjs` 自己架 http，所以測試抓不到。
+  - 新增 `開始遊戲.bat`：用 Python 架 `http://127.0.0.1:8765` 再開瀏覽器。
+  - 地圖加 `server:true`；在 `file://` 下地圖清單標「（需本機伺服器）」，載入失敗時顯示要用 `開始遊戲.bat`，6 秒後回大廳／房間（原本會卡在載入畫面）。`tools/_fileguard.mjs` 驗證。
+- **碰撞**（全場景 142 萬個方塊）：
+  - `tools/pack-apex-collision.mjs` 改輸出 `assets/maps/apex-full/collision.bin`（Int16：x/z 以 0.5 m、y 以 2 cm 為單位，y 一律往外取整）。45 MB → 17 MB，和舊 JSON 逐格比對：數量相同、最大差 1 cm、沒有往內縮。舊 JSON 移到 `tools/out/apex/preview/collision-full-legacy.json`。
+  - `CollisionWorld.addPacked()`：方塊留在一個 Float32Array，格子第一次被查詢時才建物件（`_list()`）。`moveBox`／`setBox`／`addBox` 都走 `_list`，門的碰撞和已展開的方塊不會互相漏掉。`bakeContactAO` 也讀 packed 陣列，AO 結果不變。
+  - `07v_apex_full.js` 重寫成專案的排版：物理分區和遠景裁切拆成 `ApexStreaming`（mechs[1]，不再改寫門的 `tick`；`mechs[0]` 仍是門，連線同步不變）。分區只存方塊索引；靜態陰影建圖時關一次；距離裁切每 0.25 秒算一次。加 `thumb` 視角。
+- **貼圖**：`tools/compress-apex-textures.py` 把不透明 PNG 轉 JPEG（q90、4:4:4），有用到透明度的保留 PNG。全場景 132 張轉檔，貼圖 52.6 → 20.7 MB（被換掉的 PNG 移到 `tools/out/apex/textures-png/`）；測試區 GLB 68.1 → 34.1 MB（原檔留在 `tools/out/apex/preview/region-png.glb`）。
+- **縮圖**：`assets/maps/thumbs/apex_test.jpg`、`apex_full.jpg`（地圖清單不再 404）。
+- **數字**（GTX 1650 Ti、1280×720、high、5v5）：
+  - 全場景 JS 記憶體約 1036 → 460–630 MB（GC 時機會跳）。載入約 12.6 → 10–12 s：其中約 6.7 s 是 D3D11 編譯 88 個 shader（瀏覽器會快取，第二次開比較快）。
+  - 全場景 52 → 55 fps，動態解析度 0.68 → 0.77，>33 ms 的幀 27 → 12。測試區 59 fps 不變。
+  - `check-apex`、`check-apex-traversal`、`check-apex-full` 全過；`check.mjs` 倉庫、河谷、極地、旅館、天空城也全過，沒有錯誤。
+- **連線**：二段跳／持續滑鏟是 `Human` 的程式，主機用同一份指令重播（`NetPlayer.step`），JUMP 是按下邊緣，不會按住就連跳，不用另外同步。
+- **還沒做**：
+  - `scene.bin`（60 MB）的網格壓縮需要 gltfpack／Draco 編碼器。
+  - 全部材質雙面渲染（GPU 成本）要逐材質確認缺面才能拿掉。
+  - Bot 不會二段跳和滑鏟。
+  - 全場景資產（約 99 MB）還沒加進 git，GitHub Pages 上沒有這張圖。

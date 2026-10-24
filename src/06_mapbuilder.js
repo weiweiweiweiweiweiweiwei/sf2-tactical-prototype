@@ -63,16 +63,18 @@ class MapBuilder {
     const cell = Math.max(sx * sz > 6000 ? 0.5 : 0.25, sx / 1024, sz / 1024), W = Math.ceil(sx / cell), H = Math.ceil(sz / cell);
     const T = this.col.terrain, gh = new Float32Array(W * H), occ = new Float32Array(W * H);
     for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) gh[i + j * W] = T ? T.heightAt(x0 + (i + 0.5) * cell, z0 + (j + 0.5) * cell) : 0;
-    for (const b of this.col.boxes) {
-      if (!b.blocksMove || !b.blocksShot || b.material === 'glass') continue;
-      const i0 = Math.max(0, Math.floor((b.min.x - x0) / cell)), i1 = Math.min(W - 1, Math.floor((b.max.x - x0) / cell));
-      const j0 = Math.max(0, Math.floor((b.min.z - z0) / cell)), j1 = Math.min(H - 1, Math.floor((b.max.z - z0) / cell));
+    const occlude = (bx0, by0, bz0, bx1, by1, bz1) => {
+      const i0 = Math.max(0, Math.floor((bx0 - x0) / cell)), i1 = Math.min(W - 1, Math.floor((bx1 - x0) / cell));
+      const j0 = Math.max(0, Math.floor((bz0 - z0) / cell)), j1 = Math.min(H - 1, Math.floor((bz1 - z0) / cell));
       for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
-        const k = i + j * W, g = gh[k], h = b.max.y - Math.max(b.min.y, g);
-        if (b.min.y > g + 0.35 || h < 0.3) continue;
+        const k = i + j * W, g = gh[k], h = by1 - Math.max(by0, g);
+        if (by0 > g + 0.35 || h < 0.3) continue;
         occ[k] = Math.max(occ[k], clamp(h / 1.2, 0.3, 1));
       }
-    }
+    };
+    for (const b of this.col.boxes) if (b.blocksMove && b.blocksShot && b.material !== 'glass') occlude(b.min.x, b.min.y, b.min.z, b.max.x, b.max.y, b.max.z);
+    const P = this.col.packed;
+    if (P) for (let j = 0, a = P.arr; j < a.length; j += 6) occlude(a[j], a[j + 1], a[j + 2], a[j + 3], a[j + 4], a[j + 5]);
     const r = Math.max(1, Math.round(0.55 / cell)), inv = 1 / (2 * r + 1), tmp = new Float32Array(W * H);
     const blur = (src, dst, horiz) => {
       const n = horiz ? W : H, lines = horiz ? H : W, st = horiz ? 1 : W, ln = horiz ? W : 1;

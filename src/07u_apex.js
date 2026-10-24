@@ -1,4 +1,15 @@
 // Local imported test region: visual batches and separately baked collision columns.
+// Packed collision (tools/pack-apex-collision.mjs): 'APXC', version 1, header length, JSON header, then Int16 boxes
+// x0 y0 z0 x1 y1 z1 (x/z in 1/xz m, y in 1/y m) → the header plus boxes as one Float32Array for CollisionWorld.addPacked.
+async function apexCollision(url) {
+  const r = await fetch(url); if (!r.ok) throw new Error('Apex collision data unavailable');
+  const buf = await r.arrayBuffer(), v = new DataView(buf);
+  if (v.getUint32(0, true) !== 0x43585041 || v.getUint32(4, true) !== 1) throw new Error('Apex collision: unknown format');
+  const n = v.getUint32(8, true), head = JSON.parse(new TextDecoder().decode(new Uint8Array(buf, 12, n)));
+  const q = new Int16Array(buf, (12 + n + 3) & ~3, head.count * 6), boxes = new Float32Array(q.length);
+  for (let i = 0; i < q.length; i++) boxes[i] = q[i] / (i % 3 === 1 ? head.y : head.xz);
+  return Object.assign(head, { boxes });
+}
 async function apexPreload(def) {
   if (def._apex) return;
   const root = 'assets/maps/apex-test/';
@@ -33,7 +44,7 @@ function apexSpawns(team, game) {
 MAPS.push({
   id:'apex_test',name:'Apex 訓練場・測試區',en:'APEX IMPORT TEST',
   desc:'本機測試 · 部分材質 · 近似碰撞 · 80×80',slogan:'匯入驗證 · 建築與地形移動測試',
-  bounds:{minX:-40,maxX:40,minZ:-40,maxZ:40},indoor:false,navLevels:[],
+  bounds:{minX:-40,maxX:40,minZ:-40,maxZ:40},indoor:false,navLevels:[],killY:-18,traversal:true,server:true,
   background:0x9daeb9,envIntensity:.6,exposure:.8,
   sun:{pos:[-20,70,25],color:0xfff0d5,intensity:2},hemi:[0xdce8f2,0x665b49,1.2],
   fog:{color:0x9daeb9,near:100,far:220},acoustics:'outdoor',ambience:'wind',

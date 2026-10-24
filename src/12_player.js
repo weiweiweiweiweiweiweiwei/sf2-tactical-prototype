@@ -65,6 +65,13 @@ class Human extends Combatant {
       const rise = g.y - m.pos.y;
       if (rise < lo || rise > hi) continue;
       if (!w.fits(x, g.y + 0.03, z, r, m.standHeight) || !w.fits(m.pos.x, g.y + 0.03, m.pos.z, r * 0.9, 0.9)) continue; // stand on top + head room over the lip
+      let clear = true;
+      for (let i=1;i<=8;i++) {
+        const t=i/8;
+        if (!w.fits(m.pos.x, lerp(m.pos.y+.03,g.y+.03,t), m.pos.z,r,m.standHeight) ||
+            !w.fits(lerp(m.pos.x,x,t),g.y+.03,lerp(m.pos.z,z,t),r,m.standHeight)) { clear=false;break; }
+      }
+      if (!clear) continue;
       return new THREE.Vector3(x, g.y + 0.02, z);
     }
     return null;
@@ -80,7 +87,14 @@ class Human extends Combatant {
     if (!this.alive) { m.step(h, 0, 0, 0); this.holdE = false; return; }
     const frozen = !g.canMove(), btn = frozen ? 0 : cmd.btn;
     this.holdE = g.canAct() && !!(btn & BTN.USE);
-    if (btn & BTN.JUMP) m.requestJump();
+    const traversal = !!g.def.traversal;
+    if (m.grounded || m.climbing) this.airJumpUsed = false;
+    if (btn & BTN.JUMP) {
+      if (traversal && !m.grounded && !m.climbing && !this.airJumpUsed && this.mantleT <= 0) {
+        m.vel.y = CFG.player.jumpVel; m.jumpBufferT = 0; this.airJumpUsed = true;
+        this.slideT = 0;
+      } else m.requestJump();
+    }
     if (this.mantleT > 0) { // up first, then over the lip
       m.prevPos.copy(m.pos); this.mantleT -= h;
       const k = 1 - Math.max(0, this.mantleT) / 0.32, ky = 1 - Math.pow(1 - Math.min(1, k * 1.7), 2), kx = Math.max(0, (k - 0.3) / 0.7);
@@ -91,8 +105,8 @@ class Human extends Combatant {
     }
     const fwdHeld = !frozen && cmd.f > 0;
     if (!frozen && fwdHeld && !m.climbing && !m.crouching) {
-      if (m.grounded && m.jumpBufferT > 0) { const t = this._ledge(0.5, 1.45); if (t) { this._startMantle(t); return; } } // vault / mantle instead of jumping
-      else if (!m.grounded && m.vel.y < 3.5) { const t = this._ledge(0.25, 1.15); if (t) { this._startMantle(t); return; } } // jump-grab a higher ledge
+      if (m.grounded && m.jumpBufferT > 0) { const t = this._ledge(0.5, traversal ? 2.3 : 1.45); if (t) { this._startMantle(t); return; } }
+      else if (!m.grounded && m.vel.y < 3.5) { const t = this._ledge(0.25, traversal ? 1.8 : 1.15); if (t) { this._startMantle(t); return; } }
     }
     const f = frozen ? 0 : cmd.f, r = frozen ? 0 : cmd.r;
     const s = Math.sin(this.yaw), c = Math.cos(this.yaw);
@@ -111,11 +125,13 @@ class Human extends Combatant {
     }
     this.crouchHeld = crouchKey;
     if (this.slideT > 0) {
+      if (traversal && crouchKey && f > 0 && m.grounded) this.slideT = Math.max(this.slideT, 0.55);
+      if (traversal && !crouchKey) this.slideT = 0;
       this.slideT -= h;
       const k = 1 - Math.max(0, this.slideT) / 0.72, ang = r * 1.1 * h, cs = Math.cos(ang), sn = Math.sin(ang), dx = this.slideDir.x, dz = this.slideDir.z;
       this.slideDir.set(dx * cs - dz * sn, 0, dx * sn + dz * cs);
       m.setCrouch(true); this.sprinting = false; m.edgeGuard = false;
-      m.step(h, this.slideDir.x, this.slideDir.z, lerp(this.slideV0, 2.6, k * k));
+      m.step(h, this.slideDir.x, this.slideDir.z, traversal ? Math.max(6.2, lerp(this.slideV0, 2.6, k * k)) : lerp(this.slideV0, 2.6, k * k));
       if (m.jumped || !m.grounded || this.slideT <= 0) { this.slideT = 0; this.slideCd = 0.75; }
       return;
     }

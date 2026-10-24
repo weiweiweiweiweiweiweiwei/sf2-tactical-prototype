@@ -14,3 +14,6 @@ maps/*/view/
 __pycache__/
 tools/satellite/plan.json
 tools/satellite/satellite.glb
+
+# Blender MCP bridge logs (tools/blender/verify_mcp.py)
+tools/blender/mcp_*.log

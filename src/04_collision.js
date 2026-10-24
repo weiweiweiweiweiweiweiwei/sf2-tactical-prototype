@@ -70,6 +70,7 @@ class CollisionWorld {
     this.boxes = []; this.ramps = []; this.ladders = []; this.terrain = null;
     this.cell = 4; this.grid = new Map(); this.stamp = 1;
     this._qf = []; this._qg = [];
+    this.packed = null;
   }
 
   _key(ix, iz) { return (ix + 4096) * 8192 + (iz + 4096); }
@@ -81,28 +82,60 @@ class CollisionWorld {
       blocksMove: o.blocksMove !== false, blocksShot: o.blocksShot !== false, penetrable: !!o.penetrable,
     };
     this.boxes.push(b);
-    const c = this.cell;
-    for (let ix = Math.floor(b.min.x / c); ix <= Math.floor(b.max.x / c); ix++)
-      for (let iz = Math.floor(b.min.z / c); iz <= Math.floor(b.max.z / c); iz++) {
-        const k = this._key(ix, iz);
-        let l = this.grid.get(k); if (!l) this.grid.set(k, l = []);
-        l.push(b);
-      }
+    this._cells(b, (k) => this._list(k, true).push(b));
     return b;
+  }
+
+  // Imported maps with millions of static boxes (Apex full range): they stay packed in one Float32Array (x0 y0 z0 x1 y1 z1
+  // per box, not listed in this.boxes) and a grid cell builds its box objects the first time anything touches it, so
+  // memory follows the area actually visited instead of the whole map.
+  addPacked(arr, o = {}) {
+    if (this.packed) throw new Error('CollisionWorld holds one packed box set');
+    const c = this.cell, n = arr.length / 6, slots = new Map(), counts = [];
+    const each = (i, fn) => { const j = i * 6; for (let ix = Math.floor(arr[j] / c); ix <= Math.floor(arr[j + 3] / c); ix++) for (let iz = Math.floor(arr[j + 2] / c); iz <= Math.floor(arr[j + 5] / c); iz++) fn(this._key(ix, iz)); };
+    for (let i = 0; i < n; i++) each(i, (k) => { let s = slots.get(k); if (s === undefined) { slots.set(k, s = counts.length); counts.push(0); } counts[s]++; });
+    const offs = new Int32Array(counts.length + 1);
+    for (let s = 0; s < counts.length; s++) offs[s + 1] = offs[s] + counts[s];
+    const fill = offs.slice(0, -1), refs = new Int32Array(offs[counts.length]);
+    for (let i = 0; i < n; i++) each(i, (k) => { refs[fill[slots.get(k)]++] = i; });
+    // a cell that already has listed boxes takes its packed ones now (the invariant: a listed cell is never still packed)
+    this.packed = { arr, slots, offs, refs, made: new Map(), material: o.material || 'concrete' };
+    for (const [k, l] of this.grid) { const s = slots.get(k); if (s !== undefined) { slots.delete(k); for (let j = offs[s]; j < offs[s + 1]; j++) l.push(this._packedBox(refs[j])); } }
+  }
+  _packedBox(i) {
+    const P = this.packed; let b = P.made.get(i);
+    if (!b) {
+      const a = P.arr, j = i * 6;
+      b = { kind: 'box', min: new THREE.Vector3(a[j], a[j + 1], a[j + 2]), max: new THREE.Vector3(a[j + 3], a[j + 4], a[j + 5]), _s: 0,
+        material: P.material, surface: P.material, blocksMove: true, blocksShot: true, penetrable: false };
+      P.made.set(i, b); // a box spanning several cells is one object in all of them
+    }
+    return b;
+  }
+  // the box list of one grid cell (make: create it when empty); unpacks the cell's packed boxes on first touch
+  _list(k, make = false) {
+    let l = this.grid.get(k);
+    if (l || !this.packed) { if (!l && make) this.grid.set(k, l = []); return l; }
+    const P = this.packed, s = P.slots.get(k);
+    if (s !== undefined) {
+      P.slots.delete(k); this.grid.set(k, l = []);
+      for (let j = P.offs[s]; j < P.offs[s + 1]; j++) l.push(this._packedBox(P.refs[j]));
+    } else if (make) this.grid.set(k, l = []);
+    return l;
   }
 
   // v46 map mechanisms (Sky City trams / drawbridge): a box can be moved (re-indexed in the grid) or switched off
   _cells(b, fn) { const c = this.cell; for (let ix = Math.floor(b.min.x / c); ix <= Math.floor(b.max.x / c); ix++) for (let iz = Math.floor(b.min.z / c); iz <= Math.floor(b.max.z / c); iz++) fn(this._key(ix, iz)); }
   moveBox(b, dx, dy, dz) {
-    this._cells(b, (k) => { const l = this.grid.get(k); if (l) { const i = l.indexOf(b); if (i >= 0) l.splice(i, 1); } });
+    this._cells(b, (k) => { const l = this._list(k); if (l) { const i = l.indexOf(b); if (i >= 0) l.splice(i, 1); } });
     b.min.x += dx; b.min.y += dy; b.min.z += dz; b.max.x += dx; b.max.y += dy; b.max.z += dz;
-    this._cells(b, (k) => { let l = this.grid.get(k); if (!l) this.grid.set(k, l = []); l.push(b); });
+    this._cells(b, (k) => this._list(k, true).push(b));
   }
   setSolid(b, move, shot = move) { b.blocksMove = move; b.blocksShot = shot; }
   setBox(b, x0, y0, z0, x1, y1, z1) { // re-shape a box (the turning drawbridge leaf)
-    this._cells(b, (k) => { const l = this.grid.get(k); if (l) { const i = l.indexOf(b); if (i >= 0) l.splice(i, 1); } });
+    this._cells(b, (k) => { const l = this._list(k); if (l) { const i = l.indexOf(b); if (i >= 0) l.splice(i, 1); } });
     b.min.set(x0, y0, z0); b.max.set(x1, y1, z1);
-    this._cells(b, (k) => { let l = this.grid.get(k); if (!l) this.grid.set(k, l = []); l.push(b); });
+    this._cells(b, (k) => this._list(k, true).push(b));
   }
 
   query(minX, minZ, maxX, maxZ, out) {
@@ -110,7 +143,7 @@ class CollisionWorld {
     out.length = 0;
     for (let ix = Math.floor(minX / c); ix <= Math.floor(maxX / c); ix++)
       for (let iz = Math.floor(minZ / c); iz <= Math.floor(maxZ / c); iz++) {
-        const l = this.grid.get(this._key(ix, iz));
+        const l = this._list(this._key(ix, iz));
         if (l) for (const b of l) if (b._s !== s) { b._s = s; out.push(b); }
       }
     return out;
@@ -230,7 +263,7 @@ class CollisionWorld {
     let tmx = ax > 1e-9 ? (sx > 0 ? (ix + 1) * c - o.x : o.x - ix * c) / ax : Infinity;
     let tmz = az > 1e-9 ? (sz > 0 ? (iz + 1) * c - o.z : o.z - iz * c) / az : Infinity;
     for (let guard = 0; guard < 2048; guard++) {
-      const tExit = Math.min(tmx, tmz, maxDist), l = this.grid.get(this._key(ix, iz));
+      const tExit = Math.min(tmx, tmz, maxDist), l = this._list(this._key(ix, iz));
       if (l && visit(l, tExit)) return;
       if (tExit >= maxDist) return;
       if (tmx < tmz) { tmx += tdx; ix += sx; } else { tmz += tdz; iz += sz; }
