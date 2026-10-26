@@ -255,7 +255,7 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
 .lb-modal header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}.lb-modal header b{font-size:20px;letter-spacing:4px;color:var(--accent)}
 .lb-modal .maps{grid-template-columns:repeat(5,1fr);gap:10px}.lb-modal .maps button{font-size:14px;padding:5px}.lb-modal .maps button canvas{height:104px}
 .lb-modal .mz.opt{width:520px;overflow:visible}.lb-modal .mz.opt .pills{display:flex;flex-direction:row}.lb-modal .tg{display:flex;align-items:center;gap:12px;padding:10px 6px;font-size:17px;border-bottom:1px solid rgba(255,255,255,.06);cursor:pointer}
-.lb-modal .tg input{width:20px;height:20px;accent-color:var(--accent)}.lb-modal h3{font-size:13px;letter-spacing:4px;color:var(--accent);margin:14px 0 8px}
+.lb-modal .tg input{width:20px;height:20px;accent-color:var(--accent)}.lb-modal .dmginfo{font-size:13px;line-height:1.6;color:var(--dim);padding:6px 4px 2px}.lb-modal h3{font-size:13px;letter-spacing:4px;color:var(--accent);margin:14px 0 8px}
 /* v27 room bar: code, room name, ＋ 邀請朋友 pop-up, 離開房間 */
 
 /* v31 chat — room panel under the team lists, and the in-match box (bottom left, above the health) */
@@ -636,6 +636,11 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
 #hitmarker.head i{background:#ff2a2a;height:13px;width:3px}
 #hitmarker.kill i{background:#ff1e1e;height:15px;width:3.5px;box-shadow:0 0 6px rgba(255,30,30,.8),0 0 0 1px rgba(0,0,0,.55)}
 #hitmarker.kill.show{animation:hmk2 .42s ease-out forwards}
+/* v58 damage models: Apex shield hits (tier colour), the shield breaking, a SF2 helmet knocked off */
+#hitmarker.armor i{background:var(--shc,#e8e8e8)}#hitmarker.break i{background:var(--shc,#e8e8e8);height:15px;width:3.5px;box-shadow:0 0 8px var(--shc,#fff),0 0 0 1px rgba(0,0,0,.55)}
+#hitmarker.helmet i{background:#ffd34a;height:13px;width:3px}
+#shRow{display:none;align-items:center;gap:8px;margin:4px 0 2px}#shRow .shbar{flex:1;height:7px;background:rgba(255,255,255,.1);border-radius:2px;overflow:hidden}
+#shFill{height:100%;width:0;background:var(--shc,#e8e8e8);box-shadow:0 0 6px var(--shc,#e8e8e8);transition:width .12s}#shNum{font-size:15px;font-weight:700;color:var(--shc,#e8e8e8);min-width:30px;text-align:right}
 @keyframes hmk2{0%{opacity:1;transform:scale(2.2) rotate(0)}18%{opacity:1;transform:scale(1.2) rotate(8deg)}70%{opacity:1;transform:scale(1.1) rotate(0)}100%{opacity:0;transform:scale(1.05)}}
 #interact{clip-path:polygon(10px 0,100% 0,calc(100% - 10px) 100%,0 100%);border:none;background:linear-gradient(90deg,rgba(0,0,0,.5),rgba(20,40,28,.78),rgba(0,0,0,.5))}
 #interact kbd{display:inline-block;padding:0 8px;margin:0 4px;background:var(--accent);color:#07140b;font-weight:700}
@@ -742,6 +747,7 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
     <div id="protect"></div>
     <div id="hint"></div>
     <div id="hpbox" class="panel"><div class="lbl">HEALTH</div>
+      <div id="shRow"><div class="shbar"><div id="shFill"></div></div><span id="shNum">0</span></div>
       <div class="row"><div id="hpNum">100</div><div id="kda">K 0 · A 0 · D 0</div></div>
       <div class="bar" id="hpSegs"><div id="hpFill"></div></div></div>
     <div id="ammobox" class="panel"><div class="wtop"><span id="fireMode">AUTO</span><img id="wIcon" alt=""><div id="weaponName">M4A1</div></div>
@@ -864,6 +870,8 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
     <label class="tg"><input type="checkbox" id="optPickup"><span>可以撿取地上的槍械</span></label>
     <label class="tg"><input type="checkbox" id="optKillcam"><span>陣亡時播放擊殺回放（Killcam）</span></label>
     <label class="tg"><input type="checkbox" id="optFF"><span>友軍傷害（打得到隊友）</span></label>
+    <h3>扣血機制</h3><div class="pills" id="optDmg"><button data-v="sf2">SF2（爆頭打飛頭盔）</button><button data-v="apex">Apex（護盾＋自動回復）</button></div>
+    <div id="optDmgInfo" class="dmginfo"></div>
     </div></div>
   <div class="lb-foot">WASD 移動 · SHIFT 衝刺(不會掉下邊緣) · C 蹲(無腳步聲，衝刺中按 = 滑鏟) · SPACE 跳(對矮牆 = 攀爬翻越) · 右鍵 開鏡 · 1-6 武器 · F 擒拿 · E 互動/佔領 · F1–F3 預約配裝 · 梯子 W/S · Q 快速切換 · R 換彈 · TAB 計分板</div>
 </div>

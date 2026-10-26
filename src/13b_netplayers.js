@@ -82,7 +82,7 @@ class NetPlayer extends Human {
     if (this.nextLoadout) { this.loadout = this.nextLoadout; this.nextLoadout = null; this.arsenal.rebuild(loadoutDefs(this.game.mode, this.loadout)); }
     this.motor.teleport(point); this.life = (this.life || 0) + 1;
     this.yaw = yaw; this.pitch = 0; this.aimPitch = 0; this.hp = 100; this.alive = true; this.spawnProtect = CFG.spawnProtect; this.carrying = false;
-    this.slideT = 0; this.mantleT = 0; this.damageLog.clear();
+    this.slideT = 0; this.mantleT = 0; this.damageLog.clear(); this.game.refit(this);
     this.arsenal.resetLoadout();
     this.model.root.visible = true; this.model.head.visible = true; this.model.root.position.copy(this.motor.pos); if (this.tag) this.tag.visible = true;
   }
@@ -115,8 +115,9 @@ class Ghost extends Combatant {
     b.push({ t, x: e.x, y: e.y, z: e.z, yaw: e.yaw, pitch: e.pitch, crouch: e.crouch, reload: e.reload }); while (b.length > 40) b.shift();
     if (NET_WEAPONS[e.w] && NET_WEAPONS[e.w] !== this.weaponId) { this.weaponId = NET_WEAPONS[e.w]; this.game.app.soldiers.setWeapon(this.model, this.def.model || this.weaponId); }
     this.spawnProtect = e.protect ? 1 : 0;
+    if (this.model.helmet.visible !== e.helmet) { if (!e.helmet) this.game.helmetOff(this, null); else this.model.helmet.visible = true; } // v58 SF2 helmet
   }
-  _show(on) { this.model.root.visible = on; this.model.head.visible = true; if (this.tag) this.tag.visible = on; }
+  _show(on) { this.model.root.visible = on; this.model.head.visible = true; this.model.helmet.visible = true; if (this.tag) this.tag.visible = on; }
   // render time = latest host time − interpolation delay; hold the last pose briefly if packets stop
   update(dt, renderT) {
     const b = this.buf; if (!this.alive || !b.length) return;

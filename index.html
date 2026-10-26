@@ -255,7 +255,7 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
 .lb-modal header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}.lb-modal header b{font-size:20px;letter-spacing:4px;color:var(--accent)}
 .lb-modal .maps{grid-template-columns:repeat(5,1fr);gap:10px}.lb-modal .maps button{font-size:14px;padding:5px}.lb-modal .maps button canvas{height:104px}
 .lb-modal .mz.opt{width:520px;overflow:visible}.lb-modal .mz.opt .pills{display:flex;flex-direction:row}.lb-modal .tg{display:flex;align-items:center;gap:12px;padding:10px 6px;font-size:17px;border-bottom:1px solid rgba(255,255,255,.06);cursor:pointer}
-.lb-modal .tg input{width:20px;height:20px;accent-color:var(--accent)}.lb-modal h3{font-size:13px;letter-spacing:4px;color:var(--accent);margin:14px 0 8px}
+.lb-modal .tg input{width:20px;height:20px;accent-color:var(--accent)}.lb-modal .dmginfo{font-size:13px;line-height:1.6;color:var(--dim);padding:6px 4px 2px}.lb-modal h3{font-size:13px;letter-spacing:4px;color:var(--accent);margin:14px 0 8px}
 /* v27 room bar: code, room name, ＋ 邀請朋友 pop-up, 離開房間 */
 
 /* v31 chat — room panel under the team lists, and the in-match box (bottom left, above the health) */
@@ -636,6 +636,11 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
 #hitmarker.head i{background:#ff2a2a;height:13px;width:3px}
 #hitmarker.kill i{background:#ff1e1e;height:15px;width:3.5px;box-shadow:0 0 6px rgba(255,30,30,.8),0 0 0 1px rgba(0,0,0,.55)}
 #hitmarker.kill.show{animation:hmk2 .42s ease-out forwards}
+/* v58 damage models: Apex shield hits (tier colour), the shield breaking, a SF2 helmet knocked off */
+#hitmarker.armor i{background:var(--shc,#e8e8e8)}#hitmarker.break i{background:var(--shc,#e8e8e8);height:15px;width:3.5px;box-shadow:0 0 8px var(--shc,#fff),0 0 0 1px rgba(0,0,0,.55)}
+#hitmarker.helmet i{background:#ffd34a;height:13px;width:3px}
+#shRow{display:none;align-items:center;gap:8px;margin:4px 0 2px}#shRow .shbar{flex:1;height:7px;background:rgba(255,255,255,.1);border-radius:2px;overflow:hidden}
+#shFill{height:100%;width:0;background:var(--shc,#e8e8e8);box-shadow:0 0 6px var(--shc,#e8e8e8);transition:width .12s}#shNum{font-size:15px;font-weight:700;color:var(--shc,#e8e8e8);min-width:30px;text-align:right}
 @keyframes hmk2{0%{opacity:1;transform:scale(2.2) rotate(0)}18%{opacity:1;transform:scale(1.2) rotate(8deg)}70%{opacity:1;transform:scale(1.1) rotate(0)}100%{opacity:0;transform:scale(1.05)}}
 #interact{clip-path:polygon(10px 0,100% 0,calc(100% - 10px) 100%,0 100%);border:none;background:linear-gradient(90deg,rgba(0,0,0,.5),rgba(20,40,28,.78),rgba(0,0,0,.5))}
 #interact kbd{display:inline-block;padding:0 8px;margin:0 4px;background:var(--accent);color:#07140b;font-weight:700}
@@ -742,6 +747,7 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
     <div id="protect"></div>
     <div id="hint"></div>
     <div id="hpbox" class="panel"><div class="lbl">HEALTH</div>
+      <div id="shRow"><div class="shbar"><div id="shFill"></div></div><span id="shNum">0</span></div>
       <div class="row"><div id="hpNum">100</div><div id="kda">K 0 · A 0 · D 0</div></div>
       <div class="bar" id="hpSegs"><div id="hpFill"></div></div></div>
     <div id="ammobox" class="panel"><div class="wtop"><span id="fireMode">AUTO</span><img id="wIcon" alt=""><div id="weaponName">M4A1</div></div>
@@ -864,6 +870,8 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
     <label class="tg"><input type="checkbox" id="optPickup"><span>可以撿取地上的槍械</span></label>
     <label class="tg"><input type="checkbox" id="optKillcam"><span>陣亡時播放擊殺回放（Killcam）</span></label>
     <label class="tg"><input type="checkbox" id="optFF"><span>友軍傷害（打得到隊友）</span></label>
+    <h3>扣血機制</h3><div class="pills" id="optDmg"><button data-v="sf2">SF2（爆頭打飛頭盔）</button><button data-v="apex">Apex（護盾＋自動回復）</button></div>
+    <div id="optDmgInfo" class="dmginfo"></div>
     </div></div>
   <div class="lb-foot">WASD 移動 · SHIFT 衝刺(不會掉下邊緣) · C 蹲(無腳步聲，衝刺中按 = 滑鏟) · SPACE 跳(對矮牆 = 攀爬翻越) · 右鍵 開鏡 · 1-6 武器 · F 擒拿 · E 互動/佔領 · F1–F3 預約配裝 · 梯子 W/S · Q 快速切換 · R 換彈 · TAB 計分板</div>
 </div>
@@ -1004,6 +1012,18 @@ const POINTS = { head: 50, body: 30, knife: 50, grenade: 40, assist: 15, capture
 
 // Hit-zone multipliers (chest = weapon base damage).
 const PART_MULT = { head: 2.5, chest: 1, stomach: 0.9, thigh: 0.75, shin: 0.75, foot: 0.75 }; // CLAUDE.md §4.2 (v21): head ×2.5, chest 1, abdomen 0.9, limbs 0.75
+// v58 damage models (room 設置 → 扣血機制). 'sf2': the multipliers above, range falloff, sniper headshots kill, and a helmet
+// that a headshot knocks off when it would not kill (that hit counts as a body hit; the bare head takes the full ×2.5 after).
+// 'apex' (Apex Legends, Season 24–30, 2025–26): 100 HP plus a body shield levelled by Evo — the damage you deal — to 50 / 75 /
+// 100; damage hits the shield first and the rest of that bullet carries into health; the headshot multiplier is the weapon
+// class's (helmets no longer reduce it); body ×1, legs ×0.8 (×0.9 snipers / pistols); no range falloff except shotguns; no
+// sniper one-shot rule. Health and shields come back after 4 s without damage, as in Apex's Mixtape modes (user: option 1B).
+// Evo thresholds are scaled down from Apex's 450 / 1700 for respawn matches; each soldier keeps its Evo through deaths.
+const APEX = {
+  head: { smg: 1.25, assault: 1.75, lmg: 1.75, pistol: 1.75, sniper: 2, shotgun: 1 }, legs: { sniper: 0.9, pistol: 0.9 }, leg: 0.8,
+  shields: [50, 75, 100], evo: [0, 150, 500], regenDelay: 4, regenHp: 20, regenShield: 25,
+};
+const apexShield = (evo) => APEX.shields[APEX.evo.reduce((lv, need, i) => (evo >= need ? i : lv), 0)];
 const PART_LABEL = { head: '頭部', chest: '胸部', stomach: '腹部', thigh: '大腿', shin: '小腿', foot: '腳' };
 
 /* ---------------------------------------------------------------------
@@ -1536,11 +1556,16 @@ function mulberry32(seed) { let a = seed >>> 0; return () => { a |= 0; a = (a + 
 
 // v21 (CLAUDE.md §4.2): linear falloff damageNear → damageFar between falloffStart and falloffEnd; sniper headshots always kill.
 // Knife / grab / grenades keep their own single `damage` (+ optional exponential `falloff`).
-function calcDamage(def, part, dist, mult = 1) {
-  if (part === 'head' && def.headKill) return 999;
-  const m = part === 'head' ? (def.headMult ?? PART_MULT.head) : PART_MULT[part] ?? 1;
+function calcDamage(def, part, dist, mult = 1, apex = false) {
+  if (part === 'head' && def.headKill && !apex) return 999;
+  const legs = part === 'thigh' || part === 'shin' || part === 'foot';
+  const m = apex ? (part === 'head' ? APEX.head[def.type] ?? 1.75 : legs ? APEX.legs[def.type] ?? APEX.leg : 1)
+    : part === 'head' ? (def.headMult ?? PART_MULT.head) : PART_MULT[part] ?? 1;
   let base;
-  if (def.damageNear !== undefined) { const t = clamp((dist - def.falloffStart) / Math.max(1e-3, def.falloffEnd - def.falloffStart), 0, 1); base = def.damageNear + (def.damageFar - def.damageNear) * t; }
+  if (def.damageNear !== undefined) {
+    const t = apex && def.type !== 'shotgun' ? 0 : clamp((dist - def.falloffStart) / Math.max(1e-3, def.falloffEnd - def.falloffStart), 0, 1);
+    base = def.damageNear + (def.damageFar - def.damageNear) * t;
+  }
   else base = def.damage * Math.pow(def.falloff ?? 1, dist / 10);
   return base * m * mult;
 }
@@ -2127,6 +2152,11 @@ class AudioEngine {
     if (!this.ctx) return;
     const ctx = this.ctx, t = ctx.currentTime, out = ctx.createGain(); out.gain.value = 0.7; out.connect(this.dry);
     if (kind === 'shield') { this._osc('sine', t, 1200, 1800, 0.12, out, 0.16); this._osc('sine', t, 2400, 3000, 0.1, out, 0.07); return; }
+    // v58 damage models: Apex shield hit (dry plastic tick), shield break (glassy crack), Evo level up; SF2 helmet knocked off (ping)
+    if (kind === 'armor') { this._nb(t, out, 'bandpass', 3400, 2, 0.32, 0.0005, 0.02); this._osc('triangle', t, 2200, 1900, 0.035, out, 0.18, 0.0008); return; }
+    if (kind === 'break') { this._nb(t, out, 'highpass', 3000, 0.8, 0.5, 0.0005, 0.09); for (let i = 0; i < 4; i++) this._osc('sine', t + i * 0.018, 3200 + i * 700, 2600 + i * 500, 0.06, out, 0.12, 0.0005); this._osc('sine', t, 180, 70, 0.12, out, 0.35, 0.001); return; }
+    if (kind === 'evo') { [660, 880, 1320].forEach((f, i) => this._osc('triangle', t + i * 0.07, f, f, 0.16, out, 0.16, 0.004)); return; }
+    if (kind === 'helmet') { this._hit_ping(t, out, 1.1); this._osc('sine', t, 260, 120, 0.06, out, 0.25, 0.001); return; }
     const H = HIT_SOUNDS[Settings.data.hitSound] || HIT_SOUNDS.flesh, k = (kind === 'kill' ? 1.2 : kind === 'head' ? 1.1 : 1) * (H.gain || 1);
     let played = false;
     for (const [grp, g] of H.s || []) { const l = this._s(grp); if (l) { this._one(pick(l), out, g * k, 0.94 + Math.random() * 0.12); played = true; } }
@@ -8927,11 +8957,12 @@ class SoldierFactory {
     // head (pivot at neck)
     add('head', sph(0.105, 16, 12), P.face, 0, 0.1, 0, 0, 0, 0, 0.95, 1.12, 1);
     add('head', RB(0.08, 0.035, 0.02, 0.008), P.goggle, 0, 0.1, -0.097);
-    add('head', sph(0.132, 18, 10, 0, Math.PI * 2, 0, Math.PI * 0.52), P.helmet, 0, 0.12, 0.004);
-    add('head', tor(0.128, 0.012), P.helmet, 0, 0.125, 0.004, Math.PI / 2);
-    add('head', RB(0.2, 0.045, 0.04, 0.015), P.goggle, 0, 0.18, -0.115, 0.3);
-    add('head', RB(0.05, 0.05, 0.04, 0.01), 0x151515, 0, 0.22, -0.12);
-    add('head', tor(0.133, 0.01), P.band, 0, 0.16, 0.004, Math.PI / 2 - 0.12);
+    // v58 the helmet (with its goggles, mount and team band) is its own part: a SF2 headshot knocks it off
+    add('helmet', sph(0.132, 18, 10, 0, Math.PI * 2, 0, Math.PI * 0.52), P.helmet, 0, 0.12, 0.004);
+    add('helmet', tor(0.128, 0.012), P.helmet, 0, 0.125, 0.004, Math.PI / 2);
+    add('helmet', RB(0.2, 0.045, 0.04, 0.015), P.goggle, 0, 0.18, -0.115, 0.3);
+    add('helmet', RB(0.05, 0.05, 0.04, 0.01), 0x151515, 0, 0.22, -0.12);
+    add('helmet', tor(0.133, 0.01), P.band, 0, 0.16, 0.004, Math.PI / 2 - 0.12);
     for (const sx of [-1, 1]) add('head', RB(0.04, 0.07, 0.06, 0.015), 0x252525, sx * 0.11, 0.1, 0);
     // arms (pivot at shoulder line), rifle-ready pose
     limb('arms', [0.23, 0, 0], [0.21, -0.22, -0.1], 0.06, P.uniform);
@@ -8950,18 +8981,18 @@ class SoldierFactory {
     const root = new THREE.Group(), legs = [], bones = [], parts = [], parts1 = [];
     const bone = (name, parent, x, y, z) => { const b = new THREE.Bone(); b.name = name; b.position.set(x, y, z); parent.add(b); bones.push(b); return b; };
     [-0.105, 0.105].forEach((sx, i) => { const hip = bone('hip' + i, root, sx, 0.92, 0), knee = bone('knee' + i, hip, 0, -0.42, 0); legs.push({ hip, knee }); parts.push([G.thigh, hip], [G.shin, knee]); parts1.push([G1.thigh, hip], [G1.shin, knee]); });
-    const torso = bone('torso', root, 0, 0.92, 0), head = bone('head', torso, 0, 0.66, 0), arms = bone('arms', torso, 0, 0.5, 0);
-    parts.push([G.torso, torso], [G.head, head], [G.arms, arms]); parts1.push([G1.torso, torso], [G1.head, head], [G1.arms, arms]);
+    const torso = bone('torso', root, 0, 0.92, 0), head = bone('head', torso, 0, 0.66, 0), arms = bone('arms', torso, 0, 0.5, 0), helmet = bone('helmet', head, 0, 0, 0);
+    parts.push([G.torso, torso], [G.head, head], [G.arms, arms], [G.helmet, helmet]); parts1.push([G1.torso, torso], [G1.head, head], [G1.arms, arms], [G1.helmet, helmet]);
     root.updateMatrixWorld(true);
     const lod = [this._skinGeo(team, parts, bones), this._skinGeo(team, parts1, bones, 1)]; // same bones / skinIndex layout → swappable per frame
     const body = new THREE.SkinnedMesh(lod[0], mat); body.name = 'body';
     body.castShadow = true; body.receiveShadow = true; body.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0.9, 0), 1.8); // covers crouch / death poses
     root.add(body); body.bind(new THREE.Skeleton(bones));
     // First-person spectating hides the head: a bone's `visible` does not hide skinned vertices, so collapse the bone instead.
-    Object.defineProperty(head, 'visible', { configurable: true, get() { return this._vis !== false; }, set(v) { this._vis = v; this.scale.setScalar(v ? 1 : 1e-4); } });
+    for (const b of [head, helmet]) Object.defineProperty(b, 'visible', { configurable: true, get() { return this._vis !== false; }, set(v) { this._vis = v; this.scale.setScalar(v ? 1 : 1e-4); } });
     const gunHolder = new THREE.Group(); gunHolder.position.set(0.06, -0.1, -0.32); arms.add(gunHolder);
     const muzzle = new THREE.Object3D(); gunHolder.add(muzzle);
-    const s = { root, legs, torso, head, arms, gunHolder, muzzle, mat, gun: null, body, lod }; // lod: NOT in userData (clone() would JSON-copy it)
+    const s = { root, legs, torso, head, helmet, arms, gunHolder, muzzle, mat, gun: null, body, lod }; // lod: NOT in userData (clone() would JSON-copy it)
     this.setWeapon(s, weaponId);
     return s;
   }
@@ -10685,6 +10716,7 @@ class Combatant {
     // v24: bots accelerate / brake at ~60 % of the player's rate — with the player's instant stops their A-D strafes and dodges looked like teleports
     this.motor = new CharacterMotor(game.collision, { radius: CFG.player.radius, height: CFG.player.height, crouchHeight: CFG.player.crouchHeight, accelK: isPlayer ? 1 : 0.6, frictionK: isPlayer ? 1 : 0.6 });
     this.alive = true; this.hp = 100; this.spawnProtect = 0; this.respawnT = 0; this.yaw = 0;
+    this.helmet = true; this.shield = 0; this.maxShield = 0; this.evo = 0; this.hurtT = -99; // v58 damage models (Match.refit)
     this.kills = 0; this.deaths = 0; this.assists = 0; this.score = 0; this.headshots = 0;
     this.damageLog = new Map(); this.lastPart = 'chest'; this.holdE = false; this.carrying = false;
     this.hitboxes = ['head', 'chest', 'stomach', 'thigh', 'shin', 'foot'].map((part) => ({ part, min: new THREE.Vector3(), max: new THREE.Vector3() }));
@@ -10946,7 +10978,7 @@ class Player extends Human {
     this.motor.teleport(point); this.life = (this.life || 0) + 1;
     this.yaw = yaw; this.pitch = 0; this.resetRecoil(); this.punch = 0; this.punchV = 0; this.shake = 0; this.slideT = 0; this.slideK = 0; this.mantleT = 0; this.mantleK = 0;
     this.hp = 100; this.alive = true; this.spawnProtect = CFG.spawnProtect; this.eyeH = CFG.player.eye; this.killer = null; this.carrying = false;
-    this.damageLog.clear();
+    this.damageLog.clear(); g.refit(this);
     this.game.weapons.resetLoadout(); this.game.app.hud.setWeapon(this.game.weapons);
   }
 }
@@ -11106,7 +11138,7 @@ class Bot extends Combatant {
   respawn(point, yaw) {
     this.motor.teleport(point); this.life = (this.life || 0) + 1;
     this.yaw = yaw + rand(-0.3, 0.3); this.hp = 100; this.alive = true; this.spawnProtect = CFG.spawnProtect; this.carrying = false;
-    this.ammo = this.def.mag || 0; this.reloadT = 0; this.damageLog.clear(); this.slideT = 0;
+    this.ammo = this.def.mag || 0; this.reloadT = 0; this.damageLog.clear(); this.slideT = 0; this.game.refit(this);
     this.nades = this.game.mode === 'general' ? { he: 1, flash: 1 } : { he: 0, flash: 0 };
     this.model.root.visible = true; this.model.head.visible = true; this.model.root.position.copy(this.motor.pos); if (this.tag) this.tag.visible = true;
     this.ai.reset();
@@ -11791,7 +11823,7 @@ class NetPlayer extends Human {
     if (this.nextLoadout) { this.loadout = this.nextLoadout; this.nextLoadout = null; this.arsenal.rebuild(loadoutDefs(this.game.mode, this.loadout)); }
     this.motor.teleport(point); this.life = (this.life || 0) + 1;
     this.yaw = yaw; this.pitch = 0; this.aimPitch = 0; this.hp = 100; this.alive = true; this.spawnProtect = CFG.spawnProtect; this.carrying = false;
-    this.slideT = 0; this.mantleT = 0; this.damageLog.clear();
+    this.slideT = 0; this.mantleT = 0; this.damageLog.clear(); this.game.refit(this);
     this.arsenal.resetLoadout();
     this.model.root.visible = true; this.model.head.visible = true; this.model.root.position.copy(this.motor.pos); if (this.tag) this.tag.visible = true;
   }
@@ -11824,8 +11856,9 @@ class Ghost extends Combatant {
     b.push({ t, x: e.x, y: e.y, z: e.z, yaw: e.yaw, pitch: e.pitch, crouch: e.crouch, reload: e.reload }); while (b.length > 40) b.shift();
     if (NET_WEAPONS[e.w] && NET_WEAPONS[e.w] !== this.weaponId) { this.weaponId = NET_WEAPONS[e.w]; this.game.app.soldiers.setWeapon(this.model, this.def.model || this.weaponId); }
     this.spawnProtect = e.protect ? 1 : 0;
+    if (this.model.helmet.visible !== e.helmet) { if (!e.helmet) this.game.helmetOff(this, null); else this.model.helmet.visible = true; } // v58 SF2 helmet
   }
-  _show(on) { this.model.root.visible = on; this.model.head.visible = true; if (this.tag) this.tag.visible = on; }
+  _show(on) { this.model.root.visible = on; this.model.head.visible = true; this.model.helmet.visible = true; if (this.tag) this.tag.visible = on; }
   // render time = latest host time − interpolation delay; hold the last pose briefly if packets stop
   update(dt, renderT) {
     const b = this.buf; if (!this.alive || !b.length) return;
@@ -11857,7 +11890,7 @@ class HUD {
       root: $('hud'), ch: $('crosshair'), hm: $('hitmarker'), scope: $('scope'), zoomLbl: $('zoomLbl'), vig: $('vignette'), lowhp: $('lowhp'), white: $('flashWhite'),
       dmgdir: $('dmgdir'), nade: $('nadeind'), radar: $('radar'), compass: $('compass'), kf: $('killfeed'), scoreA: $('scoreA'), scoreB: $('scoreB'), barA: $('barA'), barB: $('barB'),
       timer: $('matchTimer'), target: $('matchTarget'), mode: $('matchMode'), ann: $('announce'), annMain: $('annMain'), annSub: $('annSub'), points: $('points'),
-      reload: $('reload'), reloadFill: $('reloadFill'), protect: $('protect'), hint: $('hint'), hpbox: $('hpbox'), hpNum: $('hpNum'), hpFill: $('hpFill'), kda: $('kda'),
+      reload: $('reload'), reloadFill: $('reloadFill'), protect: $('protect'), hint: $('hint'), hpbox: $('hpbox'), hpNum: $('hpNum'), hpFill: $('hpFill'), shRow: $('shRow'), shFill: $('shFill'), shNum: $('shNum'), kda: $('kda'),
       wname: $('weaponName'), mag: $('ammoMag'), res: $('ammoRes'), slots: $('slots'), fps: $('fps'),
       death: $('death'), deathKiller: $('deathKiller'), deathTimer: $('deathTimer'), deathH: document.querySelector('#death h1'),
       sb: $('scoreboard'), sbA: $('sbA'), sbB: $('sbB'), sbScoreA: $('sbScoreA'), sbScoreB: $('sbScoreB'), sbInfo: $('sbInfo'),
@@ -11909,7 +11942,7 @@ class HUD {
   setScopeSpread() {}
 
   hitmarker(kind) {
-    const el = this.el.hm; el.classList.remove('show', 'head', 'kill', 'shield'); void el.offsetWidth;
+    const el = this.el.hm; el.classList.remove('show', 'head', 'kill', 'shield', 'armor', 'break', 'helmet'); void el.offsetWidth;
     if (kind !== 'body') el.classList.add(kind); el.classList.add('show');
   }
   points(text) { const el = this.el.points; el.textContent = text; el.classList.remove('show'); void el.offsetWidth; el.classList.add('show'); }
@@ -11950,6 +11983,14 @@ class HUD {
     this._set('hp', this.el.hpNum, 'text', String(v)); this._set('hpw', this.el.hpFill, 'width', v + '%');
     const on = Math.ceil(v / 10); if (this.cache.segs !== on) { this.cache.segs = on; this.segs.forEach((s, i) => s.classList.toggle('off', i >= on)); }
     this._cls('hpLow', this.el.hpbox, 'low', v <= 30);
+    // v58 Apex shield: bar sized to 125 (red), coloured by level (white 50 / blue 75 / purple 100); hidden in the SF2 model
+    const ms = p.maxShield || 0;
+    this._set('shOn', this.el.shRow, 'display', ms ? 'flex' : 'none');
+    if (ms) {
+      const s = Math.max(0, Math.ceil(p.shield)), c = ms >= 125 ? '#ff4040' : ms >= 100 ? '#b66bff' : ms >= 75 ? '#3f9bff' : '#e8e8e8';
+      this._set('sh', this.el.shNum, 'text', String(s)); this._set('shw', this.el.shFill, 'width', (s / 125 * 100).toFixed(1) + '%');
+      if (this.cache.shc !== c) { this.cache.shc = c; this.el.root.style.setProperty('--shc', c); }
+    }
     this._set('kda', this.el.kda, 'text', `K ${p.kills} · A ${p.assists} · D ${p.deaths}`);
   }
 
@@ -13008,7 +13049,8 @@ class Match {
     const rc = (config.ruleCfg && config.ruleCfg[config.rule]) || RULES[config.rule].def;
     this.target = rc.target; this.roundTime = RULES[config.rule].timeUnit === 'sec' ? rc.time : 0;
     this.timeLeft = RULES[config.rule].timeUnit === 'sec' ? rc.time : rc.time ? rc.time * 60 : Infinity; // v45: score modes have no time limit
-    this.opts = Object.assign({ pickup: true, killcam: true, ff: false }, config.opts); // room 設置: weapon pickup, killcam, friendly fire
+    this.opts = Object.assign({ pickup: true, killcam: true, ff: false, dmg: 'sf2' }, config.opts); // room 設置: weapon pickup, killcam, friendly fire, damage model
+    this.apex = this.opts.dmg === 'apex'; // v58 扣血機制: SF2 (helmet) or Apex (Evo shield) — APEX in 01_core.js
     this.score = { alpha: 0, bravo: 0 }; this.roundWins = { alpha: 0, bravo: 0 }; this.round = 0;
     this.stats = { shots: 0, hits: 0 }; this.firstBlood = true; this.acc = 0; this.spotT = 0; this.freezeT = 0; this.roundEndT = 0;
     this.grenades = []; this.combatants = []; this.bots = []; this.timers = [];
@@ -13061,7 +13103,7 @@ class Match {
       for (let i = 0; i < this.config.enemies; i++) this.bots.push(new Bot(this, 'bravo', i, this.botWeapon()));
     }
     this.combatants.push(...this.bots);
-    this.combatants.forEach((c, i) => { c.netId = i + 1; }); this.netSeq = this.combatants.length; // v25: stable ids (network snapshots, seeded spread)
+    this.combatants.forEach((c, i) => { c.netId = i + 1; this.refit(c); }); this.netSeq = this.combatants.length; // v25: stable ids (network snapshots, seeded spread)
     this.spawns = { alpha: this.makeSpawns('alpha'), bravo: this.makeSpawns('bravo') };
     this.spawnLOS = this.checkSpawnLOS(); window.__debug = Object.assign(window.__debug || {}, { map: def.id, spawnLOS: this.spawnLOS.visible > 0, spawnLOSPairs: this.spawnLOS });
     this.playerModel = app.soldiers.create(this.player.team, 'm4'); this.playerModel.root.visible = false; this.scene.add(this.playerModel.root); // third-person you, for killcams
@@ -13287,7 +13329,7 @@ class Match {
         endT = h.t; break;
       }
       const wasAlive = h.target.alive;
-      this.applyDamage(h.target, calcDamage(def, h.part, h.t, mult), h.part, shooter, def, dir, point, { collateral: kills > 0, wall: walls > 0, pierce: passed > 0 });
+      this.applyDamage(h.target, calcDamage(def, h.part, h.t, mult, this.apex), h.part, shooter, def, dir, point, { collateral: kills > 0, wall: walls > 0, pierce: passed > 0 });
       if (h.target.isPlayer) hitPlayer = true;
       if (wasAlive && !h.target.alive) kills++;
       if (bodies > 0) { bodies--; mult *= 0.5; passed++; continue; } // bullet keeps going with half its damage
@@ -13333,15 +13375,26 @@ class Match {
     if (!victim.alive || this.phase !== 'live') return false;
     if (attacker && attacker !== victim && attacker.team === victim.team && !this.opts.ff) return false; // friendly fire (room option, off by default)
     if (victim.spawnProtect > 0) { if (point) this.effects.shield(point); if (attacker && attacker.isPlayer) { this.app.hud.hitmarker('shield'); this.audio.hit('shield'); } if (attacker && this.net) this.net.onHit(attacker, victim, 'shield', point); return false; }
-    if (attacker && attacker.isPlayer && attacker.team !== victim.team) { const dd = attacker.dmgDone || (attacker.dmgDone = new Map()); dd.set(victim, (dd.get(victim) || 0) + Math.min(dmg, Math.max(0, victim.hp))); } // v34 Tab board: damage per enemy
+    // v58 damage models. SF2: a headshot that would not kill knocks the helmet off and counts as a body hit. Apex: the shield
+    // takes the damage first and the rest of the bullet carries into health; every point dealt to an enemy is Evo.
+    let armor = null, absorbed = 0; // armor: 'helmet' | 'armor' (all on the shield) | 'break' (the shield gave out)
+    const enemy = attacker && attacker !== victim && attacker.team !== victim.team, gun = def && def.kind !== 'knife' && def.kind !== 'grab' && !opts.blast && !opts.fall;
+    if (!this.apex && part === 'head' && victim.helmet && gun && dmg < victim.hp) { dmg /= def.headMult ?? PART_MULT.head; this.helmetOff(victim, dir); armor = 'helmet'; }
+    if (this.apex) {
+      victim.hurtT = this.time;
+      if (victim.shield > 0 && !opts.fall) { absorbed = Math.min(victim.shield, dmg); victim.shield -= absorbed; dmg -= absorbed; armor = victim.shield <= 0 ? 'break' : dmg > 0 ? null : 'armor'; }
+      if (enemy) this._evo(attacker, absorbed + Math.min(dmg, Math.max(0, victim.hp)));
+    }
+    if (attacker && attacker.isPlayer && attacker.team !== victim.team) { const dd = attacker.dmgDone || (attacker.dmgDone = new Map()); dd.set(victim, (dd.get(victim) || 0) + absorbed + Math.min(dmg, Math.max(0, victim.hp))); } // v34 Tab board: damage per enemy
     victim.hp -= dmg; victim.lastPart = part;
-    if (attacker && attacker !== victim && this.net) this.net.onHit(attacker, victim, victim.hp <= 0 ? 'kill' : part === 'head' ? 'head' : 'body', point);
+    const kind = victim.hp <= 0 ? 'kill' : armor === 'helmet' || armor === 'break' ? armor : part === 'head' ? 'head' : armor || 'body';
+    if (attacker && attacker !== victim && this.net) this.net.onHit(attacker, victim, kind, point);
     if (attacker && attacker !== victim) { const rec = victim.damageLog.get(attacker) || { amt: 0, t: 0 }; rec.amt += dmg; rec.t = this.time; victim.damageLog.set(attacker, rec); }
-    if (point && dir) { this.effects.blood(point, dir, part === 'head' ? 18 : 10); if (part === 'head' && def.kind !== 'knife' && def.kind !== 'grab' && point.distanceTo(this.camera.position) < 90) this.effects.helmetSpark(point, dir); }
+    if (point && dir && (armor === 'armor' || armor === 'break')) this.effects.shield(point); // shield sparks; blood only once health is hit
+    if (point && dir && armor !== 'armor') { this.effects.blood(point, dir, part === 'head' ? 18 : 10); if (part === 'head' && def.kind !== 'knife' && def.kind !== 'grab' && point.distanceTo(this.camera.position) < 90) this.effects.helmetSpark(point, dir); }
     if (victim.flinch && dir) victim.flinch(part, dir, dmg);
     if (attacker && attacker.isPlayer && victim !== attacker) {
       this.stats.hits++;
-      const kind = victim.hp <= 0 ? 'kill' : part === 'head' ? 'head' : 'body';
       if (kind !== 'body' || this.time - this.lastHitSnd > 0.04) { this.audio.hit(kind); this.lastHitSnd = this.time; } // pellets: one tick per blast
       this.app.hud.hitmarker(kind);
     }
@@ -13349,6 +13402,43 @@ class Match {
     victim.onDamaged(dmg, attacker, attacker ? attacker.motor.pos : (point || victim.motor.pos));
     if (victim.hp <= 0) this.onKill(victim, attacker, def, part, dir || new THREE.Vector3(0, 0, 1), opts);
     return true;
+  }
+
+  /* ------------------------------ v58 damage models ------------------------------ */
+  // every (re)spawn: helmet back on (SF2); Apex: the shield of the soldier's Evo level, full (Evo is kept through deaths)
+  refit(c) {
+    c.helmet = true; c.hurtT = -99; if (c.model) c.model.helmet.visible = true;
+    c.maxShield = this.apex ? apexShield(c.evo) : 0; c.shield = c.maxShield;
+  }
+  // Apex Evo: damage dealt levels the shield up; a new level fills it to the new size (as an Apex Shield Core does)
+  _evo(c, amount) {
+    if (!(amount > 0)) return;
+    c.evo += amount; const max = apexShield(c.evo);
+    if (max <= c.maxShield) return;
+    c.maxShield = max; if (c.alive) c.shield = max;
+    if (c.isPlayer) { this.app.hud.toast(`護盾升級 LV${APEX.shields.indexOf(max) + 1}（${max}）`); this.audio.hit('evo'); }
+  }
+  // Apex Mixtape-style recovery: after 4 s without damage, health refills first, then the shield
+  _regen(h) {
+    for (const c of this.combatants) {
+      if (!c.alive || this.time - c.hurtT < APEX.regenDelay) continue;
+      if (c.hp < 100) c.hp = Math.min(100, c.hp + APEX.regenHp * h);
+      else if (c.shield < c.maxShield) c.shield = Math.min(c.maxShield, c.shield + APEX.regenShield * h);
+    }
+  }
+  // SF2: the helmet flies off the head (host: when the shot lands; client: when a snapshot says it is gone)
+  helmetOff(c, dir) {
+    c.helmet = false;
+    const M = c.model; if (!M || !M.helmet.visible) return;
+    M.helmet.visible = false;
+    const p = M.head.getWorldPosition(new THREE.Vector3()); p.y += 0.14;
+    if (p.distanceTo(this.camera.position) > 80) return;
+    const d = dir ? dir.clone().setY(0).normalize() : new THREE.Vector3(rand(-1, 1), 0, rand(-1, 1)).normalize();
+    this._helmetGeo = this._helmetGeo || new THREE.SphereGeometry(0.132, 14, 8, 0, Math.PI * 2, 0, Math.PI * 0.52);
+    const mat = (this._helmetMats = this._helmetMats || {})[c.team] || (this._helmetMats[c.team] = new THREE.MeshStandardMaterial({ color: TEAM_PALETTE[c.team].helmet, roughness: 0.75, side: THREE.DoubleSide }));
+    const mesh = new THREE.Mesh(this._helmetGeo, mat); mesh.castShadow = true;
+    this.physics.addDynamic({ mesh, mass: 1.2, shape: new CANNON.Sphere(0.12), position: p, velocity: { x: d.x * 3.2 + rand(-0.6, 0.6), y: rand(2.6, 3.6), z: d.z * 3.2 + rand(-0.6, 0.6) },
+      angularVelocity: { x: rand(-12, 12), y: rand(-6, 6), z: rand(-12, 12) }, life: 8, sink: 0.6 });
   }
 
   /* ------------------------------ v13 KILLCAM ------------------------------ */
@@ -13766,6 +13856,7 @@ class Match {
       const ms = []; for (const c of this.combatants) if (c.alive) ms.push(c.motor);
       for (let i = 0; i < ms.length; i++) for (let j = i + 1; j < ms.length; j++) CharacterMotor.separate(ms[i], ms[j]);
       for (const mc of this.builder.mechs) mc.tick(h); // v46 trams / drawbridge carry whoever stands on them
+      if (!client && this.apex) this._regen(h);
       if (!client && this.def.killY !== undefined) for (const c of this.combatants) {
         const p=c.motor.pos,B=this.def.bounds,outside=this.def.killOutside&&(p.x<B.minX-2||p.x>B.maxX+2||p.z<B.minZ-2||p.z>B.maxZ+2);
         if (c.alive && (p.y < this.def.killY || outside)) { c.spawnProtect = 0; this.applyDamage(c, 999, 'legs', c, WEAPON_DEFS.fall, null, null, { fall: true }); }
@@ -13941,10 +14032,11 @@ const NetCodec = {
   },
   // per-client snapshot: shared header + this client's own authoritative extras + every soldier + recent shots
   encodeSnap(s) {
-    const v = new DataView(new ArrayBuffer(29 + 17 + 1 + s.ents.length * 22 + 1 + s.shots.length * 27)); let o = 0;
+    const v = new DataView(new ArrayBuffer(29 + 19 + 1 + s.ents.length * 22 + 1 + s.shots.length * 27)); let o = 0;
     v.setUint8(o, 2); v.setUint32(o + 1, s.tick); v.setFloat32(o + 5, s.time); v.setUint32(o + 9, s.ack); v.setInt16(o + 13, s.scoreA); v.setInt16(o + 15, s.scoreB);
     v.setFloat32(o + 17, s.timeLeft); v.setUint8(o + 21, s.phase); v.setFloat32(o + 22, s.phaseT); v.setUint8(o + 26, s.winsA); v.setUint8(o + 27, s.winsB); v.setUint8(o + 28, s.round); o = 29;
-    v.setFloat32(o, s.vx); v.setFloat32(o + 4, s.vy); v.setFloat32(o + 8, s.vz); v.setUint8(o + 12, s.hp); v.setUint16(o + 13, s.ammo); v.setUint16(o + 15, s.reserve); o += 17;
+    v.setFloat32(o, s.vx); v.setFloat32(o + 4, s.vy); v.setFloat32(o + 8, s.vz); v.setUint8(o + 12, s.hp); v.setUint16(o + 13, s.ammo); v.setUint16(o + 15, s.reserve);
+    v.setUint8(o + 17, clamp(Math.round(s.sh || 0), 0, 255)); v.setUint8(o + 18, s.shMax || 0); o += 19; // v58 Apex shield
     v.setUint8(o++, s.ents.length);
     for (const e of s.ents) {
       v.setUint16(o, e.id); v.setUint8(o + 2, e.flags); v.setUint8(o + 3, e.w); v.setUint8(o + 4, e.life & 255);
@@ -13958,11 +14050,12 @@ const NetCodec = {
   decodeSnap(buf) {
     const v = new DataView(buf); let o = 0;
     const s = { tick: v.getUint32(1), time: v.getFloat32(5), ack: v.getUint32(9), scoreA: v.getInt16(13), scoreB: v.getInt16(15), timeLeft: v.getFloat32(17), phase: v.getUint8(21), phaseT: v.getFloat32(22), winsA: v.getUint8(26), winsB: v.getUint8(27), round: v.getUint8(28) };
-    o = 29; s.vx = v.getFloat32(o); s.vy = v.getFloat32(o + 4); s.vz = v.getFloat32(o + 8); s.hp = v.getUint8(o + 12); s.ammo = v.getUint16(o + 13); s.reserve = v.getUint16(o + 15); o += 17;
+    o = 29; s.vx = v.getFloat32(o); s.vy = v.getFloat32(o + 4); s.vz = v.getFloat32(o + 8); s.hp = v.getUint8(o + 12); s.ammo = v.getUint16(o + 13); s.reserve = v.getUint16(o + 15);
+    s.sh = v.getUint8(o + 17); s.shMax = v.getUint8(o + 18); o += 19;
     const n = v.getUint8(o++); s.ents = [];
     for (let i = 0; i < n; i++, o += 22) {
       const f = v.getUint8(o + 2);
-      s.ents.push({ id: v.getUint16(o), alive: !!(f & 1), crouch: !!(f & 2), reload: !!(f & 4), protect: !!(f & 8), w: v.getUint8(o + 3), life: v.getUint8(o + 4),
+      s.ents.push({ id: v.getUint16(o), alive: !!(f & 1), crouch: !!(f & 2), reload: !!(f & 4), protect: !!(f & 8), helmet: !(f & 16), w: v.getUint8(o + 3), life: v.getUint8(o + 4),
         x: v.getFloat32(o + 5), y: v.getFloat32(o + 9), z: v.getFloat32(o + 13), yaw: v.getInt16(o + 17) / 10000, pitch: v.getInt16(o + 19) / 10000, hp: v.getUint8(o + 21) });
     }
     const ns = v.getUint8(o++); s.shots = [];
@@ -13975,7 +14068,7 @@ const NetCodec = {
 function netEntity(m, c) {
   const p = c.isPlayer, w = p ? m.weapons.current : c.arsenal ? c.arsenal.current : null, def = w ? w.def : c.def;
   const reload = w ? w.reloading : c.reloadT > 0;
-  return { id: c.netId, flags: (c.alive ? 1 : 0) | (c.motor.crouching ? 2 : 0) | (reload ? 4 : 0) | (c.spawnProtect > 0 ? 8 : 0), w: NET_WI[def.id] ?? 0, life: c.life || 0,
+  return { id: c.netId, flags: (c.alive ? 1 : 0) | (c.motor.crouching ? 2 : 0) | (reload ? 4 : 0) | (c.spawnProtect > 0 ? 8 : 0) | (c.helmet === false ? 16 : 0), w: NET_WI[def.id] ?? 0, life: c.life || 0,
     x: c.motor.pos.x, y: c.motor.pos.y, z: c.motor.pos.z, yaw: c.yaw, pitch: p ? c.pitch : c.isNet ? c.pitch : c.aimPitch || 0, hp: c.alive ? c.hp : 0 };
 }
 const v3arr = (v) => [+v.x.toFixed(3), +v.y.toFixed(3), +v.z.toFixed(3)];
@@ -14029,7 +14122,7 @@ class NetHost {
     }
     const np = this.peers.get(from), c = m.config;
     this.t.send(from, { k: 'welcome', v: NET_VERSION, you: np.netId, team: np.team, name: np.name, life: np.life, pos: v3arr(np.motor.pos), yaw: np.yaw,
-      cfg: { map: c.map, mode: c.mode, rule: c.rule, ruleCfg: c.ruleCfg, difficulty: c.difficulty, allies: c.allies, enemies: c.enemies },
+      cfg: { map: c.map, mode: c.mode, rule: c.rule, ruleCfg: c.ruleCfg, difficulty: c.difficulty, allies: c.allies, enemies: c.enemies, opts: c.opts }, // v58: room options too (damage model, ff, pickup)
       roster: m.combatants.filter((x) => x !== np && !x.removed).map((x) => this._info(x)), phase: m.phase, time: m.time });
   }
   _info(c) { const def = c.isPlayer ? this.m.weapons.current.def : c.def; return { id: c.netId, team: c.team, name: c.name, kind: c.isBot ? 'bot' : 'human', w: NET_WI[def.id] ?? 0 }; }
@@ -14071,7 +14164,7 @@ class NetHost {
       winsA: m.roundWins.alpha, winsB: m.roundWins.bravo, round: m.round & 255 };
     for (const [peer, np] of this.peers) {
       const w = np.arsenal.current;
-      const s = Object.assign({}, base, { ack: np.ackSeq, vx: np.motor.vel.x, vy: np.motor.vel.y, vz: np.motor.vel.z, hp: np.alive ? Math.max(0, Math.round(np.hp)) : 0, ammo: w.ammo || 0, reserve: w.reserveAmmo || 0,
+      const s = Object.assign({}, base, { ack: np.ackSeq, vx: np.motor.vel.x, vy: np.motor.vel.y, vz: np.motor.vel.z, hp: np.alive ? Math.max(0, Math.round(np.hp)) : 0, ammo: w.ammo || 0, reserve: w.reserveAmmo || 0, sh: np.shield, shMax: np.maxShield,
         ents, shots: shots.filter((h) => h.id !== np.netId).slice(-60) }); // his own shots are already on his screen
       this.t.send(peer, NetCodec.encodeSnap(s), false);
     }
@@ -14166,7 +14259,8 @@ class NetClient {
     else if (d.k === 'hit') {
       const kind = d.kind; m.app.hud.hitmarker(kind); if (kind !== 'shield') m.stats.hits++;
       if (kind !== 'body' || m.time - m.lastHitSnd > 0.04) { m.audio.hit(kind); m.lastHitSnd = m.time; }
-      if (d.pt && kind !== 'shield') m.effects.blood(new THREE.Vector3(...d.pt), m.camera.getWorldDirection(new THREE.Vector3()), kind === 'head' ? 18 : 10);
+      if (d.pt && (kind === 'armor' || kind === 'break')) m.effects.shield(new THREE.Vector3(...d.pt)); // v58 Apex shield sparks
+      if (d.pt && kind !== 'shield' && kind !== 'armor') m.effects.blood(new THREE.Vector3(...d.pt), m.camera.getWorldDirection(new THREE.Vector3()), kind === 'head' ? 18 : 10);
     } else if (d.k === 'dmg') { const p = m.player; if (p.alive) { p.hp = d.hp; p.onDamaged(d.amt, null, new THREE.Vector3(...d.from)); } }
     else if (d.k === 'flash') { m.app.post.flash(d.s, 0.6 + 4.2 * d.s); m.audio.deafen(d.s * 0.9, 1 + 3 * d.s); }
     else if (d.k === 'roster') { if (d.add) this._ghost(d.add); if (d.remove) this._unghost(d.remove); }
@@ -14227,7 +14321,10 @@ class NetClient {
     const m = this.m, p = m.player;
     if (e.alive && e.life !== ((p.life || 0) & 255)) { p.respawn(new THREE.Vector3(e.x, e.y, e.z), e.yaw); p.life = e.life; m.app.hud.showDeath(false); this.hist.fill(undefined); return; }
     if (!p.alive || !e.alive) return;
-    p.hp = Math.min(p.hp, e.hp) || e.hp;
+    if (m.apex) { // v58 Apex: health and shield also come back (regen), so take the host's values as they are
+      if (s.shMax > (p.maxShield || 0) && p.maxShield) { m.app.hud.toast(`護盾升級 LV${APEX.shields.indexOf(s.shMax) + 1}（${s.shMax}）`); m.audio.hit('evo'); }
+      p.hp = e.hp; p.shield = s.sh; p.maxShield = s.shMax;
+    } else p.hp = Math.min(p.hp, e.hp) || e.hp;
     const h = this.hist[s.ack & 255]; if (!h || h.seq !== s.ack) return;
     const dx = e.x - h.x, dy = e.y - h.y, dz = e.z - h.z, err = Math.hypot(dx, dy, dz); this.corr.snaps++;
     if (err < 0.03) return;
@@ -14515,7 +14612,7 @@ function roomCfgSafe(c) {
   c = c && typeof c === 'object' ? c : {};
   const rule = Object.prototype.hasOwnProperty.call(RULES, c.rule) ? c.rule : 'tdm', R = RULES[rule], rc = (c.ruleCfg && c.ruleCfg[rule]) || {};
   return { map: clamp(c.map | 0, 0, MAPS.length - 1), mode: Object.prototype.hasOwnProperty.call(MODES, c.mode) ? c.mode : 'general', rule, difficulty: clamp(c.difficulty | 0, 0, DIFFICULTY.length - 1),
-    allies: clamp(c.allies | 0, 1, 12), enemies: clamp(c.enemies | 0, 1, 12), opts: { pickup: !(c.opts && c.opts.pickup === false), killcam: !(c.opts && c.opts.killcam === false), ff: !!(c.opts && c.opts.ff) },
+    allies: clamp(c.allies | 0, 1, 12), enemies: clamp(c.enemies | 0, 1, 12), opts: { pickup: !(c.opts && c.opts.pickup === false), killcam: !(c.opts && c.opts.killcam === false), ff: !!(c.opts && c.opts.ff), dmg: c.opts && c.opts.dmg === 'apex' ? 'apex' : 'sf2' },
     ruleCfg: { [rule]: { target: R.targets.includes(rc.target) ? rc.target : R.def.target, time: R.times.includes(rc.time) ? rc.time : R.def.time } } };
 }
 
@@ -15227,6 +15324,8 @@ class App {
     $('lbMapClose').onclick = () => modal('lbMapModal', false); $('lbOptClose').onclick = () => modal('lbOptModal', false);
     for (const id of ['lbMapModal', 'lbOptModal']) $(id).onclick = (e) => { if (e.target === $(id)) modal(id, false); };
     for (const [id, k] of [['optPickup', 'pickup'], ['optKillcam', 'killcam'], ['optFF', 'ff']]) $(id).onchange = () => { if (this.isGuest()) return; L.opts[k] = $(id).checked; this.audio.uiClick(); this.refreshLobby(); };
+    // v58 扣血機制 (damage model), host's choice like the other room options
+    for (const b of $('optDmg').children) b.onclick = () => { if (this.isGuest()) return; L.opts.dmg = b.dataset.v; this.audio.init(); this.audio.uiClick(); this.refreshLobby(); };
     document.addEventListener('click', () => document.querySelectorAll('#lobby .dd.open').forEach((d) => d.classList.remove('open')));
     // F5 = 開始 (the browser refresh is swallowed while the room is open)
     addEventListener('keydown', (e) => { if (e.code === 'F5' && (this.state === 'lobby' || this.state === 'countdown')) { e.preventDefault(); if (e.repeat) return; if (this.state === 'countdown') this.cancelCountdown(); else if (!$('lbMapModal').classList.contains('on')) this.beginCountdown(); } });
@@ -15280,6 +15379,11 @@ class App {
     $('lbTitle').textContent = `${R.name} - ${def.name}`;
     const opts = L.opts || (L.opts = { pickup: true, killcam: true, ff: false });
     $('optPickup').checked = opts.pickup !== false; $('optKillcam').checked = opts.killcam !== false; $('optFF').checked = !!opts.ff;
+    const dmg = opts.dmg === 'apex' ? 'apex' : 'sf2';
+    [...$('optDmg').children].forEach((b) => b.classList.toggle('on', b.dataset.v === dmg));
+    $('optDmgInfo').textContent = dmg === 'apex'
+      ? '100 血＋護盾：先扣盾再扣血。造成傷害會升級護盾（白 50 → 藍 75 → 紫 100）。爆頭倍率依槍種（衝鋒槍 ×1.25、步槍／機槍／手槍 ×1.75、狙擊 ×2、霰彈 ×1），腿 ×0.8，沒有距離衰減（霰彈除外）。4 秒沒受傷先回血、再回盾。'
+      : '100 血：頭 ×2.5、胸 ×1、腹 ×0.9、四肢 ×0.75，有距離衰減，狙擊爆頭必死。打不死的爆頭會把頭盔打飛（這一槍只算身體傷害），之後再爆頭照 ×2.5 計算。';
     // the six SF2 room settings: map · win condition · weapon mode | game mode · N vs N · 設置
     const host = () => !this.isGuest();
     this._dd('ddMap', '地圖', def.name, null, () => { if (host()) { $('lbMapModal').classList.add('on'); this.audio.uiClick(); } });

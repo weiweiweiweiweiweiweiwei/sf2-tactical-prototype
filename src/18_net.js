@@ -59,10 +59,11 @@ const NetCodec = {
   },
   // per-client snapshot: shared header + this client's own authoritative extras + every soldier + recent shots
   encodeSnap(s) {
-    const v = new DataView(new ArrayBuffer(29 + 17 + 1 + s.ents.length * 22 + 1 + s.shots.length * 27)); let o = 0;
+    const v = new DataView(new ArrayBuffer(29 + 19 + 1 + s.ents.length * 22 + 1 + s.shots.length * 27)); let o = 0;
     v.setUint8(o, 2); v.setUint32(o + 1, s.tick); v.setFloat32(o + 5, s.time); v.setUint32(o + 9, s.ack); v.setInt16(o + 13, s.scoreA); v.setInt16(o + 15, s.scoreB);
     v.setFloat32(o + 17, s.timeLeft); v.setUint8(o + 21, s.phase); v.setFloat32(o + 22, s.phaseT); v.setUint8(o + 26, s.winsA); v.setUint8(o + 27, s.winsB); v.setUint8(o + 28, s.round); o = 29;
-    v.setFloat32(o, s.vx); v.setFloat32(o + 4, s.vy); v.setFloat32(o + 8, s.vz); v.setUint8(o + 12, s.hp); v.setUint16(o + 13, s.ammo); v.setUint16(o + 15, s.reserve); o += 17;
+    v.setFloat32(o, s.vx); v.setFloat32(o + 4, s.vy); v.setFloat32(o + 8, s.vz); v.setUint8(o + 12, s.hp); v.setUint16(o + 13, s.ammo); v.setUint16(o + 15, s.reserve);
+    v.setUint8(o + 17, clamp(Math.round(s.sh || 0), 0, 255)); v.setUint8(o + 18, s.shMax || 0); o += 19; // v58 Apex shield
     v.setUint8(o++, s.ents.length);
     for (const e of s.ents) {
       v.setUint16(o, e.id); v.setUint8(o + 2, e.flags); v.setUint8(o + 3, e.w); v.setUint8(o + 4, e.life & 255);
@@ -76,11 +77,12 @@ const NetCodec = {
   decodeSnap(buf) {
     const v = new DataView(buf); let o = 0;
     const s = { tick: v.getUint32(1), time: v.getFloat32(5), ack: v.getUint32(9), scoreA: v.getInt16(13), scoreB: v.getInt16(15), timeLeft: v.getFloat32(17), phase: v.getUint8(21), phaseT: v.getFloat32(22), winsA: v.getUint8(26), winsB: v.getUint8(27), round: v.getUint8(28) };
-    o = 29; s.vx = v.getFloat32(o); s.vy = v.getFloat32(o + 4); s.vz = v.getFloat32(o + 8); s.hp = v.getUint8(o + 12); s.ammo = v.getUint16(o + 13); s.reserve = v.getUint16(o + 15); o += 17;
+    o = 29; s.vx = v.getFloat32(o); s.vy = v.getFloat32(o + 4); s.vz = v.getFloat32(o + 8); s.hp = v.getUint8(o + 12); s.ammo = v.getUint16(o + 13); s.reserve = v.getUint16(o + 15);
+    s.sh = v.getUint8(o + 17); s.shMax = v.getUint8(o + 18); o += 19;
     const n = v.getUint8(o++); s.ents = [];
     for (let i = 0; i < n; i++, o += 22) {
       const f = v.getUint8(o + 2);
-      s.ents.push({ id: v.getUint16(o), alive: !!(f & 1), crouch: !!(f & 2), reload: !!(f & 4), protect: !!(f & 8), w: v.getUint8(o + 3), life: v.getUint8(o + 4),
+      s.ents.push({ id: v.getUint16(o), alive: !!(f & 1), crouch: !!(f & 2), reload: !!(f & 4), protect: !!(f & 8), helmet: !(f & 16), w: v.getUint8(o + 3), life: v.getUint8(o + 4),
         x: v.getFloat32(o + 5), y: v.getFloat32(o + 9), z: v.getFloat32(o + 13), yaw: v.getInt16(o + 17) / 10000, pitch: v.getInt16(o + 19) / 10000, hp: v.getUint8(o + 21) });
     }
     const ns = v.getUint8(o++); s.shots = [];
@@ -93,7 +95,7 @@ const NetCodec = {
 function netEntity(m, c) {
   const p = c.isPlayer, w = p ? m.weapons.current : c.arsenal ? c.arsenal.current : null, def = w ? w.def : c.def;
   const reload = w ? w.reloading : c.reloadT > 0;
-  return { id: c.netId, flags: (c.alive ? 1 : 0) | (c.motor.crouching ? 2 : 0) | (reload ? 4 : 0) | (c.spawnProtect > 0 ? 8 : 0), w: NET_WI[def.id] ?? 0, life: c.life || 0,
+  return { id: c.netId, flags: (c.alive ? 1 : 0) | (c.motor.crouching ? 2 : 0) | (reload ? 4 : 0) | (c.spawnProtect > 0 ? 8 : 0) | (c.helmet === false ? 16 : 0), w: NET_WI[def.id] ?? 0, life: c.life || 0,
     x: c.motor.pos.x, y: c.motor.pos.y, z: c.motor.pos.z, yaw: c.yaw, pitch: p ? c.pitch : c.isNet ? c.pitch : c.aimPitch || 0, hp: c.alive ? c.hp : 0 };
 }
 const v3arr = (v) => [+v.x.toFixed(3), +v.y.toFixed(3), +v.z.toFixed(3)];
@@ -147,7 +149,7 @@ class NetHost {
     }
     const np = this.peers.get(from), c = m.config;
     this.t.send(from, { k: 'welcome', v: NET_VERSION, you: np.netId, team: np.team, name: np.name, life: np.life, pos: v3arr(np.motor.pos), yaw: np.yaw,
-      cfg: { map: c.map, mode: c.mode, rule: c.rule, ruleCfg: c.ruleCfg, difficulty: c.difficulty, allies: c.allies, enemies: c.enemies },
+      cfg: { map: c.map, mode: c.mode, rule: c.rule, ruleCfg: c.ruleCfg, difficulty: c.difficulty, allies: c.allies, enemies: c.enemies, opts: c.opts }, // v58: room options too (damage model, ff, pickup)
       roster: m.combatants.filter((x) => x !== np && !x.removed).map((x) => this._info(x)), phase: m.phase, time: m.time });
   }
   _info(c) { const def = c.isPlayer ? this.m.weapons.current.def : c.def; return { id: c.netId, team: c.team, name: c.name, kind: c.isBot ? 'bot' : 'human', w: NET_WI[def.id] ?? 0 }; }
@@ -189,7 +191,7 @@ class NetHost {
       winsA: m.roundWins.alpha, winsB: m.roundWins.bravo, round: m.round & 255 };
     for (const [peer, np] of this.peers) {
       const w = np.arsenal.current;
-      const s = Object.assign({}, base, { ack: np.ackSeq, vx: np.motor.vel.x, vy: np.motor.vel.y, vz: np.motor.vel.z, hp: np.alive ? Math.max(0, Math.round(np.hp)) : 0, ammo: w.ammo || 0, reserve: w.reserveAmmo || 0,
+      const s = Object.assign({}, base, { ack: np.ackSeq, vx: np.motor.vel.x, vy: np.motor.vel.y, vz: np.motor.vel.z, hp: np.alive ? Math.max(0, Math.round(np.hp)) : 0, ammo: w.ammo || 0, reserve: w.reserveAmmo || 0, sh: np.shield, shMax: np.maxShield,
         ents, shots: shots.filter((h) => h.id !== np.netId).slice(-60) }); // his own shots are already on his screen
       this.t.send(peer, NetCodec.encodeSnap(s), false);
     }
@@ -284,7 +286,8 @@ class NetClient {
     else if (d.k === 'hit') {
       const kind = d.kind; m.app.hud.hitmarker(kind); if (kind !== 'shield') m.stats.hits++;
       if (kind !== 'body' || m.time - m.lastHitSnd > 0.04) { m.audio.hit(kind); m.lastHitSnd = m.time; }
-      if (d.pt && kind !== 'shield') m.effects.blood(new THREE.Vector3(...d.pt), m.camera.getWorldDirection(new THREE.Vector3()), kind === 'head' ? 18 : 10);
+      if (d.pt && (kind === 'armor' || kind === 'break')) m.effects.shield(new THREE.Vector3(...d.pt)); // v58 Apex shield sparks
+      if (d.pt && kind !== 'shield' && kind !== 'armor') m.effects.blood(new THREE.Vector3(...d.pt), m.camera.getWorldDirection(new THREE.Vector3()), kind === 'head' ? 18 : 10);
     } else if (d.k === 'dmg') { const p = m.player; if (p.alive) { p.hp = d.hp; p.onDamaged(d.amt, null, new THREE.Vector3(...d.from)); } }
     else if (d.k === 'flash') { m.app.post.flash(d.s, 0.6 + 4.2 * d.s); m.audio.deafen(d.s * 0.9, 1 + 3 * d.s); }
     else if (d.k === 'roster') { if (d.add) this._ghost(d.add); if (d.remove) this._unghost(d.remove); }
@@ -345,7 +348,10 @@ class NetClient {
     const m = this.m, p = m.player;
     if (e.alive && e.life !== ((p.life || 0) & 255)) { p.respawn(new THREE.Vector3(e.x, e.y, e.z), e.yaw); p.life = e.life; m.app.hud.showDeath(false); this.hist.fill(undefined); return; }
     if (!p.alive || !e.alive) return;
-    p.hp = Math.min(p.hp, e.hp) || e.hp;
+    if (m.apex) { // v58 Apex: health and shield also come back (regen), so take the host's values as they are
+      if (s.shMax > (p.maxShield || 0) && p.maxShield) { m.app.hud.toast(`護盾升級 LV${APEX.shields.indexOf(s.shMax) + 1}（${s.shMax}）`); m.audio.hit('evo'); }
+      p.hp = e.hp; p.shield = s.sh; p.maxShield = s.shMax;
+    } else p.hp = Math.min(p.hp, e.hp) || e.hp;
     const h = this.hist[s.ack & 255]; if (!h || h.seq !== s.ack) return;
     const dx = e.x - h.x, dy = e.y - h.y, dz = e.z - h.z, err = Math.hypot(dx, dy, dz); this.corr.snaps++;
     if (err < 0.03) return;

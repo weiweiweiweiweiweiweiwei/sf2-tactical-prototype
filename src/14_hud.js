@@ -9,7 +9,7 @@ class HUD {
       root: $('hud'), ch: $('crosshair'), hm: $('hitmarker'), scope: $('scope'), zoomLbl: $('zoomLbl'), vig: $('vignette'), lowhp: $('lowhp'), white: $('flashWhite'),
       dmgdir: $('dmgdir'), nade: $('nadeind'), radar: $('radar'), compass: $('compass'), kf: $('killfeed'), scoreA: $('scoreA'), scoreB: $('scoreB'), barA: $('barA'), barB: $('barB'),
       timer: $('matchTimer'), target: $('matchTarget'), mode: $('matchMode'), ann: $('announce'), annMain: $('annMain'), annSub: $('annSub'), points: $('points'),
-      reload: $('reload'), reloadFill: $('reloadFill'), protect: $('protect'), hint: $('hint'), hpbox: $('hpbox'), hpNum: $('hpNum'), hpFill: $('hpFill'), kda: $('kda'),
+      reload: $('reload'), reloadFill: $('reloadFill'), protect: $('protect'), hint: $('hint'), hpbox: $('hpbox'), hpNum: $('hpNum'), hpFill: $('hpFill'), shRow: $('shRow'), shFill: $('shFill'), shNum: $('shNum'), kda: $('kda'),
       wname: $('weaponName'), mag: $('ammoMag'), res: $('ammoRes'), slots: $('slots'), fps: $('fps'),
       death: $('death'), deathKiller: $('deathKiller'), deathTimer: $('deathTimer'), deathH: document.querySelector('#death h1'),
       sb: $('scoreboard'), sbA: $('sbA'), sbB: $('sbB'), sbScoreA: $('sbScoreA'), sbScoreB: $('sbScoreB'), sbInfo: $('sbInfo'),
@@ -61,7 +61,7 @@ class HUD {
   setScopeSpread() {}
 
   hitmarker(kind) {
-    const el = this.el.hm; el.classList.remove('show', 'head', 'kill', 'shield'); void el.offsetWidth;
+    const el = this.el.hm; el.classList.remove('show', 'head', 'kill', 'shield', 'armor', 'break', 'helmet'); void el.offsetWidth;
     if (kind !== 'body') el.classList.add(kind); el.classList.add('show');
   }
   points(text) { const el = this.el.points; el.textContent = text; el.classList.remove('show'); void el.offsetWidth; el.classList.add('show'); }
@@ -102,6 +102,14 @@ class HUD {
     this._set('hp', this.el.hpNum, 'text', String(v)); this._set('hpw', this.el.hpFill, 'width', v + '%');
     const on = Math.ceil(v / 10); if (this.cache.segs !== on) { this.cache.segs = on; this.segs.forEach((s, i) => s.classList.toggle('off', i >= on)); }
     this._cls('hpLow', this.el.hpbox, 'low', v <= 30);
+    // v58 Apex shield: bar sized to 125 (red), coloured by level (white 50 / blue 75 / purple 100); hidden in the SF2 model
+    const ms = p.maxShield || 0;
+    this._set('shOn', this.el.shRow, 'display', ms ? 'flex' : 'none');
+    if (ms) {
+      const s = Math.max(0, Math.ceil(p.shield)), c = ms >= 125 ? '#ff4040' : ms >= 100 ? '#b66bff' : ms >= 75 ? '#3f9bff' : '#e8e8e8';
+      this._set('sh', this.el.shNum, 'text', String(s)); this._set('shw', this.el.shFill, 'width', (s / 125 * 100).toFixed(1) + '%');
+      if (this.cache.shc !== c) { this.cache.shc = c; this.el.root.style.setProperty('--shc', c); }
+    }
     this._set('kda', this.el.kda, 'text', `K ${p.kills} · A ${p.assists} · D ${p.deaths}`);
   }
 

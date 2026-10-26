@@ -11,6 +11,7 @@ class Combatant {
     // v24: bots accelerate / brake at ~60 % of the player's rate — with the player's instant stops their A-D strafes and dodges looked like teleports
     this.motor = new CharacterMotor(game.collision, { radius: CFG.player.radius, height: CFG.player.height, crouchHeight: CFG.player.crouchHeight, accelK: isPlayer ? 1 : 0.6, frictionK: isPlayer ? 1 : 0.6 });
     this.alive = true; this.hp = 100; this.spawnProtect = 0; this.respawnT = 0; this.yaw = 0;
+    this.helmet = true; this.shield = 0; this.maxShield = 0; this.evo = 0; this.hurtT = -99; // v58 damage models (Match.refit)
     this.kills = 0; this.deaths = 0; this.assists = 0; this.score = 0; this.headshots = 0;
     this.damageLog = new Map(); this.lastPart = 'chest'; this.holdE = false; this.carrying = false;
     this.hitboxes = ['head', 'chest', 'stomach', 'thigh', 'shin', 'foot'].map((part) => ({ part, min: new THREE.Vector3(), max: new THREE.Vector3() }));
@@ -272,7 +273,7 @@ class Player extends Human {
     this.motor.teleport(point); this.life = (this.life || 0) + 1;
     this.yaw = yaw; this.pitch = 0; this.resetRecoil(); this.punch = 0; this.punchV = 0; this.shake = 0; this.slideT = 0; this.slideK = 0; this.mantleT = 0; this.mantleK = 0;
     this.hp = 100; this.alive = true; this.spawnProtect = CFG.spawnProtect; this.eyeH = CFG.player.eye; this.killer = null; this.carrying = false;
-    this.damageLog.clear();
+    this.damageLog.clear(); g.refit(this);
     this.game.weapons.resetLoadout(); this.game.app.hud.setWeapon(this.game.weapons);
   }
 }

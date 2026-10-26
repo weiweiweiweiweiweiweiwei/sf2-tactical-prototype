@@ -515,6 +515,11 @@ class AudioEngine {
     if (!this.ctx) return;
     const ctx = this.ctx, t = ctx.currentTime, out = ctx.createGain(); out.gain.value = 0.7; out.connect(this.dry);
     if (kind === 'shield') { this._osc('sine', t, 1200, 1800, 0.12, out, 0.16); this._osc('sine', t, 2400, 3000, 0.1, out, 0.07); return; }
+    // v58 damage models: Apex shield hit (dry plastic tick), shield break (glassy crack), Evo level up; SF2 helmet knocked off (ping)
+    if (kind === 'armor') { this._nb(t, out, 'bandpass', 3400, 2, 0.32, 0.0005, 0.02); this._osc('triangle', t, 2200, 1900, 0.035, out, 0.18, 0.0008); return; }
+    if (kind === 'break') { this._nb(t, out, 'highpass', 3000, 0.8, 0.5, 0.0005, 0.09); for (let i = 0; i < 4; i++) this._osc('sine', t + i * 0.018, 3200 + i * 700, 2600 + i * 500, 0.06, out, 0.12, 0.0005); this._osc('sine', t, 180, 70, 0.12, out, 0.35, 0.001); return; }
+    if (kind === 'evo') { [660, 880, 1320].forEach((f, i) => this._osc('triangle', t + i * 0.07, f, f, 0.16, out, 0.16, 0.004)); return; }
+    if (kind === 'helmet') { this._hit_ping(t, out, 1.1); this._osc('sine', t, 260, 120, 0.06, out, 0.25, 0.001); return; }
     const H = HIT_SOUNDS[Settings.data.hitSound] || HIT_SOUNDS.flesh, k = (kind === 'kill' ? 1.2 : kind === 'head' ? 1.1 : 1) * (H.gain || 1);
     let played = false;
     for (const [grp, g] of H.s || []) { const l = this._s(grp); if (l) { this._one(pick(l), out, g * k, 0.94 + Math.random() * 0.12); played = true; } }

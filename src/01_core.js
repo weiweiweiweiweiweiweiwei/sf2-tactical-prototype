@@ -40,6 +40,18 @@ const POINTS = { head: 50, body: 30, knife: 50, grenade: 40, assist: 15, capture
 
 // Hit-zone multipliers (chest = weapon base damage).
 const PART_MULT = { head: 2.5, chest: 1, stomach: 0.9, thigh: 0.75, shin: 0.75, foot: 0.75 }; // CLAUDE.md §4.2 (v21): head ×2.5, chest 1, abdomen 0.9, limbs 0.75
+// v58 damage models (room 設置 → 扣血機制). 'sf2': the multipliers above, range falloff, sniper headshots kill, and a helmet
+// that a headshot knocks off when it would not kill (that hit counts as a body hit; the bare head takes the full ×2.5 after).
+// 'apex' (Apex Legends, Season 24–30, 2025–26): 100 HP plus a body shield levelled by Evo — the damage you deal — to 50 / 75 /
+// 100; damage hits the shield first and the rest of that bullet carries into health; the headshot multiplier is the weapon
+// class's (helmets no longer reduce it); body ×1, legs ×0.8 (×0.9 snipers / pistols); no range falloff except shotguns; no
+// sniper one-shot rule. Health and shields come back after 4 s without damage, as in Apex's Mixtape modes (user: option 1B).
+// Evo thresholds are scaled down from Apex's 450 / 1700 for respawn matches; each soldier keeps its Evo through deaths.
+const APEX = {
+  head: { smg: 1.25, assault: 1.75, lmg: 1.75, pistol: 1.75, sniper: 2, shotgun: 1 }, legs: { sniper: 0.9, pistol: 0.9 }, leg: 0.8,
+  shields: [50, 75, 100], evo: [0, 150, 500], regenDelay: 4, regenHp: 20, regenShield: 25,
+};
+const apexShield = (evo) => APEX.shields[APEX.evo.reduce((lv, need, i) => (evo >= need ? i : lv), 0)];
 const PART_LABEL = { head: '頭部', chest: '胸部', stomach: '腹部', thigh: '大腿', shin: '小腿', foot: '腳' };
 
 /* ---------------------------------------------------------------------
@@ -572,11 +584,16 @@ function mulberry32(seed) { let a = seed >>> 0; return () => { a |= 0; a = (a + 
 
 // v21 (CLAUDE.md §4.2): linear falloff damageNear → damageFar between falloffStart and falloffEnd; sniper headshots always kill.
 // Knife / grab / grenades keep their own single `damage` (+ optional exponential `falloff`).
-function calcDamage(def, part, dist, mult = 1) {
-  if (part === 'head' && def.headKill) return 999;
-  const m = part === 'head' ? (def.headMult ?? PART_MULT.head) : PART_MULT[part] ?? 1;
+function calcDamage(def, part, dist, mult = 1, apex = false) {
+  if (part === 'head' && def.headKill && !apex) return 999;
+  const legs = part === 'thigh' || part === 'shin' || part === 'foot';
+  const m = apex ? (part === 'head' ? APEX.head[def.type] ?? 1.75 : legs ? APEX.legs[def.type] ?? APEX.leg : 1)
+    : part === 'head' ? (def.headMult ?? PART_MULT.head) : PART_MULT[part] ?? 1;
   let base;
-  if (def.damageNear !== undefined) { const t = clamp((dist - def.falloffStart) / Math.max(1e-3, def.falloffEnd - def.falloffStart), 0, 1); base = def.damageNear + (def.damageFar - def.damageNear) * t; }
+  if (def.damageNear !== undefined) {
+    const t = apex && def.type !== 'shotgun' ? 0 : clamp((dist - def.falloffStart) / Math.max(1e-3, def.falloffEnd - def.falloffStart), 0, 1);
+    base = def.damageNear + (def.damageFar - def.damageNear) * t;
+  }
   else base = def.damage * Math.pow(def.falloff ?? 1, dist / 10);
   return base * m * mult;
 }

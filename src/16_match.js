@@ -11,7 +11,8 @@ class Match {
     const rc = (config.ruleCfg && config.ruleCfg[config.rule]) || RULES[config.rule].def;
     this.target = rc.target; this.roundTime = RULES[config.rule].timeUnit === 'sec' ? rc.time : 0;
     this.timeLeft = RULES[config.rule].timeUnit === 'sec' ? rc.time : rc.time ? rc.time * 60 : Infinity; // v45: score modes have no time limit
-    this.opts = Object.assign({ pickup: true, killcam: true, ff: false }, config.opts); // room 設置: weapon pickup, killcam, friendly fire
+    this.opts = Object.assign({ pickup: true, killcam: true, ff: false, dmg: 'sf2' }, config.opts); // room 設置: weapon pickup, killcam, friendly fire, damage model
+    this.apex = this.opts.dmg === 'apex'; // v58 扣血機制: SF2 (helmet) or Apex (Evo shield) — APEX in 01_core.js
     this.score = { alpha: 0, bravo: 0 }; this.roundWins = { alpha: 0, bravo: 0 }; this.round = 0;
     this.stats = { shots: 0, hits: 0 }; this.firstBlood = true; this.acc = 0; this.spotT = 0; this.freezeT = 0; this.roundEndT = 0;
     this.grenades = []; this.combatants = []; this.bots = []; this.timers = [];
@@ -64,7 +65,7 @@ class Match {
       for (let i = 0; i < this.config.enemies; i++) this.bots.push(new Bot(this, 'bravo', i, this.botWeapon()));
     }
     this.combatants.push(...this.bots);
-    this.combatants.forEach((c, i) => { c.netId = i + 1; }); this.netSeq = this.combatants.length; // v25: stable ids (network snapshots, seeded spread)
+    this.combatants.forEach((c, i) => { c.netId = i + 1; this.refit(c); }); this.netSeq = this.combatants.length; // v25: stable ids (network snapshots, seeded spread)
     this.spawns = { alpha: this.makeSpawns('alpha'), bravo: this.makeSpawns('bravo') };
     this.spawnLOS = this.checkSpawnLOS(); window.__debug = Object.assign(window.__debug || {}, { map: def.id, spawnLOS: this.spawnLOS.visible > 0, spawnLOSPairs: this.spawnLOS });
     this.playerModel = app.soldiers.create(this.player.team, 'm4'); this.playerModel.root.visible = false; this.scene.add(this.playerModel.root); // third-person you, for killcams
@@ -290,7 +291,7 @@ class Match {
         endT = h.t; break;
       }
       const wasAlive = h.target.alive;
-      this.applyDamage(h.target, calcDamage(def, h.part, h.t, mult), h.part, shooter, def, dir, point, { collateral: kills > 0, wall: walls > 0, pierce: passed > 0 });
+      this.applyDamage(h.target, calcDamage(def, h.part, h.t, mult, this.apex), h.part, shooter, def, dir, point, { collateral: kills > 0, wall: walls > 0, pierce: passed > 0 });
       if (h.target.isPlayer) hitPlayer = true;
       if (wasAlive && !h.target.alive) kills++;
       if (bodies > 0) { bodies--; mult *= 0.5; passed++; continue; } // bullet keeps going with half its damage
@@ -336,15 +337,26 @@ class Match {
     if (!victim.alive || this.phase !== 'live') return false;
     if (attacker && attacker !== victim && attacker.team === victim.team && !this.opts.ff) return false; // friendly fire (room option, off by default)
     if (victim.spawnProtect > 0) { if (point) this.effects.shield(point); if (attacker && attacker.isPlayer) { this.app.hud.hitmarker('shield'); this.audio.hit('shield'); } if (attacker && this.net) this.net.onHit(attacker, victim, 'shield', point); return false; }
-    if (attacker && attacker.isPlayer && attacker.team !== victim.team) { const dd = attacker.dmgDone || (attacker.dmgDone = new Map()); dd.set(victim, (dd.get(victim) || 0) + Math.min(dmg, Math.max(0, victim.hp))); } // v34 Tab board: damage per enemy
+    // v58 damage models. SF2: a headshot that would not kill knocks the helmet off and counts as a body hit. Apex: the shield
+    // takes the damage first and the rest of the bullet carries into health; every point dealt to an enemy is Evo.
+    let armor = null, absorbed = 0; // armor: 'helmet' | 'armor' (all on the shield) | 'break' (the shield gave out)
+    const enemy = attacker && attacker !== victim && attacker.team !== victim.team, gun = def && def.kind !== 'knife' && def.kind !== 'grab' && !opts.blast && !opts.fall;
+    if (!this.apex && part === 'head' && victim.helmet && gun && dmg < victim.hp) { dmg /= def.headMult ?? PART_MULT.head; this.helmetOff(victim, dir); armor = 'helmet'; }
+    if (this.apex) {
+      victim.hurtT = this.time;
+      if (victim.shield > 0 && !opts.fall) { absorbed = Math.min(victim.shield, dmg); victim.shield -= absorbed; dmg -= absorbed; armor = victim.shield <= 0 ? 'break' : dmg > 0 ? null : 'armor'; }
+      if (enemy) this._evo(attacker, absorbed + Math.min(dmg, Math.max(0, victim.hp)));
+    }
+    if (attacker && attacker.isPlayer && attacker.team !== victim.team) { const dd = attacker.dmgDone || (attacker.dmgDone = new Map()); dd.set(victim, (dd.get(victim) || 0) + absorbed + Math.min(dmg, Math.max(0, victim.hp))); } // v34 Tab board: damage per enemy
     victim.hp -= dmg; victim.lastPart = part;
-    if (attacker && attacker !== victim && this.net) this.net.onHit(attacker, victim, victim.hp <= 0 ? 'kill' : part === 'head' ? 'head' : 'body', point);
+    const kind = victim.hp <= 0 ? 'kill' : armor === 'helmet' || armor === 'break' ? armor : part === 'head' ? 'head' : armor || 'body';
+    if (attacker && attacker !== victim && this.net) this.net.onHit(attacker, victim, kind, point);
     if (attacker && attacker !== victim) { const rec = victim.damageLog.get(attacker) || { amt: 0, t: 0 }; rec.amt += dmg; rec.t = this.time; victim.damageLog.set(attacker, rec); }
-    if (point && dir) { this.effects.blood(point, dir, part === 'head' ? 18 : 10); if (part === 'head' && def.kind !== 'knife' && def.kind !== 'grab' && point.distanceTo(this.camera.position) < 90) this.effects.helmetSpark(point, dir); }
+    if (point && dir && (armor === 'armor' || armor === 'break')) this.effects.shield(point); // shield sparks; blood only once health is hit
+    if (point && dir && armor !== 'armor') { this.effects.blood(point, dir, part === 'head' ? 18 : 10); if (part === 'head' && def.kind !== 'knife' && def.kind !== 'grab' && point.distanceTo(this.camera.position) < 90) this.effects.helmetSpark(point, dir); }
     if (victim.flinch && dir) victim.flinch(part, dir, dmg);
     if (attacker && attacker.isPlayer && victim !== attacker) {
       this.stats.hits++;
-      const kind = victim.hp <= 0 ? 'kill' : part === 'head' ? 'head' : 'body';
       if (kind !== 'body' || this.time - this.lastHitSnd > 0.04) { this.audio.hit(kind); this.lastHitSnd = this.time; } // pellets: one tick per blast
       this.app.hud.hitmarker(kind);
     }
@@ -352,6 +364,43 @@ class Match {
     victim.onDamaged(dmg, attacker, attacker ? attacker.motor.pos : (point || victim.motor.pos));
     if (victim.hp <= 0) this.onKill(victim, attacker, def, part, dir || new THREE.Vector3(0, 0, 1), opts);
     return true;
+  }
+
+  /* ------------------------------ v58 damage models ------------------------------ */
+  // every (re)spawn: helmet back on (SF2); Apex: the shield of the soldier's Evo level, full (Evo is kept through deaths)
+  refit(c) {
+    c.helmet = true; c.hurtT = -99; if (c.model) c.model.helmet.visible = true;
+    c.maxShield = this.apex ? apexShield(c.evo) : 0; c.shield = c.maxShield;
+  }
+  // Apex Evo: damage dealt levels the shield up; a new level fills it to the new size (as an Apex Shield Core does)
+  _evo(c, amount) {
+    if (!(amount > 0)) return;
+    c.evo += amount; const max = apexShield(c.evo);
+    if (max <= c.maxShield) return;
+    c.maxShield = max; if (c.alive) c.shield = max;
+    if (c.isPlayer) { this.app.hud.toast(`護盾升級 LV${APEX.shields.indexOf(max) + 1}（${max}）`); this.audio.hit('evo'); }
+  }
+  // Apex Mixtape-style recovery: after 4 s without damage, health refills first, then the shield
+  _regen(h) {
+    for (const c of this.combatants) {
+      if (!c.alive || this.time - c.hurtT < APEX.regenDelay) continue;
+      if (c.hp < 100) c.hp = Math.min(100, c.hp + APEX.regenHp * h);
+      else if (c.shield < c.maxShield) c.shield = Math.min(c.maxShield, c.shield + APEX.regenShield * h);
+    }
+  }
+  // SF2: the helmet flies off the head (host: when the shot lands; client: when a snapshot says it is gone)
+  helmetOff(c, dir) {
+    c.helmet = false;
+    const M = c.model; if (!M || !M.helmet.visible) return;
+    M.helmet.visible = false;
+    const p = M.head.getWorldPosition(new THREE.Vector3()); p.y += 0.14;
+    if (p.distanceTo(this.camera.position) > 80) return;
+    const d = dir ? dir.clone().setY(0).normalize() : new THREE.Vector3(rand(-1, 1), 0, rand(-1, 1)).normalize();
+    this._helmetGeo = this._helmetGeo || new THREE.SphereGeometry(0.132, 14, 8, 0, Math.PI * 2, 0, Math.PI * 0.52);
+    const mat = (this._helmetMats = this._helmetMats || {})[c.team] || (this._helmetMats[c.team] = new THREE.MeshStandardMaterial({ color: TEAM_PALETTE[c.team].helmet, roughness: 0.75, side: THREE.DoubleSide }));
+    const mesh = new THREE.Mesh(this._helmetGeo, mat); mesh.castShadow = true;
+    this.physics.addDynamic({ mesh, mass: 1.2, shape: new CANNON.Sphere(0.12), position: p, velocity: { x: d.x * 3.2 + rand(-0.6, 0.6), y: rand(2.6, 3.6), z: d.z * 3.2 + rand(-0.6, 0.6) },
+      angularVelocity: { x: rand(-12, 12), y: rand(-6, 6), z: rand(-12, 12) }, life: 8, sink: 0.6 });
   }
 
   /* ------------------------------ v13 KILLCAM ------------------------------ */
@@ -769,6 +818,7 @@ class Match {
       const ms = []; for (const c of this.combatants) if (c.alive) ms.push(c.motor);
       for (let i = 0; i < ms.length; i++) for (let j = i + 1; j < ms.length; j++) CharacterMotor.separate(ms[i], ms[j]);
       for (const mc of this.builder.mechs) mc.tick(h); // v46 trams / drawbridge carry whoever stands on them
+      if (!client && this.apex) this._regen(h);
       if (!client && this.def.killY !== undefined) for (const c of this.combatants) {
         const p=c.motor.pos,B=this.def.bounds,outside=this.def.killOutside&&(p.x<B.minX-2||p.x>B.maxX+2||p.z<B.minZ-2||p.z>B.maxZ+2);
         if (c.alive && (p.y < this.def.killY || outside)) { c.spawnProtect = 0; this.applyDamage(c, 999, 'legs', c, WEAPON_DEFS.fall, null, null, { fall: true }); }

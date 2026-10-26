@@ -110,7 +110,7 @@ class Bot extends Combatant {
   respawn(point, yaw) {
     this.motor.teleport(point); this.life = (this.life || 0) + 1;
     this.yaw = yaw + rand(-0.3, 0.3); this.hp = 100; this.alive = true; this.spawnProtect = CFG.spawnProtect; this.carrying = false;
-    this.ammo = this.def.mag || 0; this.reloadT = 0; this.damageLog.clear(); this.slideT = 0;
+    this.ammo = this.def.mag || 0; this.reloadT = 0; this.damageLog.clear(); this.slideT = 0; this.game.refit(this);
     this.nades = this.game.mode === 'general' ? { he: 1, flash: 1 } : { he: 0, flash: 0 };
     this.model.root.visible = true; this.model.head.visible = true; this.model.root.position.copy(this.motor.pos); if (this.tag) this.tag.visible = true;
     this.ai.reset();

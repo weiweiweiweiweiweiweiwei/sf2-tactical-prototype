@@ -1,6 +1,6 @@
 // v25 two-tab network test: one page hosts, one joins over the loopback transport (BroadcastChannel) with simulated
 // latency / jitter / loss, then the test drives both and checks movement agreement, hit registration and death / respawn.
-// usage: node tools/_nettest.mjs [lag=40] [jitter=10] [loss=0.02]
+// usage: node tools/_nettest.mjs [lag=40] [jitter=10] [loss=0.02]   (DMG=apex: the Apex damage model, v58)
 import { chromium } from 'playwright'; import http from 'node:http'; import fs from 'node:fs'; import path from 'node:path';
 const ROOT = process.cwd(), T = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript' };
 const srv = http.createServer((q, s) => { const p = path.join(ROOT, decodeURIComponent(new URL(q.url, 'http://x').pathname)); if (!fs.existsSync(p) || fs.statSync(p).isDirectory()) { s.writeHead(404); s.end(); return; } s.writeHead(200, { 'Content-Type': T[path.extname(p)] || 'application/octet-stream' }); fs.createReadStream(p).pipe(s); });
@@ -19,13 +19,13 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // 1. host starts a 3v3 warehouse TDM in a tab opened with ?host=
 await H.goto(RTC ? `${base}?x=1` : `${base}?host=t1${net}`); await H.waitForFunction(() => window.app && window.SF2);
-const setup = (nick) => { const S = SF2.Settings.data; S.nick = nick; S.quality = 'low'; Object.assign(S.lobby, { map: 0, rule: 'tdm', mode: 'general', allies: 3, enemies: 3, loadout: 0 }); S.loadouts[0] = { name: 'A', primary: 'm4a1', secondary: 'p226' }; };
-await H.evaluate(setup, 'HostWei');
+const setup = ([nick, dmg]) => { const S = SF2.Settings.data; S.nick = nick; S.quality = 'low'; Object.assign(S.lobby, { map: 0, rule: 'tdm', mode: 'general', allies: 3, enemies: 3, loadout: 0 }); S.lobby.opts = Object.assign({}, S.lobby.opts, { dmg }); S.loadouts[0] = { name: 'A', primary: 'm4a1', secondary: 'p226' }; };
+await H.evaluate(setup, ['HostWei', process.env.DMG || 'sf2']);
 let code = null;
 if (RTC) { // v27: the host opens a room, the friend joins the room (team bravo), then the host starts the match for both
   await H.evaluate(() => app.createRoom()); await H.waitForFunction(() => app.room && app.room.online, null, { timeout: 30000 }).catch(() => {});
   code = await H.evaluate(() => app.room.code); log('room code', code);
-  await C.goto(`${base}?x=2${process.env.RELAY ? '&relay=1' : ''}`); await C.waitForFunction(() => window.app && window.SF2 && app.dir); await C.evaluate(setup, 'Tester');
+  await C.goto(`${base}?x=2${process.env.RELAY ? '&relay=1' : ''}`); await C.waitForFunction(() => window.app && window.SF2 && app.dir); await C.evaluate(setup, ['Tester', 'sf2']); // (the friend's own setting must not matter: the room's wins)
   const t0 = Date.now(); await C.evaluate((code) => app.joinRoom(code), code);
   await C.waitForFunction(() => app.room && app.room.entered, null, { timeout: 30000 }).catch(() => {}); log('in the room after', Date.now() - t0, 'ms');
   await C.evaluate(() => app.room.setTeam('bravo')); await sleep(600);
@@ -122,6 +122,7 @@ await sleep(5500); // respawn delay
 const cBack = await C.evaluate(() => ({ alive: app.match.player.alive, hp: app.match.player.hp, life: app.match.player.life }));
 const hBack = await H.evaluate(() => ({ alive: app.match.humans[0].alive, life: app.match.humans[0].life }));
 log('respawn: client', JSON.stringify(cBack), 'host', JSON.stringify(hBack));
+log('damage model: host', JSON.stringify(await H.evaluate(() => ({ apex: app.match.apex }))), 'client', JSON.stringify(await C.evaluate(() => ({ apex: app.match.apex, shield: app.match.player.shield, max: app.match.player.maxShield, hp: app.match.player.hp })))); // v58
 
 const stats = { client: await C.evaluate(() => ({ corr: app.match.net.corr, tr: app.match.net.t.stats })), host: await H.evaluate(() => ({ tr: app.match.net.t.stats, pending: app.match.humans[0] && app.match.humans[0].pending.size, stalls: app.match.humans[0] && app.match.humans[0].stalls })) };
 log('net stats', JSON.stringify(stats));

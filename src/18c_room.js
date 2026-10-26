@@ -25,7 +25,7 @@ function roomCfgSafe(c) {
   c = c && typeof c === 'object' ? c : {};
   const rule = Object.prototype.hasOwnProperty.call(RULES, c.rule) ? c.rule : 'tdm', R = RULES[rule], rc = (c.ruleCfg && c.ruleCfg[rule]) || {};
   return { map: clamp(c.map | 0, 0, MAPS.length - 1), mode: Object.prototype.hasOwnProperty.call(MODES, c.mode) ? c.mode : 'general', rule, difficulty: clamp(c.difficulty | 0, 0, DIFFICULTY.length - 1),
-    allies: clamp(c.allies | 0, 1, 12), enemies: clamp(c.enemies | 0, 1, 12), opts: { pickup: !(c.opts && c.opts.pickup === false), killcam: !(c.opts && c.opts.killcam === false), ff: !!(c.opts && c.opts.ff) },
+    allies: clamp(c.allies | 0, 1, 12), enemies: clamp(c.enemies | 0, 1, 12), opts: { pickup: !(c.opts && c.opts.pickup === false), killcam: !(c.opts && c.opts.killcam === false), ff: !!(c.opts && c.opts.ff), dmg: c.opts && c.opts.dmg === 'apex' ? 'apex' : 'sf2' },
     ruleCfg: { [rule]: { target: R.targets.includes(rc.target) ? rc.target : R.def.target, time: R.times.includes(rc.time) ? rc.time : R.def.time } } };
 }
 

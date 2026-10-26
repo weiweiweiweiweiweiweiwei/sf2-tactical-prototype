@@ -446,6 +446,8 @@ class App {
     $('lbMapClose').onclick = () => modal('lbMapModal', false); $('lbOptClose').onclick = () => modal('lbOptModal', false);
     for (const id of ['lbMapModal', 'lbOptModal']) $(id).onclick = (e) => { if (e.target === $(id)) modal(id, false); };
     for (const [id, k] of [['optPickup', 'pickup'], ['optKillcam', 'killcam'], ['optFF', 'ff']]) $(id).onchange = () => { if (this.isGuest()) return; L.opts[k] = $(id).checked; this.audio.uiClick(); this.refreshLobby(); };
+    // v58 扣血機制 (damage model), host's choice like the other room options
+    for (const b of $('optDmg').children) b.onclick = () => { if (this.isGuest()) return; L.opts.dmg = b.dataset.v; this.audio.init(); this.audio.uiClick(); this.refreshLobby(); };
     document.addEventListener('click', () => document.querySelectorAll('#lobby .dd.open').forEach((d) => d.classList.remove('open')));
     // F5 = 開始 (the browser refresh is swallowed while the room is open)
     addEventListener('keydown', (e) => { if (e.code === 'F5' && (this.state === 'lobby' || this.state === 'countdown')) { e.preventDefault(); if (e.repeat) return; if (this.state === 'countdown') this.cancelCountdown(); else if (!$('lbMapModal').classList.contains('on')) this.beginCountdown(); } });
@@ -499,6 +501,11 @@ class App {
     $('lbTitle').textContent = `${R.name} - ${def.name}`;
     const opts = L.opts || (L.opts = { pickup: true, killcam: true, ff: false });
     $('optPickup').checked = opts.pickup !== false; $('optKillcam').checked = opts.killcam !== false; $('optFF').checked = !!opts.ff;
+    const dmg = opts.dmg === 'apex' ? 'apex' : 'sf2';
+    [...$('optDmg').children].forEach((b) => b.classList.toggle('on', b.dataset.v === dmg));
+    $('optDmgInfo').textContent = dmg === 'apex'
+      ? '100 血＋護盾：先扣盾再扣血。造成傷害會升級護盾（白 50 → 藍 75 → 紫 100）。爆頭倍率依槍種（衝鋒槍 ×1.25、步槍／機槍／手槍 ×1.75、狙擊 ×2、霰彈 ×1），腿 ×0.8，沒有距離衰減（霰彈除外）。4 秒沒受傷先回血、再回盾。'
+      : '100 血：頭 ×2.5、胸 ×1、腹 ×0.9、四肢 ×0.75，有距離衰減，狙擊爆頭必死。打不死的爆頭會把頭盔打飛（這一槍只算身體傷害），之後再爆頭照 ×2.5 計算。';
     // the six SF2 room settings: map · win condition · weapon mode | game mode · N vs N · 設置
     const host = () => !this.isGuest();
     this._dd('ddMap', '地圖', def.name, null, () => { if (host()) { $('lbMapModal').classList.add('on'); this.audio.uiClick(); } });

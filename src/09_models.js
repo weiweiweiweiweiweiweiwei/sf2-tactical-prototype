@@ -780,11 +780,12 @@ class SoldierFactory {
     // head (pivot at neck)
     add('head', sph(0.105, 16, 12), P.face, 0, 0.1, 0, 0, 0, 0, 0.95, 1.12, 1);
     add('head', RB(0.08, 0.035, 0.02, 0.008), P.goggle, 0, 0.1, -0.097);
-    add('head', sph(0.132, 18, 10, 0, Math.PI * 2, 0, Math.PI * 0.52), P.helmet, 0, 0.12, 0.004);
-    add('head', tor(0.128, 0.012), P.helmet, 0, 0.125, 0.004, Math.PI / 2);
-    add('head', RB(0.2, 0.045, 0.04, 0.015), P.goggle, 0, 0.18, -0.115, 0.3);
-    add('head', RB(0.05, 0.05, 0.04, 0.01), 0x151515, 0, 0.22, -0.12);
-    add('head', tor(0.133, 0.01), P.band, 0, 0.16, 0.004, Math.PI / 2 - 0.12);
+    // v58 the helmet (with its goggles, mount and team band) is its own part: a SF2 headshot knocks it off
+    add('helmet', sph(0.132, 18, 10, 0, Math.PI * 2, 0, Math.PI * 0.52), P.helmet, 0, 0.12, 0.004);
+    add('helmet', tor(0.128, 0.012), P.helmet, 0, 0.125, 0.004, Math.PI / 2);
+    add('helmet', RB(0.2, 0.045, 0.04, 0.015), P.goggle, 0, 0.18, -0.115, 0.3);
+    add('helmet', RB(0.05, 0.05, 0.04, 0.01), 0x151515, 0, 0.22, -0.12);
+    add('helmet', tor(0.133, 0.01), P.band, 0, 0.16, 0.004, Math.PI / 2 - 0.12);
     for (const sx of [-1, 1]) add('head', RB(0.04, 0.07, 0.06, 0.015), 0x252525, sx * 0.11, 0.1, 0);
     // arms (pivot at shoulder line), rifle-ready pose
     limb('arms', [0.23, 0, 0], [0.21, -0.22, -0.1], 0.06, P.uniform);
@@ -803,18 +804,18 @@ class SoldierFactory {
     const root = new THREE.Group(), legs = [], bones = [], parts = [], parts1 = [];
     const bone = (name, parent, x, y, z) => { const b = new THREE.Bone(); b.name = name; b.position.set(x, y, z); parent.add(b); bones.push(b); return b; };
     [-0.105, 0.105].forEach((sx, i) => { const hip = bone('hip' + i, root, sx, 0.92, 0), knee = bone('knee' + i, hip, 0, -0.42, 0); legs.push({ hip, knee }); parts.push([G.thigh, hip], [G.shin, knee]); parts1.push([G1.thigh, hip], [G1.shin, knee]); });
-    const torso = bone('torso', root, 0, 0.92, 0), head = bone('head', torso, 0, 0.66, 0), arms = bone('arms', torso, 0, 0.5, 0);
-    parts.push([G.torso, torso], [G.head, head], [G.arms, arms]); parts1.push([G1.torso, torso], [G1.head, head], [G1.arms, arms]);
+    const torso = bone('torso', root, 0, 0.92, 0), head = bone('head', torso, 0, 0.66, 0), arms = bone('arms', torso, 0, 0.5, 0), helmet = bone('helmet', head, 0, 0, 0);
+    parts.push([G.torso, torso], [G.head, head], [G.arms, arms], [G.helmet, helmet]); parts1.push([G1.torso, torso], [G1.head, head], [G1.arms, arms], [G1.helmet, helmet]);
     root.updateMatrixWorld(true);
     const lod = [this._skinGeo(team, parts, bones), this._skinGeo(team, parts1, bones, 1)]; // same bones / skinIndex layout → swappable per frame
     const body = new THREE.SkinnedMesh(lod[0], mat); body.name = 'body';
     body.castShadow = true; body.receiveShadow = true; body.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0.9, 0), 1.8); // covers crouch / death poses
     root.add(body); body.bind(new THREE.Skeleton(bones));
     // First-person spectating hides the head: a bone's `visible` does not hide skinned vertices, so collapse the bone instead.
-    Object.defineProperty(head, 'visible', { configurable: true, get() { return this._vis !== false; }, set(v) { this._vis = v; this.scale.setScalar(v ? 1 : 1e-4); } });
+    for (const b of [head, helmet]) Object.defineProperty(b, 'visible', { configurable: true, get() { return this._vis !== false; }, set(v) { this._vis = v; this.scale.setScalar(v ? 1 : 1e-4); } });
     const gunHolder = new THREE.Group(); gunHolder.position.set(0.06, -0.1, -0.32); arms.add(gunHolder);
     const muzzle = new THREE.Object3D(); gunHolder.add(muzzle);
-    const s = { root, legs, torso, head, arms, gunHolder, muzzle, mat, gun: null, body, lod }; // lod: NOT in userData (clone() would JSON-copy it)
+    const s = { root, legs, torso, head, helmet, arms, gunHolder, muzzle, mat, gun: null, body, lod }; // lod: NOT in userData (clone() would JSON-copy it)
     this.setWeapon(s, weaponId);
     return s;
   }
