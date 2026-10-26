@@ -13,18 +13,22 @@ from mathutils import Vector
 import numpy as np
 
 ROOT = Path(__file__).resolve().parents[2]
-WORK = ROOT / 'tools/out/apex/skulltown'
+sys.path.insert(0, str(Path(__file__).parent))
+from apex_maps import pick
+CFG = pick()  # -- --map skulltown | range (tools/blender/apex_maps.py)
+WORK = CFG['work']
 OUT = WORK / 'export'; (OUT / 'textures').mkdir(parents=True, exist_ok=True)
 args = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else []
+ONLY_COL = '--collision-only' in args  # re-cut collision.bin (and nothing else) from the .blend
 SAMPLES = int(args[args.index('--samples') + 1]) if '--samples' in args else 256
-INNER = 150.0  # play-area half size (m, around the centre) for the fine lightmap
+INNER = CFG['inner']  # play-area half size (m, around the centre) for the fine lightmap
 FOLIAGE = re.compile(r'grass|plant|bush|tree|foliage|flower|weed|fern|cactus|leaf|leaves|vine|shrub|ivy', re.I)
 NOCOLLIDE = re.compile(r'decal|stain|drip|_transparent|erosion|wire|cable|rope|godray|light_strip|bolt', re.I)
 SURF = [('glass', re.compile(r'glass|window', re.I)), ('metal', re.compile(r'metal|steel|pipe|trim|grate|girder|beam|tank|corrugat|generator|vent|ac_unit|catwalk|scaffold|barrel|container', re.I)),
         ('wood', re.compile(r'wood|plank|crate|pallet|frame|farmland_house', re.I)), ('sand', re.compile(r'sand|dirt|rock|bone|skull|rib|ground|desert|chalk|stone|gravel', re.I))]
 SURF_ID = {'concrete': 0, 'metal': 1, 'wood': 2, 'sand': 3, 'glass': 4}  # = TRI_SURFACES in src/04_collision.js
 
-bpy.ops.wm.open_mainfile(filepath=str(WORK / 'skulltown.blend'))
+bpy.ops.wm.open_mainfile(filepath=str(WORK / f"{CFG['name']}.blend"))
 sc = bpy.data.scenes['Scene']; bpy.context.window.scene = sc
 src = bpy.data.objects['World']
 
@@ -50,13 +54,15 @@ def split(obj):
 
 
 parts = split(src)
-for o in parts.values():
+for o in ([] if ONLY_COL else parts.values()):
     for x in sc.objects:
         x.select_set(False)
     bpy.context.view_layer.objects.active = o; o.select_set(True)
     uv = o.data.uv_layers.new(name='Lightmap'); o.data.uv_layers.active = uv
     bpy.ops.object.mode_set(mode='EDIT'); bpy.ops.mesh.select_all(action='SELECT')
-    bpy.ops.uv.smart_project(angle_limit=math.radians(66), island_margin=0.002, area_weight=0.0, scale_to_bounds=False)
+    bpy.ops.uv.smart_project(angle_limit=math.radians(66), island_margin=0.0, area_weight=0.0, scale_to_bounds=False)
+    # tens of thousands of small islands: a margin added per island ate most of the atlas — pack again with a ~2 px fraction
+    bpy.ops.uv.pack_islands(udim_source='CLOSEST_UDIM', rotate=True, scale=True, margin_method='FRACTION', margin=0.0005, shape_method='AABB')
     bpy.ops.object.mode_set(mode='OBJECT')
     o.data.uv_layers['UVMap'].active_render = True; o.data.uv_layers.active = o.data.uv_layers['UVMap']
     print('LMUV', o.name, len(o.data.polygons), flush=True)
@@ -70,7 +76,19 @@ for t in ('OPTIX', 'CUDA'):
         prefs.compute_device_type = t; prefs.get_devices(); [setattr(d, 'use', True) for d in prefs.devices]; break
     except Exception:
         pass
-sc.render.bake.margin = 6
+sc.render.bake.margin = 2
+# light: the same Poly Haven sky the game shows (SKY), as the only light — its sun casts the shadows. Turned 180° about z so
+# Blender's equirect lookup matches three.js's for the glTF axes (game x, y, z = Blender x, z, −y).
+SKY = 'kloofendal_48d_partly_cloudy_puresky'
+for o in [o for o in sc.objects if o.type == 'LIGHT']:
+    bpy.data.objects.remove(o)
+wnt = sc.world.node_tree; wnt.nodes.clear()
+env = wnt.nodes.new('ShaderNodeTexEnvironment'); env.image = bpy.data.images.load(str(ROOT / f'tools/out/apex/sky/{SKY}_1k.hdr'))
+tc = wnt.nodes.new('ShaderNodeTexCoord'); mp = wnt.nodes.new('ShaderNodeMapping'); mp.inputs['Rotation'].default_value = (0, 0, math.pi)
+bg = wnt.nodes.new('ShaderNodeBackground'); wo = wnt.nodes.new('ShaderNodeOutputWorld')
+wnt.links.new(tc.outputs['Generated'], mp.inputs['Vector']); wnt.links.new(mp.outputs['Vector'], env.inputs['Vector'])
+wnt.links.new(env.outputs['Color'], bg.inputs['Color']); wnt.links.new(bg.outputs['Background'], wo.inputs['Surface'])
+manifest['sky'] = SKY
 
 
 def srgb(x):
@@ -79,6 +97,8 @@ def srgb(x):
 
 for name, size in (('World_inner', 4096), ('World_outer', 2048)):
     o = parts[name]; tag = name.split('_')[1]
+    if ONLY_COL:
+        continue
     if '--skip-bake' in args:
         manifest['lightmaps'][tag] = {'file': f'lm_{tag}.png', 'max': 1.0}; continue
     img = bpy.data.images.new('bake_' + tag, size, size, float_buffer=True)
@@ -88,7 +108,9 @@ for name, size in (('World_inner', 4096), ('World_outer', 2048)):
     for x in sc.objects:
         x.select_set(False)
     o.select_set(True); bpy.context.view_layer.objects.active = o
-    bpy.ops.object.bake(type='DIFFUSE', pass_filter={'DIRECT', 'INDIRECT'}, margin=6, use_clear=True)
+    o.data.uv_layers.active = o.data.uv_layers['Lightmap']  # the bake writes through the active UV map
+    bpy.ops.object.bake(type='DIFFUSE', pass_filter={'DIRECT', 'INDIRECT'}, margin=2, use_clear=True)
+    o.data.uv_layers.active = o.data.uv_layers['UVMap']
     for m, n in nodes:
         m.node_tree.nodes.remove(n)
     px = np.empty(size * size * 4, np.float32); img.pixels.foreach_get(px); px = px.reshape(size, size, 4)[..., :3]
@@ -123,14 +145,33 @@ def add_mesh(me, mw, mats):
 
 for o in parts.values():
     add_mesh(o.data, o.matrix_world, list(o.data.materials))
+MAX_COL_TRIS = 80  # per prototype part: collision needs the shape, not the detail (rocks are the bulk)
 coarse_cache = {}
+
+
+def coarse_mesh(o):
+    if o.name in coarse_cache:
+        return coarse_cache[o.name]
+    me = o.data; me.calc_loop_triangles(); n = len(me.loop_triangles)
+    if n > MAX_COL_TRIS:
+        tmp = bpy.data.objects.new('dec_' + o.name, me.copy()); sc.collection.objects.link(tmp)
+        mod = tmp.modifiers.new('d', 'DECIMATE'); mod.ratio = MAX_COL_TRIS / n
+        dg = bpy.context.evaluated_depsgraph_get(); me = bpy.data.meshes.new_from_object(tmp.evaluated_get(dg)); bpy.data.objects.remove(tmp)
+    coarse_cache[o.name] = me
+    return me
+
+
 for inst in [o for o in sc.objects if o.instance_collection]:
     if FOLIAGE.search(inst['model']):
         continue
-    col = bpy.data.collections[inst['coarse']]
-    for o in col.objects:
-        if o.type == 'MESH':
-            add_mesh(o.data, inst.matrix_world @ o.matrix_world, list(o.data.materials) or [None])
+    for o in bpy.data.collections[inst['coarse']].objects:
+        if o.type != 'MESH':
+            continue
+        mw = inst.matrix_world @ o.matrix_world
+        ext = max((mw @ Vector(c) - mw @ Vector(o.bound_box[0])).length for c in o.bound_box)
+        if ext < 0.35:  # pebbles and litter: under a step, not worth triangles
+            continue
+        add_mesh(coarse_mesh(o), mw, list(o.data.materials) or [None])
 pos = np.array(P, np.float32); idx = np.array(I, np.uint32); mat = np.array(M, np.uint8)
 used = np.unique(idx); remap = np.full(len(pos) // 3, 0, np.uint32); remap[used] = np.arange(len(used), dtype=np.uint32)
 pos = pos.reshape(-1, 3)[used]; idx = remap[idx]
@@ -138,6 +179,8 @@ with open(OUT / 'collision.bin', 'wb') as f:
     f.write(struct.pack('<4sIII', b'STRI', 1, len(pos), len(idx) // 3)); f.write(pos.tobytes()); f.write(idx.tobytes()); f.write(mat.tobytes())
 manifest['collision'] = {'vertices': int(len(pos)), 'triangles': int(len(idx) // 3), 'min': pos.min(0).tolist(), 'max': pos.max(0).tolist()}
 print('COLLISION', manifest['collision'], flush=True)
+if ONLY_COL:
+    sys.exit(0)
 
 # ---------- runtime glTF: world halves + every prop instance sharing its prototype mesh ----------
 exp = bpy.data.collections.new('export'); sc.collection.children.link(exp)
@@ -175,20 +218,23 @@ bpy.ops.export_scene.gltf(filepath=str(OUT / 'scene.gltf'), export_format='GLTF_
 
 # ---------- manifest: spawns, doors, bounds ----------
 def ents(name):
-    t = (WORK / f'wrap/maps/mp_rr_freedm_skulltown_{name}.ent').read_text(encoding='latin1')
+    t = (CFG['maps'] / f"{CFG['stem']}_{name}.ent").read_text(encoding='latin1')
     return [dict(re.findall(r'"([^"\n]+)"\s+"([^"\n]*)"', b)) for b in re.findall(r'\{([^{}]*)\}', t)]
 
 
-C = Vector((-41.0, -10.0, 0.0)); S = 0.0254
+C = Vector(CFG['center']); S = 0.0254
 game = lambda o: [round(float(o[0]) * S - C.x, 3), round(float(o[2]) * S - C.z, 3), round(-(float(o[1]) * S - C.y), 3)]
 manifest['spawns'] = [game(d['origin'].split()) + [round(math.radians(float(d.get('angles', '0 0 0').split()[1])), 3)]
                       for d in ents('spawn') if d['classname'] == 'info_spawnpoint_human' and d.get('gamemode_tdm') == '1']
 manifest['doors'] = [dict(zip('xyz', game(d['origin'].split())), yaw=math.radians(float(d.get('angles', '0 0 0').split()[1])), model=d.get('model', ''), id=d.get('le_guid', ''), link=d.get('link_to_guid_0', ''))
                      for d in ents('script') if d['classname'] == 'prop_door']
-sp = np.array([s[:3] for s in manifest['spawns']])
-manifest['playBounds'] = {'minX': float(sp[:, 0].min() - 25), 'maxX': float(sp[:, 0].max() + 25), 'minZ': float(sp[:, 2].min() - 25), 'maxZ': float(sp[:, 2].max() + 25)}
+if CFG['play']:
+    manifest['playBounds'] = {k: float(v) for k, v in CFG['play'].items()}
+else:
+    sp = np.array([s[:3] for s in manifest['spawns']])
+    manifest['playBounds'] = {'minX': float(sp[:, 0].min() - 25), 'maxX': float(sp[:, 0].max() + 25), 'minZ': float(sp[:, 2].min() - 25), 'maxZ': float(sp[:, 2].max() + 25)}
 manifest['killY'] = float(pos[:, 1].min() - 20)
 manifest['center_source_m'] = list(C); manifest['inner'] = INNER
-bpy.ops.wm.save_as_mainfile(filepath=str(WORK / 'skulltown_baked.blend'), copy=True)  # the baked scene, for a look in Blender
+bpy.ops.wm.save_as_mainfile(filepath=str(WORK / f"{CFG['name']}_baked.blend"), copy=True)  # the baked scene, for a look in Blender
 (OUT / 'manifest.json').write_text(json.dumps(manifest, separators=(',', ':')))
 print('EXPORTED', {k: v for k, v in manifest.items() if k not in ('spawns', 'doors')}, 'spawns', len(manifest['spawns']), 'doors', len(manifest['doors']), flush=True)

@@ -1,4 +1,4 @@
-// Full imported extent. Repeated meshes stay instanced; bots fight over the baked reachable area (tools/bake-apex-nav.mjs).
+// Apex maps shared by the triangle-collision maps (src/07w_skulltown.js): doors, baked navigation, baked spawns.
 // Doors at the original prop_door positions (v60: Apex's own leaf, canyonlands_door_single_02_avt, 1.52 × 2.64 m, hinge at its
 // origin — tools/blender/apex_door.py; a box stand-in without it). A leaf linked to another (link_to_guid_0) is half of a double
 // door: both open and close together. Every leaf swings into the building — the side with a roof over it — whichever side it
@@ -77,90 +77,6 @@ class ApexDoors {
   }
 }
 
-// The baked collision is 0.5–1 m columns, so door frames and the lintel spill into each doorway: cut every column back to the
-// floor and lintel inside each leaf's opening (1.5 m wide, ±0.35 m off the wall, 0.22–2.6 m above the door's floor).
-function apexCarveDoors(boxes, doors) {
-  const out = [], cut = [];
-  for (const e of doors) {
-    const ux = -Math.sin(e.yaw), uz = -Math.cos(e.yaw), nx = Math.cos(e.yaw), nz = -Math.sin(e.yaw), pts = [];
-    for (const [u, v] of [[-0.05, -0.35], [1.55, -0.35], [1.55, 0.35], [-0.05, 0.35]]) pts.push([e.x + ux * u + nx * v, e.z + uz * u + nz * v]);
-    cut.push({ e, ux, uz, nx, nz, x0: Math.min(...pts.map((p) => p[0])), x1: Math.max(...pts.map((p) => p[0])), z0: Math.min(...pts.map((p) => p[1])), z1: Math.max(...pts.map((p) => p[1])), y0: e.y + 0.22, y1: e.y + 2.6 });
-  }
-  let n = 0;
-  for (let j = 0; j < boxes.length; j += 6) {
-    const bx0 = boxes[j], by0 = boxes[j + 1], bz0 = boxes[j + 2], bx1 = boxes[j + 3], by1 = boxes[j + 4], bz1 = boxes[j + 5];
-    let hit = null;
-    for (const c of cut) {
-      if (bx1 <= c.x0 || bx0 >= c.x1 || bz1 <= c.z0 || bz0 >= c.z1 || by1 <= c.y0 || by0 >= c.y1) continue;
-      let u0 = Infinity, u1 = -Infinity, v0 = Infinity, v1 = -Infinity; // the box's corners on the door axes
-      for (const [x, z] of [[bx0, bz0], [bx1, bz0], [bx1, bz1], [bx0, bz1]]) { const u = (x - c.e.x) * c.ux + (z - c.e.z) * c.uz, v = (x - c.e.x) * c.nx + (z - c.e.z) * c.nz; u0 = Math.min(u0, u); u1 = Math.max(u1, u); v0 = Math.min(v0, v); v1 = Math.max(v1, v); }
-      if (u1 <= -0.05 || u0 >= 1.55 || v1 <= -0.35 || v0 >= 0.35) continue;
-      hit = c; break;
-    }
-    if (!hit) { out.push(bx0, by0, bz0, bx1, by1, bz1); continue; }
-    n++;
-    if (by0 < hit.y0 - 0.01) out.push(bx0, by0, bz0, bx1, hit.y0, bz1);
-    if (by1 > hit.y1 + 0.01) out.push(bx0, hit.y1, bz0, bx1, by1, bz1);
-  }
-  return { boxes: new Float32Array(out), cut: n };
-}
-
-// Keeps the full world cheap: static physics exists only in 16 m tiles around combatants and live grenades (the whole map
-// would flood the cannon broadphase), and props farther than 110 m are hidden (the terrain shell always draws).
-// A tile body is built once and kept; tiles join within 2 tiles of someone and leave beyond 3 (no churn at a border).
-class ApexStreaming {
-  constructor(b, boxes, meshes) {
-    this.b = b; this.meshes = meshes; this.active = new Map(); this.built = new Map(); this.physT = 0; this.cullT = 0;
-    // tile key -> indices of the packed boxes (x0 y0 z0 x1 y1 z1) crossing it
-    this.tiles = new Map();
-    for (let i = 0, n = boxes.length / 6; i < n; i++) {
-      const j = i * 6;
-      for (let x = Math.floor(boxes[j] / 16); x <= Math.floor((boxes[j + 3] - 0.001) / 16); x++)
-        for (let z = Math.floor(boxes[j + 2] / 16); z <= Math.floor((boxes[j + 5] - 0.001) / 16); z++) {
-          const key = x + ',' + z; let t = this.tiles.get(key); if (!t) this.tiles.set(key, t = []); t.push(i);
-        }
-    }
-    this.boxes = boxes;
-  }
-  _body(key) { // one static compound per tile, each box clipped to the tile
-    const [x, z] = key.split(',').map(Number), a = this.boxes, x0 = x * 16, z0 = z * 16;
-    const body = new CANNON.Body({ mass: 0, material: this.b.phys.matDefault }); body.position.set(x0, 0, z0);
-    for (const i of this.tiles.get(key)) { // what Body.addShape does, with the radius / mass update once at the end (it is O(shapes) per add)
-      const j = i * 6, minX = Math.max(a[j], x0), minZ = Math.max(a[j + 2], z0), maxX = Math.min(a[j + 3], x0 + 16), maxZ = Math.min(a[j + 5], z0 + 16);
-      const s = new CANNON.Box(new CANNON.Vec3((maxX - minX) / 2, (a[j + 4] - a[j + 1]) / 2, (maxZ - minZ) / 2)); s.body = body;
-      body.shapes.push(s); body.shapeOffsets.push(new CANNON.Vec3((minX + maxX) / 2 - x0, (a[j + 1] + a[j + 4]) / 2, (minZ + maxZ) / 2 - z0)); body.shapeOrientations.push(new CANNON.Quaternion());
-    }
-    body.updateMassProperties(); body.updateBoundingRadius(); body.aabbNeedsUpdate = true;
-    return body;
-  }
-  tick(h) {
-    if ((this.physT -= h) > 0) return;
-    this.physT = 0.25;
-    const g = this.b.game, world = this.b.phys.world, wanted = new Set(), keep = new Set(), pos = g.combatants.filter((c) => c.alive).map((c) => c.motor.pos);
-    for (const gr of g.grenades) if (gr.dyn?.body) pos.push(gr.dyn.body.position);
-    for (const p of pos) {
-      const tx = Math.floor(p.x / 16), tz = Math.floor(p.z / 16);
-      for (let x = tx - 3; x <= tx + 3; x++) for (let z = tz - 3; z <= tz + 3; z++) { const key = x + ',' + z; keep.add(key); if (Math.abs(x - tx) <= 2 && Math.abs(z - tz) <= 2) wanted.add(key); }
-    }
-    for (const [key, body] of this.active) if (!keep.has(key)) { world.removeBody(body); this.active.delete(key); }
-    let builds = 6; // new tiles per pass at most: the 2-tile margin is 32 m, a runner covers 1.5 m per pass
-    for (const key of wanted) {
-      if (this.active.has(key) || !this.tiles.has(key)) continue;
-      let body = this.built.get(key);
-      if (!body) { if (builds-- <= 0) continue; body = this._body(key); this.built.set(key, body); }
-      world.addBody(body); this.active.set(key, body);
-    }
-  }
-  render(dt) {
-    if ((this.cullT -= dt) > 0) return;
-    this.cullT = 0.25;
-    const p = this.b.game.camera.position;
-    for (const m of this.meshes) m.visible = m.userData.fullWorld || m.boundingSphere.center.distanceTo(p) - m.boundingSphere.radius < 110;
-  }
-  interact() { return false; }
-  prompt() { return null; }
-}
-
 // Baked navigation (tools/bake-apex-nav.mjs): u32 nodes, u32 links, Float32 x y z per node, then per link Int32 from, to, kind
 // and Float32 cost — for NavGraph._baked.
 function apexNav(buf) {
@@ -170,78 +86,9 @@ function apexNav(buf) {
   return { pos, from, to, kind, cost };
 }
 // Baked spawn groups (west / east, out of each other's sight) and forward groups the match picks when they are safe.
-function apexFullSpawns(team, game) { return apexBakedSpawns(game.def._full.navMeta, team, game); }
-function apexBakedSpawns(S, team, game) { // (also Skull Town's)
+function apexBakedSpawns(S, team, game) {
   const v = (p) => new THREE.Vector3(p[0], p[1], p[2]);
   game.fwdSpawns = game.fwdSpawns || {};
   game.fwdSpawns[team] = S.forward[team].map((f) => ({ pts: f.pts.map(v), c: v(f.pts[0]), yaw: f.yaw }));
   return { pts: S.spawns[team].pts.map(v), yaw: S.spawns[team].yaw };
 }
-
-MAPS.push({
-  id: 'apex_full', name: 'Apex 訓練場・全場景', en: 'APEX FULL RANGE',
-  desc: '全場景探索 · E 電動門 · 二段跳／滑鏟／攀爬', slogan: '完整匯入範圍 · 近似碰撞',
-  bounds: { minX: -909, maxX: 208, minZ: -780, maxZ: 244 }, indoor: false, navLevels: [], killY: -284, killOutside: true, traversal: true,
-  background: 0x9daeb9, envIntensity: 0.6, exposure: 0.8,
-  sun: { pos: [-20, 70, 25], color: 0xfff0d5, intensity: 2 }, hemi: [0xdce8f2, 0x665b49, 1.2],
-  fog: { color: 0x9daeb9, near: 400, far: 1400 }, acoustics: 'outdoor', ambience: 'wind',
-  shot: { pos: [-350, 800, 350], target: [-350, 0, -250] },
-  thumb: { pos: [65, 45, -70], target: [-10, 5, 15] }, // room picture: the village under the fog, not the overview
-  objectives: { dom: [[-20, 0, 0], [0, 0, 0], [20, 0, 0]], relic: [0, 0, 0], domRadius: 3.6 }, // replaced by the baked ones on load
-  spawnPoints: apexFullSpawns,
-  async preload() {
-    if (this._full) return;
-    const p = await apexPack('apex_full', 'assets/maps/apex-full/'), text = (b) => JSON.parse(new TextDecoder().decode(b));
-    const manifest = text(p.manifest), navMeta = text(p.navMeta);
-    this._full = { manifest, navMeta, nav: apexNav(p.nav), data: apexCollision(p.collision), gltf: await apexGLTF(p.glb), door: p.door ? (await apexGLTF(p.door)).scene : null };
-    // the whole reachable area is the battlefield: baked objectives, and the bots' lanes / push direction use its extent
-    this.killY = manifest.killY; this.objectives = navMeta.objectives; this.aiBounds = navMeta.aiBounds;
-    const A = navMeta.spawns.alpha.pts[0], C = navMeta.spawns.bravo.pts[0], dx = C[0] - A[0], dz = C[2] - A[2], l = Math.hypot(dx, dz);
-    this.aiAxis = { mx: (A[0] + C[0]) / 2, mz: (A[2] + C[2]) / 2, ax: dx / l, az: dz / l, half: l * 0.62, laneHalf: Math.max(40, l * 0.4) }; // spawns at ±0.8 of the push
-  },
-  build(b) {
-    const S = this._full && this._full.navMeta.spawns, zone = (t) => { const p = S[t].pts[0]; b.spawnZone(t, p[0] - 6, p[2] - 6, p[0] + 6, p[2] + 6, S[t].yaw); };
-    if (S) { zone('alpha'); zone('bravo'); } else { b.spawnZone('alpha', -30, -30, -24, -24, 0); b.spawnZone('bravo', 24, 24, 30, 30, Math.PI); } // (lobby preview before the first load)
-    if (b.dry) return;
-    const { data, gltf, manifest } = this._full;
-    b.navBaked = this._full.nav;
-    b.game.camera.far = 2200; b.game.camera.updateProjectionMatrix();
-    const carved = apexCarveDoors(data.boxes, manifest.doors); // (kept: the bake and every match carve the same openings)
-    b.col.addPacked(carved.boxes, { material: 'concrete' });
-    // Visual geometry retains shared prototypes and original transforms.
-    gltf.scene.updateMatrixWorld(true);
-    const batches = new Map(), villageMats = new Map(); let objects = 0;
-    // the village batch gets its own copy of a material: one material drawn both merged and instanced makes three.js re-pick
-    // its shader program at every switch (instancing and vertex-alpha flags differ)
-    const villageMat = (m) => { let c = villageMats.get(m); if (!c) villageMats.set(m, c = m.clone()); return c; };
-    gltf.scene.traverse((o) => {
-      if (!o.isMesh) return; objects++;
-      // Engine-only fog cards need their depth-fade shaders; opaque substitutes obscure the map.
-      if (/atmosphere|fog_volume|godray|lightshaft|vistas/i.test(o.name)) return;
-      const mat = o.material;
-      for (const m of Array.isArray(mat) ? mat : [mat]) {
-        m.side = THREE.DoubleSide; // the export has cropped and one-sided shells seen from behind
-        if (m.transparent && !/glass/i.test(m.name)) { m.alphaTest = 0.35; m.transparent = false; m.depthWrite = true; }
-        if (/decal|stain|stencil/i.test(m.name)) { m.polygonOffset = true; m.polygonOffsetFactor = -1; m.polygonOffsetUnits = -1; }
-      }
-      const matrix = o.matrixWorld.clone(); matrix.elements[13] += data.visualYOffset; // same visual drop as the test region's GLB
-      const p = new THREE.Vector3().setFromMatrixPosition(matrix);
-      if (Math.abs(p.x) <= 40 && Math.abs(p.z) <= 40 && !Array.isArray(mat) && !mat.transparent) { // the village: merged per material
-        const geo = o.geometry.clone(); geo.applyMatrix4(matrix); b._batch(villageMat(mat), geo, false); return;
-      }
-      const key = o.geometry.uuid + ':' + (Array.isArray(mat) ? mat.map((m) => m.uuid).join(',') : mat.uuid) + ':' + Math.floor(p.x / 64) + ',' + Math.floor(p.z / 64);
-      if (!batches.has(key)) batches.set(key, { geo: o.geometry, mat, matrices: [], world: /Full_world|Full world/i.test(o.name) });
-      batches.get(key).matrices.push(matrix);
-    });
-    const meshes = [];
-    for (const batch of batches.values()) {
-      const mesh = new THREE.InstancedMesh(batch.geo, batch.mat, batch.matrices.length);
-      batch.matrices.forEach((m, i) => mesh.setMatrixAt(i, m)); mesh.computeBoundingSphere();
-      mesh.castShadow = false; mesh.receiveShadow = true; mesh.userData.fullWorld = batch.world; // no static shadow casters on the full map (cost)
-      b.scene.add(mesh); meshes.push(mesh);
-    }
-    const doors = new ApexDoors(b, manifest.doors, this._full.door);
-    b.mechs.push(doors, new ApexStreaming(b, carved.boxes, meshes));
-    window.__apexFull = { objects, drawGroups: batches.size, doors: doors.doors.length, collisionBoxes: carved.boxes.length / 6, doorCuts: carved.cut, manifest };
-  }
-});

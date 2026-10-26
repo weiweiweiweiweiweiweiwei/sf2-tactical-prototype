@@ -9,7 +9,7 @@ Run after the Blender exports (tools/blender/apex_full.py, the test-region GLB):
 - skulltown: tools/out/apex/skulltown/export (tools/blender/skulltown_export.py) textures and both lightmaps, in place
   (the export is rebuilt from the .blend; lightmaps at quality 92, 4:2:0 is fine for smooth light).
 Idempotent: already-converted textures are skipped.
-    python tools/compress-apex-textures.py [skulltown]
+    python tools/compress-apex-textures.py [skulltown | range]
 """
 import io, json, os, shutil, struct
 from PIL import Image
@@ -115,8 +115,8 @@ def test_region():
     print(f'apex-test: {len(replaced)} images -> JPEG, {before / 1e6:.1f} MB -> {os.path.getsize(path) / 1e6:.1f} MB')
 
 
-def skulltown():
-    root = os.path.join(OUT, 'skulltown', 'export') + '/'
+def tri_map(name):
+    root = os.path.join(OUT, name, 'export') + '/'
     gltf = json.load(open(root + 'scene.gltf', encoding='utf-8'))
     before = after = changed = 0
     for img in gltf.get('images', []):
@@ -139,13 +139,13 @@ def skulltown():
     json.dump(gltf, open(root + 'scene.gltf', 'w', encoding='utf-8'), separators=(',', ':'))
     for lm in ('lm_inner', 'lm_outer'):
         Image.open(root + lm + '.png').convert('RGB').save(root + lm + '.jpg', 'JPEG', quality=92, optimize=True)
-    print(f'skulltown: {changed} textures -> JPEG, {before / 1e6:.1f} MB -> {after / 1e6:.1f} MB')
+    print(f'{name}: {changed} textures -> JPEG, {before / 1e6:.1f} MB -> {after / 1e6:.1f} MB')
 
 
 if __name__ == '__main__':
     import sys
-    if sys.argv[1:] == ['skulltown']:
-        skulltown()
+    if sys.argv[1:2] in (['skulltown'], ['range']):
+        tri_map(sys.argv[1])
     else:
         full_range()
         test_region()

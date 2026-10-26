@@ -1,7 +1,7 @@
 // Ship the Apex maps as script chunks so a double-clicked index.html (file://, where fetch is blocked) loads them,
 // like the other Blender maps (assets/maps/*.js). Read by apexPack() in src/07u_apex.js.
 //   node tools/pack-apex-js.mjs            # both maps; run after pack-apex-collision.mjs / compress-apex-textures.py
-//   node tools/pack-apex-js.mjs skulltown  # v60 Skull Town from tools/out/apex/skulltown/export (compress-apex-textures.py skulltown first)
+//   node tools/pack-apex-js.mjs skulltown|range  # v60 triangle maps from tools/out/apex/<map>/export (compress-apex-textures.py <map> first)
 // Per map: assets/maps/<dir>/pack/index.js registers the bundle layout (byte ranges of its parts), then 0.js, 1.js, …
 // each hand one base64 piece of the bundle to APEX_PACK.chunk(id, i, b64). The full range's scene.gltf + scene.bin +
 // textures become one GLB with the images embedded. Both GLBs get Draco geometry (glTF-Transform: names, materials, images
@@ -18,6 +18,10 @@ import draco3d from 'draco3dgltf';
 const compress = async (glb, keepAttributes = false) => { // a fresh encoder per map (keepAttributes: TEXCOORD_1 lightmap UVs)
   const io = new NodeIO().registerExtensions(ALL_EXTENSIONS).registerDependencies({ 'draco3d.encoder': await draco3d.createEncoderModule(), 'draco3d.decoder': await draco3d.createDecoderModule() });
   const doc = await io.readBinary(new Uint8Array(glb.buffer, glb.byteOffset, glb.length));
+  if (keepAttributes) { // lightmap UVs live on the world meshes only; CAST props carry a stray second UV set (denormals that abort Draco)
+    const world = new Set(doc.getRoot().listNodes().filter((n) => /^World_/.test(n.getName())).map((n) => n.getMesh()));
+    for (const m of doc.getRoot().listMeshes()) if (!world.has(m)) for (const p of m.listPrimitives()) p.setAttribute('TEXCOORD_1', null);
+  }
   await doc.transform(prune({ keepLeaves: true, keepIndices: true, keepSolidTextures: true, keepExtras: true, keepAttributes }), draco({ method: 'edgebreaker', encodeSpeed: 5, decodeSpeed: 5, quantizePosition: 16, quantizeNormal: 10, quantizeTexcoord: 12, quantizeColor: 8, quantizeGeneric: 12 }));
   const out = Buffer.from(await io.writeBinary(doc));
   console.log('  draco', (glb.length / 1e6).toFixed(1), 'MB ->', (out.length / 1e6).toFixed(1), 'MB');
@@ -60,9 +64,18 @@ function pack(id, dir, files) {
 
 // Skull Town triangles: 'STRI' float32 from the Blender export -> 'STRQ' Int16 positions (metres × scale), Uint32 indices,
 // Uint8 surfaces (read by skullTris() in src/07w_skulltown.js)
-const skullTris = (buf) => {
-  const nv = buf.readUInt32LE(8), nt = buf.readUInt32LE(12), pos = new Float32Array(buf.buffer.slice(buf.byteOffset + 16, buf.byteOffset + 16 + nv * 12));
-  const io = 16 + nv * 12, idx = buf.subarray(io, io + nt * 12), mats = buf.subarray(io + nt * 12, io + nt * 13);
+const skullTris = (buf, B, M = 12) => { // only triangles touching the play bounds (+ M m): the arena walls keep everyone inside
+  const nv0 = buf.readUInt32LE(8), nt0 = buf.readUInt32LE(12), P = new Float32Array(buf.buffer.slice(buf.byteOffset + 16, buf.byteOffset + 16 + nv0 * 12));
+  const io0 = 16 + nv0 * 12, I = new Uint32Array(buf.buffer.slice(buf.byteOffset + io0, buf.byteOffset + io0 + nt0 * 12)), Ms = buf.subarray(io0 + nt0 * 12, io0 + nt0 * 13);
+  const inb = (v) => P[v * 3] >= B.minX - M && P[v * 3] <= B.maxX + M && P[v * 3 + 2] >= B.minZ - M && P[v * 3 + 2] <= B.maxZ + M;
+  const remap = new Int32Array(nv0).fill(-1), keepPos = [], keepIdx = [], keepMat = [];
+  for (let t = 0; t < nt0; t++) {
+    const a = I[t * 3], b = I[t * 3 + 1], c = I[t * 3 + 2]; if (!inb(a) && !inb(b) && !inb(c)) continue;
+    for (const v of [a, b, c]) { if (remap[v] < 0) { remap[v] = keepPos.length / 3; keepPos.push(P[v * 3], P[v * 3 + 1], P[v * 3 + 2]); } keepIdx.push(remap[v]); }
+    keepMat.push(Ms[t]);
+  }
+  const nv = keepPos.length / 3, nt = keepMat.length, pos = Float32Array.from(keepPos), idx = Buffer.from(Uint32Array.from(keepIdx).buffer), mats = Buffer.from(keepMat);
+  console.log('  cropped', nt0, '->', nt, 'triangles');
   const max = pos.reduce((m, v) => Math.max(m, Math.abs(v)), 0), scale = Math.min(64, Math.floor(32767 / max));
   const q = Buffer.alloc(nv * 6); for (let i = 0; i < pos.length; i++) q.writeInt16LE(Math.round(pos[i] * scale), i * 2);
   const head = Buffer.alloc(20); head.write('STRQ', 0); head.writeUInt32LE(1, 4); head.writeUInt32LE(nv, 8); head.writeUInt32LE(nt, 12); head.writeFloatLE(scale, 16);
@@ -71,17 +84,18 @@ const skullTris = (buf) => {
   return Buffer.concat([head, q, pad, idx, mats]);
 };
 const DOOR = 'tools/out/apex/door/door.glb'; // Apex's door leaf (tools/blender/apex_door.py), both full maps
-if (process.argv[2] === 'skulltown') {
-  const X = 'tools/out/apex/skulltown/export', D = 'assets/maps/apex-skulltown';
+const TRI = { skulltown: ['apex_skulltown', 'assets/maps/apex-skulltown'], range: ['apex_full', 'assets/maps/apex-range'] }; // tools/blender/apex_maps.py names
+if (TRI[process.argv[2]]) {
+  const [ID, D] = TRI[process.argv[2]], X = `tools/out/apex/${process.argv[2]}/export`;
   fs.mkdirSync(D, { recursive: true });
-  pack('apex_skulltown', D, {
+  pack(ID, D, {
     glb: await compress(glbFromGltf(X, 'scene.gltf'), true),
-    collision: skullTris(fs.readFileSync(path.join(X, 'collision.bin'))),
+    collision: skullTris(fs.readFileSync(path.join(X, 'collision.bin')), JSON.parse(fs.readFileSync(path.join(X, 'manifest.json'))).playBounds),
     manifest: fs.readFileSync(path.join(X, 'manifest.json')),
     lm_inner: fs.readFileSync(path.join(X, 'lm_inner.jpg')),
     lm_outer: fs.readFileSync(path.join(X, 'lm_outer.jpg')),
     door: fs.readFileSync(DOOR),
-    ...(fs.existsSync(D + '/nav.bin') ? { nav: fs.readFileSync(D + '/nav.bin'), navMeta: fs.readFileSync(D + '/nav.json') } : {}), // tools/bake-apex-nav.mjs apex_skulltown
+    ...(fs.existsSync(D + '/nav.bin') ? { nav: fs.readFileSync(D + '/nav.bin'), navMeta: fs.readFileSync(D + '/nav.json') } : {}), // tools/bake-apex-nav.mjs <map id>
   });
 } else {
   pack('apex_test', 'assets/maps/apex-test', {

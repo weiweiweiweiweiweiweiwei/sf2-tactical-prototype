@@ -17,7 +17,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const MAP = process.argv[2] || 'apex_full', ROOT = process.cwd();
-const OPT = { apex_full: { out: 'assets/maps/apex-full/', dist: [150, 240] }, apex_skulltown: { out: 'assets/maps/apex-skulltown/', dist: [110, 190] } }[MAP], OUT = OPT.out;
+const OPT = { apex_full: { out: 'assets/maps/apex-range/', dist: [150, 240] }, apex_skulltown: { out: 'assets/maps/apex-skulltown/', dist: [110, 190] } }[MAP], OUT = OPT.out;
 const T = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.json': 'application/json' };
 const srv = http.createServer((q, s) => { const p = path.join(ROOT, decodeURIComponent(new URL(q.url, 'http://x').pathname)); if (!fs.existsSync(p) || fs.statSync(p).isDirectory()) { s.writeHead(404); s.end(); return; } s.writeHead(200, { 'Content-Type': T[path.extname(p)] || 'application/octet-stream' }); fs.createReadStream(p).pipe(s); });
 await new Promise((r) => srv.listen(0, '127.0.0.1', r));

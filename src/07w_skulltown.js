@@ -24,6 +24,7 @@ async function skullTexture(buf) {
 function skullWorldMaterial(src, lm, scale) {
   const m = new THREE.MeshLambertMaterial({ map: src.map, color: src.color, lightMap: lm, lightMapIntensity: scale, side: THREE.DoubleSide,
     alphaTest: src.alphaTest || (src.transparent ? 0.35 : 0), transparent: false, name: src.name });
+  if (/thunderdome_fence|arena_start_barrier/i.test(src.name)) m.visible = false; // the Arenas hex fence and start barriers (the sky shows instead)
   if (/decal|stain|drip|_transparent|erosion/i.test(src.name)) { m.polygonOffset = true; m.polygonOffsetFactor = -1; m.polygonOffsetUnits = -1; }
   m.onBeforeCompile = (sh) => {
     sh.fragmentShader = sh.fragmentShader.replace('#include <lights_fragment_maps>', `
@@ -35,7 +36,7 @@ function skullWorldMaterial(src, lm, scale) {
       #ifdef USE_LIGHTMAP
         vec4 lightMapTexel = texture2D( lightMap, vLightMapUv );
         float sunK = smoothstep( 0.35, 0.7, max( lightMapTexel.r, max( lightMapTexel.g, lightMapTexel.b ) ) );
-        irradiance = lightMapTexel.rgb * lightMapIntensity * mix( 1.0, 0.4 + 0.6 * sunVis, sunK );
+        irradiance = ( lightMapTexel.rgb + vec3( 0.035, 0.04, 0.05 ) ) * lightMapIntensity * mix( 1.0, 0.4 + 0.6 * sunVis, sunK ); // + a little sky: rooms the bake left black
       #endif`).replace('#include <lights_fragment_end>', '#include <lights_fragment_end>\n      reflectedLight.directDiffuse = vec3( 0.0 );');
   };
   m.customProgramCacheKey = () => 'skullWorld';
@@ -93,80 +94,106 @@ class SkullStreaming {
   prompt() { return null; }
 }
 
-MAPS.push({
-  id: 'apex_skulltown', name: 'Apex 骷髏鎮', en: 'SKULL TOWN',
+// Skull Town is an Arenas map: a hex dome (live_fire_frame), its rings, girders and walls close it in. Node names are the models (a multi-material one: its parent's).
+const APEX_ARENA_SHELL = /^(live_fire_frame|fs_girder_beam|fs_modular_\w*floorconnector|grave_wall_gasket|thunderdome|fake_sky)/i;
+
+// Shared by the triangle-collision Apex maps (Skull Town, the rebuilt firing range): the pack (packDir) holds glb, collision,
+// manifest, lm_inner, lm_outer, door and — once tools/bake-apex-nav.mjs has run — nav + navMeta.
+function apexTriMap(def) {
+  return Object.assign({
+    spawnPoints(team, game) {
+      const S = game.def._tri.navMeta;
+      if (!S) { const p = team === 'alpha' ? [-60, 4, 0] : [60, 4, 0]; return { pts: [new THREE.Vector3(...p)], yaw: team === 'alpha' ? -Math.PI / 2 : Math.PI / 2 }; } // (nav bake run)
+      return apexBakedSpawns(S, team, game);
+    },
+    async preload() {
+      if (this._tri) return;
+      const p = await apexPack(this.id, this.packDir), text = (b) => JSON.parse(new TextDecoder().decode(b));
+      const manifest = text(p.manifest), navMeta = p.navMeta ? text(p.navMeta) : null;
+      const [lmInner, lmOuter, gltf, door] = await Promise.all([skullTexture(p.lm_inner), skullTexture(p.lm_outer), apexGLTF(p.glb), apexGLTF(p.door)]);
+      this._tri = { manifest, navMeta, nav: p.nav ? apexNav(p.nav) : null, tris: skullTris(p.collision), gltf, door: door.scene, lm: { inner: lmInner, outer: lmOuter } };
+      const B = manifest.playBounds; this.bounds = { minX: Math.floor(B.minX), maxX: Math.ceil(B.maxX), minZ: Math.floor(B.minZ), maxZ: Math.ceil(B.maxZ) };
+      this.killY = manifest.killY;
+      if (navMeta) {
+        this.objectives = navMeta.objectives; this.aiBounds = navMeta.aiBounds;
+        const A = navMeta.spawns.alpha.pts[0], C = navMeta.spawns.bravo.pts[0], dx = C[0] - A[0], dz = C[2] - A[2], l = Math.hypot(dx, dz);
+        this.aiAxis = { mx: (A[0] + C[0]) / 2, mz: (A[2] + C[2]) / 2, ax: dx / l, az: dz / l, half: l * 0.62, laneHalf: Math.max(30, l * 0.4) };
+      }
+    },
+    build(b) {
+      const S = this._tri && this._tri.navMeta && this._tri.navMeta.spawns, zone = (t) => { const p = S[t].pts[0]; b.spawnZone(t, p[0] - 5, p[2] - 5, p[0] + 5, p[2] + 5, S[t].yaw); };
+      if (S) { zone('alpha'); zone('bravo'); } else { b.spawnZone('alpha', -65, -5, -55, 5, -Math.PI / 2); b.spawnZone('bravo', 55, -5, 65, 5, Math.PI / 2); }
+      if (b.dry) return;
+      const { manifest, tris, gltf, lm, nav } = this._tri;
+      if (nav) b.navBaked = nav;
+      b.game.camera.far = 1600; b.game.camera.updateProjectionMatrix();
+      const soup = b.col.addTris(tris.pos, tris.idx, 'concrete', tris.mats);
+      b.phys.triGround = new TriGround(soup);
+      // the edge of the arena: invisible walls 2 m outside the play bounds (moves, shots, grenades)
+      const B = this.bounds, H = 120, L = -60;
+      for (const a of [[B.minX - 3, L, B.minZ - 3, B.minX - 2, H, B.maxZ + 3], [B.maxX + 2, L, B.minZ - 3, B.maxX + 3, H, B.maxZ + 3], [B.minX - 3, L, B.minZ - 3, B.maxX + 3, H, B.minZ - 2], [B.minX - 3, L, B.maxZ + 2, B.maxX + 3, H, B.maxZ + 3]]) {
+        const lo = new THREE.Vector3(a[0], a[1], a[2]), hi = new THREE.Vector3(a[3], a[4], a[5]);
+        b.col.addBox(lo, hi, { material: 'concrete', radar: 'wall' }); b.phys.addStaticBox(lo, hi);
+      }
+      // visuals: the two world halves with their lightmaps; props instanced per geometry / material / 64 m cell
+      gltf.scene.updateMatrixWorld(true);
+      const batches = new Map(), worldMats = new Map(), scale = Math.PI * 0.85;
+      const meshes = []; let objects = 0;
+      gltf.scene.traverse((o) => {
+        if (!o.isMesh) return; objects++;
+      if (APEX_ARENA_SHELL.test(o.name) || APEX_ARENA_SHELL.test(o.parent?.name || '') || /cubemap|ascent_test_colors/i.test((Array.isArray(o.material) ? o.material[0] : o.material).name)) return; // the Arenas shell (its hex dome wears a dev test material) hides the sky; reflection-probe boxes
+        if (/^World_(inner|outer)/.test(o.name) || /^World_(inner|outer)/.test(o.parent?.name || '')) {
+          const part = /inner/.test(o.name + (o.parent?.name || '')) ? 'inner' : 'outer', L = lm[part], max = manifest.lightmaps[part].max;
+          const conv = (m) => { const k = m.uuid + part; if (!worldMats.has(k)) worldMats.set(k, skullWorldMaterial(m, L, max * scale)); return worldMats.get(k); };
+          const mesh = new THREE.Mesh(o.geometry, Array.isArray(o.material) ? o.material.map(conv) : conv(o.material));
+          mesh.matrixAutoUpdate = false; mesh.matrix.copy(o.matrixWorld); mesh.matrixWorldNeedsUpdate = true;
+          mesh.receiveShadow = true; mesh.castShadow = false; b.scene.add(mesh); return;
+        }
+        for (const m of Array.isArray(o.material) ? o.material : [o.material]) {
+          if (m.transparent && !/glass/i.test(m.name)) { m.alphaTest = 0.35; m.transparent = false; m.depthWrite = true; }
+          if (m.alphaTest > 0 || /grass|plant|bush|foliage|leaf|fence|chain|wire/i.test(m.name)) m.side = THREE.DoubleSide;
+        }
+        const p = new THREE.Vector3().setFromMatrixPosition(o.matrixWorld);
+        const key = o.geometry.uuid + ':' + (Array.isArray(o.material) ? o.material.map((m) => m.uuid).join(',') : o.material.uuid) + ':' + Math.floor(p.x / 64) + ',' + Math.floor(p.z / 64);
+        if (!batches.has(key)) batches.set(key, { geo: o.geometry, mat: o.material, matrices: [] });
+        batches.get(key).matrices.push(o.matrixWorld.clone());
+      });
+      for (const batch of batches.values()) {
+        const mesh = new THREE.InstancedMesh(batch.geo, batch.mat, batch.matrices.length);
+        batch.matrices.forEach((m, i) => mesh.setMatrixAt(i, m)); mesh.computeBoundingSphere();
+        mesh.castShadow = false; mesh.receiveShadow = true; // their shadows are in the bake
+        b.scene.add(mesh); meshes.push(mesh);
+      }
+      const doors = new ApexDoors(b, manifest.doors, this._tri.door);
+      b.mechs.push(doors, new SkullStreaming(b, soup, meshes));
+      window.__triMap = { objects, drawGroups: batches.size, doors: doors.doors.length, triangles: soup.n, manifest };
+    }
+  }, def);
+}
+
+MAPS.push(apexTriMap({
+  id: 'apex_skulltown', packDir: 'assets/maps/apex-skulltown/', name: 'Apex 骷髏鎮', en: 'SKULL TOWN',
   desc: '原版場景與擺設 · 烘焙光照 · 真實三角形碰撞 · E 開門', slogan: '巨獸骸骨下的小鎮 · 屋頂、巷弄、斜坡',
   bounds: { minX: -150, maxX: 150, minZ: -150, maxZ: 150 }, indoor: false, navLevels: [], killY: -60, killOutside: true, traversal: true,
-  background: 0xa9c4dc, envIntensity: 0.55, exposure: 0.85,
-  sun: { pos: [1.5, 68, -73], color: 0xffeed7, intensity: 2.6 }, hemi: [0xbcd6ee, 0x8a7356, 1.1], // the map's light_environment: 42.8° up, from Apex −y
-  fog: { color: 0xa9c4dc, near: 160, far: 900 }, acoustics: 'outdoor', ambience: 'desert', shadowFollow: 60,
+  // the sky is the Poly Haven HDRI the bake was lit by (tools/blender/skulltown_export.py SKY): background, IBL and the live sun's
+  // direction (props, soldiers) all match the lightmaps
+  hdri: 'kloofendal_48d_partly_cloudy_puresky', hdriBackground: true, background: 0xb8c8d8, envIntensity: 0.55, exposure: 0.85,
+  sun: { pos: [1.5, 68, -73], color: 0xfff1de, intensity: 2.6, auto: true }, hemi: [0xbcd6ee, 0x8a7356, 0.6],
+  fog: { color: 0xc4ced8, near: 180, far: 1100 }, acoustics: 'outdoor', ambience: 'desert', shadowFollow: 60,
   shot: { pos: [0, 260, 120], target: [0, 0, 0] },
   thumb: { pos: [-60, 30, 70], target: [0, 6, 0] },
   objectives: { dom: [[-30, 0, 0], [0, 0, 0], [30, 0, 0]], relic: [0, 0, 0], domRadius: 5 }, // replaced by the baked ones on load
-  spawnPoints(team, game) {
-    const S = game.def._skull.navMeta;
-    if (!S) { const p = team === 'alpha' ? [-60, 4, 0] : [60, 4, 0]; return { pts: [new THREE.Vector3(...p)], yaw: team === 'alpha' ? -Math.PI / 2 : Math.PI / 2 }; } // (nav bake run)
-    return apexBakedSpawns(S, team, game);
-  },
-  async preload() {
-    if (this._skull) return;
-    const p = await apexPack('apex_skulltown', 'assets/maps/apex-skulltown/'), text = (b) => JSON.parse(new TextDecoder().decode(b));
-    const manifest = text(p.manifest), navMeta = p.navMeta ? text(p.navMeta) : null;
-    const [lmInner, lmOuter, gltf, door] = await Promise.all([skullTexture(p.lm_inner), skullTexture(p.lm_outer), apexGLTF(p.glb), apexGLTF(p.door)]);
-    this._skull = { manifest, navMeta, nav: p.nav ? apexNav(p.nav) : null, tris: skullTris(p.collision), gltf, door: door.scene, lm: { inner: lmInner, outer: lmOuter } };
-    const B = manifest.playBounds; this.bounds = { minX: Math.floor(B.minX), maxX: Math.ceil(B.maxX), minZ: Math.floor(B.minZ), maxZ: Math.ceil(B.maxZ) };
-    this.killY = manifest.killY;
-    if (navMeta) {
-      this.objectives = navMeta.objectives; this.aiBounds = navMeta.aiBounds;
-      const A = navMeta.spawns.alpha.pts[0], C = navMeta.spawns.bravo.pts[0], dx = C[0] - A[0], dz = C[2] - A[2], l = Math.hypot(dx, dz);
-      this.aiAxis = { mx: (A[0] + C[0]) / 2, mz: (A[2] + C[2]) / 2, ax: dx / l, az: dz / l, half: l * 0.62, laneHalf: Math.max(30, l * 0.4) };
-    }
-  },
-  build(b) {
-    const S = this._skull && this._skull.navMeta && this._skull.navMeta.spawns, zone = (t) => { const p = S[t].pts[0]; b.spawnZone(t, p[0] - 5, p[2] - 5, p[0] + 5, p[2] + 5, S[t].yaw); };
-    if (S) { zone('alpha'); zone('bravo'); } else { b.spawnZone('alpha', -65, -5, -55, 5, -Math.PI / 2); b.spawnZone('bravo', 55, -5, 65, 5, Math.PI / 2); }
-    if (b.dry) return;
-    const { manifest, tris, gltf, lm, nav } = this._skull;
-    if (nav) b.navBaked = nav;
-    b.game.camera.far = 1600; b.game.camera.updateProjectionMatrix();
-    const soup = b.col.addTris(tris.pos, tris.idx, 'concrete', tris.mats);
-    b.phys.triGround = new TriGround(soup);
-    // the edge of the arena: invisible walls 2 m outside the play bounds (moves, shots, grenades)
-    const B = this.bounds, H = 120, L = -60;
-    for (const a of [[B.minX - 3, L, B.minZ - 3, B.minX - 2, H, B.maxZ + 3], [B.maxX + 2, L, B.minZ - 3, B.maxX + 3, H, B.maxZ + 3], [B.minX - 3, L, B.minZ - 3, B.maxX + 3, H, B.minZ - 2], [B.minX - 3, L, B.maxZ + 2, B.maxX + 3, H, B.maxZ + 3]]) {
-      const lo = new THREE.Vector3(a[0], a[1], a[2]), hi = new THREE.Vector3(a[3], a[4], a[5]);
-      b.col.addBox(lo, hi, { material: 'concrete', radar: 'wall' }); b.phys.addStaticBox(lo, hi);
-    }
-    // visuals: the two world halves with their lightmaps; props instanced per geometry / material / 64 m cell
-    gltf.scene.updateMatrixWorld(true);
-    const batches = new Map(), worldMats = new Map(), scale = Math.PI * 0.85;
-    const meshes = []; let objects = 0;
-    gltf.scene.traverse((o) => {
-      if (!o.isMesh) return; objects++;
-      if (/^World_(inner|outer)/.test(o.name) || /^World_(inner|outer)/.test(o.parent?.name || '')) {
-        const part = /inner/.test(o.name + (o.parent?.name || '')) ? 'inner' : 'outer', L = lm[part], max = manifest.lightmaps[part].max;
-        const conv = (m) => { const k = m.uuid + part; if (!worldMats.has(k)) worldMats.set(k, skullWorldMaterial(m, L, max * scale)); return worldMats.get(k); };
-        const mesh = new THREE.Mesh(o.geometry, Array.isArray(o.material) ? o.material.map(conv) : conv(o.material));
-        mesh.matrixAutoUpdate = false; mesh.matrix.copy(o.matrixWorld); mesh.matrixWorldNeedsUpdate = true;
-        mesh.receiveShadow = true; mesh.castShadow = false; b.scene.add(mesh); return;
-      }
-      for (const m of Array.isArray(o.material) ? o.material : [o.material]) {
-        if (m.transparent && !/glass/i.test(m.name)) { m.alphaTest = 0.35; m.transparent = false; m.depthWrite = true; }
-        if (m.alphaTest > 0 || /grass|plant|bush|foliage|leaf|fence|chain|wire/i.test(m.name)) m.side = THREE.DoubleSide;
-      }
-      const p = new THREE.Vector3().setFromMatrixPosition(o.matrixWorld);
-      const key = o.geometry.uuid + ':' + (Array.isArray(o.material) ? o.material.map((m) => m.uuid).join(',') : o.material.uuid) + ':' + Math.floor(p.x / 64) + ',' + Math.floor(p.z / 64);
-      if (!batches.has(key)) batches.set(key, { geo: o.geometry, mat: o.material, matrices: [] });
-      batches.get(key).matrices.push(o.matrixWorld.clone());
-    });
-    for (const batch of batches.values()) {
-      const mesh = new THREE.InstancedMesh(batch.geo, batch.mat, batch.matrices.length);
-      batch.matrices.forEach((m, i) => mesh.setMatrixAt(i, m)); mesh.computeBoundingSphere();
-      mesh.castShadow = false; mesh.receiveShadow = true; // their shadows are in the bake
-      b.scene.add(mesh); meshes.push(mesh);
-    }
-    const doors = new ApexDoors(b, manifest.doors, this._skull.door);
-    b.mechs.push(doors, new SkullStreaming(b, soup, meshes));
-    window.__skull = { objects, drawGroups: batches.size, doors: doors.doors.length, triangles: soup.n, manifest };
-  }
-});
+}));
+// v60 the firing range, rebuilt the same way (tools/blender/apex_maps.py 'range'): the canyon around the village, centred on the
+// area the old box-collision map's bots could reach
+MAPS.push(apexTriMap({
+  id: 'apex_full', packDir: 'assets/maps/apex-range/', name: 'Apex 訓練場・全場景', en: 'APEX FIRING RANGE',
+  desc: '原版場景與擺設 · 烘焙光照 · 真實三角形碰撞 · E 開門', slogan: '峽谷裡的訓練場 · 靶場、村落、高台',
+  bounds: { minX: -165, maxX: 165, minZ: -140, maxZ: 140 }, indoor: false, navLevels: [], killY: -80, killOutside: true, traversal: true,
+  hdri: 'kloofendal_48d_partly_cloudy_puresky', hdriBackground: true, background: 0xb8c8d8, envIntensity: 0.55, exposure: 0.85,
+  sun: { pos: [-20, 70, 25], color: 0xfff1de, intensity: 2.6, auto: true }, hemi: [0xbcd6ee, 0x6f6450, 0.6],
+  fog: { color: 0xc4ced8, near: 180, far: 1100 }, acoustics: 'outdoor', ambience: 'wind', shadowFollow: 60,
+  shot: { pos: [0, 300, 140], target: [0, 0, 0] },
+  thumb: { pos: [85, 45, 1], target: [10, 5, 86] }, // the village
+  objectives: { dom: [[-30, 0, 0], [0, 0, 0], [30, 0, 0]], relic: [0, 0, 0], domRadius: 5 }, // replaced by the baked ones on load
+}));

@@ -13,14 +13,15 @@ from pathlib import Path
 from mathutils import Matrix, Vector
 
 ROOT = Path(__file__).resolve().parents[2]
-WORK = ROOT / 'tools/out/apex/skulltown'
-MAPS = WORK / 'wrap/maps'
-STEM = 'mp_rr_freedm_skulltown'
+sys.path.insert(0, str(Path(__file__).parent))
+from apex_maps import pick
+CFG = pick()  # -- --map skulltown | range (tools/blender/apex_maps.py)
+WORK, MAPS, STEM = CFG['work'], CFG['maps'], CFG['stem']
 MATDIR = ROOT / 'tools/out/apex/rsx-2.4.0/exported_files/material'
 S = 0.0254
-CENTER = Vector((-41.0, -10.0, 0.0))          # middle of the official spawns (m, source axes)
-CROP = (-330.0, 250.0, -300.0, 280.0)         # x0 x1 y0 y1 (m, source axes): play area + scenery
-SKIP_MODEL = re.compile(r'godray|podium|lightshaft|_fx_|spotlight', re.I)
+CENTER = Vector(CFG['center'])  # (m, source axes)
+CROP = tuple(c + CENTER[i // 2] for i, c in enumerate(CFG['crop']))  # x0 x1 y0 y1 (m, source axes): play area + scenery
+SKIP_MODEL = re.compile(r'godray|podium|lightshaft|_fx_|spotlight|thunderdome|fake_sky|live_fire_frame|fs_girder_beam|fs_modular_\w*floorconnector|grave_wall_gasket', re.I)  # the Arenas hex cage / dome and its girders: they hide the sky
 report = {'missing_textures': [], 'missing_models': [], 'skipped_models': []}
 
 
@@ -51,7 +52,7 @@ def pick(folder, kind, layer=None):
     if layer:
         files = [f for f in files if f.name.endswith(f'_{layer}_{kind}.png')]
     else:
-        files = [f for f in files if not re.search(rf'_\d_{kind}\.png$', f.name)] or [f for f in files if f.name.endswith(f'_1_{kind}.png')]
+        files = [f for f in files if not re.search(rf'_\d_{kind}\.png$', f.name)] or [f for f in files if f.name.endswith(f'_1_{kind}.png')] or files
     return files[0] if files else None
 
 
@@ -119,7 +120,7 @@ for mi in range(first, first + count):
     tid = struct.unpack_from('<h', sorts, si * 12)[0]
     off = struct.unpack_from('<i', texdata, tid * 16)[0]
     name = names[off:].split(b'\0', 1)[0].decode().replace('\\', '/')
-    if name.upper().startswith('TOOLS/'):
+    if name.upper().startswith('TOOLS/') or re.search(r'thunderdome_fence|arena_start_barrier', name, re.I):  # (+ the Arenas hex fence)
         dropped['tools'] += ntri
         continue
     short = name.rsplit('/', 1)[-1].lower()
@@ -204,6 +205,8 @@ def import_cast(path, name):
     for o in added:
         if o.type != 'MESH':
             bpy.data.objects.remove(o)
+    if any(re.search('cubemap|ascent_test_colors', m.name if m else '') for o in geo for m in o.data.materials):  # reflection-probe boxes; the Arenas hex dome (a dev test material)
+        return None
     return col if geo else None
 
 
@@ -211,7 +214,7 @@ lod_pick = {}
 for key in sorted(uses):
     if SKIP_MODEL.search(key):
         report['skipped_models'].append(key); continue
-    hits = [q for q in (WORK / 'full/mdl').iterdir() if q.name.lower() == key]
+    hits = [q for q in (CFG['models']).iterdir() if q.name.lower() == key]
     lods = sorted(hits[0].glob('*_LOD[0-9].cast')) if hits else []
     if not lods:
         report['missing_models'].append(key); continue
@@ -220,7 +223,7 @@ for key in sorted(uses):
     col = import_cast(vis, 'P_' + key)
     if col:
         protos[key] = col
-        coarse[key] = import_cast(lods[-1], 'C_' + key) if lods[-1] != vis else col
+        coarse[key] = (import_cast(lods[-1], 'C_' + key) if lods[-1] != vis else None) or col  # (an empty coarsest LOD: the drawn one)
 report['lods'] = lod_pick
 inst_col = bpy.data.collections.new('props')
 scene.collection.children.link(inst_col)
@@ -256,6 +259,6 @@ bg.inputs['Color'].default_value = (0.27, 0.52, 0.76, 1); bg.inputs['Strength'].
 
 lib_scene = bpy.data.scenes.new('prototypes')
 lib_scene.collection.children.link(lib)
-bpy.ops.wm.save_as_mainfile(filepath=str(WORK / 'skulltown.blend'))
-(WORK / 'skulltown_build.json').write_text(json.dumps(report, indent=1))
+bpy.ops.wm.save_as_mainfile(filepath=str(WORK / f"{CFG['name']}.blend"))
+(WORK / f"{CFG['name']}_build.json").write_text(json.dumps(report, indent=1))
 print('SAVED', flush=True)
