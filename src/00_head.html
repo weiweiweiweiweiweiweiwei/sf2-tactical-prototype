@@ -804,7 +804,7 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
     <section class="hub-rooms"><header><h3>公開房間 PUBLIC ROOMS</h3><span id="hubRoomsN"></span></header>
       <div id="hubRooms"><div class="empty">正在讀取房間列表…</div></div></section>
   </div>
-  <div class="lb-foot">WASD 移動 · SHIFT 衝刺(不會掉下邊緣) · C 蹲(無腳步聲，衝刺中按 = 滑鏟) · SPACE 跳(對矮牆 = 攀爬翻越) · 右鍵 開鏡 · 1-6 武器 · F 擒拿 · E 互動/佔領 · F1–F3 預約配裝 · 梯子 W/S · Q 快速切換 · R 換彈 · TAB 計分板</div>
+  <div class="lb-foot">WASD 移動 · SHIFT 衝刺 · CTRL/C 蹲(無腳步聲；按住時不會掉下邊緣) · SPACE 跳(對矮牆 = 攀爬翻越) · 右鍵 開鏡 · 1-6 武器 · F 擒拿 · E 互動/佔領 · F1–F3 預約配裝 · 梯子 W/S · Q 快速切換 · R 換彈 · TAB 計分板</div>
 </div></div>
 <div id="roomToast"></div>
 
@@ -873,7 +873,7 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
     <h3>扣血機制</h3><div class="pills" id="optDmg"><button data-v="sf2">SF2（爆頭打飛頭盔）</button><button data-v="apex">Apex（護盾＋自動回復）</button></div>
     <div id="optDmgInfo" class="dmginfo"></div>
     </div></div>
-  <div class="lb-foot">WASD 移動 · SHIFT 衝刺(不會掉下邊緣) · C 蹲(無腳步聲，衝刺中按 = 滑鏟) · SPACE 跳(對矮牆 = 攀爬翻越) · 右鍵 開鏡 · 1-6 武器 · F 擒拿 · E 互動/佔領 · F1–F3 預約配裝 · 梯子 W/S · Q 快速切換 · R 換彈 · TAB 計分板</div>
+  <div class="lb-foot">WASD 移動 · SHIFT 衝刺 · CTRL/C 蹲(無腳步聲；按住時不會掉下邊緣) · SPACE 跳(對矮牆 = 攀爬翻越) · 右鍵 開鏡 · 1-6 武器 · F 擒拿 · E 互動/佔領 · F1–F3 預約配裝 · 梯子 W/S · Q 快速切換 · R 換彈 · TAB 計分板</div>
 </div>
   <div id="lbCount"><div class="cz"><div class="cl">即將出發</div><div class="cn" id="lbCountNum">3</div><div class="cm" id="lbCountMap"></div>
     <button class="btn ghost" id="lbCancel">✕ 取消 CANCEL</button></div></div>
@@ -889,8 +889,8 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
 <div id="pause" class="overlay"><div class="card">
   <h2>暫停 PAUSED</h2>
   <div class="keys">
-    <kbd>W A S D</kbd><span>移動（放開即停，可急停）</span><kbd>SHIFT</kbd><span>衝刺；按住時站在邊緣不會掉下去</span>
-    <kbd>C / CTRL</kbd><span>蹲下（空中蹲 = 蹲跳，衝刺中 = 滑鏟）</span><kbd>SPACE</kbd><span>跳躍</span>
+    <kbd>W A S D</kbd><span>移動（放開即停，可急停）</span><kbd>SHIFT</kbd><span>衝刺</span>
+    <kbd>CTRL / C</kbd><span>蹲下（空中蹲 = 蹲跳）；按住時站在邊緣不會掉下去</span><kbd>SPACE</kbd><span>跳躍</span>
     <kbd>左鍵 / 右鍵</kbd><span>開火 / 開鏡（狙擊鏡可按兩次二段變焦）</span>
     <kbd>1 – 6</kbd><span>主武器 · 副武器 · 刀 · 手榴彈 · 閃光彈 · 煙霧彈</span>
     <kbd>投擲物</kbd><span>按住蓄力（像拉弓，越久越遠），放開投出；左鍵遠投 / 右鍵近拋；邊跑邊跳丟更遠</span>

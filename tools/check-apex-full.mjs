@@ -35,11 +35,13 @@ try{
     if(!w.fits(pos.x,pos.y,pos.z,human.motor.radius,human.motor.height))continue;
     human.motor.pos.copy(pos);
     if(doors.nearest(human)!==d)continue;
-    const y=d.col.min.y,bodyY=d.body.position.y;
+    // v59 hinged doors: E swings the leaf 90° away from the opener; open = no collider / physics body, closed = both back
+    const side=Math.sign((human.motor.pos.x-d.center.x)*d.nx+(human.motor.pos.z-d.center.z)*d.nz);
     assert(doors.interact(human),'E interaction failed');for(let i=0;i<100;i++)doors.tick(1/120);
-    assert(d.k===1&&d.col.min.y>y+2.8,'Door failed to open collision');assert(d.body.position.y>bodyY+2.8,'Door physics did not follow');
+    const a=d.yaw+d.dir*Math.PI/2,endN=-Math.sin(a)*d.nx-Math.cos(a)*d.nz;
+    assert(d.k===1&&!d.col.blocksMove&&!g.physics.world.bodies.includes(d.body),'Door failed to open');assert(Math.sign(endN)!==side,'Door swung toward the opener');
     human.motor.pos.copy(d.center);human.motor.pos.y=d.base+.03;d.target=0;doors.tick(1/120);assert(d.target===1,'Door crushed occupant');
-    human.motor.pos.copy(d.center).addScaledVector(n,4);d.target=0;for(let i=0;i<100;i++)doors.tick(1/120);assert(d.k===0&&Math.abs(d.col.min.y-y)<.001,'Door failed to close');
+    human.motor.pos.copy(d.center).addScaledVector(n,4);d.target=0;for(let i=0;i<100;i++)doors.tick(1/120);assert(d.k===0&&d.col.blocksMove&&g.physics.world.bodies.includes(d.body),'Door failed to close');
     result.doors.push({id:result.doors.length,position:d.center.toArray(),openClose:true,antiCrush:true});break;
    }
    if(result.doors.length>=5)break;

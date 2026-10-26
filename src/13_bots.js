@@ -38,7 +38,7 @@ const PREF_RANGE = { sniper: [30, 75], rifle: [10, 34], lmg: [12, 38], smg: [6, 
 class Bot extends Combatant {
   constructor(game, team, idx, weaponId) {
     super(game, team, BOT_NAMES[team][idx % BOT_NAMES[team].length], false);
-    this.slideT = 0; this.slideDir = new THREE.Vector3(); this.airJumpUsed = false; // v57 traversal maps
+    this.airJumpUsed = false; // v57 traversal maps (double jump)
     this.idx = idx; this.isBot = true; this.aimPitch = 0; this.walkPhase = Math.random() * 6; this.stepDist = 0; this.spottedT = -10; this.stepPitch = rand(0.9, 1.12);
     this.model = game.app.soldiers.create(team, WEAPON_DEFS[weaponId].model || weaponId);
     game.scene.add(this.model.root);
@@ -110,7 +110,7 @@ class Bot extends Combatant {
   respawn(point, yaw) {
     this.motor.teleport(point); this.life = (this.life || 0) + 1;
     this.yaw = yaw + rand(-0.3, 0.3); this.hp = 100; this.alive = true; this.spawnProtect = CFG.spawnProtect; this.carrying = false;
-    this.ammo = this.def.mag || 0; this.reloadT = 0; this.damageLog.clear(); this.slideT = 0; this.game.refit(this);
+    this.ammo = this.def.mag || 0; this.reloadT = 0; this.damageLog.clear(); this.game.refit(this);
     this.nades = this.game.mode === 'general' ? { he: 1, flash: 1 } : { he: 0, flash: 0 };
     this.model.root.visible = true; this.model.head.visible = true; this.model.root.position.copy(this.motor.pos); if (this.tag) this.tag.visible = true;
     this.ai.reset();
@@ -120,15 +120,8 @@ class Bot extends Combatant {
     if (!this.alive) return;
     const ai = this.ai, frozen = !this.game.canMove(), m = this.motor;
     if (m.grounded || m.climbing) this.airJumpUsed = false;
-    if (this.slideT > 0 && !frozen) { // v57 slide (traversal maps): crouched, fast at first, ends early once airborne
-      this.slideT -= h; m.setCrouch(true);
-      const k = 1 - Math.max(0, this.slideT) / 0.85;
-      m.step(h, this.slideDir.x, this.slideDir.z, lerp(8.2, 3.2, k * k));
-      if (!m.grounded) this.slideT = 0;
-    } else {
-      if (!m.climbing) m.setCrouch(!frozen && ai.crouchT > 0);
-      m.step(h, frozen ? 0 : ai.wishX, frozen ? 0 : ai.wishZ, frozen ? 0 : ai.wishSpeed * (this.carrying ? 0.88 : 1));
-    }
+    if (!m.climbing) m.setCrouch(!frozen && ai.crouchT > 0);
+    m.step(h, frozen ? 0 : ai.wishX, frozen ? 0 : ai.wishZ, frozen ? 0 : ai.wishSpeed * (this.carrying ? 0.88 : 1));
     if (!frozen && ai.wantJump) { m.requestJump(); ai.wantJump = false; }
     if (!frozen && ai.wantAirJump) { // v57 double jump, same impulse as the player's
       if (!this.airJumpUsed && !m.grounded && !m.climbing) { m.vel.y = CFG.player.jumpVel; this.airJumpUsed = true; }
@@ -233,8 +226,7 @@ class BotAI {
     const left = hl ? hl.t : 2.5, right = hr ? hr.t : 2.5;
     if (right > left + 0.3 || (Math.abs(right - left) <= 0.3 && Math.random() < 0.5)) { px = -px; pz = -pz; }
     this.dodgeX = px; this.dodgeZ = pz; this.dodgeT = rand(0.4, 0.65); this.strafeDir = 0; this.strafeT = 0;
-    if (this.game.def.traversal && this.bot.motor.grounded && Math.random() < 0.35) { this.bot.slideT = 0.6; this.bot.slideDir.set(px, 0, pz).normalize(); } // v57: dive-slide out of the line of fire
-    else if (Math.random() < 0.12) this.wantJump = true;
+    if (Math.random() < 0.12) this.wantJump = true;
   }
 
   // v8 NEAR MISS: no damage, but the crack gives a rough direction — fighting bots dodge, the rest turn, dodge and move on it.
@@ -355,7 +347,7 @@ class BotAI {
       if (this.game.def.traversal && !m.climbing && !t.ladder && d < 2.8) {
         if (m.grounded) {
           this.ledgeJump = false;
-          if (dy > 0.3) { const ah = this.game.collision.groundBelow(m.pos.x + wx * 0.75, m.pos.y + 2.6, m.pos.z + wz * 0.75, 0.2, 2.6); if (ah && ah.y > m.pos.y + 0.42) this.wantJump = this.ledgeJump = true; }
+          if (dy > 0.3) { const ah = this.game.collision.groundBelow(m.pos.x + wx * 0.75, m.pos.y + 2.6, m.pos.z + wz * 0.75, 0.2, 2.6); if (ah && ah.y > m.pos.y + m.stepHeight - 0.03) this.wantJump = this.ledgeJump = true; }
         } else if (this.ledgeJump && m.vel.y < 1.2 && m.pos.y < t.y + 0.15) this.wantAirJump = true;
       }
       if (face) {
@@ -478,18 +470,7 @@ class BotAI {
       this.dodgeT -= dt; this.wishX = this.dodgeX; this.wishZ = this.dodgeZ; this.wishSpeed = CFG.bot.runSpeed * 0.8; // v24: was ×1.22 for 0.26–0.42 s (read as a teleport)
     }
     if (bot.motor.crouching) this.wishSpeed *= 0.45;
-    if (g.def.traversal) this._slide(dt);
     this._stuckCheck(dt);
-  }
-
-  // v57 traversal maps: a running bot with a long straight stretch ahead sometimes slides (its own pace, every few seconds at most)
-  _slide(dt) {
-    const bot = this.bot, m = bot.motor;
-    this.slideCd = (this.slideCd || 0) - dt;
-    if (bot.slideT > 0 || this.slideCd > 0 || !m.grounded || m.crouching || this.wishSpeed < CFG.bot.runSpeed * 0.85 || this.pathIdx >= this.path.length) return;
-    const t = this.path[this.pathIdx];
-    if (Math.hypot(t.x - m.pos.x, t.z - m.pos.z) < 7 || Math.abs(t.y - m.pos.y) > 1 || Math.random() > dt * (0.25 + this.aggro * 0.5)) return;
-    bot.slideT = 0.85; bot.slideDir.set(this.wishX, 0, this.wishZ).normalize(); this.slideCd = rand(3, 7);
   }
 
   _scan(dt, width) { this.scanPhase += dt * (0.8 + this.caution * 0.6); this._turnTo(this.scanBase + Math.sin(this.scanPhase) * width, 2.6, dt); }

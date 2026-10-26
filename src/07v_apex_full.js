@@ -1,20 +1,23 @@
-// Full imported extent. Repeated meshes stay instanced; AI combat remains in the verified village.
-// Stand-in sliding doors at the original prop_door positions (E opens / closes; a closing door reopens on anyone in it).
-// mechs[0] on this map: the host streams netState() to clients.
+// Full imported extent. Repeated meshes stay instanced; bots fight over the baked reachable area (tools/bake-apex-nav.mjs).
+// Stand-in doors at the original prop_door positions, hinged like Apex's (a 1.5 m leaf swinging 90° away from whoever opens it).
+// E opens / closes; a bot walking up opens it (they cannot press E); an open leaf blocks nothing, a closed one blocks moves,
+// shots and grenades, and a closing door reopens on anyone in its swing. mechs[0] on this map: the host streams netState().
 class ApexDoors {
   constructor(b, entries) {
     this.b = b; this.doors = [];
-    for (const d of entries) {
-      const pivot = new THREE.Group(); pivot.position.set(d.x, d.y, d.z); pivot.rotation.y = d.yaw;
+    for (const e of entries) {
+      const pivot = new THREE.Group(); pivot.position.set(e.x, e.y, e.z); pivot.rotation.y = e.yaw;
       const mat = new THREE.MeshStandardMaterial({ color: 0x854d3b, metalness: 0.45, roughness: 0.65 });
-      const leaf = new THREE.Mesh(new THREE.BoxGeometry(0.16, 2.6, 1.5), mat); leaf.position.set(0, 1.3, -0.75); leaf.castShadow = true; leaf.receiveShadow = true; pivot.add(leaf);
+      const leaf = new THREE.Mesh(new THREE.BoxGeometry(0.16, 2.4, 1.46), mat); leaf.position.set(0, 1.22, -0.75); leaf.castShadow = true; leaf.receiveShadow = true; pivot.add(leaf);
       const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.15, 1.35), new THREE.MeshStandardMaterial({ color: 0xd8b057, roughness: 0.7 })); stripe.position.set(0, 1.2, -0.75); pivot.add(stripe);
       b.scene.add(pivot); pivot.updateMatrixWorld(true);
       const box = new THREE.Box3().setFromObject(pivot), col = b.col.addBox(box.min.clone(), box.max.clone(), { material: 'metal' });
       const size = box.getSize(new THREE.Vector3()), mid = box.getCenter(new THREE.Vector3());
       const body = new CANNON.Body({ mass: 0, material: b.phys.matDefault, shape: new CANNON.Box(new CANNON.Vec3(size.x / 2, size.y / 2, size.z / 2)) });
       body.position.set(mid.x, mid.y, mid.z); b.phys.world.addBody(body);
-      this.doors.push({ pivot, col, body, base: d.y, k: 0, target: 0, box: box.clone(), center: mid });
+      // leaf centre, door-plane normal (n) and leaf direction from the hinge (u)
+      this.doors.push({ pivot, col, body, yaw: e.yaw, base: e.y, k: 0, target: 0, dir: 1, solid: true, botT: 0, box: box.clone(), center: mid,
+        nx: Math.cos(e.yaw), nz: -Math.sin(e.yaw) });
     }
   }
   nearest(c) {
@@ -28,26 +31,70 @@ class ApexDoors {
     }
     return best;
   }
-  prompt(c) { const d = this.nearest(c); return d ? '按 [E] ' + (d.target ? '關閉' : '開啟') + '電動門' : null; }
-  interact(c) { const d = this.nearest(c); if (!d) return false; d.target = d.target ? 0 : 1; return true; }
-  _slide(d, k) { // the leaf rises 2.9 m; its collider and physics body follow
-    const dy = (k - d.k) * 2.9; d.k = k; if (!dy) return;
-    d.pivot.position.y = d.base + k * 2.9; this.b.col.moveBox(d.col, 0, dy, 0);
-    d.body.position.y += dy; d.body.aabbNeedsUpdate = true;
+  prompt(c) { const d = this.nearest(c); return d ? '按 [E] ' + (d.target ? '關門' : '開門') : null; }
+  interact(c) { const d = this.nearest(c); if (!d) return false; this._open(d, d.target ? 0 : 1, c.motor.pos); return true; }
+  _open(d, target, from) {
+    if (target && d.k <= 0.02) { // pick the swing that takes the leaf's free end away from the opener
+      const side = (from.x - d.center.x) * d.nx + (from.z - d.center.z) * d.nz, a = d.yaw + Math.PI / 2;
+      const endN = -Math.sin(a) * d.nx - Math.cos(a) * d.nz; // +90°: the free end moves along this much of the normal
+      d.dir = endN * side > 0 ? -1 : 1;
+    }
+    d.target = target;
+  }
+  _swing(d, k) {
+    d.k = k; d.pivot.rotation.y = d.yaw + d.dir * k * Math.PI * 0.5;
+    const solid = k <= 0.02;
+    if (solid === d.solid) return;
+    d.solid = solid; this.b.col.setSolid(d.col, solid);
+    if (solid) this.b.phys.world.addBody(d.body); else this.b.phys.world.removeBody(d.body);
   }
   tick(h) {
     const g = this.b.game;
     for (const d of this.doors) {
-      if (!g.isClient && d.target === 0 && d.k > 0 && g.combatants.some((c) => c.alive && CollisionWorld.overlap(d.box, c.motor.pos.x, c.motor.pos.y, c.motor.pos.z, c.motor.radius + 0.15, c.motor.height))) d.target = 1;
-      this._slide(d, clamp(d.k + Math.sign(d.target - d.k) * h * 1.6, 0, 1));
+      if (!g.isClient) {
+        const near = (r) => g.combatants.some((c) => c.alive && Math.hypot(c.motor.pos.x - d.center.x, c.motor.pos.z - d.center.z) < r && Math.abs(c.motor.pos.y - d.base) < 2);
+        const bot = d.k <= 0.02 && d.target === 0 && g.combatants.find((c) => c.alive && c.isBot && Math.hypot(c.motor.pos.x - d.center.x, c.motor.pos.z - d.center.z) < 1.9 && Math.abs(c.motor.pos.y - d.base) < 2);
+        if (bot) { this._open(d, 1, bot.motor.pos); d.botT = 3; }
+        if (d.botT > 0 && (d.botT -= h) <= 0 && !near(2.6)) d.target = 0; // a bot's door closes behind it
+        if (d.target === 0 && d.k > 0.02 && near(1.7)) d.target = 1; // never closes on anyone in the swing
+      }
+      this._swing(d, clamp(d.k + Math.sign(d.target - d.k) * h * 3, 0, 1));
     }
   }
   render() {}
-  netState() { return this.doors.flatMap((d) => [d.k, d.target]); }
+  netState() { return this.doors.flatMap((d) => [+d.k.toFixed(3), d.target, d.dir]); }
   applyNet(s) {
-    if (!Array.isArray(s) || s.length !== this.doors.length * 2) return;
-    this.doors.forEach((d, i) => { this._slide(d, clamp(Number(s[i * 2]) || 0, 0, 1)); d.target = s[i * 2 + 1] ? 1 : 0; });
+    if (!Array.isArray(s) || s.length !== this.doors.length * 3) return;
+    this.doors.forEach((d, i) => { d.dir = s[i * 3 + 2] < 0 ? -1 : 1; d.target = s[i * 3 + 1] ? 1 : 0; this._swing(d, clamp(Number(s[i * 3]) || 0, 0, 1)); });
   }
+}
+
+// The baked collision is 0.5–1 m columns, so door frames and the lintel spill into each doorway: cut every column back to the
+// floor and lintel inside each leaf's opening (1.5 m wide, ±0.35 m off the wall, 0.22–2.6 m above the door's floor).
+function apexCarveDoors(boxes, doors) {
+  const out = [], cut = [];
+  for (const e of doors) {
+    const ux = -Math.sin(e.yaw), uz = -Math.cos(e.yaw), nx = Math.cos(e.yaw), nz = -Math.sin(e.yaw), pts = [];
+    for (const [u, v] of [[-0.05, -0.35], [1.55, -0.35], [1.55, 0.35], [-0.05, 0.35]]) pts.push([e.x + ux * u + nx * v, e.z + uz * u + nz * v]);
+    cut.push({ e, ux, uz, nx, nz, x0: Math.min(...pts.map((p) => p[0])), x1: Math.max(...pts.map((p) => p[0])), z0: Math.min(...pts.map((p) => p[1])), z1: Math.max(...pts.map((p) => p[1])), y0: e.y + 0.22, y1: e.y + 2.6 });
+  }
+  let n = 0;
+  for (let j = 0; j < boxes.length; j += 6) {
+    const bx0 = boxes[j], by0 = boxes[j + 1], bz0 = boxes[j + 2], bx1 = boxes[j + 3], by1 = boxes[j + 4], bz1 = boxes[j + 5];
+    let hit = null;
+    for (const c of cut) {
+      if (bx1 <= c.x0 || bx0 >= c.x1 || bz1 <= c.z0 || bz0 >= c.z1 || by1 <= c.y0 || by0 >= c.y1) continue;
+      let u0 = Infinity, u1 = -Infinity, v0 = Infinity, v1 = -Infinity; // the box's corners on the door axes
+      for (const [x, z] of [[bx0, bz0], [bx1, bz0], [bx1, bz1], [bx0, bz1]]) { const u = (x - c.e.x) * c.ux + (z - c.e.z) * c.uz, v = (x - c.e.x) * c.nx + (z - c.e.z) * c.nz; u0 = Math.min(u0, u); u1 = Math.max(u1, u); v0 = Math.min(v0, v); v1 = Math.max(v1, v); }
+      if (u1 <= -0.05 || u0 >= 1.55 || v1 <= -0.35 || v0 >= 0.35) continue;
+      hit = c; break;
+    }
+    if (!hit) { out.push(bx0, by0, bz0, bx1, by1, bz1); continue; }
+    n++;
+    if (by0 < hit.y0 - 0.01) out.push(bx0, by0, bz0, bx1, hit.y0, bz1);
+    if (by1 > hit.y1 + 0.01) out.push(bx0, hit.y1, bz0, bx1, by1, bz1);
+  }
+  return { boxes: new Float32Array(out), cut: n };
 }
 
 // Keeps the full world cheap: static physics exists only in 16 m tiles around combatants and live grenades (the whole map
@@ -150,7 +197,8 @@ MAPS.push({
     const { data, gltf, manifest } = this._full;
     b.navBaked = this._full.nav;
     b.game.camera.far = 2200; b.game.camera.updateProjectionMatrix();
-    b.col.addPacked(data.boxes, { material: 'concrete' });
+    const carved = apexCarveDoors(data.boxes, manifest.doors); // (kept: the bake and every match carve the same openings)
+    b.col.addPacked(carved.boxes, { material: 'concrete' });
     // Visual geometry retains shared prototypes and original transforms.
     gltf.scene.updateMatrixWorld(true);
     const batches = new Map(), villageMats = new Map(); let objects = 0;
@@ -184,7 +232,7 @@ MAPS.push({
       b.scene.add(mesh); meshes.push(mesh);
     }
     const doors = new ApexDoors(b, manifest.doors);
-    b.mechs.push(doors, new ApexStreaming(b, data.boxes, meshes));
-    window.__apexFull = { objects, drawGroups: batches.size, doors: doors.doors.length, collisionBoxes: data.count, manifest };
+    b.mechs.push(doors, new ApexStreaming(b, carved.boxes, meshes));
+    window.__apexFull = { objects, drawGroups: batches.size, doors: doors.doors.length, collisionBoxes: carved.boxes.length / 6, doorCuts: carved.cut, manifest };
   }
 });

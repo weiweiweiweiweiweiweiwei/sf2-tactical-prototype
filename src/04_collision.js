@@ -326,6 +326,7 @@ class CharacterMotor {
     this.grounded = false; this.crouching = false; this.surface = 'concrete';
     this.stepOffset = 0; this.jumpBufferT = 0; this.landSpeed = 0; this.jumped = false;
     this.edgeGuard = false;
+    this.stepHeight = o.stepHeight ?? CFG.player.stepHeight; // v59: 0.8 m on the Apex maps, whose terrain collision is 1 m columns
     this.climbInput = 0; this.ladder = null; this.ladderCd = 0; this.climbing = false; this.climbDist = 0;
     this.onTerrain = false; this.sliding = false;
     this.accelK = o.accelK ?? 1; this.frictionK = o.frictionK ?? 1; // v24: bots get momentum (players keep the snappy Quake-style values)
@@ -430,7 +431,7 @@ class CharacterMotor {
     this._moveAxis('z', this.vel.z * dt, guard);
     this._moveY(this.vel.y * dt);
 
-    const maxDown = wasGrounded && this.vel.y <= 0 ? P.stepHeight : 0.02;
+    const maxDown = wasGrounded && this.vel.y <= 0 ? this.stepHeight : 0.02;
     const g = this.vel.y <= 0.001 ? this.world.groundBelow(this.pos.x, this.pos.y, this.pos.z, this.radius, maxDown) : null;
     this.onTerrain = !!(g && g.terrain); this.sliding = false;
     if (g && g.steep) { // too steep to stand on: slide down the fall line
@@ -467,7 +468,7 @@ class CharacterMotor {
     const cands = w.query(p.x - r - 0.05, p.z - r - 0.05, p.x + r + 0.05, p.z + r + 0.05, this._c);
     for (const b of cands) {
       if (!b.blocksMove || !CollisionWorld.overlap(b, p.x, p.y, p.z, r, h)) continue;
-      const rise = b.max.y - p.y, allow = this.grounded ? P.stepHeight : P.airStep;
+      const rise = b.max.y - p.y, allow = this.grounded ? this.stepHeight : P.airStep;
       if (rise > 0 && rise <= allow && w.fits(p.x, b.max.y + 1e-4, p.z, r, h)) {
         const old = p.y; p.y = b.max.y + 1e-4;
         if (this.grounded) this.stepOffset -= p.y - old; else if (this.vel.y < 0) this.vel.y = 0;
@@ -478,7 +479,7 @@ class CharacterMotor {
     }
     for (const rp of w.ramps) {
       if (p.x + r <= rp.minX || p.x - r >= rp.maxX || p.z + r <= rp.minZ || p.z - r >= rp.maxZ || p.y + h <= rp.y0) continue;
-      const top = w.rampMaxUnder(rp, p.x, p.z, r), allow = this.grounded ? P.stepHeight : P.airStep;
+      const top = w.rampMaxUnder(rp, p.x, p.z, r), allow = this.grounded ? this.stepHeight : P.airStep;
       if (!(top > p.y + allow && p.y < top - 0.02)) continue;
       // v23: the ramp's side is a wall that refuses moves INTO it; a body already wedged beside it may always move out
       // (before, every move on the axis was reverted → players who dropped off the low side of a ramp were stuck for good)
@@ -493,13 +494,13 @@ class CharacterMotor {
       if (th > p.y) {
         // step assist (v16): a short steep bump whose ground 0.55 m further on is within step height is a step, not a cliff
         const dir = amount > 0 ? 0.55 : -0.55, aheadRise = T.heightAt(p.x + (axis === 'x' ? dir : 0), p.z + (axis === 'z' ? dir : 0)) - beforeY;
-        const walkable = T.slopeAt(p.x, p.z) <= MAX_SLOPE || (this.grounded && aheadRise <= P.stepHeight);
+        const walkable = T.slopeAt(p.x, p.z) <= MAX_SLOPE || (this.grounded && aheadRise <= this.stepHeight);
         if (walkable && th - p.y < 0.6 && w.fits(p.x, th + 1e-3, p.z, r, h)) p.y = th;
         else { p[axis] = before; p.y = Math.max(beforeY, T.heightAt(p.x, p.z)); this.vel[axis] = 0; }
       }
     }
-    // SHIFT edge-guard: refuse moves that would leave the footprint without support.
-    if (guard && !w.groundBelow(p.x, p.y, p.z, r * 0.8, P.stepHeight + 0.05)) {
+    // edge-guard (v59: while crouch is held): refuse moves that would leave the footprint without support.
+    if (guard && !w.groundBelow(p.x, p.y, p.z, r * 0.8, this.stepHeight + 0.05)) {
       p[axis] = before; p.y = beforeY; this.vel[axis] = 0;
     }
   }

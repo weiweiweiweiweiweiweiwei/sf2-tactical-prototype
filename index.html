@@ -804,7 +804,7 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
     <section class="hub-rooms"><header><h3>公開房間 PUBLIC ROOMS</h3><span id="hubRoomsN"></span></header>
       <div id="hubRooms"><div class="empty">正在讀取房間列表…</div></div></section>
   </div>
-  <div class="lb-foot">WASD 移動 · SHIFT 衝刺(不會掉下邊緣) · C 蹲(無腳步聲，衝刺中按 = 滑鏟) · SPACE 跳(對矮牆 = 攀爬翻越) · 右鍵 開鏡 · 1-6 武器 · F 擒拿 · E 互動/佔領 · F1–F3 預約配裝 · 梯子 W/S · Q 快速切換 · R 換彈 · TAB 計分板</div>
+  <div class="lb-foot">WASD 移動 · SHIFT 衝刺 · CTRL/C 蹲(無腳步聲；按住時不會掉下邊緣) · SPACE 跳(對矮牆 = 攀爬翻越) · 右鍵 開鏡 · 1-6 武器 · F 擒拿 · E 互動/佔領 · F1–F3 預約配裝 · 梯子 W/S · Q 快速切換 · R 換彈 · TAB 計分板</div>
 </div></div>
 <div id="roomToast"></div>
 
@@ -873,7 +873,7 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
     <h3>扣血機制</h3><div class="pills" id="optDmg"><button data-v="sf2">SF2（爆頭打飛頭盔）</button><button data-v="apex">Apex（護盾＋自動回復）</button></div>
     <div id="optDmgInfo" class="dmginfo"></div>
     </div></div>
-  <div class="lb-foot">WASD 移動 · SHIFT 衝刺(不會掉下邊緣) · C 蹲(無腳步聲，衝刺中按 = 滑鏟) · SPACE 跳(對矮牆 = 攀爬翻越) · 右鍵 開鏡 · 1-6 武器 · F 擒拿 · E 互動/佔領 · F1–F3 預約配裝 · 梯子 W/S · Q 快速切換 · R 換彈 · TAB 計分板</div>
+  <div class="lb-foot">WASD 移動 · SHIFT 衝刺 · CTRL/C 蹲(無腳步聲；按住時不會掉下邊緣) · SPACE 跳(對矮牆 = 攀爬翻越) · 右鍵 開鏡 · 1-6 武器 · F 擒拿 · E 互動/佔領 · F1–F3 預約配裝 · 梯子 W/S · Q 快速切換 · R 換彈 · TAB 計分板</div>
 </div>
   <div id="lbCount"><div class="cz"><div class="cl">即將出發</div><div class="cn" id="lbCountNum">3</div><div class="cm" id="lbCountMap"></div>
     <button class="btn ghost" id="lbCancel">✕ 取消 CANCEL</button></div></div>
@@ -889,8 +889,8 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
 <div id="pause" class="overlay"><div class="card">
   <h2>暫停 PAUSED</h2>
   <div class="keys">
-    <kbd>W A S D</kbd><span>移動（放開即停，可急停）</span><kbd>SHIFT</kbd><span>衝刺；按住時站在邊緣不會掉下去</span>
-    <kbd>C / CTRL</kbd><span>蹲下（空中蹲 = 蹲跳，衝刺中 = 滑鏟）</span><kbd>SPACE</kbd><span>跳躍</span>
+    <kbd>W A S D</kbd><span>移動（放開即停，可急停）</span><kbd>SHIFT</kbd><span>衝刺</span>
+    <kbd>CTRL / C</kbd><span>蹲下（空中蹲 = 蹲跳）；按住時站在邊緣不會掉下去</span><kbd>SPACE</kbd><span>跳躍</span>
     <kbd>左鍵 / 右鍵</kbd><span>開火 / 開鏡（狙擊鏡可按兩次二段變焦）</span>
     <kbd>1 – 6</kbd><span>主武器 · 副武器 · 刀 · 手榴彈 · 閃光彈 · 煙霧彈</span>
     <kbd>投擲物</kbd><span>按住蓄力（像拉弓，越久越遠），放開投出；左鍵遠投 / 右鍵近拋；邊跑邊跳丟更遠</span>
@@ -1021,8 +1021,12 @@ const PART_MULT = { head: 2.5, chest: 1, stomach: 0.9, thigh: 0.75, shin: 0.75, 
 // Evo thresholds are scaled down from Apex's 450 / 1700 for respawn matches; each soldier keeps its Evo through deaths.
 const APEX = {
   head: { smg: 1.25, assault: 1.75, lmg: 1.75, pistol: 1.75, sniper: 2, shotgun: 1 }, legs: { sniper: 0.9, pistol: 0.9 }, leg: 0.8,
+  // v59 per-shot damage brought to Apex's own (user: Apex fights last two or three magazines): R-301 13 vs our M4 26, R-99 12 vs
+  // MP5 25, Spitfire 18 vs M249 28, P2020 18, EVA-8 56 a blast vs 870 144, Longbow 55 / Kraber 140 vs M200 120
+  scale: { assault: 0.5, smg: 0.5, lmg: 0.62, pistol: 0.6, sniper: 0.9, shotgun: 0.42 },
   shields: [50, 75, 100], evo: [0, 150, 500], regenDelay: 4, regenHp: 20, regenShield: 25,
 };
+const APEX_STEP = 0.8; // v59 step height on the Apex maps (def.traversal): their 1 m collision columns step 0.5–0.75 m on a walkable slope
 const apexShield = (evo) => APEX.shields[APEX.evo.reduce((lv, need, i) => (evo >= need ? i : lv), 0)];
 const PART_LABEL = { head: '頭部', chest: '胸部', stomach: '腹部', thigh: '大腿', shin: '小腿', foot: '腳' };
 
@@ -1564,7 +1568,7 @@ function calcDamage(def, part, dist, mult = 1, apex = false) {
   let base;
   if (def.damageNear !== undefined) {
     const t = apex && def.type !== 'shotgun' ? 0 : clamp((dist - def.falloffStart) / Math.max(1e-3, def.falloffEnd - def.falloffStart), 0, 1);
-    base = def.damageNear + (def.damageFar - def.damageNear) * t;
+    base = (def.damageNear + (def.damageFar - def.damageNear) * t) * (apex ? APEX.scale[def.type] ?? 1 : 1);
   }
   else base = def.damage * Math.pow(def.falloff ?? 1, dist / 10);
   return base * m * mult;
@@ -3552,6 +3556,7 @@ class CharacterMotor {
     this.grounded = false; this.crouching = false; this.surface = 'concrete';
     this.stepOffset = 0; this.jumpBufferT = 0; this.landSpeed = 0; this.jumped = false;
     this.edgeGuard = false;
+    this.stepHeight = o.stepHeight ?? CFG.player.stepHeight; // v59: 0.8 m on the Apex maps, whose terrain collision is 1 m columns
     this.climbInput = 0; this.ladder = null; this.ladderCd = 0; this.climbing = false; this.climbDist = 0;
     this.onTerrain = false; this.sliding = false;
     this.accelK = o.accelK ?? 1; this.frictionK = o.frictionK ?? 1; // v24: bots get momentum (players keep the snappy Quake-style values)
@@ -3656,7 +3661,7 @@ class CharacterMotor {
     this._moveAxis('z', this.vel.z * dt, guard);
     this._moveY(this.vel.y * dt);
 
-    const maxDown = wasGrounded && this.vel.y <= 0 ? P.stepHeight : 0.02;
+    const maxDown = wasGrounded && this.vel.y <= 0 ? this.stepHeight : 0.02;
     const g = this.vel.y <= 0.001 ? this.world.groundBelow(this.pos.x, this.pos.y, this.pos.z, this.radius, maxDown) : null;
     this.onTerrain = !!(g && g.terrain); this.sliding = false;
     if (g && g.steep) { // too steep to stand on: slide down the fall line
@@ -3693,7 +3698,7 @@ class CharacterMotor {
     const cands = w.query(p.x - r - 0.05, p.z - r - 0.05, p.x + r + 0.05, p.z + r + 0.05, this._c);
     for (const b of cands) {
       if (!b.blocksMove || !CollisionWorld.overlap(b, p.x, p.y, p.z, r, h)) continue;
-      const rise = b.max.y - p.y, allow = this.grounded ? P.stepHeight : P.airStep;
+      const rise = b.max.y - p.y, allow = this.grounded ? this.stepHeight : P.airStep;
       if (rise > 0 && rise <= allow && w.fits(p.x, b.max.y + 1e-4, p.z, r, h)) {
         const old = p.y; p.y = b.max.y + 1e-4;
         if (this.grounded) this.stepOffset -= p.y - old; else if (this.vel.y < 0) this.vel.y = 0;
@@ -3704,7 +3709,7 @@ class CharacterMotor {
     }
     for (const rp of w.ramps) {
       if (p.x + r <= rp.minX || p.x - r >= rp.maxX || p.z + r <= rp.minZ || p.z - r >= rp.maxZ || p.y + h <= rp.y0) continue;
-      const top = w.rampMaxUnder(rp, p.x, p.z, r), allow = this.grounded ? P.stepHeight : P.airStep;
+      const top = w.rampMaxUnder(rp, p.x, p.z, r), allow = this.grounded ? this.stepHeight : P.airStep;
       if (!(top > p.y + allow && p.y < top - 0.02)) continue;
       // v23: the ramp's side is a wall that refuses moves INTO it; a body already wedged beside it may always move out
       // (before, every move on the axis was reverted → players who dropped off the low side of a ramp were stuck for good)
@@ -3719,13 +3724,13 @@ class CharacterMotor {
       if (th > p.y) {
         // step assist (v16): a short steep bump whose ground 0.55 m further on is within step height is a step, not a cliff
         const dir = amount > 0 ? 0.55 : -0.55, aheadRise = T.heightAt(p.x + (axis === 'x' ? dir : 0), p.z + (axis === 'z' ? dir : 0)) - beforeY;
-        const walkable = T.slopeAt(p.x, p.z) <= MAX_SLOPE || (this.grounded && aheadRise <= P.stepHeight);
+        const walkable = T.slopeAt(p.x, p.z) <= MAX_SLOPE || (this.grounded && aheadRise <= this.stepHeight);
         if (walkable && th - p.y < 0.6 && w.fits(p.x, th + 1e-3, p.z, r, h)) p.y = th;
         else { p[axis] = before; p.y = Math.max(beforeY, T.heightAt(p.x, p.z)); this.vel[axis] = 0; }
       }
     }
-    // SHIFT edge-guard: refuse moves that would leave the footprint without support.
-    if (guard && !w.groundBelow(p.x, p.y, p.z, r * 0.8, P.stepHeight + 0.05)) {
+    // edge-guard (v59: while crouch is held): refuse moves that would leave the footprint without support.
+    if (guard && !w.groundBelow(p.x, p.y, p.z, r * 0.8, this.stepHeight + 0.05)) {
       p[axis] = before; p.y = beforeY; this.vel[axis] = 0;
     }
   }
@@ -7722,23 +7727,26 @@ MAPS.push({
     window.__apexImport={sourceMeshObjects:before,visualBatches:b.batches.size,collisionBoxes:data.boxes.length,navCandidates:data.nav.length};
   }
 });
-// Full imported extent. Repeated meshes stay instanced; AI combat remains in the verified village.
-// Stand-in sliding doors at the original prop_door positions (E opens / closes; a closing door reopens on anyone in it).
-// mechs[0] on this map: the host streams netState() to clients.
+// Full imported extent. Repeated meshes stay instanced; bots fight over the baked reachable area (tools/bake-apex-nav.mjs).
+// Stand-in doors at the original prop_door positions, hinged like Apex's (a 1.5 m leaf swinging 90° away from whoever opens it).
+// E opens / closes; a bot walking up opens it (they cannot press E); an open leaf blocks nothing, a closed one blocks moves,
+// shots and grenades, and a closing door reopens on anyone in its swing. mechs[0] on this map: the host streams netState().
 class ApexDoors {
   constructor(b, entries) {
     this.b = b; this.doors = [];
-    for (const d of entries) {
-      const pivot = new THREE.Group(); pivot.position.set(d.x, d.y, d.z); pivot.rotation.y = d.yaw;
+    for (const e of entries) {
+      const pivot = new THREE.Group(); pivot.position.set(e.x, e.y, e.z); pivot.rotation.y = e.yaw;
       const mat = new THREE.MeshStandardMaterial({ color: 0x854d3b, metalness: 0.45, roughness: 0.65 });
-      const leaf = new THREE.Mesh(new THREE.BoxGeometry(0.16, 2.6, 1.5), mat); leaf.position.set(0, 1.3, -0.75); leaf.castShadow = true; leaf.receiveShadow = true; pivot.add(leaf);
+      const leaf = new THREE.Mesh(new THREE.BoxGeometry(0.16, 2.4, 1.46), mat); leaf.position.set(0, 1.22, -0.75); leaf.castShadow = true; leaf.receiveShadow = true; pivot.add(leaf);
       const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.15, 1.35), new THREE.MeshStandardMaterial({ color: 0xd8b057, roughness: 0.7 })); stripe.position.set(0, 1.2, -0.75); pivot.add(stripe);
       b.scene.add(pivot); pivot.updateMatrixWorld(true);
       const box = new THREE.Box3().setFromObject(pivot), col = b.col.addBox(box.min.clone(), box.max.clone(), { material: 'metal' });
       const size = box.getSize(new THREE.Vector3()), mid = box.getCenter(new THREE.Vector3());
       const body = new CANNON.Body({ mass: 0, material: b.phys.matDefault, shape: new CANNON.Box(new CANNON.Vec3(size.x / 2, size.y / 2, size.z / 2)) });
       body.position.set(mid.x, mid.y, mid.z); b.phys.world.addBody(body);
-      this.doors.push({ pivot, col, body, base: d.y, k: 0, target: 0, box: box.clone(), center: mid });
+      // leaf centre, door-plane normal (n) and leaf direction from the hinge (u)
+      this.doors.push({ pivot, col, body, yaw: e.yaw, base: e.y, k: 0, target: 0, dir: 1, solid: true, botT: 0, box: box.clone(), center: mid,
+        nx: Math.cos(e.yaw), nz: -Math.sin(e.yaw) });
     }
   }
   nearest(c) {
@@ -7752,26 +7760,70 @@ class ApexDoors {
     }
     return best;
   }
-  prompt(c) { const d = this.nearest(c); return d ? '按 [E] ' + (d.target ? '關閉' : '開啟') + '電動門' : null; }
-  interact(c) { const d = this.nearest(c); if (!d) return false; d.target = d.target ? 0 : 1; return true; }
-  _slide(d, k) { // the leaf rises 2.9 m; its collider and physics body follow
-    const dy = (k - d.k) * 2.9; d.k = k; if (!dy) return;
-    d.pivot.position.y = d.base + k * 2.9; this.b.col.moveBox(d.col, 0, dy, 0);
-    d.body.position.y += dy; d.body.aabbNeedsUpdate = true;
+  prompt(c) { const d = this.nearest(c); return d ? '按 [E] ' + (d.target ? '關門' : '開門') : null; }
+  interact(c) { const d = this.nearest(c); if (!d) return false; this._open(d, d.target ? 0 : 1, c.motor.pos); return true; }
+  _open(d, target, from) {
+    if (target && d.k <= 0.02) { // pick the swing that takes the leaf's free end away from the opener
+      const side = (from.x - d.center.x) * d.nx + (from.z - d.center.z) * d.nz, a = d.yaw + Math.PI / 2;
+      const endN = -Math.sin(a) * d.nx - Math.cos(a) * d.nz; // +90°: the free end moves along this much of the normal
+      d.dir = endN * side > 0 ? -1 : 1;
+    }
+    d.target = target;
+  }
+  _swing(d, k) {
+    d.k = k; d.pivot.rotation.y = d.yaw + d.dir * k * Math.PI * 0.5;
+    const solid = k <= 0.02;
+    if (solid === d.solid) return;
+    d.solid = solid; this.b.col.setSolid(d.col, solid);
+    if (solid) this.b.phys.world.addBody(d.body); else this.b.phys.world.removeBody(d.body);
   }
   tick(h) {
     const g = this.b.game;
     for (const d of this.doors) {
-      if (!g.isClient && d.target === 0 && d.k > 0 && g.combatants.some((c) => c.alive && CollisionWorld.overlap(d.box, c.motor.pos.x, c.motor.pos.y, c.motor.pos.z, c.motor.radius + 0.15, c.motor.height))) d.target = 1;
-      this._slide(d, clamp(d.k + Math.sign(d.target - d.k) * h * 1.6, 0, 1));
+      if (!g.isClient) {
+        const near = (r) => g.combatants.some((c) => c.alive && Math.hypot(c.motor.pos.x - d.center.x, c.motor.pos.z - d.center.z) < r && Math.abs(c.motor.pos.y - d.base) < 2);
+        const bot = d.k <= 0.02 && d.target === 0 && g.combatants.find((c) => c.alive && c.isBot && Math.hypot(c.motor.pos.x - d.center.x, c.motor.pos.z - d.center.z) < 1.9 && Math.abs(c.motor.pos.y - d.base) < 2);
+        if (bot) { this._open(d, 1, bot.motor.pos); d.botT = 3; }
+        if (d.botT > 0 && (d.botT -= h) <= 0 && !near(2.6)) d.target = 0; // a bot's door closes behind it
+        if (d.target === 0 && d.k > 0.02 && near(1.7)) d.target = 1; // never closes on anyone in the swing
+      }
+      this._swing(d, clamp(d.k + Math.sign(d.target - d.k) * h * 3, 0, 1));
     }
   }
   render() {}
-  netState() { return this.doors.flatMap((d) => [d.k, d.target]); }
+  netState() { return this.doors.flatMap((d) => [+d.k.toFixed(3), d.target, d.dir]); }
   applyNet(s) {
-    if (!Array.isArray(s) || s.length !== this.doors.length * 2) return;
-    this.doors.forEach((d, i) => { this._slide(d, clamp(Number(s[i * 2]) || 0, 0, 1)); d.target = s[i * 2 + 1] ? 1 : 0; });
+    if (!Array.isArray(s) || s.length !== this.doors.length * 3) return;
+    this.doors.forEach((d, i) => { d.dir = s[i * 3 + 2] < 0 ? -1 : 1; d.target = s[i * 3 + 1] ? 1 : 0; this._swing(d, clamp(Number(s[i * 3]) || 0, 0, 1)); });
   }
+}
+
+// The baked collision is 0.5–1 m columns, so door frames and the lintel spill into each doorway: cut every column back to the
+// floor and lintel inside each leaf's opening (1.5 m wide, ±0.35 m off the wall, 0.22–2.6 m above the door's floor).
+function apexCarveDoors(boxes, doors) {
+  const out = [], cut = [];
+  for (const e of doors) {
+    const ux = -Math.sin(e.yaw), uz = -Math.cos(e.yaw), nx = Math.cos(e.yaw), nz = -Math.sin(e.yaw), pts = [];
+    for (const [u, v] of [[-0.05, -0.35], [1.55, -0.35], [1.55, 0.35], [-0.05, 0.35]]) pts.push([e.x + ux * u + nx * v, e.z + uz * u + nz * v]);
+    cut.push({ e, ux, uz, nx, nz, x0: Math.min(...pts.map((p) => p[0])), x1: Math.max(...pts.map((p) => p[0])), z0: Math.min(...pts.map((p) => p[1])), z1: Math.max(...pts.map((p) => p[1])), y0: e.y + 0.22, y1: e.y + 2.6 });
+  }
+  let n = 0;
+  for (let j = 0; j < boxes.length; j += 6) {
+    const bx0 = boxes[j], by0 = boxes[j + 1], bz0 = boxes[j + 2], bx1 = boxes[j + 3], by1 = boxes[j + 4], bz1 = boxes[j + 5];
+    let hit = null;
+    for (const c of cut) {
+      if (bx1 <= c.x0 || bx0 >= c.x1 || bz1 <= c.z0 || bz0 >= c.z1 || by1 <= c.y0 || by0 >= c.y1) continue;
+      let u0 = Infinity, u1 = -Infinity, v0 = Infinity, v1 = -Infinity; // the box's corners on the door axes
+      for (const [x, z] of [[bx0, bz0], [bx1, bz0], [bx1, bz1], [bx0, bz1]]) { const u = (x - c.e.x) * c.ux + (z - c.e.z) * c.uz, v = (x - c.e.x) * c.nx + (z - c.e.z) * c.nz; u0 = Math.min(u0, u); u1 = Math.max(u1, u); v0 = Math.min(v0, v); v1 = Math.max(v1, v); }
+      if (u1 <= -0.05 || u0 >= 1.55 || v1 <= -0.35 || v0 >= 0.35) continue;
+      hit = c; break;
+    }
+    if (!hit) { out.push(bx0, by0, bz0, bx1, by1, bz1); continue; }
+    n++;
+    if (by0 < hit.y0 - 0.01) out.push(bx0, by0, bz0, bx1, hit.y0, bz1);
+    if (by1 > hit.y1 + 0.01) out.push(bx0, hit.y1, bz0, bx1, by1, bz1);
+  }
+  return { boxes: new Float32Array(out), cut: n };
 }
 
 // Keeps the full world cheap: static physics exists only in 16 m tiles around combatants and live grenades (the whole map
@@ -7874,7 +7926,8 @@ MAPS.push({
     const { data, gltf, manifest } = this._full;
     b.navBaked = this._full.nav;
     b.game.camera.far = 2200; b.game.camera.updateProjectionMatrix();
-    b.col.addPacked(data.boxes, { material: 'concrete' });
+    const carved = apexCarveDoors(data.boxes, manifest.doors); // (kept: the bake and every match carve the same openings)
+    b.col.addPacked(carved.boxes, { material: 'concrete' });
     // Visual geometry retains shared prototypes and original transforms.
     gltf.scene.updateMatrixWorld(true);
     const batches = new Map(), villageMats = new Map(); let objects = 0;
@@ -7908,8 +7961,8 @@ MAPS.push({
       b.scene.add(mesh); meshes.push(mesh);
     }
     const doors = new ApexDoors(b, manifest.doors);
-    b.mechs.push(doors, new ApexStreaming(b, data.boxes, meshes));
-    window.__apexFull = { objects, drawGroups: batches.size, doors: doors.doors.length, collisionBoxes: data.count, manifest };
+    b.mechs.push(doors, new ApexStreaming(b, carved.boxes, meshes));
+    window.__apexFull = { objects, drawGroups: batches.size, doors: doors.doors.length, collisionBoxes: carved.boxes.length / 6, doorCuts: carved.cut, manifest };
   }
 });
 /* =====================================================================
@@ -10714,7 +10767,8 @@ class Combatant {
   constructor(game, team, name, isPlayer) {
     this.game = game; this.team = team; this.name = name; this.isPlayer = isPlayer;
     // v24: bots accelerate / brake at ~60 % of the player's rate — with the player's instant stops their A-D strafes and dodges looked like teleports
-    this.motor = new CharacterMotor(game.collision, { radius: CFG.player.radius, height: CFG.player.height, crouchHeight: CFG.player.crouchHeight, accelK: isPlayer ? 1 : 0.6, frictionK: isPlayer ? 1 : 0.6 });
+    this.motor = new CharacterMotor(game.collision, { radius: CFG.player.radius, height: CFG.player.height, crouchHeight: CFG.player.crouchHeight, accelK: isPlayer ? 1 : 0.6, frictionK: isPlayer ? 1 : 0.6,
+      stepHeight: game.def.traversal ? APEX_STEP : undefined });
     this.alive = true; this.hp = 100; this.spawnProtect = 0; this.respawnT = 0; this.yaw = 0;
     this.helmet = true; this.shield = 0; this.maxShield = 0; this.evo = 0; this.hurtT = -99; // v58 damage models (Match.refit)
     this.kills = 0; this.deaths = 0; this.assists = 0; this.score = 0; this.headshots = 0;
@@ -10746,7 +10800,7 @@ class Combatant {
 }
 
 /* =====================================================================
-   v25 HUMAN — a soldier steered by UserCmds: sprint / edge-guard, crouch, tactical slide, mantle, ladders, footsteps.
+   v25 HUMAN — a soldier steered by UserCmds: sprint, crouch (v59: holding it guards ledges), mantle, ladders, footsteps.
    The local Player and a remote NetPlayer (simulated on the host) both run this exact code.
    ===================================================================== */
 class Human extends Combatant {
@@ -10822,32 +10876,14 @@ class Human extends Combatant {
     const lad = g.collision.ladders.length ? g.collision.ladderAt(m.pos.x, m.pos.y, m.pos.z, m.radius) : null;
     if (lad) { const facing = -s * -lad.nx + -c * -lad.nz; m.climbInput = f * (facing < -0.3 ? -1 : 1); } else m.climbInput = 0;
     const crouchKey = !!(btn & BTN.CROUCH);
-    // v14 TACTICAL SLIDE (COD): crouch while sprinting → 0.72 s slide with a speed burst, low camera + roll, A/D steer; jump cancels it keeping momentum
-    if (this.slideCd > 0) this.slideCd -= h;
-    if (crouchKey && !this.crouchHeld && this.sprinting && m.grounded && !lad && m.horizontalSpeed() > 5.5 && this.slideCd <= 0 && this.slideT <= 0) {
-      const hs0 = m.horizontalSpeed(); this.slideT = 0.72; this.slideDir.set(m.vel.x / hs0, 0, m.vel.z / hs0); this.slideV0 = Math.max(hs0 * 1.18, 8.4);
-      m.setCrouch(true); m.vel.x = this.slideDir.x * this.slideV0; m.vel.z = this.slideDir.z * this.slideV0; this.sprinting = false; this.fovPunch = 4;
-      this._sfx('land', m.surface, 0.75); g.emitNoise(m.pos, 13, this.team);
-    }
-    this.crouchHeld = crouchKey;
-    if (this.slideT > 0) {
-      if (traversal && crouchKey && f > 0 && m.grounded) this.slideT = Math.max(this.slideT, 0.55);
-      if (traversal && !crouchKey) this.slideT = 0;
-      this.slideT -= h;
-      const k = 1 - Math.max(0, this.slideT) / 0.72, ang = r * 1.1 * h, cs = Math.cos(ang), sn = Math.sin(ang), dx = this.slideDir.x, dz = this.slideDir.z;
-      this.slideDir.set(dx * cs - dz * sn, 0, dx * sn + dz * cs);
-      m.setCrouch(true); this.sprinting = false; m.edgeGuard = false;
-      m.step(h, this.slideDir.x, this.slideDir.z, traversal ? Math.max(6.2, lerp(this.slideV0, 2.6, k * k)) : lerp(this.slideV0, 2.6, k * k));
-      if (m.jumped || !m.grounded || this.slideT <= 0) { this.slideT = 0; this.slideCd = 0.75; }
-      return;
-    }
+    // v59: no slide (user: SF2 has none) — crouch is crouch, also while sprinting
     m.setCrouch(crouchKey);
     const shift = !!(btn & BTN.SPRINT);
     const ws = this.gear(), w = ws.current;
     if (this.sprintBlock > 0) this.sprintBlock -= h;
     const intent = shift && f > 0; if (!intent) this.adsSprintLock = false;
     this.sprinting = intent && !this.adsSprintLock && !m.crouching && !w.reloading && this.sprintBlock <= 0 && !(w.kind === 'grenade' && w.state !== 'idle'); // v45: W+Shift while aimed drops the sight and sprints (any gun)
-    m.edgeGuard = shift && m.grounded;
+    m.edgeGuard = crouchKey && m.grounded; // v59 SF2: holding crouch (Ctrl / C) at a ledge keeps you on it; Shift only sprints
     let speed = w.moveSpeed * (this.carrying ? 0.88 : 1);
     if (m.crouching) speed *= P.crouchMult; else if (this.sprinting) speed *= P.sprintMult;
     if (ws.ads) speed *= w.adsMove ?? 1;
@@ -11066,7 +11102,7 @@ const PREF_RANGE = { sniper: [30, 75], rifle: [10, 34], lmg: [12, 38], smg: [6, 
 class Bot extends Combatant {
   constructor(game, team, idx, weaponId) {
     super(game, team, BOT_NAMES[team][idx % BOT_NAMES[team].length], false);
-    this.slideT = 0; this.slideDir = new THREE.Vector3(); this.airJumpUsed = false; // v57 traversal maps
+    this.airJumpUsed = false; // v57 traversal maps (double jump)
     this.idx = idx; this.isBot = true; this.aimPitch = 0; this.walkPhase = Math.random() * 6; this.stepDist = 0; this.spottedT = -10; this.stepPitch = rand(0.9, 1.12);
     this.model = game.app.soldiers.create(team, WEAPON_DEFS[weaponId].model || weaponId);
     game.scene.add(this.model.root);
@@ -11138,7 +11174,7 @@ class Bot extends Combatant {
   respawn(point, yaw) {
     this.motor.teleport(point); this.life = (this.life || 0) + 1;
     this.yaw = yaw + rand(-0.3, 0.3); this.hp = 100; this.alive = true; this.spawnProtect = CFG.spawnProtect; this.carrying = false;
-    this.ammo = this.def.mag || 0; this.reloadT = 0; this.damageLog.clear(); this.slideT = 0; this.game.refit(this);
+    this.ammo = this.def.mag || 0; this.reloadT = 0; this.damageLog.clear(); this.game.refit(this);
     this.nades = this.game.mode === 'general' ? { he: 1, flash: 1 } : { he: 0, flash: 0 };
     this.model.root.visible = true; this.model.head.visible = true; this.model.root.position.copy(this.motor.pos); if (this.tag) this.tag.visible = true;
     this.ai.reset();
@@ -11148,15 +11184,8 @@ class Bot extends Combatant {
     if (!this.alive) return;
     const ai = this.ai, frozen = !this.game.canMove(), m = this.motor;
     if (m.grounded || m.climbing) this.airJumpUsed = false;
-    if (this.slideT > 0 && !frozen) { // v57 slide (traversal maps): crouched, fast at first, ends early once airborne
-      this.slideT -= h; m.setCrouch(true);
-      const k = 1 - Math.max(0, this.slideT) / 0.85;
-      m.step(h, this.slideDir.x, this.slideDir.z, lerp(8.2, 3.2, k * k));
-      if (!m.grounded) this.slideT = 0;
-    } else {
-      if (!m.climbing) m.setCrouch(!frozen && ai.crouchT > 0);
-      m.step(h, frozen ? 0 : ai.wishX, frozen ? 0 : ai.wishZ, frozen ? 0 : ai.wishSpeed * (this.carrying ? 0.88 : 1));
-    }
+    if (!m.climbing) m.setCrouch(!frozen && ai.crouchT > 0);
+    m.step(h, frozen ? 0 : ai.wishX, frozen ? 0 : ai.wishZ, frozen ? 0 : ai.wishSpeed * (this.carrying ? 0.88 : 1));
     if (!frozen && ai.wantJump) { m.requestJump(); ai.wantJump = false; }
     if (!frozen && ai.wantAirJump) { // v57 double jump, same impulse as the player's
       if (!this.airJumpUsed && !m.grounded && !m.climbing) { m.vel.y = CFG.player.jumpVel; this.airJumpUsed = true; }
@@ -11261,8 +11290,7 @@ class BotAI {
     const left = hl ? hl.t : 2.5, right = hr ? hr.t : 2.5;
     if (right > left + 0.3 || (Math.abs(right - left) <= 0.3 && Math.random() < 0.5)) { px = -px; pz = -pz; }
     this.dodgeX = px; this.dodgeZ = pz; this.dodgeT = rand(0.4, 0.65); this.strafeDir = 0; this.strafeT = 0;
-    if (this.game.def.traversal && this.bot.motor.grounded && Math.random() < 0.35) { this.bot.slideT = 0.6; this.bot.slideDir.set(px, 0, pz).normalize(); } // v57: dive-slide out of the line of fire
-    else if (Math.random() < 0.12) this.wantJump = true;
+    if (Math.random() < 0.12) this.wantJump = true;
   }
 
   // v8 NEAR MISS: no damage, but the crack gives a rough direction — fighting bots dodge, the rest turn, dodge and move on it.
@@ -11383,7 +11411,7 @@ class BotAI {
       if (this.game.def.traversal && !m.climbing && !t.ladder && d < 2.8) {
         if (m.grounded) {
           this.ledgeJump = false;
-          if (dy > 0.3) { const ah = this.game.collision.groundBelow(m.pos.x + wx * 0.75, m.pos.y + 2.6, m.pos.z + wz * 0.75, 0.2, 2.6); if (ah && ah.y > m.pos.y + 0.42) this.wantJump = this.ledgeJump = true; }
+          if (dy > 0.3) { const ah = this.game.collision.groundBelow(m.pos.x + wx * 0.75, m.pos.y + 2.6, m.pos.z + wz * 0.75, 0.2, 2.6); if (ah && ah.y > m.pos.y + m.stepHeight - 0.03) this.wantJump = this.ledgeJump = true; }
         } else if (this.ledgeJump && m.vel.y < 1.2 && m.pos.y < t.y + 0.15) this.wantAirJump = true;
       }
       if (face) {
@@ -11506,18 +11534,7 @@ class BotAI {
       this.dodgeT -= dt; this.wishX = this.dodgeX; this.wishZ = this.dodgeZ; this.wishSpeed = CFG.bot.runSpeed * 0.8; // v24: was ×1.22 for 0.26–0.42 s (read as a teleport)
     }
     if (bot.motor.crouching) this.wishSpeed *= 0.45;
-    if (g.def.traversal) this._slide(dt);
     this._stuckCheck(dt);
-  }
-
-  // v57 traversal maps: a running bot with a long straight stretch ahead sometimes slides (its own pace, every few seconds at most)
-  _slide(dt) {
-    const bot = this.bot, m = bot.motor;
-    this.slideCd = (this.slideCd || 0) - dt;
-    if (bot.slideT > 0 || this.slideCd > 0 || !m.grounded || m.crouching || this.wishSpeed < CFG.bot.runSpeed * 0.85 || this.pathIdx >= this.path.length) return;
-    const t = this.path[this.pathIdx];
-    if (Math.hypot(t.x - m.pos.x, t.z - m.pos.z) < 7 || Math.abs(t.y - m.pos.y) > 1 || Math.random() > dt * (0.25 + this.aggro * 0.5)) return;
-    bot.slideT = 0.85; bot.slideDir.set(this.wishX, 0, this.wishZ).normalize(); this.slideCd = rand(3, 7);
   }
 
   _scan(dt, width) { this.scanPhase += dt * (0.8 + this.caution * 0.6); this._turnTo(this.scanBase + Math.sin(this.scanPhase) * width, 2.6, dt); }

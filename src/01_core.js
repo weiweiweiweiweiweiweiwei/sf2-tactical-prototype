@@ -49,8 +49,12 @@ const PART_MULT = { head: 2.5, chest: 1, stomach: 0.9, thigh: 0.75, shin: 0.75, 
 // Evo thresholds are scaled down from Apex's 450 / 1700 for respawn matches; each soldier keeps its Evo through deaths.
 const APEX = {
   head: { smg: 1.25, assault: 1.75, lmg: 1.75, pistol: 1.75, sniper: 2, shotgun: 1 }, legs: { sniper: 0.9, pistol: 0.9 }, leg: 0.8,
+  // v59 per-shot damage brought to Apex's own (user: Apex fights last two or three magazines): R-301 13 vs our M4 26, R-99 12 vs
+  // MP5 25, Spitfire 18 vs M249 28, P2020 18, EVA-8 56 a blast vs 870 144, Longbow 55 / Kraber 140 vs M200 120
+  scale: { assault: 0.5, smg: 0.5, lmg: 0.62, pistol: 0.6, sniper: 0.9, shotgun: 0.42 },
   shields: [50, 75, 100], evo: [0, 150, 500], regenDelay: 4, regenHp: 20, regenShield: 25,
 };
+const APEX_STEP = 0.8; // v59 step height on the Apex maps (def.traversal): their 1 m collision columns step 0.5–0.75 m on a walkable slope
 const apexShield = (evo) => APEX.shields[APEX.evo.reduce((lv, need, i) => (evo >= need ? i : lv), 0)];
 const PART_LABEL = { head: '頭部', chest: '胸部', stomach: '腹部', thigh: '大腿', shin: '小腿', foot: '腳' };
 
@@ -592,7 +596,7 @@ function calcDamage(def, part, dist, mult = 1, apex = false) {
   let base;
   if (def.damageNear !== undefined) {
     const t = apex && def.type !== 'shotgun' ? 0 : clamp((dist - def.falloffStart) / Math.max(1e-3, def.falloffEnd - def.falloffStart), 0, 1);
-    base = def.damageNear + (def.damageFar - def.damageNear) * t;
+    base = (def.damageNear + (def.damageFar - def.damageNear) * t) * (apex ? APEX.scale[def.type] ?? 1 : 1);
   }
   else base = def.damage * Math.pow(def.falloff ?? 1, dist / 10);
   return base * m * mult;

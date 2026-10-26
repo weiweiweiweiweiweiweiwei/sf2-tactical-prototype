@@ -2,7 +2,7 @@
 // sampling of the ~1 km map would take minutes and unpack every collision cell.
 //   node tools/bake-apex-nav.mjs     → assets/maps/apex-full/nav.bin + nav.json (packed by tools/pack-apex-js.mjs)
 // 1. candidates: every 2.5 m, each box top a capsule can stand on (NavGraph.walkable), plus the village's 0.5 m points.
-// 2. walk links (≤ 3.6 m, diagonals too): sampled every 0.3 m like the motor — rises ≤ 0.45 m (stepHeight), drops ≤ 0.6 m,
+// 2. walk links (≤ 3.6 m, diagonals too): sampled every 0.3 m like the motor — rises ≤ the Apex step height (0.8 m, v59), drops ≤ 0.85 m,
 //    capsule fits — so hills of stepped 1 m columns connect (the runtime rule, |dy| ≤ 0.5 per 2.5 m link, caps them at 11°).
 // 3. air links (one-way): drop up to 3 m; jump up 0.5–1.9 m (a double jump reaches ~2.4 m) where a shaft over the lower
 //    node and the path across at the upper height are clear — then each one is played out with the game's own motor and the
@@ -28,7 +28,8 @@ const r = await page.evaluate(async () => {
   const log = (...a) => console.log('[bake]', ...a), t0 = performance.now();
   Object.assign(SF2.Settings.data.lobby, { map: SF2.MAPS.findIndex((m) => m.id === 'apex_full'), rule: 'tdm', allies: 1, enemies: 1 });
   await app.startMatch();
-  const g = app.match, col = g.collision, nav = g.nav, B = g.def.bounds, STEP = 2.5, tmp = [], CFG_JUMP = 7.0; // CFG.player.jumpVel
+  for (const d of app.match.builder.mechs[0].doors) app.match.collision.setSolid(d.col, false); // v59: doorways are walkable (bots open doors)
+  const g = app.match, col = g.collision, nav = g.nav, B = g.def.bounds, GRID = 2.5, STEP = g.player.motor.stepHeight, tmp = [], CFG_JUMP = 7.0; // CFG.player.jumpVel
 
   // 1. candidates
   const nodes = [], hash = new Map(), HC = 3, hk = (x, z) => (Math.floor(x / HC) + 1000) * 4000 + Math.floor(z / HC) + 1000;
@@ -38,8 +39,8 @@ const r = await page.evaluate(async () => {
     if (dup) return; const k = hk(x, z); let l = hash.get(k); if (!l) hash.set(k, l = []); l.push(nodes.length); nodes.push([x, y, z]);
   };
   for (const p of g.def._full.data.nav) { const y = nav.walkable(p[0], p[1], p[2]); if (y !== null) add(p[0], y, p[2]); }
-  for (let x = B.minX + 1; x <= B.maxX - 1; x += STEP) {
-    for (let z = B.minZ + 1; z <= B.maxZ - 1; z += STEP) {
+  for (let x = B.minX + 1; x <= B.maxX - 1; x += GRID) {
+    for (let z = B.minZ + 1; z <= B.maxZ - 1; z += GRID) {
       col.query(x - 0.01, z - 0.01, x + 0.01, z + 0.01, tmp);
       const tops = [];
       for (const bx of tmp) if (bx.blocksMove && bx.max.y > -150 && bx.min.x <= x && bx.max.x >= x && bx.min.z <= z && bx.max.z >= z) tops.push(bx.max.y);
@@ -51,15 +52,17 @@ const r = await page.evaluate(async () => {
   log('candidates', nodes.length, Math.round((performance.now() - t0) / 1000) + 's');
 
   // 2 + 3. links
-  const walk = (a, c) => {
+  // a step of `st` at most between samples; tried with 0.45 m first (keeps to the floor past low clutter), then the full step
+  const walkSt = (a, c, st) => {
     const dx = c[0] - a[0], dz = c[2] - a[2], n = Math.ceil(Math.hypot(dx, dz) / 0.3); let y = a[1];
     for (let i = 1; i <= n; i++) {
-      const x = a[0] + dx * i / n, z = a[2] + dz * i / n, gr = col.groundBelow(x, y + 0.45, z, 0.12, 0.6, 0.02);
-      if (!gr || gr.steep || !col.fits(x, gr.y + 0.46, z, 0.36, 1.4)) return false; // above step height (1 m terrain columns step up to 0.45 m), to the 1.8 m head
+      const x = a[0] + dx * i / n, z = a[2] + dz * i / n, gr = col.groundBelow(x, y + st, z, 0.12, st + 0.15, 0.02);
+      if (!gr || gr.steep || !col.fits(x, gr.y + st + 0.01, z, 0.36, 1.86 - st)) return false; // above step height, up to the 1.8 m head
       y = gr.y;
     }
     return Math.abs(y - c[1]) < 0.3;
   };
+  const walk = (a, c) => walkSt(a, c, 0.45) || walkSt(a, c, STEP);
   const air = (lo, hi) => { // a shaft over the lower node up to the upper height, then across at the upper height
     if (!col.fits(lo[0], lo[1] + 0.05, lo[2], 0.36, hi[1] - lo[1] + 1.95)) return false; // the 1.8 m player (radius 0.34) over the arc
     const dx = hi[0] - lo[0], dz = hi[2] - lo[2], n = Math.ceil(Math.hypot(dx, dz) / 0.3);
@@ -74,24 +77,25 @@ const r = await page.evaluate(async () => {
       if (c <= a) return;
       const C = nodes[c], d = Math.hypot(A[0] - C[0], A[2] - C[2]), dy = C[1] - A[1];
       if (d > 3.6 || d < 0.3) return;
-      if (Math.abs(dy) <= 0.45 * Math.ceil(d) + 0.1) {
-        const ac = walk(A, C), ca = walk(C, A);
+      let ac = false, ca = false;
+      if (Math.abs(dy) <= STEP * Math.ceil(d) + 0.1) {
+        ac = walk(A, C); ca = walk(C, A);
         if (ac && ca) { link(a, c, d, 0); walks++; return; }
         if (ac) { link(a, c, d, 1); walks++; } if (ca) { link(c, a, d, 1); walks++; }
-        if (ac || ca) return;
       }
+      // a direction that cannot be walked may still be a drop (down) or a jump (up)
       if (d > 2.8 || Math.abs(dy) <= 0.5 || Math.abs(dy) > 3) return;
-      const [lo, hi, l, h] = dy > 0 ? [A, C, a, c] : [C, A, c, a];
+      const [lo, hi, l, h] = dy > 0 ? [A, C, a, c] : [C, A, c, a], downOk = dy > 0 ? ca : ac, upOk = dy > 0 ? ac : ca;
       if (!air(lo, hi)) return;
-      link(h, l, d + 1 + Math.abs(dy) * 0.3, 1); drops++;
-      if (Math.abs(dy) <= 1.9) { link(l, h, d + 4, 3); jumps++; }
+      if (!downOk) { link(h, l, d + 1 + Math.abs(dy) * 0.3, 1); drops++; }
+      if (!upOk && Math.abs(dy) <= 1.9) { link(l, h, d + 4, 3); jumps++; }
     });
     if (a % 20000 === 0) { log('linked', a, '/', nodes.length); await new Promise((r) => setTimeout(r)); }
   }
   log('links', { walks, drops, jumps }, Math.round((performance.now() - t0) / 1000) + 's');
   // play out every air link: run at the upper / lower node like a bot (4.9 m/s), jump where the ground just ahead rises past a
   // step, double jump near the top of the arc while below the target; it must stand within 1.2 m of the target in 2.5 s
-  const Motor = g.player.motor.constructor, P = CFG_JUMP, sim = new Motor(col);
+  const Motor = g.player.motor.constructor, P = CFG_JUMP, sim = new Motor(col, { stepHeight: STEP });
   const plays = (a, c, jump) => {
     const A = nodes[a], C = nodes[c]; sim.teleport(new SF2.THREE.Vector3(A[0], A[1] + 0.02, A[2])); sim.vel.set(0, 0, 0);
     let ledge = false, air = false;
@@ -100,7 +104,7 @@ const r = await page.evaluate(async () => {
       if (sim.grounded) {
         if (Math.abs(sim.pos.y - C[1]) < 0.35 && d < 1.2 && s > 5) return true;
         ledge = false; air = false;
-        if (jump && C[1] - sim.pos.y > 0.3) { const ah = col.groundBelow(sim.pos.x + wx * 0.75, sim.pos.y + 2.6, sim.pos.z + wz * 0.75, 0.2, 2.6); if (ah && ah.y > sim.pos.y + 0.42) { sim.requestJump(); ledge = true; } }
+        if (jump && C[1] - sim.pos.y > 0.3) { const ah = col.groundBelow(sim.pos.x + wx * 0.75, sim.pos.y + 2.6, sim.pos.z + wz * 0.75, 0.2, 2.6); if (ah && ah.y > sim.pos.y + STEP - 0.03) { sim.requestJump(); ledge = true; } }
       } else if (ledge && !air && sim.vel.y < 1.2 && sim.pos.y < C[1] + 0.15) { sim.vel.y = P; air = true; }
       sim.step(1 / 120, wx, wz, d > 0.05 ? 4.9 : 0);
       if (sim.pos.y < Math.min(A[1], C[1]) - 4) return false;
@@ -131,7 +135,7 @@ const r = await page.evaluate(async () => {
     while (st.length) { const j = st.pop(); n++; for (const q of inc[j]) if (comp[q] < 0) { comp[q] = c; st.push(q); } }
     size.push(n);
   }
-  const big = size.indexOf(Math.max(...size)), keep = new Int32Array(N).fill(-1), kept = [];
+  const big = size.reduce((bi, v, i) => (v > size[bi] ? i : bi), 0), keep = new Int32Array(N).fill(-1), kept = [];
   log('components', size.length, 'largest', size[big], 'next', size.slice().sort((a, c) => c - a).slice(1, 6).join(','));
   nodes.forEach((n, i) => { if (comp[i] === big) { keep[i] = kept.length; kept.push(n); } });
   const E = [];

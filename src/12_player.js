@@ -9,7 +9,8 @@ class Combatant {
   constructor(game, team, name, isPlayer) {
     this.game = game; this.team = team; this.name = name; this.isPlayer = isPlayer;
     // v24: bots accelerate / brake at ~60 % of the player's rate — with the player's instant stops their A-D strafes and dodges looked like teleports
-    this.motor = new CharacterMotor(game.collision, { radius: CFG.player.radius, height: CFG.player.height, crouchHeight: CFG.player.crouchHeight, accelK: isPlayer ? 1 : 0.6, frictionK: isPlayer ? 1 : 0.6 });
+    this.motor = new CharacterMotor(game.collision, { radius: CFG.player.radius, height: CFG.player.height, crouchHeight: CFG.player.crouchHeight, accelK: isPlayer ? 1 : 0.6, frictionK: isPlayer ? 1 : 0.6,
+      stepHeight: game.def.traversal ? APEX_STEP : undefined });
     this.alive = true; this.hp = 100; this.spawnProtect = 0; this.respawnT = 0; this.yaw = 0;
     this.helmet = true; this.shield = 0; this.maxShield = 0; this.evo = 0; this.hurtT = -99; // v58 damage models (Match.refit)
     this.kills = 0; this.deaths = 0; this.assists = 0; this.score = 0; this.headshots = 0;
@@ -41,7 +42,7 @@ class Combatant {
 }
 
 /* =====================================================================
-   v25 HUMAN — a soldier steered by UserCmds: sprint / edge-guard, crouch, tactical slide, mantle, ladders, footsteps.
+   v25 HUMAN — a soldier steered by UserCmds: sprint, crouch (v59: holding it guards ledges), mantle, ladders, footsteps.
    The local Player and a remote NetPlayer (simulated on the host) both run this exact code.
    ===================================================================== */
 class Human extends Combatant {
@@ -117,32 +118,14 @@ class Human extends Combatant {
     const lad = g.collision.ladders.length ? g.collision.ladderAt(m.pos.x, m.pos.y, m.pos.z, m.radius) : null;
     if (lad) { const facing = -s * -lad.nx + -c * -lad.nz; m.climbInput = f * (facing < -0.3 ? -1 : 1); } else m.climbInput = 0;
     const crouchKey = !!(btn & BTN.CROUCH);
-    // v14 TACTICAL SLIDE (COD): crouch while sprinting → 0.72 s slide with a speed burst, low camera + roll, A/D steer; jump cancels it keeping momentum
-    if (this.slideCd > 0) this.slideCd -= h;
-    if (crouchKey && !this.crouchHeld && this.sprinting && m.grounded && !lad && m.horizontalSpeed() > 5.5 && this.slideCd <= 0 && this.slideT <= 0) {
-      const hs0 = m.horizontalSpeed(); this.slideT = 0.72; this.slideDir.set(m.vel.x / hs0, 0, m.vel.z / hs0); this.slideV0 = Math.max(hs0 * 1.18, 8.4);
-      m.setCrouch(true); m.vel.x = this.slideDir.x * this.slideV0; m.vel.z = this.slideDir.z * this.slideV0; this.sprinting = false; this.fovPunch = 4;
-      this._sfx('land', m.surface, 0.75); g.emitNoise(m.pos, 13, this.team);
-    }
-    this.crouchHeld = crouchKey;
-    if (this.slideT > 0) {
-      if (traversal && crouchKey && f > 0 && m.grounded) this.slideT = Math.max(this.slideT, 0.55);
-      if (traversal && !crouchKey) this.slideT = 0;
-      this.slideT -= h;
-      const k = 1 - Math.max(0, this.slideT) / 0.72, ang = r * 1.1 * h, cs = Math.cos(ang), sn = Math.sin(ang), dx = this.slideDir.x, dz = this.slideDir.z;
-      this.slideDir.set(dx * cs - dz * sn, 0, dx * sn + dz * cs);
-      m.setCrouch(true); this.sprinting = false; m.edgeGuard = false;
-      m.step(h, this.slideDir.x, this.slideDir.z, traversal ? Math.max(6.2, lerp(this.slideV0, 2.6, k * k)) : lerp(this.slideV0, 2.6, k * k));
-      if (m.jumped || !m.grounded || this.slideT <= 0) { this.slideT = 0; this.slideCd = 0.75; }
-      return;
-    }
+    // v59: no slide (user: SF2 has none) — crouch is crouch, also while sprinting
     m.setCrouch(crouchKey);
     const shift = !!(btn & BTN.SPRINT);
     const ws = this.gear(), w = ws.current;
     if (this.sprintBlock > 0) this.sprintBlock -= h;
     const intent = shift && f > 0; if (!intent) this.adsSprintLock = false;
     this.sprinting = intent && !this.adsSprintLock && !m.crouching && !w.reloading && this.sprintBlock <= 0 && !(w.kind === 'grenade' && w.state !== 'idle'); // v45: W+Shift while aimed drops the sight and sprints (any gun)
-    m.edgeGuard = shift && m.grounded;
+    m.edgeGuard = crouchKey && m.grounded; // v59 SF2: holding crouch (Ctrl / C) at a ledge keeps you on it; Shift only sprints
     let speed = w.moveSpeed * (this.carrying ? 0.88 : 1);
     if (m.crouching) speed *= P.crouchMult; else if (this.sprinting) speed *= P.sprintMult;
     if (ws.ads) speed *= w.adsMove ?? 1;
