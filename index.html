@@ -3291,6 +3291,129 @@ class Terrain {
 const TERRAIN_G = { x: 0, z: 0 };
 
 /* =====================================================================
+   v60 TRIANGLE COLLISION — a map's real geometry (the Apex maps) instead of boxes: true slopes, thin props and door frames
+   exactly as drawn. Triangles sit in a 4 m xz grid; each is a floor (walkable, normal within MAX_SLOPE of up), a wall or a
+   ceiling. A body is an AABB: walls and ceilings block all of it, floors only its part above FLOOR_SKIN (the ground under a
+   foot on a slope is the motor's job, through groundAt), so walking up a slope never reads as hitting it.
+   ===================================================================== */
+const FLOOR_NY = 1 / Math.hypot(1, MAX_SLOPE), FLOOR_SKIN = 0.5;
+class TriSoup {
+  constructor(pos, idx, material = 'concrete') {
+    const n = idx.length / 3, v = new Float32Array(n * 9), nrm = new Float32Array(n * 3), bb = new Float32Array(n * 6), cls = new Uint8Array(n);
+    let m = 0;
+    for (let t = 0; t < n; t++) {
+      const a = idx[t * 3] * 3, b = idx[t * 3 + 1] * 3, c = idx[t * 3 + 2] * 3;
+      const ax = pos[a], ay = pos[a + 1], az = pos[a + 2], bx = pos[b], by = pos[b + 1], bz = pos[b + 2], cx = pos[c], cy = pos[c + 1], cz = pos[c + 2];
+      const ux = bx - ax, uy = by - ay, uz = bz - az, wx = cx - ax, wy = cy - ay, wz = cz - az;
+      let nx = uy * wz - uz * wy, ny = uz * wx - ux * wz, nz = ux * wy - uy * wx; const l = Math.hypot(nx, ny, nz);
+      if (!(l > 1e-8)) continue; // degenerate
+      nx /= l; ny /= l; nz /= l;
+      v.set([ax, ay, az, bx, by, bz, cx, cy, cz], m * 9); nrm.set([nx, ny, nz], m * 3);
+      bb.set([Math.min(ax, bx, cx), Math.min(ay, by, cy), Math.min(az, bz, cz), Math.max(ax, bx, cx), Math.max(ay, by, cy), Math.max(az, bz, cz)], m * 6);
+      cls[m] = Math.abs(ny) >= FLOOR_NY ? (ny > 0 ? 0 : 2) : 1; // floor / wall / ceiling (a down-facing walkable face is a ceiling)
+      m++;
+    }
+    this.n = m; this.v = v.subarray(0, m * 9); this.nrm = nrm.subarray(0, m * 3); this.bb = bb.subarray(0, m * 6); this.cls = cls.subarray(0, m);
+    this.material = material; this.collider = { kind: 'tri', material, surface: material, blocksMove: true, blocksShot: true, penetrable: false };
+    // grid (CSR): cell key → triangle indices
+    const C = 4, counts = new Map();
+    const each = (t, fn) => { const o = t * 6; for (let ix = Math.floor(this.bb[o] / C); ix <= Math.floor(this.bb[o + 3] / C); ix++) for (let iz = Math.floor(this.bb[o + 2] / C); iz <= Math.floor(this.bb[o + 5] / C); iz++) fn((ix + 4096) * 8192 + (iz + 4096)); };
+    for (let t = 0; t < m; t++) each(t, (k) => counts.set(k, (counts.get(k) || 0) + 1));
+    this.cells = new Map(); let total = 0; for (const [k, c] of counts) { this.cells.set(k, [total, 0]); total += c; }
+    this.refs = new Int32Array(total);
+    for (let t = 0; t < m; t++) each(t, (k) => { const e = this.cells.get(k); this.refs[e[0] + e[1]++] = t; });
+    this.C = C; this.mark = new Uint32Array(m); this.stamp = 0;
+  }
+  // every triangle whose cell overlaps the xz rectangle, once
+  each(minX, minZ, maxX, maxZ, fn) {
+    const C = this.C, s = ++this.stamp, mk = this.mark;
+    for (let ix = Math.floor(minX / C); ix <= Math.floor(maxX / C); ix++) for (let iz = Math.floor(minZ / C); iz <= Math.floor(maxZ / C); iz++) {
+      const e = this.cells.get((ix + 4096) * 8192 + (iz + 4096)); if (!e) continue;
+      for (let j = e[0], end = e[0] + e[1]; j < end; j++) { const t = this.refs[j]; if (mk[t] === s) continue; mk[t] = s; if (fn(t) === true) return true; }
+    }
+    return false;
+  }
+  // does a body's box (feet at y, height h, half width r) touch a blocking triangle?
+  blocks(x, y, z, r, h) {
+    const x0 = x - r, x1 = x + r, z0 = z - r, z1 = z + r, y0 = y + 0.01, y1 = y + h, bb = this.bb;
+    return this.each(x0, z0, x1, z1, (t) => {
+      const o = t * 6, lo = this.cls[t] === 0 ? y0 + FLOOR_SKIN : y0;
+      if (lo >= y1 || bb[o] > x1 || bb[o + 3] < x0 || bb[o + 2] > z1 || bb[o + 5] < z0 || bb[o + 1] > y1 || bb[o + 4] < lo) return false;
+      return triBox(this.v, t * 9, this.nrm, t * 3, (x0 + x1) / 2, (lo + y1) / 2, (z0 + z1) / 2, r, (y1 - lo) / 2, r);
+    });
+  }
+  // highest floor at or below y + up (and above y − down) under the footprint: five points at 0.7 r, or (full) nine at r; null if none
+  groundAt(x, y, z, r, down, up = 0.02, full = false) {
+    let best = -Infinity; const q = full ? r : r * 0.7, pts = [[x, z], [x - q, z - q], [x + q, z - q], [x - q, z + q], [x + q, z + q]], v = this.v, bb = this.bb, top = y + up, bot = y - down;
+    if (full) pts.push([x - q, z], [x + q, z], [x, z - q], [x, z + q]);
+    this.each(x - q, z - q, x + q, z + q, (t) => {
+      if (this.cls[t] !== 0) return false;
+      const o = t * 6; if (bb[o + 1] > top || bb[o + 4] < bot) return false;
+      const i = t * 9;
+      for (const [px, pz] of pts) {
+        if (px < bb[o] || px > bb[o + 3] || pz < bb[o + 2] || pz > bb[o + 5]) continue;
+        const hy = triHeight(v, i, px, pz);
+        if (hy !== null && hy <= top && hy >= bot && hy > best) best = hy;
+      }
+      return false;
+    });
+    return best === -Infinity ? null : best;
+  }
+  // first triangle along a ray (2D DDA over the grid) → { t, n: [nx, ny, nz] } or null
+  raycast(o, d, maxDist) {
+    const C = this.C, ax = Math.abs(d.x), az = Math.abs(d.z), v = this.v;
+    let ix = Math.floor(o.x / C), iz = Math.floor(o.z / C), best = maxDist, hit = -1;
+    const sx = d.x > 0 ? 1 : -1, sz = d.z > 0 ? 1 : -1, tdx = ax > 1e-9 ? C / ax : Infinity, tdz = az > 1e-9 ? C / az : Infinity;
+    let tmx = ax > 1e-9 ? (sx > 0 ? (ix + 1) * C - o.x : o.x - ix * C) / ax : Infinity, tmz = az > 1e-9 ? (sz > 0 ? (iz + 1) * C - o.z : o.z - iz * C) / az : Infinity;
+    const s = ++this.stamp, mk = this.mark;
+    for (let guard = 0; guard < 4096; guard++) {
+      const e = this.cells.get((ix + 4096) * 8192 + (iz + 4096));
+      if (e) for (let j = e[0], end = e[0] + e[1]; j < end; j++) {
+        const t = this.refs[j]; if (mk[t] === s) continue; mk[t] = s;
+        const h = rayTri(v, t * 9, o, d, best); if (h >= 0 && h < best) { best = h; hit = t; }
+      }
+      const tExit = Math.min(tmx, tmz);
+      if (hit >= 0 && best <= tExit) break;
+      if (tExit >= maxDist) break;
+      if (tmx < tmz) { tmx += tdx; ix += sx; } else { tmz += tdz; iz += sz; }
+    }
+    return hit < 0 ? null : { t: best, n: [this.nrm[hit * 3], this.nrm[hit * 3 + 1], this.nrm[hit * 3 + 2]] };
+  }
+}
+// height of a triangle's plane at (x, z) if the point is inside its xz projection, else null
+function triHeight(v, i, x, z) {
+  const ax = v[i], ay = v[i + 1], az = v[i + 2], bx = v[i + 3], by = v[i + 4], bz = v[i + 5], cx = v[i + 6], cy = v[i + 7], cz = v[i + 8];
+  const d = (bz - cz) * (ax - cx) + (cx - bx) * (az - cz); if (Math.abs(d) < 1e-12) return null;
+  const l1 = ((bz - cz) * (x - cx) + (cx - bx) * (z - cz)) / d, l2 = ((cz - az) * (x - cx) + (ax - cx) * (z - cz)) / d, l3 = 1 - l1 - l2;
+  if (l1 < -1e-4 || l2 < -1e-4 || l3 < -1e-4) return null;
+  return l1 * ay + l2 * by + l3 * cy;
+}
+// Möller–Trumbore, both faces → t or −1
+function rayTri(v, i, o, d, maxT) {
+  const e1x = v[i + 3] - v[i], e1y = v[i + 4] - v[i + 1], e1z = v[i + 5] - v[i + 2], e2x = v[i + 6] - v[i], e2y = v[i + 7] - v[i + 1], e2z = v[i + 8] - v[i + 2];
+  const px = d.y * e2z - d.z * e2y, py = d.z * e2x - d.x * e2z, pz = d.x * e2y - d.y * e2x, det = e1x * px + e1y * py + e1z * pz;
+  if (Math.abs(det) < 1e-10) return -1;
+  const inv = 1 / det, tx = o.x - v[i], ty = o.y - v[i + 1], tz = o.z - v[i + 2], u = (tx * px + ty * py + tz * pz) * inv; if (u < 0 || u > 1) return -1;
+  const qx = ty * e1z - tz * e1y, qy = tz * e1x - tx * e1z, qz = tx * e1y - ty * e1x, w = (d.x * qx + d.y * qy + d.z * qz) * inv; if (w < 0 || u + w > 1) return -1;
+  const t = (e2x * qx + e2y * qy + e2z * qz) * inv; return t > 1e-4 && t < maxT ? t : -1;
+}
+// triangle vs axis-aligned box (centre c, half extents e) — separating axis test (Akenine-Möller)
+function triBox(v, i, nrm, ni, cx, cy, cz, ex, ey, ez) {
+  const v0x = v[i] - cx, v0y = v[i + 1] - cy, v0z = v[i + 2] - cz, v1x = v[i + 3] - cx, v1y = v[i + 4] - cy, v1z = v[i + 5] - cz, v2x = v[i + 6] - cx, v2y = v[i + 7] - cy, v2z = v[i + 8] - cz;
+  const f = [[v1x - v0x, v1y - v0y, v1z - v0z], [v2x - v1x, v2y - v1y, v2z - v1z], [v0x - v2x, v0y - v2y, v0z - v2z]];
+  for (const [fx, fy, fz] of f) { // the 9 edge × axis tests
+    for (const [axx, axy, axz] of [[0, -fz, fy], [fz, 0, -fx], [-fy, fx, 0]]) {
+      const p0 = v0x * axx + v0y * axy + v0z * axz, p1 = v1x * axx + v1y * axy + v1z * axz, p2 = v2x * axx + v2y * axy + v2z * axz;
+      const r = ex * Math.abs(axx) + ey * Math.abs(axy) + ez * Math.abs(axz);
+      if (Math.min(p0, p1, p2) > r || Math.max(p0, p1, p2) < -r) return false;
+    }
+  }
+  if (Math.min(v0x, v1x, v2x) > ex || Math.max(v0x, v1x, v2x) < -ex || Math.min(v0y, v1y, v2y) > ey || Math.max(v0y, v1y, v2y) < -ey || Math.min(v0z, v1z, v2z) > ez || Math.max(v0z, v1z, v2z) < -ez) return false;
+  const nx = nrm[ni], ny = nrm[ni + 1], nz = nrm[ni + 2], dd = nx * v0x + ny * v0y + nz * v0z, r = ex * Math.abs(nx) + ey * Math.abs(ny) + ez * Math.abs(nz);
+  return Math.abs(dd) <= r;
+}
+
+/* =====================================================================
    COLLISION WORLD — static AABBs (uniform-grid broadphase) + ramp
    wedges + ladder volumes. Hitscan walks the grid with a 2D DDA so
    long rays on big maps only test the boxes in the cells they cross.
@@ -3300,8 +3423,9 @@ class CollisionWorld {
     this.boxes = []; this.ramps = []; this.ladders = []; this.terrain = null;
     this.cell = 4; this.grid = new Map(); this.stamp = 1;
     this._qf = []; this._qg = [];
-    this.packed = null;
+    this.packed = null; this.tris = null; // v60 triangle maps (TriSoup)
   }
+  addTris(pos, idx, material = 'concrete') { this.tris = new TriSoup(pos, idx, material); return this.tris; }
 
   _key(ix, iz) { return (ix + 4096) * 8192 + (iz + 4096); }
 
@@ -3425,7 +3549,7 @@ class CollisionWorld {
   fits(x, y, z, r, h) {
     if (this.terrain && y < this.terrain.heightAt(x, z) - 0.2) return false;
     for (const b of this.query(x - r, z - r, x + r, z + r, this._qf)) if (b.blocksMove && CollisionWorld.overlap(b, x, y, z, r, h)) return false;
-    return true;
+    return !(this.tris && this.tris.blocks(x, y, z, r, h));
   }
 
   groundBelow(x, y, z, r, maxDown, up = 0.02) {
@@ -3441,6 +3565,7 @@ class CollisionWorld {
       const s = this.rampHeight(rp, clamp(x, rp.minX, rp.maxX), clamp(z, rp.minZ, rp.maxZ));
       if (s <= y + Math.max(up, 0.06) && s >= y - maxDown && s > best) { best = s; surf = rp.surface; }
     }
+    if (this.tris) { const ty = this.tris.groundAt(x, y, z, r, maxDown, up); if (ty !== null && ty > best) { best = ty; surf = this.tris.material; } }
     const T = this.terrain;
     if (T) {
       const th = T.heightAt(x, z);
@@ -3508,13 +3633,19 @@ class CollisionWorld {
     });
     for (const r of this.ramps) { const h = CollisionWorld.rayConvex(o, d, r.planes, maxDist); if (h) hits.push({ t: h.t, point: o.clone().addScaledVector(d, h.t), normal: h.normal.clone(), collider: r, material: r.material, penetrable: false }); }
     if (this.terrain) { const tt = this.terrain.raycast(o, d, maxDist); if (tt >= 0) hits.push(this._terrainHit(o, d, tt)); }
+    if (this.tris) { const th = this.tris.raycast(o, d, maxDist); if (th) hits.push(this._triHit(o, d, th)); } // (first triangle only: no wallbangs through map geometry)
     hits.sort((a, b) => a.t - b.t);
     return hits;
   }
 
+  _triHit(o, d, h) { // a TriSoup hit as a raycast result (normal facing the ray)
+    const n = new THREE.Vector3(h.n[0], h.n[1], h.n[2]); if (n.dot(d) > 0) n.negate();
+    return { t: h.t, point: o.clone().addScaledVector(d, h.t), normal: n, collider: this.tris.collider, material: this.tris.material, penetrable: false };
+  }
   raycast(o, d, maxDist, ignorePenetrable = false) {
-    let best = null, bestT = maxDist, terrT = -1;
+    let best = null, bestT = maxDist, terrT = -1, triH = null;
     if (this.terrain) { terrT = this.terrain.raycast(o, d, maxDist); if (terrT >= 0) bestT = terrT; } // terrain first: shortens the grid walk
+    if (this.tris) { triH = this.tris.raycast(o, d, bestT); if (triH) { bestT = triH.t; terrT = -1; } }
     const s = ++this.stamp;
     this._walk(o, d, maxDist, (l, tExit) => {
       for (const b of l) {
@@ -3529,6 +3660,7 @@ class CollisionWorld {
     for (const r of this.ramps) { const h = CollisionWorld.rayConvex(o, d, r.planes, bestT); if (h && h.t < bestT) { bestT = h.t; rampHit = [r, h]; } }
     if (rampHit) { const [r, h] = rampHit; return { t: h.t, point: o.clone().addScaledVector(d, h.t), normal: h.normal.clone(), collider: r, material: r.material, penetrable: false }; }
     if (best) return this._hitFromBox(o, d, best[0], best[1]);
+    if (triH) return this._triHit(o, d, triH);
     return terrT >= 0 ? this._terrainHit(o, d, terrT) : null;
   }
 
@@ -3729,6 +3861,17 @@ class CharacterMotor {
         else { p[axis] = before; p.y = Math.max(beforeY, T.heightAt(p.x, p.z)); this.vel[axis] = 0; }
       }
     }
+    if (w.tris) { // v60 triangle maps: follow a floor that rises ahead (slope / step) or stop at what blocks
+      const allow = this.grounded ? this.stepHeight : P.airStep;
+      if (w.tris.blocks(p.x, p.y, p.z, r, h)) {
+        const g = w.tris.groundAt(p.x, p.y + allow, p.z, r + 0.03, allow + 0.02, 0.02, true); // the whole footprint: a plank at the toe counts
+        if (g !== null && g >= p.y - 0.02 && w.fits(p.x, g + 1e-3, p.z, r, h)) { const old = p.y; p.y = g + 1e-3; if (this.grounded && p.y - old > 0.08) this.stepOffset -= p.y - old; }
+        else { p[axis] = before; p.y = beforeY; this.vel[axis] = 0; }
+      } else if (this.grounded) { // walking up a slope: stay on it
+        const g = w.tris.groundAt(p.x, p.y + allow, p.z, r, 0.02);
+        if (g !== null && g > p.y && w.fits(p.x, g + 1e-3, p.z, r, h)) { const old = p.y; p.y = g; if (p.y - old > 0.08) this.stepOffset -= p.y - old; }
+      }
+    }
     // edge-guard (v59: while crouch is held): refuse moves that would leave the footprint without support.
     if (guard && !w.groundBelow(p.x, p.y, p.z, r * 0.8, this.stepHeight + 0.05)) {
       p[axis] = before; p.y = beforeY; this.vel[axis] = 0;
@@ -3750,6 +3893,10 @@ class CharacterMotor {
       if (p.y < s && prevY >= s - CFG.player.stepHeight - 0.05) { p.y = s; if (this.vel.y < 0) { this.vel.y = 0; hitGround = true; } }
     }
     if (w.terrain) { const th = w.terrain.heightAt(p.x, p.z); if (p.y < th) { p.y = th; if (this.vel.y < 0) { this.vel.y = 0; hitGround = true; } } }
+    if (w.tris) { // v60: land on a triangle floor crossed this step; a jump stops at a ceiling
+      if (amount <= 0) { const g = w.tris.groundAt(p.x, prevY + 0.01, p.z, r, prevY - p.y + 0.02); if (g !== null && g > p.y) { p.y = g; this.vel.y = 0; hitGround = true; } }
+      else if (w.tris.blocks(p.x, p.y, p.z, r, h)) { p.y = prevY; this.vel.y = 0; }
+    }
     return hitGround;
   }
 
