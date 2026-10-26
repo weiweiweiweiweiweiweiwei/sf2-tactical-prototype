@@ -885,3 +885,27 @@
   - `check-apex-full`：門往遠離開門者的方向轉、開門無碰撞、關門恢復、不會夾人，全過。
   - `_dmgmodel` 23 條規則全過；`_apexbots` 150 s 擊殺 9、卡住 0、掉出地圖 0。
   - `check.mjs` 7 張地圖全過、59–60 fps，`_fileplay` 正常。
+
+## v60（2026-10-26）：Skull Town、訓練場重建（真實三角形碰撞＋烘焙光照＋天空）、Apex 門重做、Apex 不摔傷
+- **來源**：使用者自己安裝的 Apex（RSX 2.4.0）：BSP 世界網格、靜態物件（`prps` v52）、CAST 模型、材質貼圖、`*.ent`（出生點、門、燈）。
+  - 很多世界材質的貼圖在 `common.rpak`，要和地圖包一起載入才匯得出來（`--exporttypes matl --exportfilter`）。
+- **流程**（`tools/blender/apex_maps.py` 設定兩張圖）：
+  - `skulltown_build.py`：世界網格（原始法線、Source 順時針繞序要反過來）＋物件（每個模型依「三角形 × 擺放數」挑畫面用 LOD，另匯最粗 LOD 給碰撞）＋貼圖。
+    排除 Arenas 外殼：六角穹頂 `live_fire_frame`（開發用測試材質）、環、鋼樑、圍牆、六角圍網、反射探針盒。
+  - `skulltown_export.py`：世界分場內（4096² 光照貼圖）和外圍（2048²），Cycles 烘焙直接＋間接光；照明是遊戲裡同一張 Poly Haven 天空 `kloofendal_48d_partly_cloudy_puresky`（轉 180° 對齊 glTF 軸向）＋地圖自己的燈（`light` / `light_spot`，亮度 × 12 W）。
+    每個物件取樣它底下的烘焙亮度存進 glTF extras，遊戲裡用來調暗室內和陰影裡的物件。
+    碰撞：世界三角形（去掉貼花）＋非植物物件最粗 LOD、每個部件減到 ≤ 80 面；高度不到 0.5 m 的碎石雜物不擋路（使用者要求）。
+  - `compress-apex-textures.py <map>` → `pack-apex-js.mjs <map>`（碰撞量化成 Int16、只留可玩範圍 ±12 m）→ `bake-apex-nav.mjs <map id>`。
+- **遊戲端**（`src/07w_skulltown.js` `apexTriMap()`）：世界用光照貼圖（Lambert，直接光歸零，即時陰影仍會壓暗被太陽照到的地方），物件 instanced 即時打光；HDRI 天空當背景和環境光；邊界隱形牆；手榴彈在 16 m 三角網格磚上反彈，屍體／掉槍用三角形地板當地形接觸。
+  - 舊的方塊碰撞訓練場（`assets/maps/apex-full`、`ApexStreaming`、`apexCarveDoors`）已刪除（使用者同意）。
+- **三角形碰撞**（`TriSoup`）：每個三角形帶表面材質（腳步聲、彈著）。
+  - 修正 Skull Town「卡住不能動、不能跳」：落地和貼地看整個腳掌（腳尖下的路緣算地面）、已經卡在三角形裡的身體可以走出／跳出、掉到太陡的坡上會滑開、剛好貼著面不算重疊。600 次隨機走動卡死 8 → 0。
+- **Apex 門**：用 Apex 原版門板模型（`canyonlands_door_single_02_avt`，1.52 × 2.64 m，`tools/blender/apex_door.py`）。`link_to_guid_0` 連起來的兩扇是雙開門，一起開關；一律往室內轉（門兩側往上打射線，有屋頂的那側），和從哪邊開無關。
+- **Apex 扣血**：沒有跌落傷害（掉出地圖仍會死）；4 秒沒受傷後每秒回 5（先血後盾）。
+- **驗證**：
+  - `tools/_trimesh.mjs` 全過；`tools/_stuckprobe.mjs` Skull Town 600 次卡死 0。
+  - `tools/check-apex-full.mjs apex_skulltown`：66 扇門、32 扇成對、66 扇都往室內、不夾人、會關回去；150 個導航點落地站穩；隨機走動卡死 0；出界會死。
+  - `_apexbots` Skull Town 120 s：擊殺 12、卡住 0、54 fps。`check-apex-traversal`（apex_test）全過。
+  - 訓練場（`apex_full`，資料在 `assets/maps/apex-range`）：`check-apex-full.mjs apex_full` 全過（27 扇門、16 扇成對、全部往室內、落地 150/150、卡死 0）；導航 6,538 點、出生點相距 154 m；`_apexbots` 120 s 擊殺 11、50 fps。
+  - 光照最終版：256 次取樣，Skull Town 202 盞燈、訓練場 451 盞；物件亮度下限 0.35（大岩石底下是自己的影子）。
+- **下一步**：實際遊玩回饋（光線亮度、哪裡還會卡）；包體偏大（Skull Town 76 MB、訓練場 62 MB），之後可考慮貼圖改 KTX2。

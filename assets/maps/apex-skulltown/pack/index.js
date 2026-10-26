@@ -1,2 +1,2 @@
 /* apex_skulltown: built by tools/pack-apex-js.mjs */
-APEX_PACK.layout("apex_skulltown", {"bytes":75075712,"chunk":15728640,"chunks":5,"parts":{"glb":[0,55965816],"collision":[55965816,15332813],"manifest":[71298632,16049],"lm_inner":[71314688,2146063],"lm_outer":[73460752,393630],"door":[73854384,552252],"nav":[74406640,667276],"navMeta":[75073920,1790]}});
+APEX_PACK.layout("apex_skulltown", {"bytes":76379496,"chunk":15728640,"chunks":5,"parts":{"glb":[0,56711160],"collision":[56711160,15332813],"manifest":[72043976,16059],"lm_inner":[72060040,2706681],"lm_outer":[74766728,391434],"door":[75158168,552252],"nav":[75710424,667276],"navMeta":[76377704,1790]}});

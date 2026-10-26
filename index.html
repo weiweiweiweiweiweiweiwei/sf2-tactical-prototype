@@ -8155,7 +8155,7 @@ function apexTriMap(def) {
         // shade is dimmed toward what the room around it got (full brightness from 60 % of the sunlit ground up)
         if (batch.light.some((v) => v >= 0)) {
           const c = new THREE.Color();
-          batch.light.forEach((v, i) => { const k = v < 0 ? 1 : clamp(v / (sunLm * 0.6), 0.14, 1); mesh.setColorAt(i, c.setScalar(k)); });
+          batch.light.forEach((v, i) => { const k = v < 0 ? 1 : clamp(v / (sunLm * 0.6), 0.35, 1); mesh.setColorAt(i, c.setScalar(k)); }); // (≥ 0.35: the ground under a big rock is in its own shadow)
         }
         mesh.castShadow = false; mesh.receiveShadow = true; // their shadows are in the bake
         b.scene.add(mesh); meshes.push(mesh);
