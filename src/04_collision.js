@@ -67,6 +67,7 @@ const TERRAIN_G = { x: 0, z: 0 };
    foot on a slope is the motor's job, through groundAt), so walking up a slope never reads as hitting it.
    ===================================================================== */
 const FLOOR_NY = 1 / Math.hypot(1, MAX_SLOPE), FLOOR_SKIN = 0.5;
+const TRI_SLIDE = [[0.05, 0], [-0.05, 0], [0, 0.05], [0, -0.05], [0.035, 0.035], [-0.035, 0.035], [0.035, -0.035], [-0.035, -0.035]]; // nudges off a steep slope
 const TRI_SURFACES = ['concrete', 'metal', 'wood', 'sand', 'glass']; // per-triangle surface ids of a packed map (tools/blender/skulltown_export.py)
 class TriSoup {
   constructor(pos, idx, material = 'concrete', mats = null) { // mats: optional Uint8Array of TRI_SURFACES ids, one per triangle
@@ -109,6 +110,7 @@ class TriSoup {
   }
   // does a body's box (feet at y, height h, half width r) touch a blocking triangle?
   blocks(x, y, z, r, h) {
+    r -= 0.005; // touching is not overlapping: a body flush against a curb's face is not inside it
     const x0 = x - r, x1 = x + r, z0 = z - r, z1 = z + r, y0 = y + 0.01, y1 = y + h, bb = this.bb;
     return this.each(x0, z0, x1, z1, (t) => {
       const o = t * 6, lo = this.cls[t] === 0 ? y0 + FLOOR_SKIN : y0;
@@ -340,7 +342,8 @@ class CollisionWorld {
       const s = this.rampHeight(rp, clamp(x, rp.minX, rp.maxX), clamp(z, rp.minZ, rp.maxZ));
       if (s <= y + Math.max(up, 0.06) && s >= y - maxDown && s > best) { best = s; surf = rp.surface; }
     }
-    if (this.tris) { const ty = this.tris.groundAt(x, y, z, r, maxDown, up); if (ty !== null && ty > best) { best = ty; surf = this.tris.matOf(this.tris.lastTri); } }
+    // triangles: the whole footprint (a curb under the toe holds you up)
+    if (this.tris) { const ty = this.tris.groundAt(x, y, z, r, maxDown, up, true); if (ty !== null && ty > best) { best = ty; surf = this.tris.matOf(this.tris.lastTri); } }
     const T = this.terrain;
     if (T) {
       const th = T.heightAt(x, z);
@@ -638,7 +641,10 @@ class CharacterMotor {
     }
     if (w.tris) { // v60 triangle maps: follow a floor that rises ahead (slope / step) or stop at what blocks
       const allow = this.grounded ? this.stepHeight : P.airStep;
-      if (w.tris.blocks(p.x, p.y, p.z, r, h)) {
+      // a body already inside a triangle (landed under a slanted rock, pushed by a door) may always move: refusing every move
+      // left players frozen — no walking, no jumping — until they killed themselves
+      const wedged = w.tris.blocks(axis === 'x' ? before : p.x, beforeY, axis === 'z' ? before : p.z, r, h);
+      if (!wedged && w.tris.blocks(p.x, p.y, p.z, r, h)) {
         const g = w.tris.groundAt(p.x, p.y + allow, p.z, r + 0.03, allow + 0.02, 0.02, true); // the whole footprint: a plank at the toe counts
         if (g !== null && g >= p.y - 0.02 && w.fits(p.x, g + 1e-3, p.z, r, h)) { const old = p.y; p.y = g + 1e-3; if (this.grounded && p.y - old > 0.08) this.stepOffset -= p.y - old; }
         else { p[axis] = before; p.y = beforeY; this.vel[axis] = 0; }
@@ -669,8 +675,16 @@ class CharacterMotor {
     }
     if (w.terrain) { const th = w.terrain.heightAt(p.x, p.z); if (p.y < th) { p.y = th; if (this.vel.y < 0) { this.vel.y = 0; hitGround = true; } } }
     if (w.tris) { // v60: land on a triangle floor crossed this step; a jump stops at a ceiling
-      if (amount <= 0) { const g = w.tris.groundAt(p.x, prevY + 0.01, p.z, r, prevY - p.y + 0.02); if (g !== null && g > p.y) { p.y = g; this.vel.y = 0; hitGround = true; } }
-      else if (w.tris.blocks(p.x, p.y, p.z, r, h)) { p.y = prevY; this.vel.y = 0; }
+      if (amount <= 0) {
+        // the whole footprint: a curb under the toe is the floor, not the street beside it (or the body sinks into the curb's face)
+        const g = w.tris.groundAt(p.x, prevY + 0.01, p.z, r, prevY - p.y + 0.02, 0.02, true);
+        if (g !== null && g > p.y) { p.y = g; this.vel.y = 0; hitGround = true; }
+        else if (w.tris.blocks(p.x, p.y, p.z, r, h) && !w.tris.blocks(p.x, prevY, p.z, r, h)) { // a too-steep slope: slide off it, never sink in
+          const k = TRI_SLIDE.find(([dx, dz]) => !w.tris.blocks(p.x + dx, p.y, p.z + dz, r, h));
+          if (k) { p.x += k[0]; p.z += k[1]; } else { p.y = prevY; this.vel.y = 0; }
+        }
+      }
+      else if (w.tris.blocks(p.x, p.y, p.z, r, h) && !w.tris.blocks(p.x, prevY, p.z, r, h)) { p.y = prevY; this.vel.y = 0; } // (a wedged body may jump out)
     }
     return hitGround;
   }

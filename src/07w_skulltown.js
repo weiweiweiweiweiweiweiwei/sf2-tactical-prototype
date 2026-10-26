@@ -137,7 +137,7 @@ function apexTriMap(def) {
       }
       // visuals: the two world halves with their lightmaps; props instanced per geometry / material / 64 m cell
       gltf.scene.updateMatrixWorld(true);
-      const batches = new Map(), worldMats = new Map(), scale = Math.PI * 0.85;
+      const batches = new Map(), worldMats = new Map(), scale = Math.PI * 0.85, sunLm = manifest.lightmaps.inner.max * 0.8; // sunlit ground ≈ 80 % of the bake's top
       const meshes = []; let objects = 0;
       gltf.scene.traverse((o) => {
         if (!o.isMesh) return; objects++;
@@ -155,12 +155,18 @@ function apexTriMap(def) {
         }
         const p = new THREE.Vector3().setFromMatrixPosition(o.matrixWorld);
         const key = o.geometry.uuid + ':' + (Array.isArray(o.material) ? o.material.map((m) => m.uuid).join(',') : o.material.uuid) + ':' + Math.floor(p.x / 64) + ',' + Math.floor(p.z / 64);
-        if (!batches.has(key)) batches.set(key, { geo: o.geometry, mat: o.material, matrices: [] });
-        batches.get(key).matrices.push(o.matrixWorld.clone());
+        if (!batches.has(key)) batches.set(key, { geo: o.geometry, mat: o.material, matrices: [], light: [] });
+        batches.get(key).matrices.push(o.matrixWorld.clone()); batches.get(key).light.push(o.userData.lm ?? o.parent?.userData.lm ?? -1);
       });
       for (const batch of batches.values()) {
         const mesh = new THREE.InstancedMesh(batch.geo, batch.mat, batch.matrices.length);
         batch.matrices.forEach((m, i) => mesh.setMatrixAt(i, m)); mesh.computeBoundingSphere();
+        // the bake under each prop (tools/blender/skulltown_export.py 'lm'): live sun and sky light it, so one indoors or in deep
+        // shade is dimmed toward what the room around it got (full brightness from 60 % of the sunlit ground up)
+        if (batch.light.some((v) => v >= 0)) {
+          const c = new THREE.Color();
+          batch.light.forEach((v, i) => { const k = v < 0 ? 1 : clamp(v / (sunLm * 0.6), 0.14, 1); mesh.setColorAt(i, c.setScalar(k)); });
+        }
         mesh.castShadow = false; mesh.receiveShadow = true; // their shadows are in the bake
         b.scene.add(mesh); meshes.push(mesh);
       }

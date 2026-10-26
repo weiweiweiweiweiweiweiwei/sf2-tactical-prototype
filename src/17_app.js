@@ -1145,7 +1145,7 @@ class App {
 try {
   const app = new App();
   window.app = app;
-  window.SF2 = { THREE, Settings, MAPS, WEAPON_DEFS, WEAPON_DATABASE, CFG, MODES, RULES, calcDamage, loadoutDefs, LOOK_DEFAULT, resolveLook, CAO, AudioEngine, GUN_PROFILES, triHeight }; // debug handle for the console
+  window.SF2 = { THREE, Settings, MAPS, WEAPON_DEFS, WEAPON_DATABASE, CFG, MODES, RULES, calcDamage, loadoutDefs, LOOK_DEFAULT, resolveLook, CAO, AudioEngine, GUN_PROFILES, triHeight, triBox }; // debug handle for the console
   window.SF2net = { Friends, NetHost, NetClient, LoopbackTransport, NetCodec, RoomDirectory, RtcHostTransport, RtcClientTransport, BackgroundTicker, RoomHost, RoomGuest, RoomLink, inviteLink, parseCode, fmtCode, roomCode, roomCfgSafe, ONLINE, host: (room, o = {}) => new NetHost(app, app.match, new LoopbackTransport(room, o)), join: (room, o = {}) => app.netJoin(room, o) }; // v25 tests
   window.__gameReady = true;
   document.getElementById('boot').classList.add('done');

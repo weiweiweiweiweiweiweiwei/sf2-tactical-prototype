@@ -69,6 +69,7 @@ for o in ([] if ONLY_COL else parts.values()):
 
 # ---------- bake ----------
 manifest = {'lightmaps': {}}
+baked = {}
 sc.render.engine = 'CYCLES'; sc.cycles.device = 'GPU'; sc.cycles.samples = SAMPLES
 prefs = bpy.context.preferences.addons['cycles'].preferences
 for t in ('OPTIX', 'CUDA'):
@@ -89,6 +90,31 @@ bg = wnt.nodes.new('ShaderNodeBackground'); wo = wnt.nodes.new('ShaderNodeOutput
 wnt.links.new(tc.outputs['Generated'], mp.inputs['Vector']); wnt.links.new(mp.outputs['Vector'], env.inputs['Vector'])
 wnt.links.new(env.outputs['Color'], bg.inputs['Color']); wnt.links.new(bg.outputs['Background'], wo.inputs['Surface'])
 manifest['sky'] = SKY
+# the map's own lights (env.ent light / light_spot): interiors are lit by them. Source brightness B (4th of _light) -> watts
+# B × LIGHT_W (tuned on the lightmaps: a 60-brightness ceiling lamp lights a room like a dim day); colour sRGB 0-255; spots
+# aim along their angles (pitch 90 = down), _cone / _inner_cone are half angles.
+LIGHT_W = 12.0
+CENTER_SRC = Vector(CFG['center'])
+lit = 0
+for e in [dict(re.findall(r'"([^"\n]+)"\s+"([^"\n]*)"', b)) for b in re.findall(r'\{([^{}]*)\}', (CFG['maps'] / f"{CFG['stem']}_env.ent").read_text(encoding='latin1'))]:
+    if e.get('classname') not in ('light', 'light_spot') or len(e.get('_light', '').split()) != 4:
+        continue
+    r, g, b_, br = (float(v) for v in e['_light'].split())
+    pos = Vector([float(v) * 0.0254 for v in e['origin'].split()]) - CENTER_SRC
+    if not (CFG['crop'][0] <= pos.x <= CFG['crop'][1] and CFG['crop'][2] <= pos.y <= CFG['crop'][3]) or br <= 0:
+        continue
+    spot = e['classname'] == 'light_spot'
+    L = bpy.data.lights.new('ent_light', 'SPOT' if spot else 'POINT')
+    L.energy = br * LIGHT_W; L.color = tuple((c / 255) ** 2.2 for c in (r, g, b_)); L.shadow_soft_size = 0.1
+    o = bpy.data.objects.new('ent_light', L); o.location = pos; sc.collection.objects.link(o)
+    if spot:
+        pitch, yaw = (math.radians(float(v)) for v in e.get('angles', '90 0 0').split()[:2])
+        d = Vector((math.cos(pitch) * math.cos(yaw), math.cos(pitch) * math.sin(yaw), -math.sin(pitch)))
+        o.rotation_euler = d.to_track_quat('-Z', 'Y').to_euler()
+        cone = float(e.get('_cone', 45)); L.spot_size = math.radians(min(2 * cone, 179)); L.spot_blend = max(0.0, 1 - float(e.get('_inner_cone', cone / 2)) / max(cone, 1))
+    lit += 1
+manifest['lights'] = lit
+print('LIGHTS', lit, flush=True)
 
 
 def srgb(x):
@@ -116,12 +142,13 @@ for name, size in (('World_inner', 4096), ('World_outer', 2048)):
     px = np.empty(size * size * 4, np.float32); img.pixels.foreach_get(px); px = px.reshape(size, size, 4)[..., :3]
     k = np.array([0.25, 0.5, 0.25], np.float32)  # light 3×3 blur: what the bake's sample noise needs
     px = sum(w * np.roll(px, s, 0) for w, s in zip(k, (-1, 0, 1))); px = sum(w * np.roll(px, s, 1) for w, s in zip(k, (-1, 0, 1)))
-    lum = px.max(axis=2); top = float(np.percentile(lum[lum > 0], 99.7)) if (lum > 0).any() else 1.0
+    lum = px.max(axis=2); top = float(np.percentile(lum[lum > 0], 99.0))  # (the 1 % hottest — right under lamps — clip) if (lum > 0).any() else 1.0
     enc = srgb(np.clip(px / top, 0, 1))
     out = bpy.data.images.new('lm_' + tag, size, size, alpha=False); out.colorspace_settings.name = 'Non-Color'
     rgba = np.concatenate([enc, np.ones((size, size, 1), np.float32)], axis=2)
     out.pixels.foreach_set(rgba.ravel()); out.filepath_raw = str(OUT / f'lm_{tag}.png'); out.file_format = 'PNG'; out.save()
     manifest['lightmaps'][tag] = {'file': f'lm_{tag}.png', 'max': top}
+    baked[name] = px  # (linear, blurred) for the props' light samples below
     print('BAKED', name, size, 'max', top, flush=True)
 
 # ---------- collision triangles (game axes) ----------
@@ -168,8 +195,8 @@ for inst in [o for o in sc.objects if o.instance_collection]:
         if o.type != 'MESH':
             continue
         mw = inst.matrix_world @ o.matrix_world
-        ext = max((mw @ Vector(c) - mw @ Vector(o.bound_box[0])).length for c in o.bound_box)
-        if ext < 0.35:  # pebbles and litter: under a step, not worth triangles
+        zs = [(mw @ Vector(c)).z for c in o.bound_box]
+        if max(zs) - min(zs) < 0.5:  # rubble, litter, low debris (user: they snag feet): walked through, like grass
             continue
         add_mesh(coarse_mesh(o), mw, list(o.data.materials) or [None])
 pos = np.array(P, np.float32); idx = np.array(I, np.uint32); mat = np.array(M, np.uint8)
@@ -181,6 +208,37 @@ manifest['collision'] = {'vertices': int(len(pos)), 'triangles': int(len(idx) //
 print('COLLISION', manifest['collision'], flush=True)
 if ONLY_COL:
     sys.exit(0)
+
+# ---------- props' light: the bake under each instance (props are lit live; this dims the ones indoors / in shade) ----------
+from mathutils.bvhtree import BVHTree
+from mathutils.geometry import barycentric_transform
+probe = {}
+if baked:
+    dg = bpy.context.evaluated_depsgraph_get()
+    trees = {n: (BVHTree.FromObject(o, dg), o) for n, o in parts.items()}
+    def sample(pt):
+        for n, (tree, o) in trees.items():
+            hit = tree.ray_cast(pt, Vector((0, 0, -1)), 6.0)
+            if hit[0] is None:
+                hit = tree.find_nearest(pt, 2.5)
+            if hit[0] is None:
+                continue
+            me = o.data; poly = me.polygons[hit[2]]; uvl = me.uv_layers['Lightmap'].data
+            vs = [me.vertices[v].co for v in poly.vertices[:3]]; uvs = [uvl[li].uv for li in list(poly.loop_indices)[:3]]
+            uv = barycentric_transform(hit[0], *vs, *(Vector((u.x, u.y, 0)) for u in uvs))
+            img = baked[n]; size = img.shape[0]
+            x = min(size - 1, max(0, int(uv.x * size))); y = min(size - 1, max(0, int(uv.y * size)))
+            return float(img[y, x].mean())
+        return None
+    for inst in [o for o in sc.objects if o.instance_collection]:
+        pts = [inst.matrix_world @ (Vector(c)) for c in inst.instance_collection.objects[0].bound_box] if inst.instance_collection.objects else []
+        if not pts:
+            continue
+        cx = sum(p.x for p in pts) / 8; cy = sum(p.y for p in pts) / 8; zmin = min(p.z for p in pts); zmax = max(p.z for p in pts)
+        v = sample(Vector((cx, cy, zmin + min(1.5, (zmax - zmin) * 0.5) + 0.3)))
+        if v is not None:
+            probe[inst.name] = v
+    print('PROBES', len(probe), flush=True)
 
 # ---------- runtime glTF: world halves + every prop instance sharing its prototype mesh ----------
 exp = bpy.data.collections.new('export'); sc.collection.children.link(exp)
@@ -195,6 +253,8 @@ for inst in [o for o in sc.objects if o.instance_collection]:
             continue
         x = bpy.data.objects.new(f"{inst['model']}#{inst.name[5:10]}", o.data)
         x.matrix_world = inst.matrix_world @ o.matrix_world; exp.objects.link(x)
+        if inst.name in probe:
+            x['lm'] = round(probe[inst.name], 4)  # glTF extras -> userData.lm
         for m in o.data.materials:
             if m:
                 uses[m.name] = uses.get(m.name, 0) + 1
@@ -214,7 +274,7 @@ for o in sc.objects:
 bpy.context.view_layer.objects.active = parts['World_inner']
 bpy.ops.export_scene.gltf(filepath=str(OUT / 'scene.gltf'), export_format='GLTF_SEPARATE', export_texture_dir='textures', use_selection=True,
                           export_yup=True, export_texcoords=True, export_normals=True, export_vertex_color='NONE', export_materials='EXPORT',
-                          export_image_format='AUTO', export_extras=False, export_apply=False)
+                          export_image_format='AUTO', export_extras=True, export_apply=False)
 
 # ---------- manifest: spawns, doors, bounds ----------
 def ents(name):

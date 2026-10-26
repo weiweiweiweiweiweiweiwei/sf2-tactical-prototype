@@ -42,7 +42,7 @@ const out = await page.evaluate(() => {
   r = run(16, 600); ok('5 cm plank and 0.6 m step walked over, wall stops', Math.abs(r.mo.pos.y - 0.6) < 0.02 && r.mo.pos.z > -14.1 && r.mo.pos.z < -13.4, `y ${r.mo.pos.y.toFixed(2)} z ${r.mo.pos.z.toFixed(2)}`);
   r = run(24, 240, 30, -4); ok('a jump under a 2.2 m ceiling stops at it', r.maxY < 2.2 - 1.8 + 0.05, `max feet y ${r.maxY.toFixed(2)}`);
   const h = w.raycast(new V(16, 1.5, -10), new V(0, 0, -1), 50); ok('a shot hits the wall at 4 m', h && Math.abs(h.t - 4) < 0.01 && h.normal.z > 0.9, h ? `t ${h.t.toFixed(3)}` : 'no hit');
-  const gb = w.groundBelow(0, 3, -10, 0.12, 2); ok('groundBelow on the slope', gb && gb.y >= 5 * t30 - 0.01 && gb.y < 5 * t30 + 0.06, JSON.stringify(gb) + ' tris ' + w.tris.groundAt(0, 3, -10, 0.12, 2));
+  const gb = w.groundBelow(0, 3, -10, 0.12, 2); ok('groundBelow on the slope (highest point under the footprint)', gb && gb.y >= 5 * t30 - 0.01 && gb.y < 5 * t30 + 0.12 * t30 + 0.01, JSON.stringify(gb) + ' tris ' + w.tris.groundAt(0, 3, -10, 0.12, 2));
   ok('fits in the open, not inside the wall', w.fits(16, 0.6, -12, 0.34, 1.8) && !w.fits(16, 0.6, -14.2, 0.34, 1.8));
   return R;
 });
