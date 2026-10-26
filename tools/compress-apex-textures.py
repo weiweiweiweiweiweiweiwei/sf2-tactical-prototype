@@ -147,5 +147,4 @@ if __name__ == '__main__':
     if sys.argv[1:2] in (['skulltown'], ['range']):
         tri_map(sys.argv[1])
     else:
-        full_range()
         test_region()

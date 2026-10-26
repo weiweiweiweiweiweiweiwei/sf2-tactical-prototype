@@ -1,6 +1,6 @@
 // Ship the Apex maps as script chunks so a double-clicked index.html (file://, where fetch is blocked) loads them,
 // like the other Blender maps (assets/maps/*.js). Read by apexPack() in src/07u_apex.js.
-//   node tools/pack-apex-js.mjs            # both maps; run after pack-apex-collision.mjs / compress-apex-textures.py
+//   node tools/pack-apex-js.mjs            # the old test region (apex_test); compress-apex-textures.py first
 //   node tools/pack-apex-js.mjs skulltown|range  # v60 triangle maps from tools/out/apex/<map>/export (compress-apex-textures.py <map> first)
 // Per map: assets/maps/<dir>/pack/index.js registers the bundle layout (byte ranges of its parts), then 0.js, 1.js, …
 // each hand one base64 piece of the bundle to APEX_PACK.chunk(id, i, b64). The full range's scene.gltf + scene.bin +
@@ -101,13 +101,5 @@ if (TRI[process.argv[2]]) {
   pack('apex_test', 'assets/maps/apex-test', {
     glb: await compress(fs.readFileSync('assets/maps/apex-test/region.glb')),
     collision: fs.readFileSync('assets/maps/apex-test/collision.json'),
-  });
-  pack('apex_full', 'assets/maps/apex-full', {
-    glb: await compress(glbFromGltf('assets/maps/apex-full', 'scene.gltf')),
-    collision: fs.readFileSync('assets/maps/apex-full/collision.bin'),
-    manifest: fs.readFileSync('assets/maps/apex-full/manifest.json'),
-    nav: fs.readFileSync('assets/maps/apex-full/nav.bin'), // tools/bake-apex-nav.mjs
-    navMeta: fs.readFileSync('assets/maps/apex-full/nav.json'),
-    door: fs.readFileSync(DOOR),
   });
 }
