@@ -52,7 +52,7 @@ const APEX = {
   // v59 per-shot damage brought to Apex's own (user: Apex fights last two or three magazines): R-301 13 vs our M4 26, R-99 12 vs
   // MP5 25, Spitfire 18 vs M249 28, P2020 18, EVA-8 56 a blast vs 870 144, Longbow 55 / Kraber 140 vs M200 120
   scale: { assault: 0.5, smg: 0.5, lmg: 0.62, pistol: 0.6, sniper: 0.9, shotgun: 0.42 },
-  shields: [50, 75, 100], evo: [0, 150, 500], regenDelay: 4, regenHp: 20, regenShield: 25,
+  shields: [50, 75, 100], evo: [0, 150, 500], regenDelay: 4, regenHp: 5, regenShield: 5, // v60 user: 5 a second (health, then shield)
 };
 const APEX_STEP = 0.8; // v59 step height on the Apex maps (def.traversal): their 1 m collision columns step 0.5–0.75 m on a walkable slope
 const apexShield = (evo) => APEX.shields[APEX.evo.reduce((lv, need, i) => (evo >= need ? i : lv), 0)];

@@ -1,6 +1,7 @@
 // Full-range Apex navigation, baked offline with the game's own collision code (headless Chrome over http): runtime
 // sampling of the ~1 km map would take minutes and unpack every collision cell.
-//   node tools/bake-apex-nav.mjs     → assets/maps/apex-full/nav.bin + nav.json (packed by tools/pack-apex-js.mjs)
+//   node tools/bake-apex-nav.mjs [apex_full | apex_skulltown]  → assets/maps/<dir>/nav.bin + nav.json (packed by tools/pack-apex-js.mjs)
+// v60 triangle maps (Skull Town): candidates are the floor triangles under each grid point, the cover test casts a ray up.
 // 1. candidates: every 2.5 m, each box top a capsule can stand on (NavGraph.walkable), plus the village's 0.5 m points.
 // 2. walk links (≤ 3.6 m, diagonals too): sampled every 0.3 m like the motor — rises ≤ the Apex step height (0.8 m, v59), drops ≤ 0.85 m,
 //    capsule fits — so hills of stepped 1 m columns connect (the runtime rule, |dy| ≤ 0.5 per 2.5 m link, caps them at 11°).
@@ -15,7 +16,8 @@ import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 
-const ROOT = process.cwd(), OUT = 'assets/maps/apex-full/';
+const MAP = process.argv[2] || 'apex_full', ROOT = process.cwd();
+const OPT = { apex_full: { out: 'assets/maps/apex-full/', dist: [150, 240] }, apex_skulltown: { out: 'assets/maps/apex-skulltown/', dist: [110, 190] } }[MAP], OUT = OPT.out;
 const T = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.json': 'application/json' };
 const srv = http.createServer((q, s) => { const p = path.join(ROOT, decodeURIComponent(new URL(q.url, 'http://x').pathname)); if (!fs.existsSync(p) || fs.statSync(p).isDirectory()) { s.writeHead(404); s.end(); return; } s.writeHead(200, { 'Content-Type': T[path.extname(p)] || 'application/octet-stream' }); fs.createReadStream(p).pipe(s); });
 await new Promise((r) => srv.listen(0, '127.0.0.1', r));
@@ -24,9 +26,9 @@ const page = await b.newPage(); page.on('console', (m) => { if (/^\[bake\]/.test
 page.on('pageerror', (e) => console.error('page error:', e.message));
 await page.goto(`http://127.0.0.1:${srv.address().port}/index.html`); await page.waitForFunction(() => window.app && window.SF2);
 page.setDefaultTimeout(0);
-const r = await page.evaluate(async () => {
+const r = await page.evaluate(async ({ MAP, DIST }) => {
   const log = (...a) => console.log('[bake]', ...a), t0 = performance.now();
-  Object.assign(SF2.Settings.data.lobby, { map: SF2.MAPS.findIndex((m) => m.id === 'apex_full'), rule: 'tdm', allies: 1, enemies: 1 });
+  Object.assign(SF2.Settings.data.lobby, { map: SF2.MAPS.findIndex((m) => m.id === MAP), rule: 'tdm', allies: 1, enemies: 1 });
   await app.startMatch();
   for (const d of app.match.builder.mechs[0].doors) app.match.collision.setSolid(d.col, false); // v59: doorways are walkable (bots open doors)
   const g = app.match, col = g.collision, nav = g.nav, B = g.def.bounds, GRID = 2.5, STEP = g.player.motor.stepHeight, tmp = [], CFG_JUMP = 7.0; // CFG.player.jumpVel
@@ -38,12 +40,14 @@ const r = await page.evaluate(async () => {
     let dup = false; near(x, z, 1, (i) => { const n = nodes[i]; if (Math.hypot(n[0] - x, n[2] - z) < 1 && Math.abs(n[1] - y) < 0.3) dup = true; });
     if (dup) return; const k = hk(x, z); let l = hash.get(k); if (!l) hash.set(k, l = []); l.push(nodes.length); nodes.push([x, y, z]);
   };
-  for (const p of g.def._full.data.nav) { const y = nav.walkable(p[0], p[1], p[2]); if (y !== null) add(p[0], y, p[2]); }
+  if (g.def._full) for (const p of g.def._full.data.nav) { const y = nav.walkable(p[0], p[1], p[2]); if (y !== null) add(p[0], y, p[2]); }
+  const TS = col.tris, V3 = SF2.THREE.Vector3, UP = new V3(0, 1, 0);
   for (let x = B.minX + 1; x <= B.maxX - 1; x += GRID) {
     for (let z = B.minZ + 1; z <= B.maxZ - 1; z += GRID) {
       col.query(x - 0.01, z - 0.01, x + 0.01, z + 0.01, tmp);
       const tops = [];
       for (const bx of tmp) if (bx.blocksMove && bx.max.y > -150 && bx.min.x <= x && bx.max.x >= x && bx.min.z <= z && bx.max.z >= z) tops.push(bx.max.y);
+      if (TS) TS.each(x, z, x, z, (t) => { if (TS.cls[t] !== 0) return false; const h = SF2.triHeight(TS.v, t * 9, x, z); if (h !== null) tops.push(h); return false; });
       tops.sort((a, c) => a - c); let last = -1e9;
       for (const t of tops) { if (t - last < 0.3) continue; last = t; const y = nav.walkable(x, t, z); if (y !== null) add(x, y, z); }
     }
@@ -148,14 +152,15 @@ const r = await page.evaluate(async () => {
   const deg = new Uint8Array(kept.length); for (let i = 0; i < E.length; i += 4) if (E[i + 2] === 0) { deg[E[i]]++; deg[E[i + 1]]++; }
   const roomy = (i) => { let c = 0; knear(kept[i], 8, (j) => { const q = kept[j]; if (deg[j] >= 4 && Math.hypot(q[0] - kept[i][0], q[2] - kept[i][2]) < 8 && Math.abs(q[1] - kept[i][1]) < 1.5) c++; }); return c; };
   const V = SF2.THREE.Vector3, eye = (p) => new V(p[0], p[1] + 1.6, p[2]);
-  const open = []; for (let i = 0; i < kept.length; i++) if (deg[i] >= 6 && !col.query(kept[i][0] - 0.1, kept[i][2] - 0.1, kept[i][0] + 0.1, kept[i][2] + 0.1, tmp).some((bx) => bx.min.y > kept[i][1] + 2 && bx.min.y < kept[i][1] + 12)) open.push(i);
+  const covered = (p) => col.query(p[0] - 0.1, p[2] - 0.1, p[0] + 0.1, p[2] + 0.1, tmp).some((bx) => bx.min.y > p[1] + 2 && bx.min.y < p[1] + 12) || (TS && !!TS.raycast(new V3(p[0], p[1] + 2, p[2]), UP, 10));
+  const open = []; for (let i = 0; i < kept.length; i++) if (deg[i] >= 6 && !covered(kept[i])) open.push(i);
   let s = 12345; const rnd = () => (s = (s * 16807) % 2147483647) / 2147483647;
   const cen = kept.reduce((a, n) => [a[0] + n[0] / kept.length, 0, a[2] + n[2] / kept.length], [0, 0, 0]);
   let best = null, bs = -Infinity;
   for (let k = 0; k < 60000; k++) {
     const a = kept[open[Math.floor(rnd() * open.length)]], c = kept[open[Math.floor(rnd() * open.length)]];
     if (a[0] >= c[0]) continue;
-    const d = Math.hypot(c[0] - a[0], c[2] - a[2]); if (d < 150 || d > 240 || c[0] - a[0] < 0.6 * d) continue;
+    const d = Math.hypot(c[0] - a[0], c[2] - a[2]); if (d < DIST[0] || d > DIST[1] || c[0] - a[0] < 0.6 * d) continue;
     const mid = [(a[0] + c[0]) / 2, 0, (a[2] + c[2]) / 2], sc = -Math.hypot(mid[0] - cen[0], mid[2] - cen[2]) - Math.abs(a[1] - c[1]) * 0.5 + rnd() * 10;
     if (sc <= bs || col.segmentClear(eye(a), eye(c))) continue;
     const ra = roomy(kept.indexOf(a)), rc = roomy(kept.indexOf(c)); if (ra < 14 || rc < 14) continue;
@@ -181,7 +186,7 @@ const r = await page.evaluate(async () => {
   };
   log('spawns', JSON.stringify(A), JSON.stringify(C), 'dist', Math.round(Math.hypot(C[0] - A[0], C[2] - A[2])));
   return { pos: kept.flat(), edges: E, meta };
-});
+}, { MAP, DIST: OPT.dist });
 await b.close(); srv.close();
 // nav.bin: u32 node count, u32 edge count, Float32 x y z per node, then per edge Int32 from, to, kind (0 both ways, 1 one way,
 // 3 one-way jump) and Float32 cost

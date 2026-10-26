@@ -67,9 +67,10 @@ const TERRAIN_G = { x: 0, z: 0 };
    foot on a slope is the motor's job, through groundAt), so walking up a slope never reads as hitting it.
    ===================================================================== */
 const FLOOR_NY = 1 / Math.hypot(1, MAX_SLOPE), FLOOR_SKIN = 0.5;
+const TRI_SURFACES = ['concrete', 'metal', 'wood', 'sand', 'glass']; // per-triangle surface ids of a packed map (tools/blender/skulltown_export.py)
 class TriSoup {
-  constructor(pos, idx, material = 'concrete') {
-    const n = idx.length / 3, v = new Float32Array(n * 9), nrm = new Float32Array(n * 3), bb = new Float32Array(n * 6), cls = new Uint8Array(n);
+  constructor(pos, idx, material = 'concrete', mats = null) { // mats: optional Uint8Array of TRI_SURFACES ids, one per triangle
+    const n = idx.length / 3, v = new Float32Array(n * 9), nrm = new Float32Array(n * 3), bb = new Float32Array(n * 6), cls = new Uint8Array(n), tm = new Uint8Array(n);
     let m = 0;
     for (let t = 0; t < n; t++) {
       const a = idx[t * 3] * 3, b = idx[t * 3 + 1] * 3, c = idx[t * 3 + 2] * 3;
@@ -81,9 +82,11 @@ class TriSoup {
       v.set([ax, ay, az, bx, by, bz, cx, cy, cz], m * 9); nrm.set([nx, ny, nz], m * 3);
       bb.set([Math.min(ax, bx, cx), Math.min(ay, by, cy), Math.min(az, bz, cz), Math.max(ax, bx, cx), Math.max(ay, by, cy), Math.max(az, bz, cz)], m * 6);
       cls[m] = Math.abs(ny) >= FLOOR_NY ? (ny > 0 ? 0 : 2) : 1; // floor / wall / ceiling (a down-facing walkable face is a ceiling)
+      tm[m] = mats ? mats[t] : 0;
       m++;
     }
     this.n = m; this.v = v.subarray(0, m * 9); this.nrm = nrm.subarray(0, m * 3); this.bb = bb.subarray(0, m * 6); this.cls = cls.subarray(0, m);
+    this.tmat = mats ? tm.subarray(0, m) : null; this.lastTri = -1; // lastTri: the floor groundAt picked
     this.material = material; this.collider = { kind: 'tri', material, surface: material, blocksMove: true, blocksShot: true, penetrable: false };
     // grid (CSR): cell key → triangle indices
     const C = 4, counts = new Map();
@@ -94,6 +97,7 @@ class TriSoup {
     for (let t = 0; t < m; t++) each(t, (k) => { const e = this.cells.get(k); this.refs[e[0] + e[1]++] = t; });
     this.C = C; this.mark = new Uint32Array(m); this.stamp = 0;
   }
+  matOf(t) { return this.tmat && t >= 0 ? TRI_SURFACES[this.tmat[t]] || this.material : this.material; }
   // every triangle whose cell overlaps the xz rectangle, once
   each(minX, minZ, maxX, maxZ, fn) {
     const C = this.C, s = ++this.stamp, mk = this.mark;
@@ -114,7 +118,7 @@ class TriSoup {
   }
   // highest floor at or below y + up (and above y − down) under the footprint: five points at 0.7 r, or (full) nine at r; null if none
   groundAt(x, y, z, r, down, up = 0.02, full = false) {
-    let best = -Infinity; const q = full ? r : r * 0.7, pts = [[x, z], [x - q, z - q], [x + q, z - q], [x - q, z + q], [x + q, z + q]], v = this.v, bb = this.bb, top = y + up, bot = y - down;
+    let best = -Infinity, bt = -1; const q = full ? r : r * 0.7, pts = [[x, z], [x - q, z - q], [x + q, z - q], [x - q, z + q], [x + q, z + q]], v = this.v, bb = this.bb, top = y + up, bot = y - down;
     if (full) pts.push([x - q, z], [x + q, z], [x, z - q], [x, z + q]);
     this.each(x - q, z - q, x + q, z + q, (t) => {
       if (this.cls[t] !== 0) return false;
@@ -123,10 +127,11 @@ class TriSoup {
       for (const [px, pz] of pts) {
         if (px < bb[o] || px > bb[o + 3] || pz < bb[o + 2] || pz > bb[o + 5]) continue;
         const hy = triHeight(v, i, px, pz);
-        if (hy !== null && hy <= top && hy >= bot && hy > best) best = hy;
+        if (hy !== null && hy <= top && hy >= bot && hy > best) { best = hy; bt = t; }
       }
       return false;
     });
+    this.lastTri = bt;
     return best === -Infinity ? null : best;
   }
   // first triangle along a ray (2D DDA over the grid) → { t, n: [nx, ny, nz] } or null
@@ -147,7 +152,7 @@ class TriSoup {
       if (tExit >= maxDist) break;
       if (tmx < tmz) { tmx += tdx; ix += sx; } else { tmz += tdz; iz += sz; }
     }
-    return hit < 0 ? null : { t: best, n: [this.nrm[hit * 3], this.nrm[hit * 3 + 1], this.nrm[hit * 3 + 2]] };
+    return hit < 0 ? null : { t: best, n: [this.nrm[hit * 3], this.nrm[hit * 3 + 1], this.nrm[hit * 3 + 2]], tri: hit };
   }
 }
 // height of a triangle's plane at (x, z) if the point is inside its xz projection, else null
@@ -195,7 +200,7 @@ class CollisionWorld {
     this._qf = []; this._qg = [];
     this.packed = null; this.tris = null; // v60 triangle maps (TriSoup)
   }
-  addTris(pos, idx, material = 'concrete') { this.tris = new TriSoup(pos, idx, material); return this.tris; }
+  addTris(pos, idx, material = 'concrete', mats = null) { this.tris = new TriSoup(pos, idx, material, mats); return this.tris; }
 
   _key(ix, iz) { return (ix + 4096) * 8192 + (iz + 4096); }
 
@@ -335,7 +340,7 @@ class CollisionWorld {
       const s = this.rampHeight(rp, clamp(x, rp.minX, rp.maxX), clamp(z, rp.minZ, rp.maxZ));
       if (s <= y + Math.max(up, 0.06) && s >= y - maxDown && s > best) { best = s; surf = rp.surface; }
     }
-    if (this.tris) { const ty = this.tris.groundAt(x, y, z, r, maxDown, up); if (ty !== null && ty > best) { best = ty; surf = this.tris.material; } }
+    if (this.tris) { const ty = this.tris.groundAt(x, y, z, r, maxDown, up); if (ty !== null && ty > best) { best = ty; surf = this.tris.matOf(this.tris.lastTri); } }
     const T = this.terrain;
     if (T) {
       const th = T.heightAt(x, z);
@@ -410,7 +415,7 @@ class CollisionWorld {
 
   _triHit(o, d, h) { // a TriSoup hit as a raycast result (normal facing the ray)
     const n = new THREE.Vector3(h.n[0], h.n[1], h.n[2]); if (n.dot(d) > 0) n.negate();
-    return { t: h.t, point: o.clone().addScaledVector(d, h.t), normal: n, collider: this.tris.collider, material: this.tris.material, penetrable: false };
+    return { t: h.t, point: o.clone().addScaledVector(d, h.t), normal: n, collider: this.tris.collider, material: this.tris.matOf(h.tri), penetrable: false };
   }
   raycast(o, d, maxDist, ignorePenetrable = false) {
     let best = null, bestT = maxDist, terrT = -1, triH = null;

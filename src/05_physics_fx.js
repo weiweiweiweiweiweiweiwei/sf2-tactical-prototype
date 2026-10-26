@@ -96,21 +96,22 @@ class PhysicsWorld {
   // Terrain contact for non-grenade dynamics: every hull point below the heightfield gets pushed out and receives a
   // normal impulse (restitution) plus Coulomb friction at that point, so boxes tumble and settle on slopes.
   _terrainContacts() {
-    const T = this.terrain; if (!T) return;
+    const T = this.terrain || this.triGround; if (!T) return; // v60 triGround: a triangle map's floors (heights near the body: several storeys)
     const wp = this._tw || (this._tw = new CANNON.Vec3()), r = this._tr || (this._tr = new CANNON.Vec3()), vc = this._tv || (this._tv = new CANNON.Vec3());
     const rn = this._trn || (this._trn = new CANNON.Vec3()), tmp = this._tt || (this._tt = new CANNON.Vec3()), imp = this._ti || (this._ti = new CANNON.Vec3()), n3 = new THREE.Vector3();
     for (const d of this.dynamics) {
       if (d.removed || d.sinking || d.useHF) continue;
       const b = d.body; if (b.sleepState === CANNON.Body.SLEEPING) continue;
+      const yr = b.position.y + 0.6;
       if (!d.hull) { const sh = b.shapes[0]; d.hull = sh.halfExtents ? [-1, 1].flatMap((x) => [-1, 1].flatMap((y) => [-1, 1].map((z) => new CANNON.Vec3(x * sh.halfExtents.x, y * sh.halfExtents.y, z * sh.halfExtents.z)))) : sh.vertices ? sh.vertices.map((v) => v.clone()) : [new CANNON.Vec3(0, -(sh.radius || 0.05), 0)]; }
       let maxPen = 0, contacts = 0;
-      for (const lp of d.hull) { b.quaternion.vmult(lp, r); const pen = T.heightAt(b.position.x + r.x, b.position.z + r.z) - (b.position.y + r.y); if (pen > maxPen) maxPen = pen; }
+      for (const lp of d.hull) { b.quaternion.vmult(lp, r); const pen = T.heightAt(b.position.x + r.x, b.position.z + r.z, yr) - (b.position.y + r.y); if (pen > maxPen) maxPen = pen; }
       if (maxPen > 0) { b.position.y += maxPen; if (b.previousPosition) b.previousPosition.y += maxPen; b.aabbNeedsUpdate = true; }
       for (let it = 0; it < 2; it++) for (const lp of d.hull) { // sequential impulses (2 passes), points within 1 cm of the surface count as touching
         b.quaternion.vmult(lp, r); wp.copy(b.position).vadd(r, wp);
-        if (T.heightAt(wp.x, wp.z) - wp.y < -0.01) continue;
+        if (T.heightAt(wp.x, wp.z, yr) - wp.y < -0.01) continue;
         if (it === 0) contacts++;
-        T.normalAt(wp.x, wp.z, n3); const n = tmp.set(n3.x, n3.y, n3.z);
+        T.normalAt(wp.x, wp.z, n3, yr); const n = tmp.set(n3.x, n3.y, n3.z);
         b.angularVelocity.cross(r, vc); vc.vadd(b.velocity, vc);
         const vn = vc.dot(n); if (vn >= 0) continue;
         r.cross(n, rn); b.invInertiaWorld.vmult(rn, rn); rn.cross(r, rn);
@@ -122,7 +123,7 @@ class PhysicsWorld {
         if (vt > 1e-4) { const jt = Math.min(vt / kn, (d.fric ?? 0.6) * jn); imp.set(-vc.x / vt * jt, -vc.y / vt * jt, -vc.z / vt * jt); b.applyImpulse(imp, r); }
       }
       if (contacts) { // static friction: on a slope gentler than the friction cone a slow body sticks instead of creeping
-        const stick = d.age > 0.8 && T.slopeAt(b.position.x, b.position.z) < (d.fric ?? 0.6) && b.velocity.length() < 2.5, k = stick ? 0.6 : 0.97;
+        const stick = d.age > 0.8 && T.slopeAt(b.position.x, b.position.z, yr) < (d.fric ?? 0.6) && b.velocity.length() < 2.5, k = stick ? 0.6 : 0.97;
         b.velocity.x *= k; b.velocity.z *= k; if (stick && b.velocity.y > 0) b.velocity.y *= 0.5;
         b.angularVelocity.scale(stick && b.angularVelocity.lengthSquared() < 1 ? 0.8 : 0.96, b.angularVelocity); // let bodies topple; only calm the last wobble
       }

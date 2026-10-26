@@ -138,8 +138,8 @@ class Human extends Combatant {
       if (this.stepDist > (this.sprinting ? 2.5 : 2.1)) { this.stepDist = 0; this._sfx('step', m.surface, this.sprinting ? 0.7 : 0.55); g.emitNoise(m.pos, this.sprinting ? 17 : 11, this.team); }
     } else if (!m.grounded) this.stepDist = 1.4;
     if (m.landSpeed > 3.5) { this._sfx('land', m.surface, m.landSpeed / 9); this.punchV += Math.min(m.landSpeed, 14) * -0.012; g.emitNoise(m.pos, 14, this.team); }
-    // v34 fall damage (Source / UE-style, fixed HP): drop height h = v² / 2g; safe up to FALL_SAFE m, lethal at FALL_LETHAL m
-    if (m.landSpeed > 11 && this.alive) { const hgt = m.landSpeed * m.landSpeed / (-2 * CFG.gravity), dmg = Math.round((hgt - FALL_SAFE) / (FALL_LETHAL - FALL_SAFE) * 100);
+    // v34 fall damage (Source / UE-style, fixed HP): drop height h = v² / 2g; safe up to FALL_SAFE m, lethal at FALL_LETHAL m — none in Apex mode (v60; falling out of the map still kills)
+    if (m.landSpeed > 11 && this.alive && !g.apex) { const hgt = m.landSpeed * m.landSpeed / (-2 * CFG.gravity), dmg = Math.round((hgt - FALL_SAFE) / (FALL_LETHAL - FALL_SAFE) * 100);
       if (dmg > 0) { g.applyDamage(this, dmg, 'legs', this, WEAPON_DEFS.fall, null, null, { fall: true }); if (this.isPlayer) g.audio.land(null, m.surface, 1.4); } }
   }
 }

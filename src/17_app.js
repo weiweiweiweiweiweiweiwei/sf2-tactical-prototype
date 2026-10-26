@@ -504,7 +504,7 @@ class App {
     const dmg = opts.dmg === 'apex' ? 'apex' : 'sf2';
     [...$('optDmg').children].forEach((b) => b.classList.toggle('on', b.dataset.v === dmg));
     $('optDmgInfo').textContent = dmg === 'apex'
-      ? '100 血＋護盾：先扣盾再扣血。造成傷害會升級護盾（白 50 → 藍 75 → 紫 100）。爆頭倍率依槍種（衝鋒槍 ×1.25、步槍／機槍／手槍 ×1.75、狙擊 ×2、霰彈 ×1），腿 ×0.8，沒有距離衰減（霰彈除外）。4 秒沒受傷先回血、再回盾。'
+      ? '100 血＋護盾：先扣盾再扣血。造成傷害會升級護盾（白 50 → 藍 75 → 紫 100）。爆頭倍率依槍種（衝鋒槍 ×1.25、步槍／機槍／手槍 ×1.75、狙擊 ×2、霰彈 ×1），腿 ×0.8，沒有距離衰減（霰彈除外）。4 秒沒受傷後每秒回 5 點（先回血、再回盾）。沒有跌落傷害。'
       : '100 血：頭 ×2.5、胸 ×1、腹 ×0.9、四肢 ×0.75，有距離衰減，狙擊爆頭必死。打不死的爆頭會把頭盔打飛（這一槍只算身體傷害），之後再爆頭照 ×2.5 計算。';
     // the six SF2 room settings: map · win condition · weapon mode | game mode · N vs N · 設置
     const host = () => !this.isGuest();
@@ -1145,7 +1145,7 @@ class App {
 try {
   const app = new App();
   window.app = app;
-  window.SF2 = { THREE, Settings, MAPS, WEAPON_DEFS, WEAPON_DATABASE, CFG, MODES, RULES, calcDamage, loadoutDefs, LOOK_DEFAULT, resolveLook, CAO, AudioEngine, GUN_PROFILES }; // debug handle for the console
+  window.SF2 = { THREE, Settings, MAPS, WEAPON_DEFS, WEAPON_DATABASE, CFG, MODES, RULES, calcDamage, loadoutDefs, LOOK_DEFAULT, resolveLook, CAO, AudioEngine, GUN_PROFILES, triHeight }; // debug handle for the console
   window.SF2net = { Friends, NetHost, NetClient, LoopbackTransport, NetCodec, RoomDirectory, RtcHostTransport, RtcClientTransport, BackgroundTicker, RoomHost, RoomGuest, RoomLink, inviteLink, parseCode, fmtCode, roomCode, roomCfgSafe, ONLINE, host: (room, o = {}) => new NetHost(app, app.match, new LoopbackTransport(room, o)), join: (room, o = {}) => app.netJoin(room, o) }; // v25 tests
   window.__gameReady = true;
   document.getElementById('boot').classList.add('done');
