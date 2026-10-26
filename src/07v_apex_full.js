@@ -26,6 +26,12 @@ class ApexDoors {
       const d = { pivot, col, body, yaw: e.yaw, base: e.y, k: 0, target: 0, dir: 1, solid: true, botT: 0, box: box.clone(), center: mid,
         nx: Math.cos(e.yaw), nz: -Math.sin(e.yaw), partner: null, link: e.link };
       d.dir = this._inward(d);
+      // v60 an open leaf is solid too (along the wall it swung to): its own collider and body, swapped in at the end of the swing
+      pivot.rotation.y = e.yaw + d.dir * Math.PI * 0.5; pivot.updateMatrixWorld(true);
+      const ob = new THREE.Box3().setFromObject(pivot), os = ob.getSize(new THREE.Vector3()), om = ob.getCenter(new THREE.Vector3());
+      d.openCol = b.col.addBox(ob.min.clone(), ob.max.clone(), { material: 'metal' }); b.col.setSolid(d.openCol, false);
+      d.openBody = new CANNON.Body({ mass: 0, material: b.phys.matDefault, shape: new CANNON.Box(new CANNON.Vec3(os.x / 2, os.y / 2, os.z / 2)) }); d.openBody.position.set(om.x, om.y, om.z);
+      d.open = false; d.leaf = box.clone(); pivot.rotation.y = e.yaw; pivot.updateMatrixWorld(true);
       this.doors.push(d); if (e.id) byId.set(e.id, d);
     }
     for (const d of this.doors) { const o = d.link && byId.get(d.link); if (o && o !== d) { d.partner = o; o.partner = d; } }
@@ -41,7 +47,8 @@ class ApexDoors {
     for (const d of this.doors) {
       const n = eye.distanceTo(d.center); if (n >= dist) continue;
       const hit = this.b.col.raycast(eye, d.center.clone().sub(eye).normalize(), n);
-      if (hit && hit.collider !== d.col && hit.t < n - 0.25) continue; // a wall between you and the door
+      const own = (c) => c === d.col || c === d.openCol || (d.partner && (c === d.partner.col || c === d.partner.openCol)); // (its own leaves, shut or open)
+      if (hit && !own(hit.collider) && hit.t < n - 0.25) continue; // a wall between you and the door
       best = d; dist = n;
     }
     return best;
@@ -50,11 +57,38 @@ class ApexDoors {
   interact(c) { const d = this.nearest(c); if (!d) return false; this._open(d, d.target ? 0 : 1); return true; }
   _open(d, target) { d.target = target; if (d.partner) d.partner.target = target; } // a double door moves as one
   _swing(d, k) {
+    const moved = k !== d.k;
     d.k = k; d.pivot.rotation.y = d.yaw + d.dir * k * Math.PI * 0.5;
-    const solid = k <= 0.02;
-    if (solid === d.solid) return;
-    d.solid = solid; this.b.col.setSolid(d.col, solid);
-    if (solid) this.b.phys.world.addBody(d.body); else this.b.phys.world.removeBody(d.body);
+    if (moved) { d.pivot.updateMatrixWorld(true); d.leaf.setFromObject(d.pivot); } // where the leaf is now (anti-crush)
+    const shut = k <= 0.02, open = k >= 0.98, W = this.b.phys.world; // in between (a third of a second) neither collider is solid
+    if (shut !== d.solid) { d.solid = shut; this.b.col.setSolid(d.col, shut); if (shut) W.addBody(d.body); else W.removeBody(d.body); }
+    if (open !== d.open) { d.open = open; this.b.col.setSolid(d.openCol, open); if (open) W.addBody(d.openBody); else W.removeBody(d.openBody); }
+  }
+  // a closing leaf meets a body: the angle of the body around the hinge (from the shut leaf) is inside the sweep that is left
+  // and within its radius of the leaf now (0.45 m of arc), and it is within the leaf's reach
+  _hit(d, c) {
+    const p = c.motor.pos; if (!c.alive || Math.abs(p.y - d.base) > 2) return null;
+    const hx = d.pivot.position.x, hz = d.pivot.position.z, dx = p.x - hx, dz = p.z - hz, r = Math.hypot(dx, dz);
+    if (r > 1.55 + 0.45 || r < 0.05) return null;
+    const now = d.dir * d.k * Math.PI * 0.5, a = Math.atan2(-dx, -dz) - d.yaw, rel = Math.atan2(Math.sin(a), Math.cos(a)), pad = Math.min(1.2, 0.45 / r);
+    const inside = now > 0 ? rel > -pad && rel < now + pad : rel < pad && rel > now - pad;
+    return inside && Math.abs(rel - now) < pad ? { r, rel } : null;
+  }
+  // v60 user: E must close a door from where you stand. A body the closing leaf meets steps back from the hinge, out of the
+  // leaf's reach; only one that cannot (a wall behind it) sends the door back open.
+  _shove(d) {
+    const hx = d.pivot.position.x, hz = d.pivot.position.z;
+    for (const c of this.b.game.combatants) {
+      let hit = this._hit(d, c); if (!hit) continue;
+      if (d.k < 0.12) return true; // in the doorway at the last moment: open again
+      const p = c.motor.pos, x0 = p.x, z0 = p.z;
+      c.motor.nudge((p.x - hx) / hit.r * 0.12, (p.z - hz) / hit.r * 0.12); // step back from the hinge
+      if (!(hit = this._hit(d, c))) continue;
+      const ang = d.yaw + hit.rel, t = -Math.sign(d.dir) * 0.12; // else along the leaf's sweep: out through the doorway
+      c.motor.nudge(-Math.cos(ang) * t, Math.sin(ang) * t);
+      if (Math.hypot(p.x - x0, p.z - z0) < 0.04) return true; // pinned against a wall
+    }
+    return false;
   }
   tick(h) {
     const g = this.b.game;
@@ -64,7 +98,7 @@ class ApexDoors {
         const bot = d.k <= 0.02 && d.target === 0 && g.combatants.find((c) => c.alive && c.isBot && Math.hypot(c.motor.pos.x - d.center.x, c.motor.pos.z - d.center.z) < 1.9 && Math.abs(c.motor.pos.y - d.base) < 2);
         if (bot) { this._open(d, 1); d.botT = 3; if (d.partner) d.partner.botT = 3; }
         if (d.botT > 0 && (d.botT -= h) <= 0 && !near(2.6)) d.target = 0; // a bot's door closes behind it
-        if (d.target === 0 && d.k > 0.02 && near(1.7)) d.target = 1; // never closes on anyone in the swing
+        if (d.target === 0 && d.k > 0.02 && this._shove(d)) this._open(d, 1); // never closes on anyone in the swing (v60: only them — the one pressing E beside it may close it)
       }
       this._swing(d, clamp(d.k + Math.sign(d.target - d.k) * h * 3, 0, 1));
     }

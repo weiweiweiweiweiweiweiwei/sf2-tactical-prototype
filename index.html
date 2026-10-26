@@ -3320,7 +3320,7 @@ class TriSoup {
     this.tmat = mats ? tm.subarray(0, m) : null; this.lastTri = -1; // lastTri: the floor groundAt picked
     this.material = material; this.collider = { kind: 'tri', material, surface: material, blocksMove: true, blocksShot: true, penetrable: false };
     // grid (CSR): cell key → triangle indices
-    const C = 4, counts = new Map();
+    const C = 2, counts = new Map(); // 2 m cells: dense prop collision (≈1 M triangles) keeps each body test to a few dozen
     const each = (t, fn) => { const o = t * 6; for (let ix = Math.floor(this.bb[o] / C); ix <= Math.floor(this.bb[o + 3] / C); ix++) for (let iz = Math.floor(this.bb[o + 2] / C); iz <= Math.floor(this.bb[o + 5] / C); iz++) fn((ix + 4096) * 8192 + (iz + 4096)); };
     for (let t = 0; t < m; t++) each(t, (k) => counts.set(k, (counts.get(k) || 0) + 1));
     this.cells = new Map(); let total = 0; for (const [k, c] of counts) { this.cells.set(k, [total, 0]); total += c; }
@@ -3347,6 +3347,21 @@ class TriSoup {
       if (lo >= y1 || bb[o] > x1 || bb[o + 3] < x0 || bb[o + 2] > z1 || bb[o + 5] < z0 || bb[o + 1] > y1 || bb[o + 4] < lo) return false;
       return triBox(this.v, t * 9, this.nrm, t * 3, (x0 + x1) / 2, (lo + y1) / 2, (z0 + z1) / 2, r, (y1 - lo) / 2, r);
     });
+  }
+  // how deep a body's box sits in the triangles it overlaps (sum over them of how far it reaches past each plane): a wedged body
+  // may only move so this shrinks — out of the wall, never on through it
+  depth(x, y, z, r, h) {
+    r -= 0.005; let sum = 0;
+    const x0 = x - r, x1 = x + r, z0 = z - r, z1 = z + r, y0 = y + 0.01, y1 = y + h, bb = this.bb, v = this.v, n = this.nrm;
+    this.each(x0, z0, x1, z1, (t) => {
+      const o = t * 6, lo = this.cls[t] === 0 ? y0 + FLOOR_SKIN : y0;
+      if (lo >= y1 || bb[o] > x1 || bb[o + 3] < x0 || bb[o + 2] > z1 || bb[o + 5] < z0 || bb[o + 1] > y1 || bb[o + 4] < lo) return false;
+      const cx = x, cy = (lo + y1) / 2, cz = z, ey = (y1 - lo) / 2;
+      if (!triBox(v, t * 9, n, t * 3, cx, cy, cz, r, ey, r)) return false;
+      const i = t * 3, j = t * 9, d = n[i] * (cx - v[j]) + n[i + 1] * (cy - v[j + 1]) + n[i + 2] * (cz - v[j + 2]);
+      sum += r * Math.abs(n[i]) + ey * Math.abs(n[i + 1]) + r * Math.abs(n[i + 2]) - Math.abs(d); return false;
+    });
+    return sum;
   }
   // highest floor at or below y + up (and above y − down) under the footprint: five points at 0.7 r, or (full) nine at r; null if none
   groundAt(x, y, z, r, down, up = 0.02, full = false) {
@@ -3871,10 +3886,10 @@ class CharacterMotor {
     }
     if (w.tris) { // v60 triangle maps: follow a floor that rises ahead (slope / step) or stop at what blocks
       const allow = this.grounded ? this.stepHeight : P.airStep;
-      // a body already inside a triangle (landed under a slanted rock, pushed by a door) may always move: refusing every move
-      // left players frozen — no walking, no jumping — until they killed themselves
-      const wedged = w.tris.blocks(axis === 'x' ? before : p.x, beforeY, axis === 'z' ? before : p.z, r, h);
-      if (!wedged && w.tris.blocks(p.x, p.y, p.z, r, h)) {
+      // a body already inside triangles (landed under a slanted rock, pushed by a door) may move where it sits less deep in them:
+      // refusing every move froze players (no walking, no jumping); allowing every move let them walk on through walls
+      const ox = axis === 'x' ? before : p.x, oz = axis === 'z' ? before : p.z, wedged = w.tris.blocks(ox, beforeY, oz, r, h);
+      if (wedged ? w.tris.depth(p.x, p.y, p.z, r, h) > w.tris.depth(ox, beforeY, oz, r, h) + 0.005 : w.tris.blocks(p.x, p.y, p.z, r, h)) { // (wedged: sliding along is fine, deeper is not)
         const g = w.tris.groundAt(p.x, p.y + allow, p.z, r + 0.03, allow + 0.02, 0.02, true); // the whole footprint: a plank at the toe counts
         if (g !== null && g >= p.y - 0.02 && w.fits(p.x, g + 1e-3, p.z, r, h)) { const old = p.y; p.y = g + 1e-3; if (this.grounded && p.y - old > 0.08) this.stepOffset -= p.y - old; }
         else { p[axis] = before; p.y = beforeY; this.vel[axis] = 0; }
@@ -3914,7 +3929,7 @@ class CharacterMotor {
           if (k) { p.x += k[0]; p.z += k[1]; } else { p.y = prevY; this.vel.y = 0; }
         }
       }
-      else if (w.tris.blocks(p.x, p.y, p.z, r, h) && !w.tris.blocks(p.x, prevY, p.z, r, h)) { p.y = prevY; this.vel.y = 0; } // (a wedged body may jump out)
+      else if (w.tris.blocks(p.x, p.y, p.z, r, h) && (!w.tris.blocks(p.x, prevY, p.z, r, h) || w.tris.depth(p.x, p.y, p.z, r, h) >= w.tris.depth(p.x, prevY, p.z, r, h) - 1e-4)) { p.y = prevY; this.vel.y = 0; } // (a wedged body may jump out, not up through)
     }
     return hitGround;
   }
@@ -7922,6 +7937,12 @@ class ApexDoors {
       const d = { pivot, col, body, yaw: e.yaw, base: e.y, k: 0, target: 0, dir: 1, solid: true, botT: 0, box: box.clone(), center: mid,
         nx: Math.cos(e.yaw), nz: -Math.sin(e.yaw), partner: null, link: e.link };
       d.dir = this._inward(d);
+      // v60 an open leaf is solid too (along the wall it swung to): its own collider and body, swapped in at the end of the swing
+      pivot.rotation.y = e.yaw + d.dir * Math.PI * 0.5; pivot.updateMatrixWorld(true);
+      const ob = new THREE.Box3().setFromObject(pivot), os = ob.getSize(new THREE.Vector3()), om = ob.getCenter(new THREE.Vector3());
+      d.openCol = b.col.addBox(ob.min.clone(), ob.max.clone(), { material: 'metal' }); b.col.setSolid(d.openCol, false);
+      d.openBody = new CANNON.Body({ mass: 0, material: b.phys.matDefault, shape: new CANNON.Box(new CANNON.Vec3(os.x / 2, os.y / 2, os.z / 2)) }); d.openBody.position.set(om.x, om.y, om.z);
+      d.open = false; d.leaf = box.clone(); pivot.rotation.y = e.yaw; pivot.updateMatrixWorld(true);
       this.doors.push(d); if (e.id) byId.set(e.id, d);
     }
     for (const d of this.doors) { const o = d.link && byId.get(d.link); if (o && o !== d) { d.partner = o; o.partner = d; } }
@@ -7937,7 +7958,8 @@ class ApexDoors {
     for (const d of this.doors) {
       const n = eye.distanceTo(d.center); if (n >= dist) continue;
       const hit = this.b.col.raycast(eye, d.center.clone().sub(eye).normalize(), n);
-      if (hit && hit.collider !== d.col && hit.t < n - 0.25) continue; // a wall between you and the door
+      const own = (c) => c === d.col || c === d.openCol || (d.partner && (c === d.partner.col || c === d.partner.openCol)); // (its own leaves, shut or open)
+      if (hit && !own(hit.collider) && hit.t < n - 0.25) continue; // a wall between you and the door
       best = d; dist = n;
     }
     return best;
@@ -7946,11 +7968,38 @@ class ApexDoors {
   interact(c) { const d = this.nearest(c); if (!d) return false; this._open(d, d.target ? 0 : 1); return true; }
   _open(d, target) { d.target = target; if (d.partner) d.partner.target = target; } // a double door moves as one
   _swing(d, k) {
+    const moved = k !== d.k;
     d.k = k; d.pivot.rotation.y = d.yaw + d.dir * k * Math.PI * 0.5;
-    const solid = k <= 0.02;
-    if (solid === d.solid) return;
-    d.solid = solid; this.b.col.setSolid(d.col, solid);
-    if (solid) this.b.phys.world.addBody(d.body); else this.b.phys.world.removeBody(d.body);
+    if (moved) { d.pivot.updateMatrixWorld(true); d.leaf.setFromObject(d.pivot); } // where the leaf is now (anti-crush)
+    const shut = k <= 0.02, open = k >= 0.98, W = this.b.phys.world; // in between (a third of a second) neither collider is solid
+    if (shut !== d.solid) { d.solid = shut; this.b.col.setSolid(d.col, shut); if (shut) W.addBody(d.body); else W.removeBody(d.body); }
+    if (open !== d.open) { d.open = open; this.b.col.setSolid(d.openCol, open); if (open) W.addBody(d.openBody); else W.removeBody(d.openBody); }
+  }
+  // a closing leaf meets a body: the angle of the body around the hinge (from the shut leaf) is inside the sweep that is left
+  // and within its radius of the leaf now (0.45 m of arc), and it is within the leaf's reach
+  _hit(d, c) {
+    const p = c.motor.pos; if (!c.alive || Math.abs(p.y - d.base) > 2) return null;
+    const hx = d.pivot.position.x, hz = d.pivot.position.z, dx = p.x - hx, dz = p.z - hz, r = Math.hypot(dx, dz);
+    if (r > 1.55 + 0.45 || r < 0.05) return null;
+    const now = d.dir * d.k * Math.PI * 0.5, a = Math.atan2(-dx, -dz) - d.yaw, rel = Math.atan2(Math.sin(a), Math.cos(a)), pad = Math.min(1.2, 0.45 / r);
+    const inside = now > 0 ? rel > -pad && rel < now + pad : rel < pad && rel > now - pad;
+    return inside && Math.abs(rel - now) < pad ? { r, rel } : null;
+  }
+  // v60 user: E must close a door from where you stand. A body the closing leaf meets steps back from the hinge, out of the
+  // leaf's reach; only one that cannot (a wall behind it) sends the door back open.
+  _shove(d) {
+    const hx = d.pivot.position.x, hz = d.pivot.position.z;
+    for (const c of this.b.game.combatants) {
+      let hit = this._hit(d, c); if (!hit) continue;
+      if (d.k < 0.12) return true; // in the doorway at the last moment: open again
+      const p = c.motor.pos, x0 = p.x, z0 = p.z;
+      c.motor.nudge((p.x - hx) / hit.r * 0.12, (p.z - hz) / hit.r * 0.12); // step back from the hinge
+      if (!(hit = this._hit(d, c))) continue;
+      const ang = d.yaw + hit.rel, t = -Math.sign(d.dir) * 0.12; // else along the leaf's sweep: out through the doorway
+      c.motor.nudge(-Math.cos(ang) * t, Math.sin(ang) * t);
+      if (Math.hypot(p.x - x0, p.z - z0) < 0.04) return true; // pinned against a wall
+    }
+    return false;
   }
   tick(h) {
     const g = this.b.game;
@@ -7960,7 +8009,7 @@ class ApexDoors {
         const bot = d.k <= 0.02 && d.target === 0 && g.combatants.find((c) => c.alive && c.isBot && Math.hypot(c.motor.pos.x - d.center.x, c.motor.pos.z - d.center.z) < 1.9 && Math.abs(c.motor.pos.y - d.base) < 2);
         if (bot) { this._open(d, 1); d.botT = 3; if (d.partner) d.partner.botT = 3; }
         if (d.botT > 0 && (d.botT -= h) <= 0 && !near(2.6)) d.target = 0; // a bot's door closes behind it
-        if (d.target === 0 && d.k > 0.02 && near(1.7)) d.target = 1; // never closes on anyone in the swing
+        if (d.target === 0 && d.k > 0.02 && this._shove(d)) this._open(d, 1); // never closes on anyone in the swing (v60: only them — the one pressing E beside it may close it)
       }
       this._swing(d, clamp(d.k + Math.sign(d.target - d.k) * h * 3, 0, 1));
     }
@@ -8047,7 +8096,14 @@ class TriGround {
 
 // Grenade trimesh tiles (16 m, built once, in the world while a grenade is within a tile) and prop culling past 150 m.
 class SkullStreaming {
-  constructor(b, tris, meshes) { this.b = b; this.tris = tris; this.meshes = meshes; this.built = new Map(); this.active = new Map(); this.physT = 0; this.cullT = 0; }
+  constructor(b, tris, meshes) {
+    // how far a batch draws grows with its pieces' size: litter goes at 45 m, a house frame at 160 (draw calls halved)
+    const M = new THREE.Matrix4();
+    for (const m of meshes) {
+      if (!m.geometry.boundingSphere) m.geometry.computeBoundingSphere();
+      m.getMatrixAt(0, M); m.userData.far = clamp(m.geometry.boundingSphere.radius * M.getMaxScaleOnAxis() * 35, 45, 160);
+    }
+    this.b = b; this.tris = tris; this.meshes = meshes; this.built = new Map(); this.active = new Map(); this.physT = 0; this.cullT = 0; }
   _tile(key) {
     const [x, z] = key.split(',').map(Number), T = this.tris, v = T.v, verts = [], ids = [];
     T.each(x * 16, z * 16, x * 16 + 16, z * 16 + 16, (t) => {
@@ -8078,7 +8134,7 @@ class SkullStreaming {
     if ((this.cullT -= dt) > 0) return;
     this.cullT = 0.25;
     const p = this.b.game.camera.position;
-    for (const m of this.meshes) m.visible = m.boundingSphere.center.distanceTo(p) - m.boundingSphere.radius < 150;
+    for (const m of this.meshes) m.visible = m.boundingSphere.center.distanceTo(p) - m.boundingSphere.radius < m.userData.far;
   }
   interact() { return false; }
   prompt() { return null; }

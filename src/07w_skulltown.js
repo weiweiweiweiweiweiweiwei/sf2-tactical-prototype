@@ -57,7 +57,14 @@ class TriGround {
 
 // Grenade trimesh tiles (16 m, built once, in the world while a grenade is within a tile) and prop culling past 150 m.
 class SkullStreaming {
-  constructor(b, tris, meshes) { this.b = b; this.tris = tris; this.meshes = meshes; this.built = new Map(); this.active = new Map(); this.physT = 0; this.cullT = 0; }
+  constructor(b, tris, meshes) {
+    // how far a batch draws grows with its pieces' size: litter goes at 45 m, a house frame at 160 (draw calls halved)
+    const M = new THREE.Matrix4();
+    for (const m of meshes) {
+      if (!m.geometry.boundingSphere) m.geometry.computeBoundingSphere();
+      m.getMatrixAt(0, M); m.userData.far = clamp(m.geometry.boundingSphere.radius * M.getMaxScaleOnAxis() * 35, 45, 160);
+    }
+    this.b = b; this.tris = tris; this.meshes = meshes; this.built = new Map(); this.active = new Map(); this.physT = 0; this.cullT = 0; }
   _tile(key) {
     const [x, z] = key.split(',').map(Number), T = this.tris, v = T.v, verts = [], ids = [];
     T.each(x * 16, z * 16, x * 16 + 16, z * 16 + 16, (t) => {
@@ -88,7 +95,7 @@ class SkullStreaming {
     if ((this.cullT -= dt) > 0) return;
     this.cullT = 0.25;
     const p = this.b.game.camera.position;
-    for (const m of this.meshes) m.visible = m.boundingSphere.center.distanceTo(p) - m.boundingSphere.radius < 150;
+    for (const m of this.meshes) m.visible = m.boundingSphere.center.distanceTo(p) - m.boundingSphere.radius < m.userData.far;
   }
   interact() { return false; }
   prompt() { return null; }

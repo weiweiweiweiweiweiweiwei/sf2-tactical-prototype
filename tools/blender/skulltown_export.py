@@ -172,17 +172,20 @@ def add_mesh(me, mw, mats):
 
 for o in parts.values():
     add_mesh(o.data, o.matrix_world, list(o.data.materials))
-MAX_COL_TRIS = 80  # per prototype part: collision needs the shape, not the detail (rocks are the bulk)
+MAX_COL_TRIS = 80  # per rock part: collision needs a rock's shape, not its detail (rocks are the bulk of the triangles)
+NATURAL = re.compile(r'rock|cluster|boulder|cliff|stone|bone|skull|pebble|debris|rubble|dirt_pile|sand_pile', re.I)
+MAX_BUILT_TRIS = 400  # stairs, rails, walls: a light trim that keeps steps, posts and openings (80 tore them)
 coarse_cache = {}
 
 
-def coarse_mesh(o):
+def coarse_mesh(o, natural):
     if o.name in coarse_cache:
         return coarse_cache[o.name]
     me = o.data; me.calc_loop_triangles(); n = len(me.loop_triangles)
-    if n > MAX_COL_TRIS:
+    cap = MAX_COL_TRIS if natural else MAX_BUILT_TRIS
+    if n > cap:
         tmp = bpy.data.objects.new('dec_' + o.name, me.copy()); sc.collection.objects.link(tmp)
-        mod = tmp.modifiers.new('d', 'DECIMATE'); mod.ratio = MAX_COL_TRIS / n
+        mod = tmp.modifiers.new('d', 'DECIMATE'); mod.ratio = cap / n
         dg = bpy.context.evaluated_depsgraph_get(); me = bpy.data.meshes.new_from_object(tmp.evaluated_get(dg)); bpy.data.objects.remove(tmp)
     coarse_cache[o.name] = me
     return me
@@ -195,10 +198,10 @@ for inst in [o for o in sc.objects if o.instance_collection]:
         if o.type != 'MESH':
             continue
         mw = inst.matrix_world @ o.matrix_world
-        zs = [(mw @ Vector(c)).z for c in o.bound_box]
-        if max(zs) - min(zs) < 0.5:  # rubble, litter, low debris (user: they snag feet): walked through, like grass
-            continue
-        add_mesh(coarse_mesh(o), mw, list(o.data.materials) or [None])
+        ws = [mw @ Vector(c) for c in o.bound_box]
+        if max(q.z for q in ws) - min(q.z for q in ws) < 0.5 and max(max(q.x for q in ws) - min(q.x for q in ws), max(q.y for q in ws) - min(q.y for q in ws)) < 1.5:
+            continue  # rubble, litter, low debris (user: they snag feet): walked through like grass — thin floors and platforms are wide, they stay
+        add_mesh(coarse_mesh(o, bool(NATURAL.search(inst['model']))), mw, list(o.data.materials) or [None])
 pos = np.array(P, np.float32); idx = np.array(I, np.uint32); mat = np.array(M, np.uint8)
 used = np.unique(idx); remap = np.full(len(pos) // 3, 0, np.uint32); remap[used] = np.arange(len(used), dtype=np.uint32)
 pos = pos.reshape(-1, 3)[used]; idx = remap[idx]

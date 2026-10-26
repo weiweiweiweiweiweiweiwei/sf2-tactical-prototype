@@ -90,7 +90,7 @@ class TriSoup {
     this.tmat = mats ? tm.subarray(0, m) : null; this.lastTri = -1; // lastTri: the floor groundAt picked
     this.material = material; this.collider = { kind: 'tri', material, surface: material, blocksMove: true, blocksShot: true, penetrable: false };
     // grid (CSR): cell key → triangle indices
-    const C = 4, counts = new Map();
+    const C = 2, counts = new Map(); // 2 m cells: dense prop collision (≈1 M triangles) keeps each body test to a few dozen
     const each = (t, fn) => { const o = t * 6; for (let ix = Math.floor(this.bb[o] / C); ix <= Math.floor(this.bb[o + 3] / C); ix++) for (let iz = Math.floor(this.bb[o + 2] / C); iz <= Math.floor(this.bb[o + 5] / C); iz++) fn((ix + 4096) * 8192 + (iz + 4096)); };
     for (let t = 0; t < m; t++) each(t, (k) => counts.set(k, (counts.get(k) || 0) + 1));
     this.cells = new Map(); let total = 0; for (const [k, c] of counts) { this.cells.set(k, [total, 0]); total += c; }
@@ -117,6 +117,21 @@ class TriSoup {
       if (lo >= y1 || bb[o] > x1 || bb[o + 3] < x0 || bb[o + 2] > z1 || bb[o + 5] < z0 || bb[o + 1] > y1 || bb[o + 4] < lo) return false;
       return triBox(this.v, t * 9, this.nrm, t * 3, (x0 + x1) / 2, (lo + y1) / 2, (z0 + z1) / 2, r, (y1 - lo) / 2, r);
     });
+  }
+  // how deep a body's box sits in the triangles it overlaps (sum over them of how far it reaches past each plane): a wedged body
+  // may only move so this shrinks — out of the wall, never on through it
+  depth(x, y, z, r, h) {
+    r -= 0.005; let sum = 0;
+    const x0 = x - r, x1 = x + r, z0 = z - r, z1 = z + r, y0 = y + 0.01, y1 = y + h, bb = this.bb, v = this.v, n = this.nrm;
+    this.each(x0, z0, x1, z1, (t) => {
+      const o = t * 6, lo = this.cls[t] === 0 ? y0 + FLOOR_SKIN : y0;
+      if (lo >= y1 || bb[o] > x1 || bb[o + 3] < x0 || bb[o + 2] > z1 || bb[o + 5] < z0 || bb[o + 1] > y1 || bb[o + 4] < lo) return false;
+      const cx = x, cy = (lo + y1) / 2, cz = z, ey = (y1 - lo) / 2;
+      if (!triBox(v, t * 9, n, t * 3, cx, cy, cz, r, ey, r)) return false;
+      const i = t * 3, j = t * 9, d = n[i] * (cx - v[j]) + n[i + 1] * (cy - v[j + 1]) + n[i + 2] * (cz - v[j + 2]);
+      sum += r * Math.abs(n[i]) + ey * Math.abs(n[i + 1]) + r * Math.abs(n[i + 2]) - Math.abs(d); return false;
+    });
+    return sum;
   }
   // highest floor at or below y + up (and above y − down) under the footprint: five points at 0.7 r, or (full) nine at r; null if none
   groundAt(x, y, z, r, down, up = 0.02, full = false) {
@@ -641,10 +656,10 @@ class CharacterMotor {
     }
     if (w.tris) { // v60 triangle maps: follow a floor that rises ahead (slope / step) or stop at what blocks
       const allow = this.grounded ? this.stepHeight : P.airStep;
-      // a body already inside a triangle (landed under a slanted rock, pushed by a door) may always move: refusing every move
-      // left players frozen — no walking, no jumping — until they killed themselves
-      const wedged = w.tris.blocks(axis === 'x' ? before : p.x, beforeY, axis === 'z' ? before : p.z, r, h);
-      if (!wedged && w.tris.blocks(p.x, p.y, p.z, r, h)) {
+      // a body already inside triangles (landed under a slanted rock, pushed by a door) may move where it sits less deep in them:
+      // refusing every move froze players (no walking, no jumping); allowing every move let them walk on through walls
+      const ox = axis === 'x' ? before : p.x, oz = axis === 'z' ? before : p.z, wedged = w.tris.blocks(ox, beforeY, oz, r, h);
+      if (wedged ? w.tris.depth(p.x, p.y, p.z, r, h) > w.tris.depth(ox, beforeY, oz, r, h) + 0.005 : w.tris.blocks(p.x, p.y, p.z, r, h)) { // (wedged: sliding along is fine, deeper is not)
         const g = w.tris.groundAt(p.x, p.y + allow, p.z, r + 0.03, allow + 0.02, 0.02, true); // the whole footprint: a plank at the toe counts
         if (g !== null && g >= p.y - 0.02 && w.fits(p.x, g + 1e-3, p.z, r, h)) { const old = p.y; p.y = g + 1e-3; if (this.grounded && p.y - old > 0.08) this.stepOffset -= p.y - old; }
         else { p[axis] = before; p.y = beforeY; this.vel[axis] = 0; }
@@ -684,7 +699,7 @@ class CharacterMotor {
           if (k) { p.x += k[0]; p.z += k[1]; } else { p.y = prevY; this.vel.y = 0; }
         }
       }
-      else if (w.tris.blocks(p.x, p.y, p.z, r, h) && !w.tris.blocks(p.x, prevY, p.z, r, h)) { p.y = prevY; this.vel.y = 0; } // (a wedged body may jump out)
+      else if (w.tris.blocks(p.x, p.y, p.z, r, h) && (!w.tris.blocks(p.x, prevY, p.z, r, h) || w.tris.depth(p.x, p.y, p.z, r, h) >= w.tris.depth(p.x, prevY, p.z, r, h) - 1e-4)) { p.y = prevY; this.vel.y = 0; } // (a wedged body may jump out, not up through)
     }
     return hitGround;
   }

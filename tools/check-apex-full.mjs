@@ -33,10 +33,25 @@ try {
     ok(res.inside >= D.length * 0.9, `leaves swing inside (${res.inside}/${D.length})`);
     for (const d of D.slice(0, 6)) { // anti-crush, then close
       doors._open(d, 1); for (let i = 0; i < 90; i++) doors.tick(1 / 30); // (its other half may have closed with the last one)
-      human.motor.pos.copy(d.center); human.motor.pos.y = d.base + 0.03; doors._open(d, 0); doors.tick(1 / 30); ok(d.target === 1, 'a door never closes on someone');
+      human.motor.pos.copy(d.center); human.motor.pos.y = d.base + 0.03; doors._open(d, 0); for (let i = 0; i < 60; i++) doors.tick(1 / 30); { const p = human.motor.pos; ok(d.k > 0.02 || !(p.x > d.box.min.x - 0.3 && p.x < d.box.max.x + 0.3 && p.z > d.box.min.z - 0.3 && p.z < d.box.max.z + 0.3), 'a door never closes on someone'); } // (it shoves them clear, or opens again)
       human.motor.pos.set(d.center.x + d.nx * 6, d.base, d.center.z + d.nz * 6); doors._open(d, 0); for (let i = 0; i < 90; i++) doors.tick(1 / 30);
       ok(d.k === 0 && d.col.blocksMove, 'a door closes again'); res.tested++;
     }
+    // v60 user: a door opened with E closes again with E from the same spot, and an open leaf is solid
+    let eClose = 0;
+    for (const d of D.slice(0, 8)) {
+      doors._open(d, 0); for (let i = 0; i < 90; i++) doors.tick(1 / 30);
+      for (const sgn of [1, -1]) {
+        human.motor.pos.set(d.center.x + d.nx * 1.2 * sgn, d.base + 0.03, d.center.z + d.nz * 1.2 * sgn);
+        if (doors.nearest(human) !== d) continue;
+        doors.interact(human); for (let i = 0; i < 60; i++) doors.tick(1 / 30);
+        const opened = d.k === 1 && d.openCol.blocksMove;
+        doors.interact(human); for (let i = 0; i < 60; i++) doors.tick(1 / 30);
+        if (opened && d.k === 0 && d.col.blocksMove) eClose++;
+        break;
+      }
+    }
+    ok(eClose >= 4, `E opens a door (solid when open) and E closes it again (${eClose}/8)`); res.eClose = eClose;
     g.combatants = keep;
     const Motor = human.motor.constructor, nodes = (g.nav.nodes || g.nav.valid || []).map((n) => n.p || n);
     let s = 3; const rnd = () => (s = (s * 16807) % 2147483647) / 2147483647; let floor = 0, frozen = 0;
