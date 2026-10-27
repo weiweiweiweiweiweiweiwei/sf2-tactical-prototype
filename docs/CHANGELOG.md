@@ -1018,3 +1018,8 @@
 - Apex 地圖的光照貼圖著色器：r169 起 `getShadow()` 多了 `shadowIntensity` 參數，舊呼叫在 Skull Town 編譯失敗（地面、骨頭材質）。
 - 環境光（IBL）：r163 起「沒有自己 envMap、吃 `scene.environment` 的材質」，`envMapIntensity` 會被 `scene.environmentIntensity` 蓋掉，地圖各自的 `envIntensity`（倉庫 0.3）失效，倉庫亮了 2.5 倍。`applyEnvIntensity` 改成把場景環境指定為材質自己的 envMap（低畫質關掉 IBL 時同步清掉）。
 - 驗證（`tools/out/_pagecmp.mjs` 同視角截圖比 r160）：倉庫 0.9、旅館 3.7（雲）、天空城 0.7、Skull Town 1.8、訓練場 0.8（平均像素差，0–255）；低畫質倉庫 0.7；槍模開鏡 3.1。`check.mjs`、`_nettest`、`check-apex-full` 都過。
+
+### v62r（2026-10-27）：物理、手榴彈改在固定 120 Hz 步長（架構第 2 項，使用者選 A）
+- 原本：玩家、Bot、連線已是固定 120 Hz（v25）；cannon 物理用自己的 90 Hz 累加器、手榴彈的引信和防穿牆掃描跟著畫面跑。
+- 現在：`PhysicsWorld.fixedStep(h)`（每個固定步長前記下位置／旋轉、屍體推倒的衝量）和 `Match.stepGrenades(h)` 都在 120 Hz 迴圈裡；`sync(dt, alpha)` 每畫面在最後兩步之間內插畫出來（任何更新率都順）。
+- 驗證：手榴彈引信 2.6 s → 2.608 s（一步之內）、停在地面；擊倒的 Bot 躺平；`_gear` 連線手榴彈／煙霧／掉槍全過；`check.mjs` 過。

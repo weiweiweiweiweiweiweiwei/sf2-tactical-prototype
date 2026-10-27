@@ -203,10 +203,29 @@ class PhysicsWorld {
     }
   }
 
-  step(dt) {
-    this.world.step(1 / 90, dt, 4);
+  // v62r one simulation step on the match's fixed clock (CFG.fixedStep, 120 Hz — was cannon's own 90 Hz accumulator on the
+  // frame time): every body's state before it is kept, so sync() can draw between the last two steps at any frame rate
+  fixedStep(h) {
+    for (const d of this.dynamics) {
+      if (d.removed || d.sinking || !d.mesh) continue;
+      const b = d.body; (d.pp || (d.pp = new CANNON.Vec3())).copy(b.position); (d.pq || (d.pq = new CANNON.Quaternion())).copy(b.quaternion);
+      if (d.corpse && d.age > 0.5 && d.age < 5) { // never leave a body standing: still upright after 0.5 s → shove the shoulders over
+        const q = b.quaternion, upY = 1 - 2 * (q.x * q.x + q.z * q.z);
+        if (upY > 0.75) {
+          d.shove = (d.shove || 0) + 1; const f = d.shove % 80 < 40 ? 1 : -1; // alternate direction (every 1/3 s) in case a wall blocks one side
+          const top = this._top || (this._top = new CANNON.Vec3()), imp = this._shv || (this._shv = new CANNON.Vec3());
+          b.quaternion.vmult(new CANNON.Vec3(0, 0.75, 0), top); imp.copy(d.fallDir).scale(f * 60 * 1.6 * h, imp);
+          b.wakeUp(); b.applyImpulse(imp, top);
+        }
+      }
+    }
+    this.world.step(h);
     this._terrainContacts();
-    const tmp = TMP_V4;
+  }
+
+  // every frame: ages, sinking, and the meshes drawn at alpha (0–1) between the previous and the last fixed step
+  sync(dt, alpha) {
+    const tmp = TMP_V4, P = this._ip || (this._ip = new CANNON.Vec3()), Q = this._iq || (this._iq = new CANNON.Quaternion());
     for (let i = this.dynamics.length - 1; i >= 0; i--) {
       const d = this.dynamics[i];
       if (d.removed) { this.dynamics.splice(i, 1); continue; }
@@ -219,19 +238,11 @@ class PhysicsWorld {
       }
       const b = d.body;
       if (!d.mesh) continue;
-      d.mesh.quaternion.set(b.quaternion.x, b.quaternion.y, b.quaternion.z, b.quaternion.w);
-      if (d.offset) { tmp.copy(d.offset).applyQuaternion(d.mesh.quaternion); d.mesh.position.set(b.position.x + tmp.x, b.position.y + tmp.y, b.position.z + tmp.z); }
-      else d.mesh.position.set(b.position.x, b.position.y, b.position.z);
+      if (d.pp) { d.pp.lerp(b.position, alpha, P); d.pq.slerp(b.quaternion, alpha, Q); } else { P.copy(b.position); Q.copy(b.quaternion); }
+      d.mesh.quaternion.set(Q.x, Q.y, Q.z, Q.w);
+      if (d.offset) { tmp.copy(d.offset).applyQuaternion(d.mesh.quaternion); d.mesh.position.set(P.x + tmp.x, P.y + tmp.y, P.z + tmp.z); }
+      else d.mesh.position.set(P.x, P.y, P.z);
       if (d.limp) this._limp(d, dt);
-      if (d.corpse && d.age > 0.5 && d.age < 5) { // never leave a body standing: still upright after 0.5 s → shove the shoulders over
-        const q = b.quaternion, upY = 1 - 2 * (q.x * q.x + q.z * q.z);
-        if (upY > 0.75) {
-          d.shove = (d.shove || 0) + 1; const f = d.shove % 40 < 20 ? 1 : -1; // alternate direction in case a wall blocks one side
-          const top = this._top || (this._top = new CANNON.Vec3()), imp = this._shv || (this._shv = new CANNON.Vec3());
-          b.quaternion.vmult(new CANNON.Vec3(0, 0.75, 0), top); imp.copy(d.fallDir).scale(f * 60 * 1.6 * dt, imp);
-          b.wakeUp(); b.applyImpulse(imp, top);
-        }
-      }
     }
   }
 }

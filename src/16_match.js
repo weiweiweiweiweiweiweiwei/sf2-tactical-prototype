@@ -731,11 +731,11 @@ class Match {
     this.detonate({ def, owner: this.net.byId(e.o | 0) || { team: null }, body: { position: p } });
   }
 
-  updateGrenades(dt) {
+  stepGrenades(h) { // v62r on the fixed clock, right after the physics step (was every frame): fuse and sweep in step with the bodies
     const o = TMP_V1, d = TMP_V2;
     for (let i = this.grenades.length - 1; i >= 0; i--) {
-      const n = this.grenades[i]; n.t += dt;
-      // anti-tunnelling: fast grenades are swept against the level every frame and bounced off whatever they would pass through
+      const n = this.grenades[i]; n.t += h;
+      // anti-tunnelling: fast grenades are swept against the level every step and bounced off whatever they would pass through
       const b = n.body, cur = TMP_V3.set(b.position.x, b.position.y, b.position.z), seg = d.subVectors(cur, n.prev), len = seg.length();
       if (len > 0.08) {
         seg.divideScalar(len);
@@ -825,6 +825,7 @@ class Match {
       const ms = []; for (const c of this.combatants) if (c.alive) ms.push(c.motor);
       for (let i = 0; i < ms.length; i++) for (let j = i + 1; j < ms.length; j++) CharacterMotor.separate(ms[i], ms[j]);
       for (const mc of this.builder.mechs) mc.tick(h); // v46 trams / drawbridge carry whoever stands on them
+      this.physics.fixedStep(h); this.stepGrenades(h); // v62r debris, bodies and grenades on the same 120 Hz clock
       if (!client && this.apex) this._regen(h);
       if (!client && this.def.killY !== undefined) for (const c of this.combatants) {
         const p=c.motor.pos,B=this.def.bounds,outside=this.def.killOutside&&(p.x<B.minX-2||p.x>B.maxX+2||p.z<B.minZ-2||p.z>B.maxZ+2);
@@ -864,8 +865,7 @@ class Match {
     this.followShadow();
     this.shadowProxy.visible = p.alive; this.shadowProxy.position.set(p.renderPos.x, p.renderPos.y + (p.motor.crouching ? 0.55 : 0.75), p.renderPos.z);
     this.weapons.update(dt, input, mouse);
-    this.updateGrenades(dt);
-    this.physics.step(dt);
+    this.physics.sync(dt, alpha);
     this.effects.update(dt);
     for (const fn of this.builder.animated) fn(dt, this.time);
     for (const mc of this.builder.mechs) mc.render(dt, alpha);
