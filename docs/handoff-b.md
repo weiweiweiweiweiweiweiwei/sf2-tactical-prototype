@@ -1,5 +1,7 @@
 # 交接單：給第二個 Claude Code（B）
 
+> **2026-10-27 停用**（見 `COLLAB.md`）。這兩項任務回到 A 的待辦。
+
 > 先讀 `COLLAB.md`（工作資料夾、檔案歸屬、鎖定表、規矩）和 `PROGRESS.md` 開頭的「里程碑對照」「待辦」。
 > 你在 `.worktrees\b\`、分支 `collab/b` 工作，只在自己的分支提交，不要推上 GitHub。
 > 每完成一項，寫進 `docs/progress-b.md`（做了什麼、數值、怎麼驗證），然後在 `COLLAB.md` 留言板留一行。
