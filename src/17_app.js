@@ -1128,7 +1128,7 @@ class App {
         this.shotT += dt;
         const s = m.def.shot, k = this.shotT * 0.12;
         m.camera.position.set(s.pos[0] + k * 2.2, s.pos[1] - k * 0.5, s.pos[2] - k * 1.2); m.camera.lookAt(s.target[0], s.target[1], s.target[2]);
-        m.camera.fov = 62; m.camera.updateProjectionMatrix();
+        m.camera.fov = s.fov || 62; m.camera.updateProjectionMatrix();
         m.effects.update(dt); for (const fn of m.builder.animated) fn(dt, this.shotT);
         this.post.render(dt, false);
       } else if (this.state === 'playing' || this.state === 'paused' || this.state === 'ended') {

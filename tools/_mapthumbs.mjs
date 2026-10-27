@@ -20,7 +20,7 @@ for (const [i, id] of ids.entries()) {
     app.state = 'shot'; app.hud.show(false); document.getElementById('loader').classList.remove('on', 'shot');
     const hold = () => { app.shotT = 0; const c = m.camera; c.position.set(...v.pos); c.lookAt(...v.target); c.fov = v.fov || 62; c.updateProjectionMatrix(); if (app.state === 'shot') requestAnimationFrame(hold); };
     // the shot state moves the camera every frame — pin it to the thumb view instead
-    const orig = m.def.shot; m.def.shot = { pos: v.pos, target: v.target }; hold();
+    const orig = m.def.shot; m.def.shot = { pos: v.pos, target: v.target, fov: v.fov }; // fov: the shot state honours it (was always 62) hold();
     window.__restoreShot = () => { m.def.shot = orig; };
     await new Promise((r) => setTimeout(r, 2200));
   }, i);

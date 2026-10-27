@@ -20,12 +20,12 @@ for (const [i, id] of ids.entries()) {
     app.state = 'shot'; app.hud.show(false); document.getElementById('loader').classList.remove('on', 'shot');
     const hold = () => { app.shotT = 0; const c = m.camera, w = window.__v || [...v.pos, ...v.target, v.fov]; c.position.set(w[0], w[1], w[2]); c.lookAt(w[3], w[4], w[5]); c.fov = w[6] || 62; c.updateProjectionMatrix(); if (app.state === 'shot') requestAnimationFrame(hold); };
     // the shot state moves the camera every frame — pin it to the thumb view instead
-    const orig = m.def.shot; m.def.shot = { pos: v.pos, target: v.target }; hold();
+    const orig = m.def.shot; m.def.shot = { pos: v.pos, target: v.target, fov: v.fov }; // fov: the shot state honours it (was always 62) hold();
     window.__restoreShot = () => { m.def.shot = orig; };
     await new Promise((r) => setTimeout(r, 2200));
   }, i);
   for (const [n, v] of VIEWS.entries()) {
-    await p.evaluate((v) => { const m = app.match; m.def.shot.pos = v.slice(0, 3); m.def.shot.target = v.slice(3, 6); window.__v = v; }, v);
+    await p.evaluate((v) => { const m = app.match; m.def.shot.pos = v.slice(0, 3); m.def.shot.target = v.slice(3, 6); m.def.shot.fov = v[6]; window.__v = v; }, v);
     await p.evaluate(() => { const c = app.match.camera, v = window.__v; c.position.set(v[0], v[1], v[2]); c.lookAt(v[3], v[4], v[5]); c.fov = v[6] || 62; c.updateProjectionMatrix(); });
     await new Promise((r) => setTimeout(r, 1500));
     const cv = await p.$('canvas'); await cv.screenshot({ path: `tools/out/views/${id}_${n + 1}.jpg`, type: 'jpeg', quality: 84 }); console.log(id, n + 1);

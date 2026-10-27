@@ -10,7 +10,8 @@
 - ✅ M4A1 開槍：照 SF2 原版 ZoomFire 動畫數值改（開鏡只平移後退、不旋轉）
 - ✅ 槍枝材質：改成霧面、非金屬（陽極處理／磷化／聚合物）
 - ✅ 載入畫面一開始就顯示地圖圖片
-- ❓ Skull Town、訓練場的選圖縮圖和載入畫面：5 個視角已給使用者（`tools/out/views/*_choices.jpg`，座標在 `choices.json`），等回覆
+- ✅ Skull Town 選圖縮圖和載入畫面：用使用者 Blender 截圖的視角（v61c）
+- ❓ 訓練場的選圖縮圖和載入畫面：等使用者的 Blender 截圖
 - 🔄 M4A1 原版動畫（使用者選 A）
   - ✅ 匯出動畫集：`umodel -export -psk rif_m4a1` → `tools/out/sf2/m4a1_anim/`（15 段：Equip、Idle、Fire、Zoom、ZoomFire、Reload、dash…，30 fps）；PSA 格式已能直接用 Python 讀（不一定要裝外掛）
   - ⬜ 第一人稱手臂模型：`c_comm_1st_glove_b05`（手套 `com_1st_glove_b06`）等套件，找出袖子／手臂

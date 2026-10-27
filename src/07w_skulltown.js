@@ -199,7 +199,8 @@ MAPS.push(apexTriMap({
   sun: { pos: [1.5, 68, -73], color: 0xfff1de, intensity: 2.6, auto: true }, hemi: [0xbcd6ee, 0x8a7356, 0.8],
   fog: { color: 0xc4ced8, near: 180, far: 1100 }, acoustics: 'outdoor', ambience: 'desert', shadowFollow: 60,
   shot: { pos: [0, 260, 120], target: [0, 0, 0] },
-  thumb: { pos: [-60, 30, 70], target: [0, 6, 0] },
+  // the user's Blender view (10-27), solved from 8 landmarks; fov 43.8 = Blender's 50 mm viewport lens at 16:9
+  thumb: { pos: [210.4, 106.2, 17.5], target: [121.5, 61.7, 7.0], fov: 43.8 },
   objectives: { dom: [[-30, 0, 0], [0, 0, 0], [30, 0, 0]], relic: [0, 0, 0], domRadius: 5 }, // replaced by the baked ones on load
 }));
 // v60 the firing range, rebuilt the same way (tools/blender/apex_maps.py 'range'): the canyon around the village, centred on the
