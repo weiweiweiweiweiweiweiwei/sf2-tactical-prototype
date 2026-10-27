@@ -75,25 +75,27 @@ class Weapon {
      65536/360); how they move the view per frame is native in sf2.exe, so the motion is rebuilt from its runtime state
      (S_RECOIL_RESULT: currentCrossVert, forceDir, currentDomValue …):
      · climb: each shot +nextCrossVert up to maxCrossVert, then only the sideways sway goes on
-     · sideways: each shot incline × the climb step toward forceDir; once the drift is more than forceCorrection % of the
-       climb, forceDir turns back toward the middle (a zig-zag inside a cone)
+     · sideways: a small step of incline × the climb × latScale (0.2) toward forceDir, which turns around on forceCorrection %
+       of the shots — a slight wobble. v62g fitted to the user's SF2 spray (aimed, uncompensated, 10-27): 270 px straight
+       up (≈ 8.1° at SF2's 55° aimed FOV = the 8.4° cap, the last shots piled at the top) with only ±10 px (±0.3°) sideways;
+       v62e's drift of half the climb swung 3.9° off
      · aimed × zoomMod (RecoilZoomModifier), crouched × crouchMod; the camera recovers at vertDec °/s, speeding up by
        crossDecreasInc °/s² (Player.update)
-     · spread cone (half angle): domDefault (aimed domZoomDefault) + domInc per shot, domMin..domMax, back at domDec °/s;
+     · spread cone (half angle): hip domDefault + domInc per shot, domMin..domMax, back at domDec °/s; aimed domZoomDefault
+       with no growth (the same spray's holes run in one line);
        sprinting / airborne add maxMovingValue × mulValueRun / mulValueJump (walking's 0.035° is left out: only states both
        ends of an online match agree on feed the spread) */
   sf2Mod(ws) { const r = this.def.sf2Recoil, m = this.owner.motor; return (ws.ads ? r.zoomMod : 1) * (m.crouching && m.grounded ? r.crouchMod : 1); }
   sf2Kick(ws) {
     const r = this.def.sf2Recoil, k = this.sf2Mod(ws), up = r.nextCrossVert * k, cap = r.maxCrossVert * k;
-    if (this.sfV < 0.01 && Math.abs(this.sfH) < 0.01) this.sfDir = Math.random() < 0.5 ? -1 : 1; // a fresh spray picks its side
     const climb = Math.max(0, Math.min(up, cap - this.sfV)); this.sfV += climb;
-    if (Math.abs(this.sfH) > r.forceCorrection / 100 * Math.max(this.sfV, up)) this.sfDir = -Math.sign(this.sfH);
-    const side = this.sfDir * up * r.incline * rand(0.6, 1); this.sfH += side;
+    if (Math.random() * 100 < r.forceCorrection) this.sfDir = -this.sfDir; // each shot may turn the sideways step around
+    const side = this.sfDir * up * r.incline * (r.latScale ?? 0.2) * rand(0.6, 1); this.sfH += side;
     return [climb * THREE.MathUtils.DEG2RAD, side * THREE.MathUtils.DEG2RAD];
   }
   sf2Spread(ws) {
     const r = this.def.sf2Recoil, p = this.owner, m = p.motor;
-    let d = clamp((ws.ads ? r.domZoomDefault : r.domDefault) + this.sfDom, ws.ads ? 0 : r.domMin, r.domMax) * this.sf2Mod(ws);
+    let d = (ws.ads ? r.domZoomDefault : clamp(r.domDefault + this.sfDom, r.domMin, r.domMax)) * this.sf2Mod(ws); // aimed: no growth (v62g, the SF2 spray below)
     if (p.sprinting) d += r.maxMovingValue * r.mulValueRun; else if (!m.grounded) d += r.maxMovingValue * r.mulValueJump;
     return d * THREE.MathUtils.DEG2RAD;
   }
