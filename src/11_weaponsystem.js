@@ -236,10 +236,11 @@ class WeaponSystem extends Arsenal {
   // Viewmodel kick is cosmetic only: a backward z kickback + a tiny rotational shake (almost none in ADS, so the
   // sight stays on the screen centre). The real recoil is the camera rotation in Player.addRecoil.
   kick(k) {
-    // ADS: the eye is 2–3 cm behind an iron sight's peep, so a hip-sized kickback (≈3 cm) slams the rear sight into the
-    // camera (user 10-27: "the stock shakes fore and aft, the sight hardly moves") — aimed, the kick is ≈4 mm back and a
-    // small muzzle flip that bounces the front post in the peep; the climb itself is the camera's (Player.addRecoil)
-    const a = this.ads ? 0.12 : 0.28;
+    // ADS: the eye is 2–3 cm behind an iron sight's peep, so a hip-sized kickback (≈3.6 cm) slammed the rear sight into the
+    // camera (user 10-27: "the stock shakes fore and aft, the sight hardly moves"). SF2's own ZoomFire (rif_m4a1 animset)
+    // is a straight 2 cm push back with no rotation at all, ≈ ¼ of its 8.5 cm eye relief — the same quarter here (≈6 mm);
+    // the climb is the camera's (Player.addRecoil)
+    const a = this.ads ? 0 : 0.28;
     this.kickVel.z += k.z * 24 * (this.ads ? 0.12 : 1); this.kickVel.y += k.y * 5 * a;
     const side = this.ads && this.current.def.adsVertical ? 0 : 1; // the holo window must not wobble sideways under a narrow ADS lens
     this.kickRotVel.x += k.rx * 20 * a; this.kickRotVel.z += rand(-1, 1) * k.rx * 3 * a * side; this.kickRotVel.y += rand(-1, 1) * k.rx * 1.5 * a * side;
