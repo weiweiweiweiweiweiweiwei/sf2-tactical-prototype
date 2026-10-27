@@ -1,0 +1,1841 @@
+{
+  "source": "docs/research/sf2/sf2_package_list.txt",
+  "source_snapshot": "本輪讀取既有文字清單；舊盤點日期2026-10-21",
+  "input_lines": 1647,
+  "package_entries": 1646,
+  "unique_package_filenames": 1646,
+  "selected_entries": 366,
+  "not_reaudited": "未檢查D:/SpecialForce2，數量與格式只代表文字清單；舊報告約數不可當本輪磁碟掃描。",
+  "entries": [
+    {
+      "filename": "mg_fn_mag.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "mg_hk23.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "mg_hk23_texture.upk",
+      "kind": "texture",
+      "content_verified": false
+    },
+    {
+      "filename": "mg_K3.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "mg_K3_texture.upk",
+      "kind": "texture",
+      "content_verified": false
+    },
+    {
+      "filename": "mg_l86a1.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "mg_l86a1_sight.upk",
+      "kind": "sight",
+      "content_verified": false
+    },
+    {
+      "filename": "mg_l86a1_texture.upk",
+      "kind": "texture",
+      "content_verified": false
+    },
+    {
+      "filename": "mg_mg4.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "mg_mg4_sight.upk",
+      "kind": "sight",
+      "content_verified": false
+    },
+    {
+      "filename": "mg_mg4_texture.upk",
+      "kind": "texture",
+      "content_verified": false
+    },
+    {
+      "filename": "mg_rpk74.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "mg_rpk74_texture.upk",
+      "kind": "texture",
+      "content_verified": false
+    },
+    {
+      "filename": "mg_songkran_ultimax.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "mg_spw.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "mg_spw_texture.upk",
+      "kind": "texture",
+      "content_verified": false
+    },
+    {
+      "filename": "mg_ultimax.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "mg_ultimax_texture.upk",
+      "kind": "texture",
+      "content_verified": false
+    },
+    {
+      "filename": "pis_blackhawk.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "pis_colt1911.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "pis_colt1911_texture.upk",
+      "kind": "texture",
+      "content_verified": false
+    },
+    {
+      "filename": "pis_cz75.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "pis_cz75_texture.upk",
+      "kind": "texture",
+      "content_verified": false
+    },
+    {
+      "filename": "pis_deserteagle.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "pis_deserteagle_texture.upk",
+      "kind": "texture",
+      "content_verified": false
+    },
+    {
+      "filename": "pis_elephant.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "pis_glock17.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "pis_glock17_texture.upk",
+      "kind": "texture",
+      "content_verified": false
+    },
+    {
+      "filename": "pis_infi.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "pis_infi_texture.upk",
+      "kind": "texture",
+      "content_verified": false
+    },
+    {
+      "filename": "pis_jericho941.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "pis_jericho941_texture.upk",
+      "kind": "texture",
+      "content_verified": false
+    },
+    {
+      "filename": "pis_k5.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "pis_k5_texture.upk",
+      "kind": "texture",
+      "content_verified": false
+    },
+    {
+      "filename": "pis_luger.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "pis_m92f.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "pis_m92f_dual.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "pis_m92f_texture.upk",
+      "kind": "texture",
+      "content_verified": false
+    },
+    {
+      "filename": "pis_maxim9.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "pis_maxim9_rat.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "pis_p226.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "pis_p226_texture.upk",
+      "kind": "texture",
+      "content_verified": false
+    },
+    {
+      "filename": "pis_p7m13.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "pis_pirate_deserteagle.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "pis_strike_one.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "pis_strike_one_sf_yellow.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "pis_sw60.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "pis_sw60_texture.upk",
+      "kind": "texture",
+      "content_verified": false
+    },
+    {
+      "filename": "pis_wildey.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "rif_acr.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "rif_acr_sight.upk",
+      "kind": "sight",
+      "content_verified": false
+    },
+    {
+      "filename": "rif_acr_texture.upk",
+      "kind": "texture",
+      "content_verified": false
+    },
+    {
+      "filename": "rif_ak103.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "rif_ak103_crescent.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "rif_ak103_pirate.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "rif_ak103_texture.upk",
+      "kind": "texture",
+      "content_verified": false
+    },
+    {
+      "filename": "rif_an94.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "rif_an94_sight.upk",
+      "kind": "sight",
+      "content_verified": false
+    },
+    {
+      "filename": "rif_an94_texture.upk",
+      "kind": "texture",
+      "content_verified": false
+    },
+    {
+      "filename": "rif_arx160.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "rif_arx160_gacha.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "rif_ar_m203.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "rif_aug.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "rif_aug_sight.upk",
+      "kind": "sight",
+      "content_verified": false
+    },
+    {
+      "filename": "rif_aug_texture.upk",
+      "kind": "texture",
+      "content_verified": false
+    },
+    {
+      "filename": "rif_cm901.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "rif_famas.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "rif_famas_pixel.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "rif_famas_texture.upk",
+      "kind": "texture",
+      "content_verified": false
+    },
+    {
+      "filename": "rif_fnf2000.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "rif_g36c.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "rif_g36c_texture.upk",
+      "kind": "texture",
+      "content_verified": false
+    },
+    {
+      "filename": "rif_galil.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "rif_galil_sight.upk",
+      "kind": "sight",
+      "content_verified": false
+    },
+    {
+      "filename": "rif_galil_texture.upk",
+      "kind": "texture",
+      "content_verified": false
+    },
+    {
+      "filename": "rif_hk417.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "rif_hk417_murderer.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "rif_hk417_sight.upk",
+      "kind": "sight",
+      "content_verified": false
+    },
+    {
+      "filename": "rif_hk417_texture.upk",
+      "kind": "texture",
+      "content_verified": false
+    },
+    {
+      "filename": "rif_K2.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "rif_K2C1.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "rif_k2c1_reflex_hyperbuster.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "rif_K2_texture.upk",
+      "kind": "texture",
+      "content_verified": false
+    },
+    {
+      "filename": "rif_m14ebr.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "rif_m14ebr_texture.upk",
+      "kind": "texture",
+      "content_verified": false
+    },
+    {
+      "filename": "rif_m16a3.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "rif_m16a3_texture.upk",
+      "kind": "texture",
+      "content_verified": false
+    },
+    {
+      "filename": "rif_m4a1.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "rif_m4a1_fallenangel.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "rif_m4a1_sight.upk",
+      "kind": "sight",
+      "content_verified": false
+    },
+    {
+      "filename": "rif_m4a1_texture.upk",
+      "kind": "texture",
+      "content_verified": false
+    },
+    {
+      "filename": "rif_madsen_lar.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "rif_madsen_lar_harpoon.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "rif_mp40.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "rif_mrr.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "rif_nanos.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "rif_qbz97.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "rif_qbz97_texture.upk",
+      "kind": "texture",
+      "content_verified": false
+    },
+    {
+      "filename": "rif_sar21.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "rif_sar21_crescent.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "rif_sar21_sight.upk",
+      "kind": "sight",
+      "content_verified": false
+    },
+    {
+      "filename": "rif_sar21_texture.upk",
+      "kind": "texture",
+      "content_verified": false
+    },
+    {
+      "filename": "rif_scar-h.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "rif_scar-h_sight.upk",
+      "kind": "sight",
+      "content_verified": false
+    },
+    {
+      "filename": "rif_scar-h_texture.upk",
+      "kind": "texture",
+      "content_verified": false
+    },
+    {
+      "filename": "rif_scar_L.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "rif_scar_L_texture.upk",
+      "kind": "texture",
+      "content_verified": false
+    },
+    {
+      "filename": "rif_sig551.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "rif_sig551_texture.upk",
+      "kind": "texture",
+      "content_verified": false
+    },
+    {
+      "filename": "rif_stg44.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "rif_stg44_texture.upk",
+      "kind": "texture",
+      "content_verified": false
+    },
+    {
+      "filename": "rif_t65k1.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "rif_t65k2.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "rif_t65k2_sight.upk",
+      "kind": "sight",
+      "content_verified": false
+    },
+    {
+      "filename": "rif_t65k2_texture.upk",
+      "kind": "texture",
+      "content_verified": false
+    },
+    {
+      "filename": "rif_t91.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "rif_tar21.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "rif_tar21_parasite.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "rif_type89.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "rif_type89_sight.upk",
+      "kind": "sight",
+      "content_verified": false
+    },
+    {
+      "filename": "rif_type89_texture.upk",
+      "kind": "texture",
+      "content_verified": false
+    },
+    {
+      "filename": "rif_xm8.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "rif_xm8_texture.upk",
+      "kind": "texture",
+      "content_verified": false
+    },
+    {
+      "filename": "sho_aa12.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "sho_aa12_texture.upk",
+      "kind": "texture",
+      "content_verified": false
+    },
+    {
+      "filename": "sho_bnill.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "sho_bnill_texture.upk",
+      "kind": "texture",
+      "content_verified": false
+    },
+    {
+      "filename": "sho_ksg.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "sho_m870.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "sho_m870_texture.upk",
+      "kind": "texture",
+      "content_verified": false
+    },
+    {
+      "filename": "sho_saiga12.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "sho_saiga12_texture.upk",
+      "kind": "texture",
+      "content_verified": false
+    },
+    {
+      "filename": "sho_usas12.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "sho_usas12_texture.upk",
+      "kind": "texture",
+      "content_verified": false
+    },
+    {
+      "filename": "smg_bizon.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "smg_bizon_texture.upk",
+      "kind": "texture",
+      "content_verified": false
+    },
+    {
+      "filename": "smg_csls06.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "smg_csls06_texture.upk",
+      "kind": "texture",
+      "content_verified": false
+    },
+    {
+      "filename": "smg_cz_scorpion.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "smg_k1.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "smg_k1_anubis.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "smg_k1_texture.upk",
+      "kind": "texture",
+      "content_verified": false
+    },
+    {
+      "filename": "smg_ksv.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "smg_ksv_sight.upk",
+      "kind": "sight",
+      "content_verified": false
+    },
+    {
+      "filename": "smg_ksv_texture.upk",
+      "kind": "texture",
+      "content_verified": false
+    },
+    {
+      "filename": "smg_mac10.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "smg_mac10_espionage.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "smg_mp5k.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "smg_mp5k_texture.upk",
+      "kind": "texture",
+      "content_verified": false
+    },
+    {
+      "filename": "smg_mp7.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "smg_mp7_sight.upk",
+      "kind": "sight",
+      "content_verified": false
+    },
+    {
+      "filename": "smg_mp7_texture.upk",
+      "kind": "texture",
+      "content_verified": false
+    },
+    {
+      "filename": "smg_mx4_storm.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "smg_p90.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "smg_p90_texture.upk",
+      "kind": "texture",
+      "content_verified": false
+    },
+    {
+      "filename": "smg_pp2000.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "smg_pp2000_texture.upk",
+      "kind": "texture",
+      "content_verified": false
+    },
+    {
+      "filename": "smg_scorpion.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "smg_scorpion_texture.upk",
+      "kind": "texture",
+      "content_verified": false
+    },
+    {
+      "filename": "smg_sigmpx.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "smg_ump45.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "smg_ump45_anubis.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "smg_ump45_texture.upk",
+      "kind": "texture",
+      "content_verified": false
+    },
+    {
+      "filename": "smg_uzi_pro.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "smg_winter_bizon.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "sni_awp.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "sni_awp_texture.upk",
+      "kind": "texture",
+      "content_verified": false
+    },
+    {
+      "filename": "sni_barret.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "sni_barret_texture.upk",
+      "kind": "texture",
+      "content_verified": false
+    },
+    {
+      "filename": "sni_cheytac.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "sni_cheytac_crescent.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "sni_cheytac_pixel.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "sni_cheytac_rat.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "sni_cheytac_texture.upk",
+      "kind": "texture",
+      "content_verified": false
+    },
+    {
+      "filename": "sni_cz700.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "sni_cz700_texture.upk",
+      "kind": "texture",
+      "content_verified": false
+    },
+    {
+      "filename": "sni_dragunov.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "sni_dragunov_texture.upk",
+      "kind": "texture",
+      "content_verified": false
+    },
+    {
+      "filename": "sni_fnar.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "sni_frf2.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "sni_frf2_texture.upk",
+      "kind": "texture",
+      "content_verified": false
+    },
+    {
+      "filename": "sni_k14.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "sni_kar98k.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "sni_killer_whale.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "sni_m40a1.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "sni_m40a1_texture.upk",
+      "kind": "texture",
+      "content_verified": false
+    },
+    {
+      "filename": "sni_msr.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "sni_pirate_k14.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "sni_psg-1.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "sni_psg-1_texture.upk",
+      "kind": "texture",
+      "content_verified": false
+    },
+    {
+      "filename": "sni_scope_zin.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "sni_songkran_k14.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "sni_songkran_watergun.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "sni_sr-25.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "sni_sr-25_texture.upk",
+      "kind": "texture",
+      "content_verified": false
+    },
+    {
+      "filename": "sni_svch.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "sni_trg.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "sni_winter_k14.upk",
+      "kind": "weapon_or_variant",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_44magnum.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_AA-12.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_ACR.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_ACR_Haunted.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_AG36.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_AK103.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_AK47_103.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_Alienware-m4a1.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_Ambient_001.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_An94.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_Aquablaster.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_ARX160.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_AUGA3.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_AWP_2.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_B92FS.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_Barret.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_Baseball.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_Baseball_bat.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_Bizon.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_Bnlli.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_Bow.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_Bowie.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_C4.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_Cat.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_Cheytac.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_Cheytac_2.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_Collisions.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_Colt911.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_common.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_Crossbow.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_CrowBar.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_Csls06.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_CSWeapon.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_CZ3A1.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_CZ700.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_CZ75.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_Dagger.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_Damage.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_DesertEagle.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_Doors.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_DragonovSVD.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_DragunovSVD.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_Drone.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_Eglm.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_Elephant.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_Explosions.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_Explosions2.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_FAMAS_2.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_Firingrange.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_Flame.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_FNAR.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_FNF2000.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_FnMag.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_Folding_Fan.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_Foley.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_Foot.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_FootSteps.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_FRF2.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_G36C.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_Galil.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_Glock17.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_GP30.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_GPM30A1.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_Grenades.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_Hammer.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_heavyrain_Summer.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_HK23E.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_HK417.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_Hotpack.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_Impacts.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_Impacts_2nd.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_INFI.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_Jericho914.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_K1.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_K14.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_K2C1.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_K2_2.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_K3.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_K5.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_Kar98k_new.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_Knife.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_KrissV_2.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_KSG.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_Kukri.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_Kunai.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_Kunai_icicle.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_L86A1.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_Lightning.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_Luger_new.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_M14EBR.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_M16A3.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_M203.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_M40A1.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_M4A1.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_M67Coke.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_M67StickGrenade.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_M67_BabyStunner.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_M67_MiniCar.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_M870.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_MAC10.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_mansiom.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_MedsenLar.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_Metal_Hammer.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_MG4.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_Mk16.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_Mosque.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_Mp40_new.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_MP5K.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_MP7.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_MRR.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_MSR.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_Mx4Storm.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_Nanos.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_Object.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_P7m13.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_P90.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_P90_Pixel.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_PDA.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_PP2000.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_PSG1.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_QBZ97.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_RevolverSW60.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_RPG.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_RPG7_Firework.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_RPK-74.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_SAIGA12.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_Sar21.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_SCARH.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_SCARH_DMR.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_Scorpion.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_Shells.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_Shuriken.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_SIG551.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_SIGMPX.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_SIGP226.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_Silence.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_Skull_Smoke.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_SlingShot.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_SPW.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_SR25.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_St10.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_STG44.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_StrikeOne.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_SVCh.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_T65k2.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_Tar21.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_Tar21_parasite.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_Temp.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_Temp_Must_Delete.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_Temp_TWN.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_Thunder.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_Tomahawk.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_TRG.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_Type89.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_UI.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_UI_Combine.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_UI_Enchant.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_Ultimax.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_UMP45.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_USAS12.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_UziPro.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_WeaponEmpty.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_Whizbys.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_Wildey.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_Wildey_Gas.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_XM8.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_XM8_AR.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    },
+    {
+      "filename": "Sound_XM8_CC.upk",
+      "kind": "audio_or_environment",
+      "content_verified": false
+    }
+  ]
+}

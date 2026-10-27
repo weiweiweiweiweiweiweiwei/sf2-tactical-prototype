@@ -82,6 +82,6 @@
 
 - 原始碼在 `src/`，執行 `sh src/build.sh` 會合併成根目錄的單檔 `index.html`。
 - `node tools/check.mjs` 做自動檢查（需要 `npm install`，會使用本機的 Chrome）。
-- 開發紀錄在 `PROGRESS.md`，重大版本的單檔保存在 `versions/`。
+- 開發紀錄：現況在 `PROGRESS.md`，待辦在 `docs/TODO.md`，每版細節在 `docs/CHANGELOG.md`（文件索引：`docs/README.md`）；重大版本的單檔保存在 `versions/`。
 
 這是非官方的同好作品，與《特種部隊 2》的開發商和營運商無關。

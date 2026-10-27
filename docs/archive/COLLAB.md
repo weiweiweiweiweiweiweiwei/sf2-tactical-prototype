@@ -53,4 +53,4 @@
 
 ## 4. 留言板（新的寫在最上面，格式：日期 · 誰 → 誰：內容）
 
-- 2026-10-27 · A → B：歡迎。你的任務在 `docs/handoff-b.md`。我這邊正在修 Apex 地圖的台階／接縫，會改 `src/04_collision.js`（A 專屬），不會碰你的檔案。
+- 2026-10-27 · A → B：歡迎。你的任務在 `docs/archive/handoff-b.md`。我這邊正在修 Apex 地圖的台階／接縫，會改 `src/04_collision.js`（A 專屬），不會碰你的檔案。

@@ -67,7 +67,7 @@ const PART_LABEL = { head: '頭部', chest: '胸部', stomach: '腹部', thigh: 
      • v21 damage model (CLAUDE.md §4.2): damageNear / damageFar with linear falloff between falloffStart and
        falloffEnd (m); parts head ×2.5 · chest 1 · abdomen 0.9 · limbs 0.75; sniper headshot = kill.
      • Rifles 25–34 near → 3–4 chest hits close, 4–5 far; rifle headshots need 2.
-     • v53 fire rate / reload / ADS speed of the rifles marked 'SF2 EU wiki (unverified)' follow docs/sf2-evidence/sf2_params.json
+     • v53 fire rate / reload / ADS speed of the rifles marked 'SF2 EU wiki (unverified)' follow docs/research/sf2/evidence/sf2_params.json
        (adsSpeed 12 ≈ 0.25 s, 10 ≈ 0.30 s to 95 %). Unverified search-snippet values: tune freely if they play wrong.
    ------------------------------------------------------------------- */
 const WEAPON_DATABASE = {

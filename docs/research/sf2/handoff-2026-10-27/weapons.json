@@ -1,0 +1,2553 @@
+{
+  "schema_version": "1.0.0",
+  "researched_on": "2026-10-27",
+  "game": "Dragonfly Special Force 2 / S.K.I.L.L. / Soldier Front 2 / 風暴戰區",
+  "scope": "35種基礎槍械研究索引；不是全版本全武器或可直接執行的遊戲設定",
+  "counts": {
+    "weapons": 35,
+    "jp_snapshots": 27,
+    "legacy_weapons": 22
+  },
+  "status_definitions": {
+    "confirmed_page": "直接讀到該頁，不等於檔案、參數、授權或本機兼容已驗證",
+    "provisional": "單一來源/歷史版本，未當作現役實戰真值",
+    "unverified": "只見索引摘要或舊記錄",
+    "filename_only": "只讀專案現有文字清單，未讀封包內容",
+    "unknown": "無可採用證據，保留null/空陣列"
+  },
+  "weapons": [
+    {
+      "id": "m4a1",
+      "name": "M4A1",
+      "class": "assault",
+      "project_id": "m4a1",
+      "legacy_model_match": "same model",
+      "legacy_snapshot": {
+        "source_id": "local-params",
+        "inherited_statuses": true,
+        "values": {
+          "uiRating": {
+            "damage": {
+              "value": 56,
+              "status": "provisional",
+              "confidence": "medium"
+            },
+            "fireRate": {
+              "value": 73,
+              "status": "provisional",
+              "confidence": "medium"
+            },
+            "recoilReal": {
+              "value": 46,
+              "status": "provisional",
+              "confidence": "medium"
+            },
+            "accuracy": {
+              "value": 73,
+              "status": "provisional",
+              "confidence": "medium"
+            }
+          },
+          "rpm": {
+            "value": 637,
+            "status": "estimated",
+            "method": "regression on fireRate rating 73 (assault-rifle interpolation)",
+            "error": "±25 RPM (leave-one-out)",
+            "confidence": "low"
+          },
+          "reloadTime": {
+            "status": "unknown",
+            "why": "EU wiki field reported blank"
+          },
+          "readyTime": {
+            "status": "unknown",
+            "why": "EU wiki field reported blank"
+          },
+          "adsTime": {
+            "status": "unknown",
+            "why": "EU wiki field reported blank"
+          },
+          "magazine": {
+            "value": "30/90",
+            "status": "unverified",
+            "confidence": "low"
+          },
+          "speed": {
+            "value": {
+              "standard": 5.9,
+              "heavyArmor": 4,
+              "heavyBoots": 5.2,
+              "lightArmor": 5,
+              "lightBoots": 6.2
+            },
+            "unit": "unknown",
+            "status": "unverified",
+            "confidence": "low"
+          }
+        }
+      },
+      "japan_snapshot": {
+        "source_id": "jp-ar",
+        "status": "provisional",
+        "access": "direct-read",
+        "ui_ratings": {
+          "damage": 56,
+          "recoil_control": 54,
+          "fire_rate": 73,
+          "accuracy": 76
+        },
+        "magazine": 30,
+        "reserve": 90,
+        "unit_caveat": "UI評分不是HP或RPM；備彈只適用該歷史版本。"
+      },
+      "verified_gameplay": {
+        "damage_hp": null,
+        "cyclic_rpm": null,
+        "reload_seconds": null,
+        "ads_seconds": null
+      },
+      "notes": [
+        "legacy_model_match及project_id為舊文件記錄，本輪未重新核對實裝。",
+        "舊rpm欄一律待確認定義：不可直接用於60/RPM的開火間隔；estimated仍只是舊推估。",
+        "KR2011精準度73、JP歷史76，分版本保存，不互相覆蓋。"
+      ],
+      "local_package_candidates": {
+        "source_id": "local-list",
+        "verification": "filename_only",
+        "model": [
+          "rif_m4a1.upk"
+        ],
+        "texture": [
+          "rif_m4a1_texture.upk"
+        ],
+        "sight": [
+          "rif_m4a1_sight.upk"
+        ],
+        "audio": [
+          "Sound_Alienware-m4a1.upk",
+          "Sound_M4A1.upk"
+        ],
+        "mapping_confidence": "provisional_name_match"
+      },
+      "model_download_verified": false,
+      "audio_download_verified": false,
+      "external_candidates": [
+        "m4a1-port"
+      ],
+      "attachment_compatibility": {
+        "status": "unknown",
+        "items": [],
+        "note": "_sight檔名或Laserdot/EOTech移植只表示命名線索，不證明自由裝配系統。"
+      }
+    },
+    {
+      "id": "ak103",
+      "name": "AK-103",
+      "class": "assault",
+      "project_id": "ak47",
+      "legacy_model_match": "different model: our AK-47 stands in for SF2 AK-103",
+      "legacy_snapshot": {
+        "source_id": "local-params",
+        "inherited_statuses": true,
+        "values": {
+          "uiRating": {
+            "damage": {
+              "value": 70,
+              "status": "provisional",
+              "confidence": "medium"
+            },
+            "fireRate": {
+              "value": 61,
+              "status": "provisional",
+              "confidence": "medium"
+            },
+            "recoilReal": {
+              "value": 71,
+              "status": "provisional",
+              "confidence": "medium"
+            },
+            "accuracy": {
+              "value": 66,
+              "status": "provisional",
+              "confidence": "medium"
+            }
+          },
+          "rpm": {
+            "value": 529,
+            "status": "unverified",
+            "confidence": "low"
+          },
+          "reloadTime": {
+            "value": 2.4,
+            "unit": "s",
+            "status": "unverified",
+            "confidence": "low"
+          },
+          "readyTime": {
+            "value": 1,
+            "unit": "s",
+            "status": "unverified",
+            "confidence": "low"
+          },
+          "adsTime": {
+            "value": 0.25,
+            "unit": "s",
+            "status": "unverified",
+            "confidence": "low"
+          }
+        }
+      },
+      "japan_snapshot": {
+        "source_id": "jp-ar",
+        "status": "provisional",
+        "access": "direct-read",
+        "ui_ratings": {
+          "damage": 70,
+          "recoil_control": 29,
+          "fire_rate": 61,
+          "accuracy": 66
+        },
+        "magazine": 30,
+        "reserve": 90,
+        "unit_caveat": "UI評分不是HP或RPM；備彈只適用該歷史版本。"
+      },
+      "verified_gameplay": {
+        "damage_hp": null,
+        "cyclic_rpm": null,
+        "reload_seconds": null,
+        "ads_seconds": null
+      },
+      "notes": [
+        "legacy_model_match及project_id為舊文件記錄，本輪未重新核對實裝。",
+        "舊rpm欄一律待確認定義：不可直接用於60/RPM的開火間隔；estimated仍只是舊推估。",
+        "AK-103與AK-47非同型，舊project_id映射不能證明模型/數據相同。"
+      ],
+      "local_package_candidates": {
+        "source_id": "local-list",
+        "verification": "filename_only",
+        "model": [
+          "rif_ak103.upk"
+        ],
+        "texture": [
+          "rif_ak103_texture.upk"
+        ],
+        "sight": [],
+        "audio": [
+          "Sound_AK103.upk",
+          "Sound_AK47_103.upk"
+        ],
+        "mapping_confidence": "provisional_name_match"
+      },
+      "model_download_verified": false,
+      "audio_download_verified": false,
+      "external_candidates": [],
+      "attachment_compatibility": {
+        "status": "unknown",
+        "items": [],
+        "note": "_sight檔名或Laserdot/EOTech移植只表示命名線索，不證明自由裝配系統。"
+      }
+    },
+    {
+      "id": "hk417",
+      "name": "HK417",
+      "class": "assault",
+      "project_id": "hk417",
+      "legacy_model_match": "same model",
+      "legacy_snapshot": {
+        "source_id": "local-params",
+        "inherited_statuses": true,
+        "values": {
+          "uiRating": {
+            "damage": {
+              "value": 61,
+              "status": "provisional",
+              "confidence": "medium"
+            },
+            "fireRate": {
+              "value": 67,
+              "status": "provisional",
+              "confidence": "medium"
+            },
+            "recoilReal": {
+              "value": 55,
+              "status": "provisional",
+              "confidence": "medium"
+            },
+            "accuracy": {
+              "value": 67,
+              "status": "provisional",
+              "confidence": "medium"
+            }
+          },
+          "rpm": {
+            "value": 586,
+            "status": "estimated",
+            "method": "regression on fireRate rating 67 (assault-rifle interpolation)",
+            "error": "±25 RPM (leave-one-out)",
+            "confidence": "low"
+          }
+        }
+      },
+      "japan_snapshot": {
+        "source_id": "jp-ar",
+        "status": "provisional",
+        "access": "direct-read",
+        "ui_ratings": {
+          "damage": 61,
+          "recoil_control": 45,
+          "fire_rate": 67,
+          "accuracy": 67
+        },
+        "magazine": 30,
+        "reserve": 90,
+        "unit_caveat": "UI評分不是HP或RPM；備彈只適用該歷史版本。"
+      },
+      "verified_gameplay": {
+        "damage_hp": null,
+        "cyclic_rpm": null,
+        "reload_seconds": null,
+        "ads_seconds": null
+      },
+      "notes": [
+        "legacy_model_match及project_id為舊文件記錄，本輪未重新核對實裝。",
+        "舊rpm欄一律待確認定義：不可直接用於60/RPM的開火間隔；estimated仍只是舊推估。"
+      ],
+      "local_package_candidates": {
+        "source_id": "local-list",
+        "verification": "filename_only",
+        "model": [
+          "rif_hk417.upk"
+        ],
+        "texture": [
+          "rif_hk417_texture.upk"
+        ],
+        "sight": [
+          "rif_hk417_sight.upk"
+        ],
+        "audio": [
+          "Sound_HK417.upk"
+        ],
+        "mapping_confidence": "provisional_name_match"
+      },
+      "model_download_verified": false,
+      "audio_download_verified": false,
+      "external_candidates": [],
+      "attachment_compatibility": {
+        "status": "unknown",
+        "items": [],
+        "note": "_sight檔名或Laserdot/EOTech移植只表示命名線索，不證明自由裝配系統。"
+      }
+    },
+    {
+      "id": "g36c",
+      "name": "G36C",
+      "class": "assault",
+      "project_id": "g36c",
+      "legacy_model_match": "same model (ours is a gold variant)",
+      "legacy_snapshot": {
+        "source_id": "local-params",
+        "inherited_statuses": true,
+        "values": {
+          "uiRating": {
+            "damage": {
+              "value": 64,
+              "status": "unverified",
+              "confidence": "low"
+            },
+            "fireRate": {
+              "value": 64,
+              "status": "unverified",
+              "confidence": "low"
+            },
+            "recoilReal": {
+              "value": 58,
+              "status": "unverified",
+              "confidence": "low"
+            },
+            "accuracy": {
+              "value": 72,
+              "status": "unverified",
+              "confidence": "low"
+            }
+          },
+          "rpm": {
+            "value": 782,
+            "status": "unknown",
+            "why": "Self-contradictory: 581 × 60 / 64 ≈ 545 RPM; rating 64 interpolates to ≈561."
+          }
+        }
+      },
+      "japan_snapshot": null,
+      "verified_gameplay": {
+        "damage_hp": null,
+        "cyclic_rpm": null,
+        "reload_seconds": null,
+        "ads_seconds": null
+      },
+      "notes": [
+        "legacy_model_match及project_id為舊文件記錄，本輪未重新核對實裝。",
+        "舊rpm欄一律待確認定義：不可直接用於60/RPM的開火間隔；estimated仍只是舊推估。"
+      ],
+      "local_package_candidates": {
+        "source_id": "local-list",
+        "verification": "filename_only",
+        "model": [
+          "rif_g36c.upk"
+        ],
+        "texture": [
+          "rif_g36c_texture.upk"
+        ],
+        "sight": [],
+        "audio": [
+          "Sound_G36C.upk"
+        ],
+        "mapping_confidence": "provisional_name_match"
+      },
+      "model_download_verified": false,
+      "audio_download_verified": false,
+      "external_candidates": [],
+      "attachment_compatibility": {
+        "status": "unknown",
+        "items": [],
+        "note": "_sight檔名或Laserdot/EOTech移植只表示命名線索，不證明自由裝配系統。"
+      }
+    },
+    {
+      "id": "sg551",
+      "name": "SG 551",
+      "class": "assault",
+      "project_id": "sg551",
+      "legacy_model_match": "same model",
+      "legacy_snapshot": {
+        "source_id": "local-params",
+        "inherited_statuses": true,
+        "values": {
+          "uiRating": {
+            "damage": {
+              "value": 57,
+              "status": "unverified",
+              "confidence": "low"
+            },
+            "fireRate": {
+              "value": 72,
+              "status": "unverified",
+              "confidence": "low"
+            },
+            "recoilReal": {
+              "value": 18,
+              "status": "unverified",
+              "confidence": "low"
+            },
+            "accuracy": {
+              "value": 72,
+              "status": "unverified",
+              "confidence": "low"
+            }
+          },
+          "rpm": {
+            "value": 620,
+            "status": "unverified",
+            "confidence": "low"
+          },
+          "reloadTime": {
+            "status": "unknown",
+            "why": "no source"
+          },
+          "readyTime": {
+            "status": "unknown",
+            "why": "no source"
+          },
+          "adsTime": {
+            "status": "unknown",
+            "why": "no source"
+          }
+        }
+      },
+      "japan_snapshot": {
+        "source_id": "jp-ar",
+        "status": "provisional",
+        "access": "direct-read",
+        "ui_ratings": {
+          "damage": 57,
+          "recoil_control": 82,
+          "fire_rate": 72,
+          "accuracy": 72
+        },
+        "magazine": 30,
+        "reserve": 90,
+        "unit_caveat": "UI評分不是HP或RPM；備彈只適用該歷史版本。"
+      },
+      "verified_gameplay": {
+        "damage_hp": null,
+        "cyclic_rpm": null,
+        "reload_seconds": null,
+        "ads_seconds": null
+      },
+      "notes": [
+        "legacy_model_match及project_id為舊文件記錄，本輪未重新核對實裝。",
+        "舊rpm欄一律待確認定義：不可直接用於60/RPM的開火間隔；estimated仍只是舊推估。"
+      ],
+      "local_package_candidates": {
+        "source_id": "local-list",
+        "verification": "filename_only",
+        "model": [
+          "rif_sig551.upk"
+        ],
+        "texture": [
+          "rif_sig551_texture.upk"
+        ],
+        "sight": [],
+        "audio": [
+          "Sound_SIG551.upk"
+        ],
+        "mapping_confidence": "provisional_name_match"
+      },
+      "model_download_verified": false,
+      "audio_download_verified": false,
+      "external_candidates": [],
+      "attachment_compatibility": {
+        "status": "unknown",
+        "items": [],
+        "note": "_sight檔名或Laserdot/EOTech移植只表示命名線索，不證明自由裝配系統。"
+      }
+    },
+    {
+      "id": "famas",
+      "name": "FAMAS (G2)",
+      "class": "assault",
+      "project_id": "famas",
+      "legacy_model_match": "same family (ours unspecified F1/G2)",
+      "legacy_snapshot": {
+        "source_id": "local-params",
+        "inherited_statuses": true,
+        "values": {
+          "uiRating": {
+            "damage": {
+              "value": 53,
+              "status": "unverified",
+              "confidence": "low"
+            },
+            "fireRate": {
+              "value": 78,
+              "status": "unverified",
+              "confidence": "low"
+            },
+            "recoilReal": {
+              "value": 38,
+              "status": "unverified",
+              "confidence": "low"
+            },
+            "accuracy": {
+              "value": 85,
+              "status": "unverified",
+              "confidence": "low"
+            }
+          },
+          "rpm": {
+            "value": 692,
+            "status": "unverified",
+            "confidence": "low"
+          },
+          "reloadTime": {
+            "status": "unknown",
+            "why": "no source"
+          },
+          "readyTime": {
+            "status": "unknown",
+            "why": "no source"
+          },
+          "adsTime": {
+            "status": "unknown",
+            "why": "no source"
+          }
+        }
+      },
+      "japan_snapshot": {
+        "source_id": "jp-ar",
+        "status": "provisional",
+        "access": "direct-read",
+        "ui_ratings": {
+          "damage": 53,
+          "recoil_control": 62,
+          "fire_rate": 78,
+          "accuracy": 65
+        },
+        "magazine": 30,
+        "reserve": 90,
+        "unit_caveat": "UI評分不是HP或RPM；備彈只適用該歷史版本。"
+      },
+      "verified_gameplay": {
+        "damage_hp": null,
+        "cyclic_rpm": null,
+        "reload_seconds": null,
+        "ads_seconds": null
+      },
+      "notes": [
+        "legacy_model_match及project_id為舊文件記錄，本輪未重新核對實裝。",
+        "舊rpm欄一律待確認定義：不可直接用於60/RPM的開火間隔；estimated仍只是舊推估。"
+      ],
+      "local_package_candidates": {
+        "source_id": "local-list",
+        "verification": "filename_only",
+        "model": [
+          "rif_famas.upk"
+        ],
+        "texture": [
+          "rif_famas_texture.upk"
+        ],
+        "sight": [],
+        "audio": [
+          "Sound_FAMAS_2.upk"
+        ],
+        "mapping_confidence": "provisional_name_match"
+      },
+      "model_download_verified": false,
+      "audio_download_verified": false,
+      "external_candidates": [],
+      "attachment_compatibility": {
+        "status": "unknown",
+        "items": [],
+        "note": "_sight檔名或Laserdot/EOTech移植只表示命名線索，不證明自由裝配系統。"
+      }
+    },
+    {
+      "id": "m16a3",
+      "name": "M16A3",
+      "class": "assault",
+      "project_id": "m16a3",
+      "legacy_model_match": "same model",
+      "legacy_snapshot": {
+        "source_id": "local-params",
+        "inherited_statuses": true,
+        "values": {
+          "rpm": {
+            "value": 580,
+            "status": "unverified",
+            "confidence": "low"
+          },
+          "reloadTime": {
+            "value": 2.3,
+            "unit": "s",
+            "status": "unverified",
+            "confidence": "low"
+          },
+          "readyTime": {
+            "value": 0.9,
+            "unit": "s",
+            "status": "unverified",
+            "confidence": "low"
+          },
+          "adsTime": {
+            "value": 0.25,
+            "unit": "s",
+            "status": "unverified",
+            "confidence": "low"
+          }
+        }
+      },
+      "japan_snapshot": null,
+      "verified_gameplay": {
+        "damage_hp": null,
+        "cyclic_rpm": null,
+        "reload_seconds": null,
+        "ads_seconds": null
+      },
+      "notes": [
+        "legacy_model_match及project_id為舊文件記錄，本輪未重新核對實裝。",
+        "舊rpm欄一律待確認定義：不可直接用於60/RPM的開火間隔；estimated仍只是舊推估。"
+      ],
+      "local_package_candidates": {
+        "source_id": "local-list",
+        "verification": "filename_only",
+        "model": [
+          "rif_m16a3.upk"
+        ],
+        "texture": [
+          "rif_m16a3_texture.upk"
+        ],
+        "sight": [],
+        "audio": [
+          "Sound_M16A3.upk"
+        ],
+        "mapping_confidence": "provisional_name_match"
+      },
+      "model_download_verified": false,
+      "audio_download_verified": false,
+      "external_candidates": [],
+      "attachment_compatibility": {
+        "status": "unknown",
+        "items": [],
+        "note": "_sight檔名或Laserdot/EOTech移植只表示命名線索，不證明自由裝配系統。"
+      }
+    },
+    {
+      "id": "xm8",
+      "name": "XM8",
+      "class": "assault",
+      "project_id": "xm8",
+      "legacy_model_match": "same model",
+      "legacy_snapshot": {
+        "source_id": "local-params",
+        "inherited_statuses": true,
+        "values": {
+          "rpm": {
+            "value": 562,
+            "status": "unverified",
+            "confidence": "low"
+          },
+          "reloadTime": {
+            "value": 2.2,
+            "unit": "s",
+            "status": "unverified",
+            "confidence": "low"
+          },
+          "readyTime": {
+            "value": 0.9,
+            "unit": "s",
+            "status": "unverified",
+            "confidence": "low"
+          },
+          "adsTime": {
+            "value": 0.25,
+            "unit": "s",
+            "status": "unverified",
+            "confidence": "low"
+          }
+        }
+      },
+      "japan_snapshot": null,
+      "verified_gameplay": {
+        "damage_hp": null,
+        "cyclic_rpm": null,
+        "reload_seconds": null,
+        "ads_seconds": null
+      },
+      "notes": [
+        "legacy_model_match及project_id為舊文件記錄，本輪未重新核對實裝。",
+        "舊rpm欄一律待確認定義：不可直接用於60/RPM的開火間隔；estimated仍只是舊推估。"
+      ],
+      "local_package_candidates": {
+        "source_id": "local-list",
+        "verification": "filename_only",
+        "model": [
+          "rif_xm8.upk"
+        ],
+        "texture": [
+          "rif_xm8_texture.upk"
+        ],
+        "sight": [],
+        "audio": [
+          "Sound_XM8.upk",
+          "Sound_XM8_AR.upk",
+          "Sound_XM8_CC.upk"
+        ],
+        "mapping_confidence": "provisional_name_match"
+      },
+      "model_download_verified": false,
+      "audio_download_verified": false,
+      "external_candidates": [],
+      "attachment_compatibility": {
+        "status": "unknown",
+        "items": [],
+        "note": "_sight檔名或Laserdot/EOTech移植只表示命名線索，不證明自由裝配系統。"
+      }
+    },
+    {
+      "id": "scarl",
+      "name": "SCAR-L",
+      "class": "assault",
+      "project_id": "scarl",
+      "legacy_model_match": "same model",
+      "legacy_snapshot": {
+        "source_id": "local-params",
+        "inherited_statuses": true,
+        "values": {
+          "rpm": {
+            "value": 580,
+            "status": "unverified",
+            "confidence": "low"
+          },
+          "reloadTime": {
+            "value": 2.3,
+            "unit": "s",
+            "status": "unverified",
+            "confidence": "low"
+          },
+          "readyTime": {
+            "value": 1,
+            "unit": "s",
+            "status": "unverified",
+            "confidence": "low"
+          },
+          "adsTime": {
+            "value": 0.25,
+            "unit": "s",
+            "status": "unverified",
+            "confidence": "low"
+          }
+        }
+      },
+      "japan_snapshot": {
+        "source_id": "jp-ar",
+        "status": "provisional",
+        "access": "direct-read",
+        "ui_ratings": {
+          "damage": 62,
+          "recoil_control": 31,
+          "fire_rate": 67,
+          "accuracy": 79
+        },
+        "magazine": 30,
+        "reserve": 90,
+        "unit_caveat": "UI評分不是HP或RPM；備彈只適用該歷史版本。"
+      },
+      "verified_gameplay": {
+        "damage_hp": null,
+        "cyclic_rpm": null,
+        "reload_seconds": null,
+        "ads_seconds": null
+      },
+      "notes": [
+        "legacy_model_match及project_id為舊文件記錄，本輪未重新核對實裝。",
+        "舊rpm欄一律待確認定義：不可直接用於60/RPM的開火間隔；estimated仍只是舊推估。",
+        "Sound_Mk16依名稱推測與SCAR-L相關，未開封包驗證，可信度較低。"
+      ],
+      "local_package_candidates": {
+        "source_id": "local-list",
+        "verification": "filename_only",
+        "model": [
+          "rif_scar_L.upk"
+        ],
+        "texture": [
+          "rif_scar_L_texture.upk"
+        ],
+        "sight": [],
+        "audio": [
+          "Sound_Mk16.upk"
+        ],
+        "mapping_confidence": "provisional_name_match"
+      },
+      "model_download_verified": false,
+      "audio_download_verified": false,
+      "external_candidates": [],
+      "attachment_compatibility": {
+        "status": "unknown",
+        "items": [],
+        "note": "_sight檔名或Laserdot/EOTech移植只表示命名線索，不證明自由裝配系統。"
+      }
+    },
+    {
+      "id": "type89",
+      "name": "Howa Type 89",
+      "class": "assault",
+      "project_id": "type89",
+      "legacy_model_match": "same model",
+      "legacy_snapshot": {
+        "source_id": "local-params",
+        "inherited_statuses": true,
+        "values": {
+          "rpm": {
+            "value": 580,
+            "status": "unverified",
+            "confidence": "low"
+          },
+          "reloadTime": {
+            "value": 2.3,
+            "unit": "s",
+            "status": "unverified",
+            "confidence": "low"
+          },
+          "readyTime": {
+            "value": 0.9,
+            "unit": "s",
+            "status": "unverified",
+            "confidence": "low"
+          },
+          "adsTime": {
+            "value": 0.3,
+            "unit": "s",
+            "status": "unverified",
+            "confidence": "low"
+          }
+        }
+      },
+      "japan_snapshot": {
+        "source_id": "jp-ar",
+        "status": "provisional",
+        "access": "direct-read",
+        "ui_ratings": {
+          "damage": 60,
+          "recoil_control": 79,
+          "fire_rate": 66,
+          "accuracy": 73
+        },
+        "magazine": 30,
+        "reserve": 90,
+        "unit_caveat": "UI評分不是HP或RPM；備彈只適用該歷史版本。"
+      },
+      "verified_gameplay": {
+        "damage_hp": null,
+        "cyclic_rpm": null,
+        "reload_seconds": null,
+        "ads_seconds": null
+      },
+      "notes": [
+        "legacy_model_match及project_id為舊文件記錄，本輪未重新核對實裝。",
+        "舊rpm欄一律待確認定義：不可直接用於60/RPM的開火間隔；estimated仍只是舊推估。"
+      ],
+      "local_package_candidates": {
+        "source_id": "local-list",
+        "verification": "filename_only",
+        "model": [
+          "rif_type89.upk"
+        ],
+        "texture": [
+          "rif_type89_texture.upk"
+        ],
+        "sight": [
+          "rif_type89_sight.upk"
+        ],
+        "audio": [
+          "Sound_Type89.upk"
+        ],
+        "mapping_confidence": "provisional_name_match"
+      },
+      "model_download_verified": false,
+      "audio_download_verified": false,
+      "external_candidates": [],
+      "attachment_compatibility": {
+        "status": "unknown",
+        "items": [],
+        "note": "_sight檔名或Laserdot/EOTech移植只表示命名線索，不證明自由裝配系統。"
+      }
+    },
+    {
+      "id": "k2",
+      "name": "K2",
+      "class": "assault",
+      "project_id": "k2",
+      "legacy_model_match": "same model",
+      "legacy_snapshot": {
+        "source_id": "local-params",
+        "inherited_statuses": true,
+        "values": {
+          "uiRating": {
+            "damage": {
+              "value": 54,
+              "status": "unverified",
+              "confidence": "low"
+            },
+            "fireRate": {
+              "value": 70,
+              "status": "unverified",
+              "confidence": "low"
+            }
+          },
+          "rpm": {
+            "value": 612,
+            "status": "estimated",
+            "method": "regression on fireRate rating 70 (assault-rifle interpolation)",
+            "error": "±25 RPM (leave-one-out)",
+            "confidence": "low"
+          }
+        }
+      },
+      "japan_snapshot": {
+        "source_id": "jp-ar",
+        "status": "provisional",
+        "access": "direct-read",
+        "ui_ratings": {
+          "damage": 54,
+          "recoil_control": 79,
+          "fire_rate": 70,
+          "accuracy": 67
+        },
+        "magazine": 30,
+        "reserve": 90,
+        "unit_caveat": "UI評分不是HP或RPM；備彈只適用該歷史版本。"
+      },
+      "verified_gameplay": {
+        "damage_hp": null,
+        "cyclic_rpm": null,
+        "reload_seconds": null,
+        "ads_seconds": null
+      },
+      "notes": [
+        "legacy_model_match及project_id為舊文件記錄，本輪未重新核對實裝。",
+        "舊rpm欄一律待確認定義：不可直接用於60/RPM的開火間隔；estimated仍只是舊推估。"
+      ],
+      "local_package_candidates": {
+        "source_id": "local-list",
+        "verification": "filename_only",
+        "model": [
+          "rif_K2.upk"
+        ],
+        "texture": [
+          "rif_K2_texture.upk"
+        ],
+        "sight": [],
+        "audio": [
+          "Sound_K2_2.upk"
+        ],
+        "mapping_confidence": "provisional_name_match"
+      },
+      "model_download_verified": false,
+      "audio_download_verified": false,
+      "external_candidates": [],
+      "attachment_compatibility": {
+        "status": "unknown",
+        "items": [],
+        "note": "_sight檔名或Laserdot/EOTech移植只表示命名線索，不證明自由裝配系統。"
+      }
+    },
+    {
+      "id": "m14ebr",
+      "name": "M14EBR",
+      "class": "dmr",
+      "project_id": "m14ebr",
+      "legacy_model_match": "same model (ours is in the sniper class)",
+      "legacy_snapshot": {
+        "source_id": "local-params",
+        "inherited_statuses": true,
+        "values": {
+          "uiRating": {
+            "fireRate": {
+              "value": 23,
+              "status": "unverified",
+              "confidence": "low"
+            }
+          },
+          "rpm": {
+            "value": 214,
+            "status": "unverified",
+            "confidence": "low"
+          },
+          "reloadTime": {
+            "value": 3.5,
+            "unit": "s",
+            "status": "unverified",
+            "confidence": "low"
+          },
+          "readyTime": {
+            "status": "unknown",
+            "why": "no source"
+          },
+          "adsTime": {
+            "value": 0.3,
+            "unit": "s",
+            "status": "unverified",
+            "confidence": "low"
+          }
+        }
+      },
+      "japan_snapshot": null,
+      "verified_gameplay": {
+        "damage_hp": null,
+        "cyclic_rpm": null,
+        "reload_seconds": null,
+        "ads_seconds": null
+      },
+      "notes": [
+        "legacy_model_match及project_id為舊文件記錄，本輪未重新核對實裝。",
+        "舊rpm欄一律待確認定義：不可直接用於60/RPM的開火間隔；estimated仍只是舊推估。"
+      ],
+      "local_package_candidates": {
+        "source_id": "local-list",
+        "verification": "filename_only",
+        "model": [
+          "rif_m14ebr.upk"
+        ],
+        "texture": [
+          "rif_m14ebr_texture.upk"
+        ],
+        "sight": [],
+        "audio": [
+          "Sound_M14EBR.upk"
+        ],
+        "mapping_confidence": "provisional_name_match"
+      },
+      "model_download_verified": false,
+      "audio_download_verified": false,
+      "external_candidates": [],
+      "attachment_compatibility": {
+        "status": "unknown",
+        "items": [],
+        "note": "_sight檔名或Laserdot/EOTech移植只表示命名線索，不證明自由裝配系統。"
+      }
+    },
+    {
+      "id": "p90",
+      "name": "P90",
+      "class": "smg",
+      "project_id": "p90",
+      "legacy_model_match": "same model",
+      "legacy_snapshot": {
+        "source_id": "local-params",
+        "inherited_statuses": true,
+        "values": {
+          "uiRating": {
+            "damage": {
+              "value": 51,
+              "status": "provisional",
+              "confidence": "medium"
+            },
+            "fireRate": {
+              "value": 86,
+              "status": "provisional",
+              "confidence": "medium"
+            },
+            "recoilReal": {
+              "value": 44,
+              "status": "provisional",
+              "confidence": "medium"
+            },
+            "accuracy": {
+              "value": 65,
+              "status": "provisional",
+              "confidence": "medium"
+            }
+          },
+          "rpm": {
+            "status": "unknown",
+            "why": "SMG: outside the regression range; no source"
+          },
+          "magazine": {
+            "value": 50,
+            "status": "provisional",
+            "confidence": "medium"
+          }
+        }
+      },
+      "japan_snapshot": {
+        "source_id": "jp-smg",
+        "status": "provisional",
+        "access": "direct-read_wiki_source",
+        "ui_ratings": {
+          "damage": 53,
+          "recoil_control": 56,
+          "fire_rate": 86,
+          "accuracy": 65
+        },
+        "magazine": 50,
+        "reserve": 150,
+        "unit_caveat": "UI評分不是HP或RPM；備彈只適用該歷史版本。",
+        "reserve_conflict": {
+          "other_value": 100,
+          "source_id": "jp-smg",
+          "location": "同頁P90個別段落"
+        }
+      },
+      "verified_gameplay": {
+        "damage_hp": null,
+        "cyclic_rpm": null,
+        "reload_seconds": null,
+        "ads_seconds": null
+      },
+      "notes": [
+        "legacy_model_match及project_id為舊文件記錄，本輪未重新核對實裝。",
+        "舊rpm欄一律待確認定義：不可直接用於60/RPM的開火間隔；estimated仍只是舊推估。",
+        "KR2011傷害UI51、JP表53；備彈JP同頁150/100衝突。"
+      ],
+      "local_package_candidates": {
+        "source_id": "local-list",
+        "verification": "filename_only",
+        "model": [
+          "smg_p90.upk"
+        ],
+        "texture": [
+          "smg_p90_texture.upk"
+        ],
+        "sight": [],
+        "audio": [
+          "Sound_P90.upk",
+          "Sound_P90_Pixel.upk"
+        ],
+        "mapping_confidence": "provisional_name_match"
+      },
+      "model_download_verified": false,
+      "audio_download_verified": false,
+      "external_candidates": [],
+      "attachment_compatibility": {
+        "status": "unknown",
+        "items": [],
+        "note": "_sight檔名或Laserdot/EOTech移植只表示命名線索，不證明自由裝配系統。"
+      }
+    },
+    {
+      "id": "mp5k",
+      "name": "MP5K",
+      "class": "smg",
+      "project_id": "mp5",
+      "legacy_model_match": "different model: our MP5 stands in for SF2 MP5K",
+      "legacy_snapshot": {
+        "source_id": "local-params",
+        "inherited_statuses": true,
+        "values": {
+          "uiRating": {
+            "damage": {
+              "value": 48,
+              "status": "provisional",
+              "confidence": "medium"
+            },
+            "fireRate": {
+              "value": 92,
+              "status": "provisional",
+              "confidence": "medium"
+            },
+            "recoilReal": {
+              "value": 34,
+              "status": "provisional",
+              "confidence": "medium"
+            },
+            "accuracy": {
+              "value": 70,
+              "status": "provisional",
+              "confidence": "medium"
+            }
+          },
+          "rpm": {
+            "status": "unknown",
+            "why": "SMG: outside the regression range; no source"
+          }
+        }
+      },
+      "japan_snapshot": {
+        "source_id": "jp-smg",
+        "status": "provisional",
+        "access": "direct-read_wiki_source",
+        "ui_ratings": {
+          "damage": 49,
+          "recoil_control": 66,
+          "fire_rate": 92,
+          "accuracy": 70
+        },
+        "magazine": 30,
+        "reserve": 120,
+        "unit_caveat": "UI評分不是HP或RPM；備彈只適用該歷史版本。"
+      },
+      "verified_gameplay": {
+        "damage_hp": null,
+        "cyclic_rpm": null,
+        "reload_seconds": null,
+        "ads_seconds": null
+      },
+      "notes": [
+        "legacy_model_match及project_id為舊文件記錄，本輪未重新核對實裝。",
+        "舊rpm欄一律待確認定義：不可直接用於60/RPM的開火間隔；estimated仍只是舊推估。",
+        "MP5K與MP5非同型。",
+        "KR2011傷害UI48、JP表49。"
+      ],
+      "local_package_candidates": {
+        "source_id": "local-list",
+        "verification": "filename_only",
+        "model": [
+          "smg_mp5k.upk"
+        ],
+        "texture": [
+          "smg_mp5k_texture.upk"
+        ],
+        "sight": [],
+        "audio": [
+          "Sound_MP5K.upk"
+        ],
+        "mapping_confidence": "provisional_name_match"
+      },
+      "model_download_verified": false,
+      "audio_download_verified": false,
+      "external_candidates": [],
+      "attachment_compatibility": {
+        "status": "unknown",
+        "items": [],
+        "note": "_sight檔名或Laserdot/EOTech移植只表示命名線索，不證明自由裝配系統。"
+      }
+    },
+    {
+      "id": "hk23e",
+      "name": "HK23E",
+      "class": "lmg",
+      "project_id": "hk23e",
+      "legacy_model_match": "same model",
+      "legacy_snapshot": {
+        "source_id": "local-params",
+        "inherited_statuses": true,
+        "values": {
+          "uiRating": {
+            "damage": {
+              "value": 57,
+              "status": "provisional",
+              "confidence": "medium"
+            },
+            "fireRate": {
+              "value": 67,
+              "status": "provisional",
+              "confidence": "medium"
+            },
+            "recoilReal": {
+              "value": 39,
+              "status": "provisional",
+              "confidence": "medium"
+            },
+            "accuracy": {
+              "value": 28,
+              "status": "provisional",
+              "confidence": "medium"
+            }
+          },
+          "rpm": {
+            "status": "unknown",
+            "why": "LMG: no LMG sample in the regression"
+          }
+        }
+      },
+      "japan_snapshot": {
+        "source_id": "jp-mg",
+        "status": "provisional",
+        "access": "direct-read",
+        "ui_ratings": {
+          "damage": 57,
+          "recoil_control": 61,
+          "fire_rate": 67,
+          "accuracy": 28
+        },
+        "magazine": 75,
+        "reserve": 225,
+        "unit_caveat": "UI評分不是HP或RPM；備彈只適用該歷史版本。"
+      },
+      "verified_gameplay": {
+        "damage_hp": null,
+        "cyclic_rpm": null,
+        "reload_seconds": null,
+        "ads_seconds": null
+      },
+      "notes": [
+        "legacy_model_match及project_id為舊文件記錄，本輪未重新核對實裝。",
+        "舊rpm欄一律待確認定義：不可直接用於60/RPM的開火間隔；estimated仍只是舊推估。"
+      ],
+      "local_package_candidates": {
+        "source_id": "local-list",
+        "verification": "filename_only",
+        "model": [
+          "mg_hk23.upk"
+        ],
+        "texture": [
+          "mg_hk23_texture.upk"
+        ],
+        "sight": [],
+        "audio": [
+          "Sound_HK23E.upk"
+        ],
+        "mapping_confidence": "provisional_name_match"
+      },
+      "model_download_verified": false,
+      "audio_download_verified": false,
+      "external_candidates": [],
+      "attachment_compatibility": {
+        "status": "unknown",
+        "items": [],
+        "note": "_sight檔名或Laserdot/EOTech移植只表示命名線索，不證明自由裝配系統。"
+      }
+    },
+    {
+      "id": "l86a1",
+      "name": "L86A1",
+      "class": "lmg",
+      "project_id": "l86a1",
+      "legacy_model_match": "same model",
+      "legacy_snapshot": {
+        "source_id": "local-params",
+        "inherited_statuses": true,
+        "values": {
+          "uiRating": {
+            "damage": {
+              "value": 60,
+              "status": "provisional",
+              "confidence": "medium"
+            },
+            "fireRate": {
+              "value": 64,
+              "status": "provisional",
+              "confidence": "medium"
+            },
+            "recoilReal": {
+              "value": 44,
+              "status": "provisional",
+              "confidence": "medium"
+            },
+            "accuracy": {
+              "value": 50,
+              "status": "provisional",
+              "confidence": "medium"
+            }
+          },
+          "rpm": {
+            "status": "unknown",
+            "why": "LMG: no LMG sample in the regression"
+          }
+        }
+      },
+      "japan_snapshot": {
+        "source_id": "jp-mg",
+        "status": "provisional",
+        "access": "direct-read",
+        "ui_ratings": {
+          "damage": 60,
+          "recoil_control": 56,
+          "fire_rate": 64,
+          "accuracy": 50
+        },
+        "magazine": 75,
+        "reserve": 225,
+        "unit_caveat": "UI評分不是HP或RPM；備彈只適用該歷史版本。"
+      },
+      "verified_gameplay": {
+        "damage_hp": null,
+        "cyclic_rpm": null,
+        "reload_seconds": null,
+        "ads_seconds": null
+      },
+      "notes": [
+        "legacy_model_match及project_id為舊文件記錄，本輪未重新核對實裝。",
+        "舊rpm欄一律待確認定義：不可直接用於60/RPM的開火間隔；estimated仍只是舊推估。"
+      ],
+      "local_package_candidates": {
+        "source_id": "local-list",
+        "verification": "filename_only",
+        "model": [
+          "mg_l86a1.upk"
+        ],
+        "texture": [
+          "mg_l86a1_texture.upk"
+        ],
+        "sight": [
+          "mg_l86a1_sight.upk"
+        ],
+        "audio": [
+          "Sound_L86A1.upk"
+        ],
+        "mapping_confidence": "provisional_name_match"
+      },
+      "model_download_verified": false,
+      "audio_download_verified": false,
+      "external_candidates": [],
+      "attachment_compatibility": {
+        "status": "unknown",
+        "items": [],
+        "note": "_sight檔名或Laserdot/EOTech移植只表示命名線索，不證明自由裝配系統。"
+      }
+    },
+    {
+      "id": "psg1",
+      "name": "PSG-1",
+      "class": "sniper",
+      "project_id": "psg1",
+      "legacy_model_match": "same model",
+      "legacy_snapshot": {
+        "source_id": "local-params",
+        "inherited_statuses": true,
+        "values": {
+          "uiRating": {
+            "damage": {
+              "value": 87,
+              "status": "provisional",
+              "confidence": "medium"
+            },
+            "fireRate": {
+              "value": 0,
+              "status": "provisional",
+              "confidence": "medium"
+            },
+            "recoilReal": {
+              "value": 100,
+              "status": "provisional",
+              "confidence": "medium"
+            },
+            "accuracy": {
+              "value": 100,
+              "status": "provisional",
+              "confidence": "medium"
+            }
+          }
+        }
+      },
+      "japan_snapshot": {
+        "source_id": "jp-sniper",
+        "status": "provisional",
+        "access": "direct-read",
+        "ui_ratings": {
+          "damage": 87,
+          "recoil_control": 0,
+          "fire_rate": 0,
+          "accuracy": 100
+        },
+        "magazine": 5,
+        "reserve": 15,
+        "unit_caveat": "UI評分不是HP或RPM；備彈只適用該歷史版本。"
+      },
+      "verified_gameplay": {
+        "damage_hp": null,
+        "cyclic_rpm": null,
+        "reload_seconds": null,
+        "ads_seconds": null
+      },
+      "notes": [
+        "legacy_model_match及project_id為舊文件記錄，本輪未重新核對實裝。"
+      ],
+      "local_package_candidates": {
+        "source_id": "local-list",
+        "verification": "filename_only",
+        "model": [
+          "sni_psg-1.upk"
+        ],
+        "texture": [
+          "sni_psg-1_texture.upk"
+        ],
+        "sight": [],
+        "audio": [
+          "Sound_PSG1.upk"
+        ],
+        "mapping_confidence": "provisional_name_match"
+      },
+      "model_download_verified": false,
+      "audio_download_verified": false,
+      "external_candidates": [],
+      "attachment_compatibility": {
+        "status": "unknown",
+        "items": [],
+        "note": "_sight檔名或Laserdot/EOTech移植只表示命名線索，不證明自由裝配系統。"
+      }
+    },
+    {
+      "id": "cz700",
+      "name": "CZ700",
+      "class": "sniper",
+      "project_id": "cz700",
+      "legacy_model_match": "same model",
+      "legacy_snapshot": {
+        "source_id": "local-params",
+        "inherited_statuses": true,
+        "values": {
+          "uiRating": {
+            "damage": {
+              "value": 93,
+              "status": "provisional",
+              "confidence": "medium"
+            },
+            "fireRate": {
+              "value": 0,
+              "status": "provisional",
+              "confidence": "medium"
+            },
+            "recoilReal": {
+              "value": 100,
+              "status": "provisional",
+              "confidence": "medium"
+            },
+            "accuracy": {
+              "value": 100,
+              "status": "provisional",
+              "confidence": "medium"
+            }
+          }
+        }
+      },
+      "japan_snapshot": {
+        "source_id": "jp-sniper",
+        "status": "provisional",
+        "access": "direct-read",
+        "ui_ratings": {
+          "damage": 93,
+          "recoil_control": 0,
+          "fire_rate": 0,
+          "accuracy": 100
+        },
+        "magazine": 5,
+        "reserve": 15,
+        "unit_caveat": "UI評分不是HP或RPM；備彈只適用該歷史版本。"
+      },
+      "verified_gameplay": {
+        "damage_hp": null,
+        "cyclic_rpm": null,
+        "reload_seconds": null,
+        "ads_seconds": null
+      },
+      "notes": [
+        "legacy_model_match及project_id為舊文件記錄，本輪未重新核對實裝。"
+      ],
+      "local_package_candidates": {
+        "source_id": "local-list",
+        "verification": "filename_only",
+        "model": [
+          "sni_cz700.upk"
+        ],
+        "texture": [
+          "sni_cz700_texture.upk"
+        ],
+        "sight": [],
+        "audio": [
+          "Sound_CZ700.upk"
+        ],
+        "mapping_confidence": "provisional_name_match"
+      },
+      "model_download_verified": false,
+      "audio_download_verified": false,
+      "external_candidates": [],
+      "attachment_compatibility": {
+        "status": "unknown",
+        "items": [],
+        "note": "_sight檔名或Laserdot/EOTech移植只表示命名線索，不證明自由裝配系統。"
+      }
+    },
+    {
+      "id": "m92fs",
+      "name": "Beretta 92FS",
+      "class": "pistol",
+      "project_id": "m92fs",
+      "legacy_model_match": "same model",
+      "legacy_snapshot": {
+        "source_id": "local-params",
+        "inherited_statuses": true,
+        "values": {
+          "uiRating": {
+            "damage": {
+              "value": 50,
+              "status": "provisional",
+              "confidence": "medium"
+            },
+            "fireRate": {
+              "value": 0,
+              "status": "provisional",
+              "confidence": "medium"
+            },
+            "recoilReal": {
+              "value": 46,
+              "status": "provisional",
+              "confidence": "medium"
+            },
+            "accuracy": {
+              "value": 66,
+              "status": "provisional",
+              "confidence": "medium"
+            }
+          }
+        }
+      },
+      "japan_snapshot": null,
+      "verified_gameplay": {
+        "damage_hp": null,
+        "cyclic_rpm": null,
+        "reload_seconds": null,
+        "ads_seconds": null
+      },
+      "notes": [
+        "legacy_model_match及project_id為舊文件記錄，本輪未重新核對實裝。"
+      ],
+      "local_package_candidates": {
+        "source_id": "local-list",
+        "verification": "filename_only",
+        "model": [
+          "pis_m92f.upk"
+        ],
+        "texture": [
+          "pis_m92f_texture.upk"
+        ],
+        "sight": [],
+        "audio": [
+          "Sound_B92FS.upk"
+        ],
+        "mapping_confidence": "provisional_name_match"
+      },
+      "model_download_verified": false,
+      "audio_download_verified": false,
+      "external_candidates": [],
+      "attachment_compatibility": {
+        "status": "unknown",
+        "items": [],
+        "note": "_sight檔名或Laserdot/EOTech移植只表示命名線索，不證明自由裝配系統。"
+      }
+    },
+    {
+      "id": "cz75bd",
+      "name": "CZ75BD",
+      "class": "pistol",
+      "project_id": "cz75",
+      "legacy_model_match": "same model",
+      "legacy_snapshot": {
+        "source_id": "local-params",
+        "inherited_statuses": true,
+        "values": {
+          "uiRating": {
+            "damage": {
+              "value": 42,
+              "status": "provisional",
+              "confidence": "medium"
+            },
+            "fireRate": {
+              "value": 0,
+              "status": "provisional",
+              "confidence": "medium"
+            },
+            "recoilReal": {
+              "value": 45,
+              "status": "provisional",
+              "confidence": "medium"
+            },
+            "accuracy": {
+              "value": 72,
+              "status": "provisional",
+              "confidence": "medium"
+            }
+          }
+        }
+      },
+      "japan_snapshot": null,
+      "verified_gameplay": {
+        "damage_hp": null,
+        "cyclic_rpm": null,
+        "reload_seconds": null,
+        "ads_seconds": null
+      },
+      "notes": [
+        "legacy_model_match及project_id為舊文件記錄，本輪未重新核對實裝。"
+      ],
+      "local_package_candidates": {
+        "source_id": "local-list",
+        "verification": "filename_only",
+        "model": [
+          "pis_cz75.upk"
+        ],
+        "texture": [
+          "pis_cz75_texture.upk"
+        ],
+        "sight": [],
+        "audio": [
+          "Sound_CZ75.upk"
+        ],
+        "mapping_confidence": "provisional_name_match"
+      },
+      "model_download_verified": false,
+      "audio_download_verified": false,
+      "external_candidates": [],
+      "attachment_compatibility": {
+        "status": "unknown",
+        "items": [],
+        "note": "_sight檔名或Laserdot/EOTech移植只表示命名線索，不證明自由裝配系統。"
+      }
+    },
+    {
+      "id": "m870",
+      "name": "Remington M870",
+      "class": "shotgun",
+      "project_id": "remington870",
+      "legacy_model_match": "same model",
+      "legacy_snapshot": {
+        "source_id": "local-params",
+        "inherited_statuses": true,
+        "values": {
+          "uiRating": {
+            "damage": {
+              "value": 53,
+              "status": "provisional",
+              "confidence": "medium"
+            },
+            "fireRate": {
+              "value": 0,
+              "status": "provisional",
+              "confidence": "medium"
+            },
+            "recoilReal": {
+              "value": 90,
+              "status": "provisional",
+              "confidence": "medium"
+            },
+            "accuracy": {
+              "value": 25,
+              "status": "provisional",
+              "confidence": "medium"
+            }
+          }
+        }
+      },
+      "japan_snapshot": null,
+      "verified_gameplay": {
+        "damage_hp": null,
+        "cyclic_rpm": null,
+        "reload_seconds": null,
+        "ads_seconds": null
+      },
+      "notes": [
+        "legacy_model_match及project_id為舊文件記錄，本輪未重新核對實裝。"
+      ],
+      "local_package_candidates": {
+        "source_id": "local-list",
+        "verification": "filename_only",
+        "model": [
+          "sho_m870.upk"
+        ],
+        "texture": [
+          "sho_m870_texture.upk"
+        ],
+        "sight": [],
+        "audio": [
+          "Sound_M870.upk"
+        ],
+        "mapping_confidence": "provisional_name_match"
+      },
+      "model_download_verified": false,
+      "audio_download_verified": false,
+      "external_candidates": [],
+      "attachment_compatibility": {
+        "status": "unknown",
+        "items": [],
+        "note": "_sight檔名或Laserdot/EOTech移植只表示命名線索，不證明自由裝配系統。"
+      }
+    },
+    {
+      "id": "benelli_m4",
+      "name": "Benelli M4",
+      "class": "shotgun",
+      "project_id": "benelli_m4",
+      "legacy_model_match": "same model",
+      "legacy_snapshot": {
+        "source_id": "local-params",
+        "inherited_statuses": true,
+        "values": {
+          "uiRating": {
+            "damage": {
+              "value": 96,
+              "status": "provisional",
+              "confidence": "medium"
+            },
+            "fireRate": {
+              "value": 0,
+              "status": "provisional",
+              "confidence": "medium"
+            },
+            "recoilReal": {
+              "value": 100,
+              "status": "provisional",
+              "confidence": "medium"
+            },
+            "accuracy": {
+              "value": 42,
+              "status": "provisional",
+              "confidence": "medium"
+            }
+          }
+        }
+      },
+      "japan_snapshot": null,
+      "verified_gameplay": {
+        "damage_hp": null,
+        "cyclic_rpm": null,
+        "reload_seconds": null,
+        "ads_seconds": null
+      },
+      "notes": [
+        "legacy_model_match及project_id為舊文件記錄，本輪未重新核對實裝。"
+      ],
+      "local_package_candidates": {
+        "source_id": "local-list",
+        "verification": "filename_only",
+        "model": [
+          "sho_bnill.upk"
+        ],
+        "texture": [
+          "sho_bnill_texture.upk"
+        ],
+        "sight": [],
+        "audio": [
+          "Sound_Bnlli.upk"
+        ],
+        "mapping_confidence": "provisional_name_match"
+      },
+      "model_download_verified": false,
+      "audio_download_verified": false,
+      "external_candidates": [],
+      "attachment_compatibility": {
+        "status": "unknown",
+        "items": [],
+        "note": "_sight檔名或Laserdot/EOTech移植只表示命名線索，不證明自由裝配系統。"
+      }
+    },
+    {
+      "id": "scarh",
+      "name": "SCAR-H",
+      "class": "assault",
+      "project_id": null,
+      "legacy_snapshot": null,
+      "verified_gameplay": {
+        "damage_hp": null,
+        "cyclic_rpm": null,
+        "reload_seconds": null,
+        "ads_seconds": null
+      },
+      "notes": [],
+      "japan_snapshot": {
+        "source_id": "jp-ar",
+        "status": "provisional",
+        "access": "direct-read",
+        "ui_ratings": {
+          "damage": 67,
+          "recoil_control": 31,
+          "fire_rate": 67,
+          "accuracy": 79
+        },
+        "magazine": 25,
+        "reserve": 75,
+        "unit_caveat": "UI評分不是HP或RPM；備彈只適用該歷史版本。"
+      },
+      "local_package_candidates": {
+        "source_id": "local-list",
+        "verification": "filename_only",
+        "model": [
+          "rif_scar-h.upk"
+        ],
+        "texture": [
+          "rif_scar-h_texture.upk"
+        ],
+        "sight": [
+          "rif_scar-h_sight.upk"
+        ],
+        "audio": [
+          "Sound_SCARH.upk",
+          "Sound_SCARH_DMR.upk"
+        ],
+        "mapping_confidence": "provisional_name_match"
+      },
+      "model_download_verified": false,
+      "audio_download_verified": false,
+      "external_candidates": [],
+      "attachment_compatibility": {
+        "status": "unknown",
+        "items": [],
+        "note": "_sight檔名或Laserdot/EOTech移植只表示命名線索，不證明自由裝配系統。"
+      }
+    },
+    {
+      "id": "aug",
+      "name": "AUG A3",
+      "class": "assault",
+      "project_id": null,
+      "legacy_snapshot": null,
+      "verified_gameplay": {
+        "damage_hp": null,
+        "cyclic_rpm": null,
+        "reload_seconds": null,
+        "ads_seconds": null
+      },
+      "notes": [],
+      "japan_snapshot": {
+        "source_id": "jp-ar",
+        "status": "provisional",
+        "access": "direct-read",
+        "ui_ratings": {
+          "damage": 60,
+          "recoil_control": 54,
+          "fire_rate": 69,
+          "accuracy": 72
+        },
+        "magazine": 30,
+        "reserve": 90,
+        "unit_caveat": "UI評分不是HP或RPM；備彈只適用該歷史版本。"
+      },
+      "local_package_candidates": {
+        "source_id": "local-list",
+        "verification": "filename_only",
+        "model": [
+          "rif_aug.upk"
+        ],
+        "texture": [
+          "rif_aug_texture.upk"
+        ],
+        "sight": [
+          "rif_aug_sight.upk"
+        ],
+        "audio": [
+          "Sound_AUGA3.upk"
+        ],
+        "mapping_confidence": "provisional_name_match"
+      },
+      "model_download_verified": false,
+      "audio_download_verified": false,
+      "external_candidates": [],
+      "attachment_compatibility": {
+        "status": "unknown",
+        "items": [],
+        "note": "_sight檔名或Laserdot/EOTech移植只表示命名線索，不證明自由裝配系統。"
+      }
+    },
+    {
+      "id": "awp",
+      "name": "AWP",
+      "class": "sniper",
+      "project_id": null,
+      "legacy_snapshot": null,
+      "verified_gameplay": {
+        "damage_hp": null,
+        "cyclic_rpm": null,
+        "reload_seconds": null,
+        "ads_seconds": null
+      },
+      "notes": [],
+      "japan_snapshot": {
+        "source_id": "jp-sniper",
+        "status": "provisional",
+        "access": "direct-read",
+        "ui_ratings": {
+          "damage": 95,
+          "recoil_control": 0,
+          "fire_rate": 0,
+          "accuracy": 100
+        },
+        "magazine": 5,
+        "reserve": 15,
+        "unit_caveat": "UI評分不是HP或RPM；備彈只適用該歷史版本。"
+      },
+      "local_package_candidates": {
+        "source_id": "local-list",
+        "verification": "filename_only",
+        "model": [
+          "sni_awp.upk"
+        ],
+        "texture": [
+          "sni_awp_texture.upk"
+        ],
+        "sight": [],
+        "audio": [
+          "Sound_AWP_2.upk"
+        ],
+        "mapping_confidence": "provisional_name_match"
+      },
+      "model_download_verified": false,
+      "audio_download_verified": false,
+      "external_candidates": [],
+      "attachment_compatibility": {
+        "status": "unknown",
+        "items": [],
+        "note": "_sight檔名或Laserdot/EOTech移植只表示命名線索，不證明自由裝配系統。"
+      }
+    },
+    {
+      "id": "cheytac",
+      "name": "Cheytac M200",
+      "class": "sniper",
+      "project_id": null,
+      "legacy_snapshot": null,
+      "verified_gameplay": {
+        "damage_hp": null,
+        "cyclic_rpm": null,
+        "reload_seconds": null,
+        "ads_seconds": null
+      },
+      "notes": [],
+      "japan_snapshot": {
+        "source_id": "jp-sniper",
+        "status": "provisional",
+        "access": "direct-read",
+        "ui_ratings": {
+          "damage": 97,
+          "recoil_control": 0,
+          "fire_rate": 0,
+          "accuracy": 100
+        },
+        "magazine": 7,
+        "reserve": 21,
+        "unit_caveat": "UI評分不是HP或RPM；備彈只適用該歷史版本。"
+      },
+      "local_package_candidates": {
+        "source_id": "local-list",
+        "verification": "filename_only",
+        "model": [
+          "sni_cheytac.upk"
+        ],
+        "texture": [
+          "sni_cheytac_texture.upk"
+        ],
+        "sight": [],
+        "audio": [
+          "Sound_Cheytac.upk",
+          "Sound_Cheytac_2.upk"
+        ],
+        "mapping_confidence": "provisional_name_match"
+      },
+      "model_download_verified": false,
+      "audio_download_verified": false,
+      "external_candidates": [],
+      "attachment_compatibility": {
+        "status": "unknown",
+        "items": [],
+        "note": "_sight檔名或Laserdot/EOTech移植只表示命名線索，不證明自由裝配系統。"
+      }
+    },
+    {
+      "id": "sr25",
+      "name": "SR25",
+      "class": "sniper",
+      "project_id": null,
+      "legacy_snapshot": null,
+      "verified_gameplay": {
+        "damage_hp": null,
+        "cyclic_rpm": null,
+        "reload_seconds": null,
+        "ads_seconds": null
+      },
+      "notes": [],
+      "japan_snapshot": {
+        "source_id": "jp-sniper",
+        "status": "provisional",
+        "access": "direct-read",
+        "ui_ratings": {
+          "damage": 94,
+          "recoil_control": 0,
+          "fire_rate": 0,
+          "accuracy": 100
+        },
+        "magazine": 5,
+        "reserve": 15,
+        "unit_caveat": "UI評分不是HP或RPM；備彈只適用該歷史版本。"
+      },
+      "local_package_candidates": {
+        "source_id": "local-list",
+        "verification": "filename_only",
+        "model": [
+          "sni_sr-25.upk"
+        ],
+        "texture": [
+          "sni_sr-25_texture.upk"
+        ],
+        "sight": [],
+        "audio": [
+          "Sound_SR25.upk"
+        ],
+        "mapping_confidence": "provisional_name_match"
+      },
+      "model_download_verified": false,
+      "audio_download_verified": false,
+      "external_candidates": [],
+      "attachment_compatibility": {
+        "status": "unknown",
+        "items": [],
+        "note": "_sight檔名或Laserdot/EOTech移植只表示命名線索，不證明自由裝配系統。"
+      }
+    },
+    {
+      "id": "dragunov",
+      "name": "Dragunov SVD",
+      "class": "sniper",
+      "project_id": null,
+      "legacy_snapshot": null,
+      "verified_gameplay": {
+        "damage_hp": null,
+        "cyclic_rpm": null,
+        "reload_seconds": null,
+        "ads_seconds": null
+      },
+      "notes": [],
+      "japan_snapshot": {
+        "source_id": "jp-sniper",
+        "status": "provisional",
+        "access": "direct-read",
+        "ui_ratings": {
+          "damage": 83,
+          "recoil_control": 0,
+          "fire_rate": 0,
+          "accuracy": 100
+        },
+        "magazine": 7,
+        "reserve": 21,
+        "unit_caveat": "UI評分不是HP或RPM；備彈只適用該歷史版本。"
+      },
+      "local_package_candidates": {
+        "source_id": "local-list",
+        "verification": "filename_only",
+        "model": [
+          "sni_dragunov.upk"
+        ],
+        "texture": [
+          "sni_dragunov_texture.upk"
+        ],
+        "sight": [],
+        "audio": [
+          "Sound_DragonovSVD.upk",
+          "Sound_DragunovSVD.upk"
+        ],
+        "mapping_confidence": "provisional_name_match"
+      },
+      "model_download_verified": false,
+      "audio_download_verified": false,
+      "external_candidates": [],
+      "attachment_compatibility": {
+        "status": "unknown",
+        "items": [],
+        "note": "_sight檔名或Laserdot/EOTech移植只表示命名線索，不證明自由裝配系統。"
+      }
+    },
+    {
+      "id": "m249spw",
+      "name": "M249 SPW",
+      "class": "machinegun",
+      "project_id": null,
+      "legacy_snapshot": null,
+      "verified_gameplay": {
+        "damage_hp": null,
+        "cyclic_rpm": null,
+        "reload_seconds": null,
+        "ads_seconds": null
+      },
+      "notes": [],
+      "japan_snapshot": {
+        "source_id": "jp-mg",
+        "status": "provisional",
+        "access": "direct-read",
+        "ui_ratings": {
+          "damage": 47,
+          "recoil_control": 48,
+          "fire_rate": 82,
+          "accuracy": 44
+        },
+        "magazine": 75,
+        "reserve": 225,
+        "unit_caveat": "UI評分不是HP或RPM；備彈只適用該歷史版本。"
+      },
+      "local_package_candidates": {
+        "source_id": "local-list",
+        "verification": "filename_only",
+        "model": [
+          "mg_spw.upk"
+        ],
+        "texture": [
+          "mg_spw_texture.upk"
+        ],
+        "sight": [],
+        "audio": [
+          "Sound_SPW.upk"
+        ],
+        "mapping_confidence": "provisional_name_match"
+      },
+      "model_download_verified": false,
+      "audio_download_verified": false,
+      "external_candidates": [],
+      "attachment_compatibility": {
+        "status": "unknown",
+        "items": [],
+        "note": "_sight檔名或Laserdot/EOTech移植只表示命名線索，不證明自由裝配系統。"
+      }
+    },
+    {
+      "id": "rpk74",
+      "name": "RPK-74",
+      "class": "machinegun",
+      "project_id": null,
+      "legacy_snapshot": null,
+      "verified_gameplay": {
+        "damage_hp": null,
+        "cyclic_rpm": null,
+        "reload_seconds": null,
+        "ads_seconds": null
+      },
+      "notes": [
+        "JP比較表含未實裝/準備中標記，不能視作當時全部已上線。"
+      ],
+      "japan_snapshot": {
+        "source_id": "jp-mg",
+        "status": "provisional",
+        "access": "direct-read",
+        "ui_ratings": {
+          "damage": 70,
+          "recoil_control": 54,
+          "fire_rate": 56,
+          "accuracy": 46
+        },
+        "magazine": 75,
+        "reserve": 225,
+        "unit_caveat": "UI評分不是HP或RPM；備彈只適用該歷史版本。"
+      },
+      "local_package_candidates": {
+        "source_id": "local-list",
+        "verification": "filename_only",
+        "model": [
+          "mg_rpk74.upk"
+        ],
+        "texture": [
+          "mg_rpk74_texture.upk"
+        ],
+        "sight": [],
+        "audio": [
+          "Sound_RPK-74.upk"
+        ],
+        "mapping_confidence": "provisional_name_match"
+      },
+      "model_download_verified": false,
+      "audio_download_verified": false,
+      "external_candidates": [],
+      "attachment_compatibility": {
+        "status": "unknown",
+        "items": [],
+        "note": "_sight檔名或Laserdot/EOTech移植只表示命名線索，不證明自由裝配系統。"
+      }
+    },
+    {
+      "id": "k3",
+      "name": "K3",
+      "class": "machinegun",
+      "project_id": null,
+      "legacy_snapshot": null,
+      "verified_gameplay": {
+        "damage_hp": null,
+        "cyclic_rpm": null,
+        "reload_seconds": null,
+        "ads_seconds": null
+      },
+      "notes": [
+        "JP比較表含未實裝/準備中標記，不能視作當時全部已上線。"
+      ],
+      "japan_snapshot": {
+        "source_id": "jp-mg",
+        "status": "provisional",
+        "access": "direct-read",
+        "ui_ratings": {
+          "damage": 54,
+          "recoil_control": 58,
+          "fire_rate": 72,
+          "accuracy": 26
+        },
+        "magazine": 75,
+        "reserve": 225,
+        "unit_caveat": "UI評分不是HP或RPM；備彈只適用該歷史版本。"
+      },
+      "local_package_candidates": {
+        "source_id": "local-list",
+        "verification": "filename_only",
+        "model": [
+          "mg_K3.upk"
+        ],
+        "texture": [
+          "mg_K3_texture.upk"
+        ],
+        "sight": [],
+        "audio": [
+          "Sound_K3.upk"
+        ],
+        "mapping_confidence": "provisional_name_match"
+      },
+      "model_download_verified": false,
+      "audio_download_verified": false,
+      "external_candidates": [],
+      "attachment_compatibility": {
+        "status": "unknown",
+        "items": [],
+        "note": "_sight檔名或Laserdot/EOTech移植只表示命名線索，不證明自由裝配系統。"
+      }
+    },
+    {
+      "id": "mp7",
+      "name": "MP7A1",
+      "class": "smg",
+      "project_id": null,
+      "legacy_snapshot": null,
+      "verified_gameplay": {
+        "damage_hp": null,
+        "cyclic_rpm": null,
+        "reload_seconds": null,
+        "ads_seconds": null
+      },
+      "notes": [],
+      "japan_snapshot": {
+        "source_id": "jp-smg",
+        "status": "provisional",
+        "access": "direct-read_wiki_source",
+        "ui_ratings": {
+          "damage": 48,
+          "recoil_control": 51,
+          "fire_rate": 93,
+          "accuracy": 77
+        },
+        "magazine": 40,
+        "reserve": 120,
+        "unit_caveat": "UI評分不是HP或RPM；備彈只適用該歷史版本。"
+      },
+      "local_package_candidates": {
+        "source_id": "local-list",
+        "verification": "filename_only",
+        "model": [
+          "smg_mp7.upk"
+        ],
+        "texture": [
+          "smg_mp7_texture.upk"
+        ],
+        "sight": [
+          "smg_mp7_sight.upk"
+        ],
+        "audio": [
+          "Sound_MP7.upk"
+        ],
+        "mapping_confidence": "provisional_name_match"
+      },
+      "model_download_verified": false,
+      "audio_download_verified": false,
+      "external_candidates": [],
+      "attachment_compatibility": {
+        "status": "unknown",
+        "items": [],
+        "note": "_sight檔名或Laserdot/EOTech移植只表示命名線索，不證明自由裝配系統。"
+      }
+    },
+    {
+      "id": "kriss",
+      "name": "KRISS Super V",
+      "class": "smg",
+      "project_id": null,
+      "legacy_snapshot": null,
+      "verified_gameplay": {
+        "damage_hp": null,
+        "cyclic_rpm": null,
+        "reload_seconds": null,
+        "ads_seconds": null
+      },
+      "notes": [],
+      "japan_snapshot": {
+        "source_id": "jp-smg",
+        "status": "provisional",
+        "access": "direct-read_wiki_source",
+        "ui_ratings": {
+          "damage": 44,
+          "recoil_control": 54,
+          "fire_rate": 99,
+          "accuracy": 76
+        },
+        "magazine": 20,
+        "reserve": 100,
+        "unit_caveat": "UI評分不是HP或RPM；備彈只適用該歷史版本。"
+      },
+      "local_package_candidates": {
+        "source_id": "local-list",
+        "verification": "filename_only",
+        "model": [
+          "smg_ksv.upk"
+        ],
+        "texture": [
+          "smg_ksv_texture.upk"
+        ],
+        "sight": [
+          "smg_ksv_sight.upk"
+        ],
+        "audio": [
+          "Sound_KrissV_2.upk"
+        ],
+        "mapping_confidence": "provisional_name_match"
+      },
+      "model_download_verified": false,
+      "audio_download_verified": false,
+      "external_candidates": [
+        "ksv-fbx"
+      ],
+      "attachment_compatibility": {
+        "status": "unknown",
+        "items": [],
+        "note": "_sight檔名或Laserdot/EOTech移植只表示命名線索，不證明自由裝配系統。"
+      }
+    },
+    {
+      "id": "ump45",
+      "name": "UMP45",
+      "class": "smg",
+      "project_id": null,
+      "legacy_snapshot": null,
+      "verified_gameplay": {
+        "damage_hp": null,
+        "cyclic_rpm": null,
+        "reload_seconds": null,
+        "ads_seconds": null
+      },
+      "notes": [],
+      "japan_snapshot": {
+        "source_id": "jp-smg",
+        "status": "provisional",
+        "access": "direct-read_wiki_source",
+        "ui_ratings": {
+          "damage": 55,
+          "recoil_control": 62,
+          "fire_rate": 78,
+          "accuracy": 73
+        },
+        "magazine": 30,
+        "reserve": 120,
+        "unit_caveat": "UI評分不是HP或RPM；備彈只適用該歷史版本。"
+      },
+      "local_package_candidates": {
+        "source_id": "local-list",
+        "verification": "filename_only",
+        "model": [
+          "smg_ump45.upk"
+        ],
+        "texture": [
+          "smg_ump45_texture.upk"
+        ],
+        "sight": [],
+        "audio": [
+          "Sound_UMP45.upk"
+        ],
+        "mapping_confidence": "provisional_name_match"
+      },
+      "model_download_verified": false,
+      "audio_download_verified": false,
+      "external_candidates": [],
+      "attachment_compatibility": {
+        "status": "unknown",
+        "items": [],
+        "note": "_sight檔名或Laserdot/EOTech移植只表示命名線索，不證明自由裝配系統。"
+      }
+    },
+    {
+      "id": "scorpion",
+      "name": "Scorpion",
+      "class": "smg",
+      "project_id": null,
+      "legacy_snapshot": null,
+      "verified_gameplay": {
+        "damage_hp": null,
+        "cyclic_rpm": null,
+        "reload_seconds": null,
+        "ads_seconds": null
+      },
+      "notes": [],
+      "japan_snapshot": {
+        "source_id": "jp-smg",
+        "status": "provisional",
+        "access": "direct-read_wiki_source",
+        "ui_ratings": {
+          "damage": 45,
+          "recoil_control": 63,
+          "fire_rate": 100,
+          "accuracy": 69
+        },
+        "magazine": 40,
+        "reserve": 160,
+        "unit_caveat": "UI評分不是HP或RPM；備彈只適用該歷史版本。"
+      },
+      "local_package_candidates": {
+        "source_id": "local-list",
+        "verification": "filename_only",
+        "model": [
+          "smg_scorpion.upk"
+        ],
+        "texture": [
+          "smg_scorpion_texture.upk"
+        ],
+        "sight": [],
+        "audio": [
+          "Sound_Scorpion.upk"
+        ],
+        "mapping_confidence": "provisional_name_match"
+      },
+      "model_download_verified": false,
+      "audio_download_verified": false,
+      "external_candidates": [],
+      "attachment_compatibility": {
+        "status": "unknown",
+        "items": [],
+        "note": "_sight檔名或Laserdot/EOTech移植只表示命名線索，不證明自由裝配系統。"
+      }
+    }
+  ]
+}

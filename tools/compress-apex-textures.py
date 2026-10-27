@@ -1,13 +1,11 @@
-"""Re-encode the Apex exports' opaque PNG textures as JPEG (alpha-using ones stay PNG).
+"""Re-encode the Apex exports' textures: the triangle maps to WebP, the old test region's opaque PNGs to JPEG.
 
-Run after the Blender exports (tools/blender/apex_full.py, the test-region GLB):
+Run after the Blender exports:
     python tools/compress-apex-textures.py
-- assets/maps/apex-full/textures/*.png -> .jpg, scene.gltf image URIs updated; the replaced PNGs move to
-  tools/out/apex/textures-png/ (local only) so a rerun or a rollback has them.
 - assets/maps/apex-test/region.glb: embedded PNG images re-encoded in place; the previous file is kept as
   tools/out/apex/preview/region-png.glb.
-- skulltown: tools/out/apex/skulltown/export (tools/blender/skulltown_export.py) textures and both lightmaps, in place
-  (the export is rebuilt from the .blend; lightmaps at quality 92, 4:2:0 is fine for smooth light).
+- skulltown | range: tools/out/apex/<map>/export (tools/blender/skulltown_export.py) textures -> WebP and both lightmaps
+  -> JPEG, in place (the export is rebuilt from the .blend; lightmaps at quality 92, 4:2:0 is fine for smooth light).
 Idempotent: already-converted textures are skipped.
     python tools/compress-apex-textures.py [skulltown | range]
 """
@@ -28,35 +26,6 @@ def to_jpeg(data):
     buf = io.BytesIO()
     im.convert('RGB').save(buf, 'JPEG', quality=QUALITY, subsampling=0, optimize=True)  # 4:4:4 keeps normal maps clean
     return buf.getvalue() if buf.tell() < len(data) else None
-
-
-def full_range():
-    root = 'assets/maps/apex-full/'
-    gltf = json.load(open(root + 'scene.gltf', encoding='utf-8'))
-    keep = os.path.join(OUT, 'textures-png')
-    os.makedirs(keep, exist_ok=True)
-    before = after = changed = 0
-    for img in gltf.get('images', []):
-        uri = img.get('uri', '')
-        if not uri.lower().endswith('.png'):
-            continue
-        src = root + uri
-        data = open(src, 'rb').read()
-        before += len(data)
-        jpg = to_jpeg(data)
-        if jpg is None:
-            after += len(data)
-            continue
-        new_uri = uri[:-4] + '.jpg'
-        open(root + new_uri, 'wb').write(jpg)
-        shutil.move(src, os.path.join(keep, os.path.basename(uri)))
-        img['uri'] = new_uri
-        if 'mimeType' in img:
-            img['mimeType'] = 'image/jpeg'
-        after += len(jpg)
-        changed += 1
-    json.dump(gltf, open(root + 'scene.gltf', 'w', encoding='utf-8'), separators=(',', ':'))
-    print(f'apex-full: {changed} textures -> JPEG, {before / 1e6:.1f} MB -> {after / 1e6:.1f} MB')
 
 
 def read_glb(path):
@@ -98,7 +67,7 @@ def test_region():
     if not replaced:
         print('apex-test: nothing to convert')
         return
-    shutil.copyfile(path, os.path.join(OUT, 'preview', 'region-png.glb'))
+    os.makedirs(os.path.join(OUT, 'preview'), exist_ok=True); shutil.copyfile(path, os.path.join(OUT, 'preview', 'region-png.glb'))
     # rebuild the binary chunk: every view keeps its data (or the JPEG), 4-byte aligned, offsets rewritten
     out = bytearray()
     for i, v in enumerate(views):

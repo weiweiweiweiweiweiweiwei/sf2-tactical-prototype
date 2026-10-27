@@ -2,7 +2,7 @@ import {chromium} from 'playwright';
 import fs from 'node:fs';
 import path from 'node:path';
 import http from 'node:http';
-const root=process.cwd(),out=path.join(root,'tools/out/apex/preview');
+const root=process.cwd(),out=path.join(root,'tools/out/apex/preview');fs.mkdirSync(out,{recursive:true});
 const server=http.createServer((req,res)=>{
  if(new URL(req.url,'http://localhost').pathname==='/favicon.ico'){res.writeHead(204);res.end();return;}
  const p=path.resolve(root,'.'+new URL(req.url,'http://localhost').pathname);

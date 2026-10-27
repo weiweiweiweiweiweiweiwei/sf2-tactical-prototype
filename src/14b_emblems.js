@@ -1,7 +1,7 @@
 /* =====================================================================
    v34 KILL EMBLEMS (SF2 style) — a silver star-burst medal pops up top-centre with its name, and a row of small medals
    collects along the bottom for the current life. Art is drawn here as SVG (no game assets); conditions follow the
-   SF2 emblem list in docs/SF2_RESEARCH.md.
+   SF2 emblem list in docs/research/sf2/SF2_RESEARCH.md.
    ===================================================================== */
 const EMB_HOLD = 1800; // ms each emblem stays (measured from SF2 gameplay video)
 const EMBLEMS = {
