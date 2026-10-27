@@ -1040,3 +1040,8 @@
   - 場景完成、打好光後就在背景編譯世界的著色器（`PostFX.applyWorld` 先套畫質對著色器有影響的部分；特效的燈光提前建立，否則燈數改變會整批重編），導航、士兵、槍模同時載入。
 - 結果（有快取、在房間等 9 秒）：Skull Town 9.7 → 3.4 s、訓練場 → 3.9 s；直接開（沒等）8.8 s；同分頁第二場 2.7 s。剩下：著色器 1.4–2.0 s、地圖預覽 1.6 s。
 - `check-apex-full`、`check-apex-traversal`、`_nettest MAP=apex_skulltown`、`check.mjs` 都過。
+
+### v62u（2026-10-27）：Apex 碰撞資料縮成 1/4（下載大小）
+- 碰撞格式 `STRZ`（`tools/pack-apex-js.mjs` 的 `strz()`，遊戲端 `skullTris()` 兩種格式都讀）：相同位置的頂點合併（Skull Town 160 萬 → 81 萬）、依第一次使用排序；座標存成各軸差值的兩個位元組平面，索引存成「相對目前最大索引」的變長碼；再 gzip。
+- Skull Town 碰撞 10.4 → 2.3 MB、訓練場 8.9 → 2.2 MB；整包（base64）50 → 39 MB、39 → 30 MB。解碼 49 ms。
+- 驗證：和舊格式逐個三角形比對，114 萬個三角形的頂點、表面材質 0 差異；`check-apex-full`、`check-apex-traversal` 過。

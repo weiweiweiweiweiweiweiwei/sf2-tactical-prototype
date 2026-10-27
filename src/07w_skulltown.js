@@ -17,6 +17,14 @@ async function apexGunzip(buf) {
 }
 function skullTris(buf) {
   const v = new DataView(buf);
+  if (v.getUint32(0, true) === 0x5a525453 && v.getUint32(4, true) === 1) { // v62t 'STRZ' (tools/pack-apex-js.mjs strz): welded, delta / LEB128 coded
+    const nv = v.getUint32(8, true), nt = v.getUint32(12, true), s = v.getFloat32(16, true), nb = v.getUint32(20, true), B = new Uint8Array(buf), pos = new Float32Array(nv * 3);
+    let o = 24;
+    for (let c = 0; c < 3; c++, o += nv * 2) { let pv = 0; for (let i = 0; i < nv; i++) { pv = (pv + (B[o + i] | (B[o + nv + i] << 8))) & 0xffff; pos[i * 3 + c] = ((pv << 16) >> 16) / s; } }
+    const idx = new Uint32Array(nt * 3); let hi = -1, p = o;
+    for (let i = 0; i < nt * 3; i++) { let z = 0, sh = 0, b; do { b = B[p++]; z |= (b & 0x7f) << sh; sh += 7; } while (b & 0x80); const x = z === 0 ? hi + 1 : hi - z + 1; idx[i] = x; if (x > hi) hi = x; }
+    return { pos, idx, mats: B.slice(o + nb, o + nb + nt) };
+  }
   if (v.getUint32(0, true) !== 0x51525453 || v.getUint32(4, true) !== 1) throw new Error('Skull Town collision: unknown format');
   const nv = v.getUint32(8, true), nt = v.getUint32(12, true), s = v.getFloat32(16, true);
   const q = new Int16Array(buf, 20, nv * 3), pos = new Float32Array(nv * 3);

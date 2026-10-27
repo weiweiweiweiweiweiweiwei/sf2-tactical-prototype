@@ -14542,6 +14542,31 @@ async function apexGunzip(buf) {
 __name(apexGunzip, "apexGunzip");
 function skullTris(buf) {
   const v = new DataView(buf);
+  if (v.getUint32(0, true) === 1515344979 && v.getUint32(4, true) === 1) {
+    const nv2 = v.getUint32(8, true), nt2 = v.getUint32(12, true), s2 = v.getFloat32(16, true), nb = v.getUint32(20, true), B = new Uint8Array(buf), pos2 = new Float32Array(nv2 * 3);
+    let o = 24;
+    for (let c = 0; c < 3; c++, o += nv2 * 2) {
+      let pv = 0;
+      for (let i = 0; i < nv2; i++) {
+        pv = pv + (B[o + i] | B[o + nv2 + i] << 8) & 65535;
+        pos2[i * 3 + c] = (pv << 16 >> 16) / s2;
+      }
+    }
+    const idx2 = new Uint32Array(nt2 * 3);
+    let hi = -1, p = o;
+    for (let i = 0; i < nt2 * 3; i++) {
+      let z = 0, sh = 0, b;
+      do {
+        b = B[p++];
+        z |= (b & 127) << sh;
+        sh += 7;
+      } while (b & 128);
+      const x = z === 0 ? hi + 1 : hi - z + 1;
+      idx2[i] = x;
+      if (x > hi) hi = x;
+    }
+    return { pos: pos2, idx: idx2, mats: B.slice(o + nb, o + nb + nt2) };
+  }
   if (v.getUint32(0, true) !== 1364350035 || v.getUint32(4, true) !== 1) throw new Error("Skull Town collision: unknown format");
   const nv = v.getUint32(8, true), nt = v.getUint32(12, true), s = v.getFloat32(16, true);
   const q = new Int16Array(buf, 20, nv * 3), pos = new Float32Array(nv * 3);
