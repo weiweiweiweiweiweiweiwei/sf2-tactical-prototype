@@ -11,31 +11,49 @@
 // v62h), and an AK's iron sights are part of its body. All riveted to weapon_root. The muzzle is the 'flame' socket.
 import { NodeIO } from '@gltf-transform/core';
 import { ALL_EXTENSIONS } from '@gltf-transform/extensions';
-import { draco, textureCompress, prune, dedup } from '@gltf-transform/functions';
+import { draco, textureCompress, prune, dedup, resample } from '@gltf-transform/functions';
 import draco3d from 'draco3dgltf';
 import sharp from 'sharp';
 import fs from 'node:fs';
 
 const GID = process.argv[2] || 'm4a1', SRC = 'tools/out/sf2/', OUT = `tools/guns/${GID}_sf2_rig.glb`;
-// one gun: its four parts rif_<id>_<part> (UModel `-export -gltf -png rif_<id>` → <id>/, `-export -psk rif_<id>` → <id>_anim/),
-// textures <id>_<part>_d / _n from rif_<id>_texture, the animset 1st_anim_<id>
+// one gun: its four parts <pkg>/<stem>_<part> (UModel `-export -gltf -png <pkg>` → <id>/, `-export -psk <pkg>` → <id>_anim/: the
+// animset and the body's .props.txt with the sockets); textures <tex>_<part>_d / _n found by file name anywhere under <id>/
 const ARMS = [['sleeve', 'arms/c_comm_skelet/SkeletalMesh3/com_1starm_b01.gltf', 'sleeve'], ['glove', 'arms/c_comm_skelet/SkeletalMesh3/com_1stglove_b01.gltf', 'glove']];
-const gun = (id, o = {}) => Object.assign({
-  base: `${id}/rif_${id}/SkeletalMesh3/rif_${id}_body.gltf`, props: `${id}_anim/rif_${id}/SkeletalMesh3/rif_${id}_body.props.txt`,
-  parts: [...['body', 'barrel', 'stock', 'magazine'].map((k) => [k, `${id}/rif_${id}/SkeletalMesh3/rif_${id}_${k}.gltf`, `${id}_${k}`]), ...ARMS],
-  psa: `${id}_anim/rif_${id}/AnimSet/1st_anim_${id}.psa`, socketSights: [],
-}, o);
+const gun = (id, o = {}) => {
+  const pkg = o.pkg || `rif_${id}`, stem = o.stem || pkg, tex = o.tex || id, mesh = `${id}/${pkg}/SkeletalMesh3/${stem}_`;
+  return Object.assign({
+    base: `${mesh}body.gltf`, props: `${id}_anim/${pkg}/SkeletalMesh3/${stem}_body.props.txt`,
+    parts: [...['body', 'barrel', 'stock', 'magazine'].map((k) => [k, `${mesh}${k}.gltf`, `${tex}_${k}`]), ...ARMS],
+    psa: `${id}_anim/${pkg}/AnimSet/${o.anim || '1st_anim_' + id}.psa`, socketSights: [],
+  }, o);
+};
+// SightOnMesh on the class's SightBaseSocketName ('Sight'): [name, gltf, texture stem, socket]
+const sight = (file, tex) => [['sight', file, tex, 'Sight']];
 const G = {
   m4a1: gun('m4a1', { railSights: { sight: ['m4a1/rif_m4a1_sight/SkeletalMesh3/rif_m4a1_sight_up.gltf', 'm4a1_sight'], rear: ['m4a1/weapon_common_part01/SkeletalMesh3/rif_m4a1_rearsight.gltf', 'm4a1_rearsight'] } }),
   ak103: gun('ak103'), // iron sights on the body
-  g36c: gun('g36c', { hoodedPost: true, socketSights: [['sight', 'g36c/rif_g36c/SkeletalMesh3/rif_g36c_sight_up.gltf', 'g36c_frontsight', 'Sight']] }), // SightOnMesh on SightBaseSocketName
+  g36c: gun('g36c', { hoodedPost: true, socketSights: sight('g36c/rif_g36c/SkeletalMesh3/rif_g36c_sight_up.gltf', 'g36c_frontsight') }),
+  // v62i the rifle batch
+  m16a3: gun('m16a3', { socketSights: sight('m16a3/rif_m16a3/SkeletalMesh3/rif_m16a3_sight_up.gltf', 'm16a3_sight') }),
+  k2: gun('k2', { hoodedPost: true, pkg: 'rif_K2', stem: 'rif_k2', anim: '1st_anim_K2' }), // (no SightOnMesh: its sights are on the body)
+  scarl: gun('scarl', { hoodedPost: true, pkg: 'rif_scar_L', tex: 'scar_L', anim: '1st_anim_scar_L', socketSights: sight('scarl/rif_scar-h_sight/SkeletalMesh3/rif_scar-h_sight_up.gltf', 'scar-h_sight') }),
+  scarh: gun('scarh', { hoodedPost: true, pkg: 'rif_scar-h', tex: 'scar-h', anim: '1st_anim_scar-h', socketSights: sight('scarh/rif_scar-h_sight/SkeletalMesh3/rif_scar-h_sight_up.gltf', 'scar-h_sight') }),
+  famas: gun('famas'), // carry-handle sights on the body
+  xm8: gun('xm8', { socketSights: sight('xm8/rif_xm8/SkeletalMesh3/rif_xm8_sight_up.gltf', 'xm8_sight') }),
+  galil: gun('galil', { hoodedPost: true, socketSights: sight('galil/rif_galil_sight/SkeletalMesh3/rif_galil_sight_up.gltf', 'galil_barrel_frontsight') }),
+  hk417: gun('hk417', { socketSights: sight('hk417/rif_hk417_sight/SkeletalMesh3/rif_hk417_sight_up.gltf', 'hk417_sight') }),
+  qbz97: gun('qbz97', { hoodedPost: true }), // carry-handle sights on the body
 }[GID];
+if (!G) throw new Error(`unknown gun ${GID}`);
 const TEX = {
   m4a1_sight: ['m4a1/rif_m4a1_sight/Texture2D/m4a1_sight'], m4a1_rearsight: ['m4a1/weapon_common_part01/Texture2D/m4a1_rearsight'],
   sleeve: ['arms/c_delta_1st_texture/Texture2D/delm_1st_b01', 'arms/c_comm_1st_texture/Texture2D/com_1st_b01'], // the Delta Force sleeve colour, the common sleeve's normals
   glove: ['arms/c_comm_1sthand_texture/Texture2D/com_1st_glove_b01'],
 };
-const texDirs = (stem) => TEX[stem] || [`${GID}/rif_${GID}_texture/Texture2D/${stem}`];
+const PNG = {}; // every exported texture of this gun by file name
+(function walk(d) { for (const f of fs.readdirSync(d, { withFileTypes: true })) { const q = `${d}/${f.name}`; if (f.isDirectory()) walk(q); else if (f.name.endsWith('.png')) PNG[f.name.toLowerCase()] ??= q.slice(SRC.length, -4).replace(/_[dns]$/, ''); } })(SRC + GID);
+const texDirs = (stem) => TEX[stem] || [PNG[`${stem}_d.png`.toLowerCase()] || `${GID}/missing/${stem}`];
 const ROUGH = { barrel: 0.78, stock: 0.8, magazine: 0.72, sight: 0.66, body: 0.68, sleeve: 0.9, glove: 0.82 }; // matte, dielectric (as sf2_gun_build.py)
 const PEEP_DROP = 0.0048, PEEP_DX = 0.0007; // the rear sight's aperture under its top / off its top's mean x (tuned on ADS shots, v61b)
 // v62f the flip-up front sight sits this far behind the rail's front end (its socket is not exported): measured on the user's SF2 ADS
@@ -59,6 +77,7 @@ async function material(stem) {
   const key = Object.keys(ROUGH).find((k) => stem.includes(k)), m = doc.createMaterial(`gun:tex_${stem}`).setMetallicFactor(0).setRoughnessFactor(ROUGH[key] ?? 0.75).setDoubleSided(true);
   const dirs = texDirs(stem), find = (kind) => dirs.map((d) => `${SRC}${d}_${kind}.png`).find((p) => fs.existsSync(p));
   const d = find('d'), n = find('n');
+  if (!d) console.warn('NOTEX', GID, stem, 'no diffuse texture');
   if (d) m.setBaseColorTexture(doc.createTexture(stem + '_d').setImage(await sharp(d).removeAlpha().png().toBuffer()).setMimeType('image/png')); // (the alpha is a spec mask: opaque here, and it doubled the WebP)
   if (n) m.setNormalTexture(doc.createTexture(stem + '_n').setImage(fs.readFileSync(n)).setMimeType('image/png'));
   return m;
@@ -70,13 +89,25 @@ async function addPart(name, file, stem, bake = null) {
   const pd = await io.read(SRC + file), pr = pd.getRoot(), pskin = pr.listSkins()[0], pj = pskin.listJoints(), remap = pj.map((j) => jix[j.getName()]);
   if (remap.some((i) => i === undefined) && !bake) throw new Error(`${name}: bone missing in the base skeleton`);
   const mesh = doc.createMesh(name), mat = await material(stem), out = [];
+  // v62i each part keeps its OWN bind pose (as UE3 does: the bones are shared, each mesh its own reference pose): its own skin over
+  // the body's joints with its inverse-bind matrices (the body's for bones it lacks). AK-103 / SCAR stocks have weapon_stock
+  // turned 90° against the body's, the G36C's arms a whole other bind — read through the body's, the stock swung a metre off.
+  let partSkin = skin;
+  if (!bake) {
+    const pibm = pskin.getInverseBindMatrices().getArray(), bibm = skin.getInverseBindMatrices().getArray(), byName = Object.fromEntries(pj.map((j, k) => [j.getName(), k]));
+    const ib = new Float32Array(joints.length * 16); let differs = false;
+    joints.forEach((j, i) => { const k = byName[j.getName()], m = k === undefined ? bibm.slice(i * 16, i * 16 + 16) : pibm.slice(k * 16, k * 16 + 16); ib.set(m, i * 16); if (k !== undefined && m.some((x, c) => Math.abs(x - bibm[i * 16 + c]) > 1e-4)) differs = true; });
+    if (differs) { partSkin = doc.createSkin(name + '_skin').setInverseBindMatrices(doc.createAccessor().setType('MAT4').setArray(ib).setBuffer(buf)); joints.forEach((j) => partSkin.addJoint(j)); console.log('OWNBIND', GID, name); }
+  }
   for (const p of pr.listMeshes()[0].listPrimitives()) {
     const P = p.getAttribute('POSITION'), N = p.getAttribute('NORMAL'), T = p.getAttribute('TANGENT'), UV = p.getAttribute('TEXCOORD_0'), J = p.getAttribute('JOINTS_0'), W = p.getAttribute('WEIGHTS_0'), n = P.getCount();
     const pos = new Float32Array(n * 3), nor = new Float32Array(n * 3), tan = T ? new Float32Array(n * 4) : null, jo = new Uint16Array(n * 4), we = new Float32Array(n * 4), e = [], f = [];
     for (let i = 0; i < n; i++) {
       P.getElement(i, e); let v = e.slice(0, 3); N.getElement(i, f); let nn = f.slice(0, 3); let tt = null; if (T) { T.getElement(i, f); tt = f.slice(0, 4); }
       if (bake) { v = bake.p(v, i); nn = bake.n(nn); if (tt) tt = [...bake.n(tt.slice(0, 3)), tt[3]]; jo.set([jix.weapon_root, 0, 0, 0], i * 4); we.set([1, 0, 0, 0], i * 4); }
-      else { J.getElement(i, e); jo.set(e.map((j) => remap[j] ?? 0), i * 4); W.getElement(i, e); we.set(e, i * 4); }
+      else {
+        J.getElement(i, e); jo.set(e.map((j) => remap[j] ?? 0), i * 4); W.getElement(i, e); we.set(e, i * 4);
+      }
       pos.set(v, i * 3); nor.set(norm(nn), i * 3); if (tan) tan.set(tt, i * 4);
     }
     const acc = (type, arr) => doc.createAccessor().setType(type).setArray(arr).setBuffer(buf);
@@ -86,7 +117,7 @@ async function addPart(name, file, stem, bake = null) {
     if (tan) prim.setAttribute('TANGENT', acc('VEC4', tan));
     mesh.addPrimitive(prim); out.push(pos);
   }
-  scene.addChild(doc.createNode(name).setMesh(mesh).setSkin(skin));
+  scene.addChild(doc.createNode(name).setMesh(mesh).setSkin(partSkin));
   return out.flatMap((a) => Array.from({ length: a.length / 3 }, (_, i) => [a[i * 3], a[i * 3 + 1], a[i * 3 + 2]]));
 }
 
@@ -190,7 +221,7 @@ for (const a of psa.anims) {
   });
 }
 for (const m of root.listMaterials()) if (!m.getName().startsWith('gun:')) m.dispose();
-await doc.transform(prune({ keepLeaves: true }), dedup(), textureCompress({ encoder: sharp, targetFormat: 'webp', resize: [1024, 1024] }), draco({ method: 'edgebreaker' }));
+await doc.transform(resample({ tolerance: 1e-4 }), prune({ keepLeaves: true }), dedup(), textureCompress({ encoder: sharp, targetFormat: 'webp', resize: [1024, 1024] }), draco({ method: 'edgebreaker' }));
 await io.write(OUT, doc);
 console.log('SF2RIG', GID, OUT, (fs.statSync(OUT).size / 1024).toFixed(0) + ' KB', 'clips', root.listAnimations().map((a) => a.getName()).join(' '), 'channels', channels,
   'marks', Object.fromEntries(Object.entries(marks).map(([k, p]) => [k, p.map((x) => +x.toFixed(4))])));

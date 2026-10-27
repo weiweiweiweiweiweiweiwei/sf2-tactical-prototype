@@ -1054,9 +1054,9 @@ const WEAPON_DATABASE = {
     recoilPitch: 0.012, recoilYaw: 0.009, recoilRecovery: 9,
     hipSpread: 0.075, adsSpread: 0.0022, adsFov: 55, adsType: '3d_sight', mobility: 0.95, maxAmmo: 30, reloadTime: 2.3, equipTime: 0.8, adsSpeed: 12, modelUrl: null,
     // v62f SF2's own viewmodel lenses — UE3 FOVs are HORIZONTAL: aimed fZoomedMeshFOV 35 (16:9: 20.1° vertical, matches the user's SF2
-    // ADS screenshot to the pixel); hip the player's DefaultFOV 90 (58.7°). fZoomOutMeshFOV 60 is not the hip lens: at 36° the gun
-    // falls off the bottom-right corner
-    vmHFov: 90, vmAdsHFov: 35,
+    // ADS screenshot to the pixel); v62i hip = the weapon's fZoomOutFOV (M4A1 60 → 36°; the user's SF2 hip shots fit it: AK-103 60, G36C 50),
+    // reaching off the bottom-right corner (v62f took that for a mistake and used 90)
+    vmHFov: 60, vmAdsHFov: 35, sf2ZoomIn: [-3, 0, -0.87], sf2ZoomOut: [-1, 0, 0],
     model: 'm4', sound: 'm4', sf2: 'm4a1', tracerEvery: 2, penetration: 1, desc: '均衡的全自動步槍，全息瞄具。',
     // v62e SF2's own recoil block (Default__SFCWeaponM4A1.RecoilDefault over SFCWeaponARBase, RecoilZoomModifier, RecoilCrouchModifier)
     sf2Recoil: { nextCrossVert: 1.26, maxCrossVert: 14, vertInc: 9000, vertDec: 12, crossDecreasInc: 9, incline: 0.5, forceCorrection: 50,
@@ -1081,7 +1081,7 @@ const WEAPON_DATABASE = {
     name: 'G36C', type: 'assault', slot: 'primary', damageNear: 25, damageFar: 19, falloffStart: 25, falloffEnd: 60, fireRate: 0.109,
     recoilPitch: 0.011, recoilYaw: 0.012, recoilRecovery: 10,
     hipSpread: 0.07, adsSpread: 0.0018, adsFov: 55, adsType: '3d_sight', mobility: 0.95, maxAmmo: 30, reloadTime: 2.28, equipTime: 0.85, adsSpeed: 12, modelUrl: null,
-    vmHFov: 90, vmAdsHFov: 40, model: 'g36c_sf2', sound: 'g36', sf2: 'g36c', tracerEvery: 2, penetration: 1, tp: { len: 0.72, body: 'dark', mag: 'box' },
+    vmHFov: 50, vmAdsHFov: 40, model: 'g36c_sf2', sound: 'g36', sf2: 'g36c', tracerEvery: 2, penetration: 1, tp: { len: 0.72, body: 'dark', mag: 'box' },
     sf2Recoil: { nextCrossVert: 1.78, maxCrossVert: 10.6, vertInc: 15000, vertDec: 13, crossDecreasInc: 15, incline: 0.05, forceCorrection: 50,
       domDefault: 0.15, domZoomDefault: 0, domInc: 0.3, domMax: 2.2, domMin: 0, domDec: 1.4, maxMovingValue: 0.8, mulValueRun: 0.4, mulValueJump: 6,
       zoomMod: 0.35, crouchMod: 0.9 },
@@ -1141,11 +1141,11 @@ const WEAPON_DATABASE = {
   ak103: {
     name: 'AK-103', type: 'assault', slot: 'primary', damageNear: 34, damageFar: 25, falloffStart: 25, falloffEnd: 60, fireRate: 0.115, recoilPitch: 0.016, recoilYaw: 0.012, recoilRecovery: 7,
     hipSpread: 0.08, adsSpread: 0.0028, adsFov: 55, adsType: '3d_sight', mobility: 0.93, maxAmmo: 30, reloadTime: 2.4, equipTime: 0.9, adsSpeed: 12, modelUrl: null,
-    vmHFov: 90, vmAdsHFov: 40, model: 'ak103', sound: 'ak', sf2: 'ak103', penetration: 2, tracerEvery: 2, tp: { len: 0.9, body: 'dark', mag: 'curve' },
+    vmHFov: 60, vmAdsHFov: 40, model: 'ak103', sound: 'ak', sf2: 'ak103', penetration: 2, tracerEvery: 2, tp: { len: 0.9, body: 'dark', mag: 'curve' },
     sf2Recoil: { nextCrossVert: 2.04, maxCrossVert: 13, vertInc: 15000, vertDec: 13, crossDecreasInc: 15, incline: 0.15, forceCorrection: 50,
       domDefault: 0.1, domZoomDefault: 0, domInc: 0.4, domMax: 2.5, domMin: 0, domDec: 1.35, maxMovingValue: 1.2, mulValueRun: 0.1, mulValueJump: 6,
       zoomMod: 0.3, crouchMod: 0.8 },
-    sf2ZoomIn: [-3, 0, -0.28], sf2ReloadSounds: [[0.13, 'magout'], [0.39, 'magin'], [0.76, 'charge']],
+    sf2ZoomIn: [-3, 0, -0.28], sf2ZoomOut: [0, 0, -0.5], sf2ReloadSounds: [[0.13, 'magout'], [0.39, 'magin'], [0.76, 'charge']],
     desc: 'SF2 原版 AK-103：7.62mm、黑色聚合物護木，後座力大但開鏡穩，機械瞄具。',
   },
   scarl: {
@@ -1414,7 +1414,7 @@ function compileWeapon(id, s) {
     recoil: { first: s.recoilPitch * 0.75, climb: s.recoilPitch, climbShots: 10, late: s.recoilPitch * 0.75, h: s.recoilYaw, hStart: 6, jitter: s.recoilYaw * 0.35 },
     recoilRecovery: s.recoilRecovery, adsFov: s.adsFov, vmAdsFov: s.vmAdsFov, vmHFov: s.vmHFov || 0, vmAdsHFov: s.vmAdsHFov || 0, adsVertical: s.adsVertical || 0, adsType: s.adsType, adsRecoilMult: 1, adsSpeed: s.adsSpeed || (s.type === 'smg' ? 24 : 20),
     moveSpeed: CFG.player.baseSpeed * s.mobility, mobility: s.mobility, reloadTime: s.reloadTime, equipTime: s.equipTime || 0, sf2Recoil: s.sf2Recoil || null, sound: s.sound || id,
-    sf2: s.sf2 || null, sf2ZoomIn: s.sf2ZoomIn || null, sf2ReloadSounds: s.sf2ReloadSounds || null, // v62h (sf2 never reached the def before: v61's SF2 gun sounds never played)
+    sf2: s.sf2 || null, sf2Rig: s.sf2Rig || null, sf2ZoomIn: s.sf2ZoomIn || null, sf2ZoomOut: s.sf2ZoomOut || null, sf2ReloadSounds: s.sf2ReloadSounds || null, // v62h (sf2 never reached the def before: v61's SF2 gun sounds never played)
     suppressed: !!s.suppressed, tracerEvery: s.tracerEvery ?? 2, shellReload: s.shellReload || 0, zoomFovs: s.zoomFovs || [s.adsFov],
     noise: s.suppressed ? 14 : t.noise, pump, bolt, soundRate: s.rate || 1, tpSpec: s.tp || null,
     fireMode: auto ? 'AUTO' : pump ? 'PUMP' : bolt ? 'BOLT' : 'SEMI',
@@ -1428,6 +1428,20 @@ function compileWeapon(id, s) {
   return def;
 }
 
+// <sf2-weapons>
+/* v62i SF2's own timing, lenses, zoom offsets and recoil for the guns with an SF2 rig — generated by tools/sf2_weapon_table.py from
+   docs/research/sf2/client-data/weapons.json; applied onto WEAPON_DATABASE before compileWeapon. Damage stays on the balance rules. */
+const SF2_WEAPONS = {
+  k2: {'fireRate': 0.1, 'reloadTime': 2.2, 'equipTime': 0.75, 'adsSpeed': 12, 'adsFov': 55, 'adsType': '3d_sight', 'vmHFov': 60.0, 'vmAdsHFov': 35.0, 'sf2Rig': 'k2', 'sf2': 'k2', 'sf2ZoomIn': [0.0, -0.01, -0.17], 'sf2ZoomOut': [0.0, 0.0, 0.0], 'sf2ReloadSounds': [[0.12, 'magout'], [0.35, 'magin'], [0.75, 'charge']], 'sf2Recoil': {'nextCrossVert': 0.6, 'maxCrossVert': 7.0, 'vertInc': 15000.0, 'vertDec': 13.0, 'crossDecreasInc': 15.0, 'incline': 0.05, 'forceCorrection': 50.0, 'domDefault': 0.28, 'domZoomDefault': 0.0, 'domInc': 0.3, 'domMax': 1.0, 'domMin': 0.0, 'domDec': 1.25, 'maxMovingValue': 0.8, 'mulValueRun': 0.4, 'mulValueJump': 6.0, 'zoomMod': 0.8, 'crouchMod': 0.9}}, // SFCWeaponK2
+  scarl: {'fireRate': 0.107, 'reloadTime': 2.35, 'equipTime': 0.9, 'adsSpeed': 12, 'adsFov': 55, 'adsType': '3d_sight', 'vmHFov': 60.0, 'vmAdsHFov': 35.0, 'sf2Rig': 'scarl', 'sf2': 'scarh', 'sf2ZoomIn': [0.0, -0.01, -0.2], 'sf2ZoomOut': [-1.0, 0.0, 0.0], 'sf2ReloadSounds': [[0.12, 'magout'], [0.44, 'magin'], [0.72, 'charge']], 'sf2Recoil': {'nextCrossVert': 2.1, 'maxCrossVert': 15.0, 'vertInc': 15000.0, 'vertDec': 12.0, 'crossDecreasInc': 9.0, 'incline': 0.35, 'forceCorrection': 50.0, 'domDefault': 0.15, 'domZoomDefault': 0.0, 'domInc': 0.22, 'domMax': 2.4, 'domMin': 0.1, 'domDec': 2.0, 'maxMovingValue': 0.7, 'mulValueRun': 0.7, 'mulValueJump': 6.0, 'zoomMod': 0.99, 'crouchMod': 0.85}}, // SFCWeaponSCARL
+  scarh: {'fireRate': 0.105, 'reloadTime': 2.45, 'equipTime': 0.92, 'adsSpeed': 12, 'adsFov': 55, 'adsType': '3d_sight', 'vmHFov': 60.0, 'vmAdsHFov': 35.0, 'sf2Rig': 'scarh', 'sf2': 'scarh', 'sf2ZoomIn': [0.0, -0.01, -0.2], 'sf2ZoomOut': [-1.0, 0.0, 0.0], 'sf2ReloadSounds': [[0.12, 'magout'], [0.44, 'magin'], [0.72, 'charge']], 'sf2Recoil': {'nextCrossVert': 2.1, 'maxCrossVert': 15.0, 'vertInc': 15000.0, 'vertDec': 12.0, 'crossDecreasInc': 9.0, 'incline': 0.35, 'forceCorrection': 50.0, 'domDefault': 0.15, 'domZoomDefault': 0.0, 'domInc': 0.22, 'domMax': 2.4, 'domMin': 0.1, 'domDec': 2.0, 'maxMovingValue': 0.7, 'mulValueRun': 0.7, 'mulValueJump': 6.0, 'zoomMod': 0.99, 'crouchMod': 0.85}}, // SFCWeaponSCARH
+  famas: {'fireRate': 0.085, 'reloadTime': 2.35, 'equipTime': 0.8, 'adsSpeed': 12, 'adsFov': 55, 'adsType': '3d_sight', 'vmHFov': 60.0, 'vmAdsHFov': 35.0, 'sf2Rig': 'famas', 'sf2': 'famas', 'sf2ZoomIn': [0.0, -0.02, -0.17], 'sf2ZoomOut': [0.0, 0.0, 0.0], 'sf2ReloadSounds': [[0.2, 'magout'], [0.4, 'magin'], [0.73, 'charge']], 'sf2Recoil': {'nextCrossVert': 1.1, 'maxCrossVert': 12.0, 'vertInc': 15000.0, 'vertDec': 13.0, 'crossDecreasInc': 15.0, 'incline': 0.1, 'forceCorrection': 50.0, 'domDefault': 0.3, 'domZoomDefault': 0.2, 'domInc': 0.3, 'domMax': 1.5, 'domMin': 0.0, 'domDec': 1.25, 'maxMovingValue': 0.8, 'mulValueRun': 0.4, 'mulValueJump': 6.0, 'zoomMod': 0.99, 'crouchMod': 0.9}}, // SFCWeaponFAMAS
+  xm8: {'fireRate': 0.106, 'reloadTime': 2.25, 'equipTime': 0.79, 'adsSpeed': 12, 'adsFov': 55, 'adsType': '3d_sight', 'vmHFov': 60.0, 'vmAdsHFov': 35.0, 'sf2Rig': 'xm8', 'sf2': 'xm8', 'sf2ZoomIn': [6.0, 0.0, 0.04], 'sf2ZoomOut': [0.0, 0.0, 0.0], 'sf2ReloadSounds': [[0.12, 'magout'], [0.27, 'magin'], [0.73, 'charge']], 'sf2Recoil': {'nextCrossVert': 2.0, 'maxCrossVert': 15.0, 'vertInc': 15000.0, 'vertDec': 12.0, 'crossDecreasInc': 9.0, 'incline': 0.35, 'forceCorrection': 50.0, 'domDefault': 0.17, 'domZoomDefault': 0.0, 'domInc': 0.22, 'domMax': 2.4, 'domMin': 0.1, 'domDec': 2.0, 'maxMovingValue': 0.7, 'mulValueRun': 0.7, 'mulValueJump': 6.0, 'zoomMod': 0.6, 'crouchMod': 0.9}}, // SFCWeaponXM8
+  galil: {'fireRate': 0.112, 'reloadTime': 2.1, 'equipTime': 0.8, 'adsSpeed': 12, 'adsFov': 55, 'adsType': '3d_sight', 'vmHFov': 65.0, 'vmAdsHFov': 35.0, 'sf2Rig': 'galil', 'sf2': 'galil', 'sf2ZoomIn': [2.0, -0.01, 0.0], 'sf2ZoomOut': [0.0, 0.0, 0.0], 'sf2ReloadSounds': [[0.23, 'magout'], [0.72, 'magin'], [0.76, 'charge']], 'sf2Recoil': {'nextCrossVert': 2.3, 'maxCrossVert': 14.0, 'vertInc': 15000.0, 'vertDec': 13.0, 'crossDecreasInc': 15.0, 'incline': 0.15, 'forceCorrection': 50.0, 'domDefault': 0.05, 'domZoomDefault': 0.0, 'domInc': 0.42, 'domMax': 2.5, 'domMin': 0.0, 'domDec': 1.38, 'maxMovingValue': 1.2, 'mulValueRun': 0.1, 'mulValueJump': 6.0, 'zoomMod': 0.4, 'crouchMod': 0.7}}, // SFCWeaponGALIL
+  hk417: {'fireRate': 0.102, 'reloadTime': 2.18, 'equipTime': 0.85, 'adsSpeed': 12, 'adsFov': 55, 'adsType': '3d_sight', 'vmHFov': 60.0, 'vmAdsHFov': 40.0, 'sf2Rig': 'hk417', 'sf2': 'hk417', 'sf2ZoomIn': [-4.0, -0.02, -0.2], 'sf2ZoomOut': [0.0, 0.0, 0.0], 'sf2ReloadSounds': [[0.16, 'magout'], [0.37, 'magin'], [0.77, 'charge']], 'sf2Recoil': {'nextCrossVert': 1.7, 'maxCrossVert': 9.0, 'vertInc': 15000.0, 'vertDec': 13.0, 'crossDecreasInc': 15.0, 'incline': 0.05, 'forceCorrection': 50.0, 'domDefault': 0.3, 'domZoomDefault': 0.0, 'domInc': 0.22, 'domMax': 2.1, 'domMin': 0.0, 'domDec': 1.35, 'maxMovingValue': 0.8, 'mulValueRun': 0.4, 'mulValueJump': 6.0, 'zoomMod': 0.35, 'crouchMod': 0.9}}, // SFCWeaponHK417
+};
+for (const [id, o] of Object.entries(SF2_WEAPONS)) { const s = WEAPON_DATABASE[id]; Object.assign(s, o); delete s.vmAdsFov; delete s.adsVertical; } // (their own sights now)
+// </sf2-weapons>
 const WEAPON_DEFS = {};
 for (const [id, s] of Object.entries(WEAPON_DATABASE)) WEAPON_DEFS[id] = compileWeapon(id, s);
 Object.assign(WEAPON_DEFS, {
@@ -8657,7 +8671,7 @@ class WeaponModels {
   // Build the first-person model for a weapon definition: procedural first, then (optionally) an external GLTF/GLB swapped in.
   build(def) {
     const key = def.model || def.id;
-    const vm = (key === 'he' || key === 'flash' || key === 'smoke') ? this.grenade(key) : this[key](def);
+    const vm = (key === 'he' || key === 'flash' || key === 'smoke') ? this.grenade(key) : (def.sf2Rig && this.fromRig(def.sf2Rig + '_sf2_rig', this._rigOpts(def))) || this[key](def); // v62i def.sf2Rig: SF2's own rig, the old model until it is parsed
     if (def.kind !== 'grenade' && def.kind !== 'knife' && !vm.rig) this._fitAds(vm, def); // (a rig's camera is SF2's own)
     if (def.modelUrl) this.attachGLTF(vm, def.modelUrl);
     return vm;
@@ -8796,7 +8810,7 @@ class WeaponModels {
   // reloadSounds: when SF2's Reload clip pulls the mag (frame 5 of 75), seats it (27) and works the charging handle (55).
   fromRig(id, o = {}) {
     const G = GUN_RIGS[id]; if (!G) return null;
-    const rig = new SF2Rig(G, Object.assign({ reloadSounds: [[0.07, 'magout'], [0.36, 'magin'], [0.73, 'charge']] }, o)), g = new THREE.Group(); g.add(rig.model);
+    const rig = new SF2Rig(G, Object.assign({}, o, { reloadSounds: o.reloadSounds || [[0.07, 'magout'], [0.36, 'magin'], [0.73, 'charge']] })), g = new THREE.Group(); g.add(rig.model);
     const V = THREE.Vector3, out = { group: g, nodes: {}, rig, mag: null, bolt: null, slide: null, charge: null, pin: null, nade: null, pump: null, cover: null, lhand: null };
     out.hipPos = new V(); out.adsPos = new V(); out.hipRot = new THREE.Euler(); out.adsRot = new THREE.Euler(); out.magMove = new V(); out.magRot = 0;
     out.muzzle = rig.model.getObjectByName('MUZZLE'); out.flash = this._flash(out.muzzle, 0, 0, 0, o.flash ?? 0.2);
@@ -8810,8 +8824,8 @@ class WeaponModels {
   // v62h SF2's own AK-103 / black G36C (tools/sf2_rig_build.mjs ak103 / g36c); the AK-47 / gold G36C stand in until the pack is parsed
   ak103(def) { return this.fromRig('ak103_sf2_rig', this._rigOpts(def)) || this.ak47(def); }
   g36c_sf2(def) { return this.fromRig('g36c_sf2_rig', this._rigOpts(def)) || this.g36c(def); }
-  _rigOpts(def) { return def ? { equipTime: def.equipTime, zoomIn: def.sf2ZoomIn, reloadSounds: def.sf2ReloadSounds || undefined } : {}; }
-  m4(def) { return this.fromRig('m4a1_sf2_rig', { equipTime: def && def.equipTime }) || this.fromGLB('m4a1_sf2', { eye: 0.03, eyeRelief: 0.025, reticle: 'tritium', reticleScale: 0.22 }) || this.fromGLB('m4a1', { eye: 0.2, eyeRelief: 0.03 }) || this.m4Proc(); } // v61 SF2's own M4A1 first (tools/blender/sf2_gun_build.py): like SF2's ADS, the eye right at the carry handle's peep and a green dot on the front post // eye 20 cm behind the hood: the holo frame fills about a quarter of the view
+  _rigOpts(def) { return def ? { equipTime: def.equipTime, zoomIn: def.sf2ZoomIn, zoomOut: def.sf2ZoomOut, reloadSounds: def.sf2ReloadSounds || undefined } : {}; }
+  m4(def) { return this.fromRig('m4a1_sf2_rig', Object.assign(this._rigOpts(def), { reloadSounds: undefined })) || this.fromGLB('m4a1_sf2', { eye: 0.03, eyeRelief: 0.025, reticle: 'tritium', reticleScale: 0.22 }) || this.fromGLB('m4a1', { eye: 0.2, eyeRelief: 0.03 }) || this.m4Proc(); } // v61 SF2's own M4A1 first (tools/blender/sf2_gun_build.py): like SF2's ADS, the eye right at the carry handle's peep and a green dot on the front post // eye 20 cm behind the hood: the holo frame fills about a quarter of the view
   m4Proc() {
     const M = this.M, gb = new GunBuilder(M);
     gb.node('mag', new THREE.Vector3(0, -0.035, -0.03)).node('charge', new THREE.Vector3(0, 0.024, 0.13));
@@ -10308,12 +10322,18 @@ class SF2Rig {
     const s = (sm || m.getObjectByName('POST')).getWorldPosition(new THREE.Vector3());
     const eye = new THREE.Vector3(s.x, s.y, sm ? (o.eyeRelief != null ? s.z - o.eyeRelief : head.z) : head.z - 0.03 - (o.zoomIn ? o.zoomIn[0] : -3) / 100);
     m.rotation.y = Math.PI; m.position.set(eye.x, -eye.y, eye.z);
+    // v62i at the hip SF2 holds the mesh at vLocZoomOut, aimed at vLocZoomIN (UE cm: x forward, y right, z up), blended by the aim:
+    // the hip eye = the aimed eye + (in − out) in rig space (−y, z, x) / 100 (M4A1: 2 cm further back and 0.87 cm lower)
+    const zi = o.zoomIn || [-3, 0, 0], zo = o.zoomOut || [0, 0, 0];
+    this.eyeAim = eye.clone(); this.hipShift = new THREE.Vector3(-(zi[1] - zo[1]), zi[2] - zo[2], zi[0] - zo[0]).multiplyScalar(0.01);
+    this.place(0);
     this.reloadSounds = o.reloadSounds || null;
     // v62d play the Equip clip over the gun's draw time (def.equipTime, SF2's own 0.8 s for the M4A1); with none, the old 1.6×
     this.equipRate = o.equipTime ? this.dur('Equip') / o.equipTime : (o.equipRate || 1.6);
     this.zoomFireWeight = o.zoomFireWeight ?? 1; // v62f full again: 2 cm back with the eye 6.4 cm behind the peep is SF2's own (v62 had 0.3 for a 3 cm eye)
     this.idleT = 0; this.zoomT = 0; this.dashT = 0; this.fireT = -1; this.fireClip = 'Fire'; this.equipT = -1; this.lastDraw = 0;
   }
+  place(ads) { const e = this.eyeAim, h = this.hipShift, k = 1 - ads; this.model.position.set(e.x + h.x * k, -(e.y + h.y * k), e.z + h.z * k); }
   dur(k) { return this.a[k] ? this.a[k].getClip().duration : 0; }
   // { clip: [time, weight] }, every other clip off
   pose(w) {
@@ -10345,7 +10365,7 @@ class SF2Rig {
     if (run > 0) w.dash = [this.dashT, run];
     if (aim > 0) w.Zoom = [this.zoomT, aim];
     w.Idle = [this.idleT, rest - run - aim];
-    this.pose(w);
+    this.pose(w); this.place(s.ads);
   }
 }
 /* =====================================================================

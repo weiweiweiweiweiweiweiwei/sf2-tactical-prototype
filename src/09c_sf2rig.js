@@ -28,12 +28,18 @@ class SF2Rig {
     const s = (sm || m.getObjectByName('POST')).getWorldPosition(new THREE.Vector3());
     const eye = new THREE.Vector3(s.x, s.y, sm ? (o.eyeRelief != null ? s.z - o.eyeRelief : head.z) : head.z - 0.03 - (o.zoomIn ? o.zoomIn[0] : -3) / 100);
     m.rotation.y = Math.PI; m.position.set(eye.x, -eye.y, eye.z);
+    // v62i at the hip SF2 holds the mesh at vLocZoomOut, aimed at vLocZoomIN (UE cm: x forward, y right, z up), blended by the aim:
+    // the hip eye = the aimed eye + (in − out) in rig space (−y, z, x) / 100 (M4A1: 2 cm further back and 0.87 cm lower)
+    const zi = o.zoomIn || [-3, 0, 0], zo = o.zoomOut || [0, 0, 0];
+    this.eyeAim = eye.clone(); this.hipShift = new THREE.Vector3(-(zi[1] - zo[1]), zi[2] - zo[2], zi[0] - zo[0]).multiplyScalar(0.01);
+    this.place(0);
     this.reloadSounds = o.reloadSounds || null;
     // v62d play the Equip clip over the gun's draw time (def.equipTime, SF2's own 0.8 s for the M4A1); with none, the old 1.6×
     this.equipRate = o.equipTime ? this.dur('Equip') / o.equipTime : (o.equipRate || 1.6);
     this.zoomFireWeight = o.zoomFireWeight ?? 1; // v62f full again: 2 cm back with the eye 6.4 cm behind the peep is SF2's own (v62 had 0.3 for a 3 cm eye)
     this.idleT = 0; this.zoomT = 0; this.dashT = 0; this.fireT = -1; this.fireClip = 'Fire'; this.equipT = -1; this.lastDraw = 0;
   }
+  place(ads) { const e = this.eyeAim, h = this.hipShift, k = 1 - ads; this.model.position.set(e.x + h.x * k, -(e.y + h.y * k), e.z + h.z * k); }
   dur(k) { return this.a[k] ? this.a[k].getClip().duration : 0; }
   // { clip: [time, weight] }, every other clip off
   pose(w) {
@@ -65,6 +71,6 @@ class SF2Rig {
     if (run > 0) w.dash = [this.dashT, run];
     if (aim > 0) w.Zoom = [this.zoomT, aim];
     w.Idle = [this.idleT, rest - run - aim];
-    this.pose(w);
+    this.pose(w); this.place(s.ads);
   }
 }

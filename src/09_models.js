@@ -167,7 +167,7 @@ class WeaponModels {
   // Build the first-person model for a weapon definition: procedural first, then (optionally) an external GLTF/GLB swapped in.
   build(def) {
     const key = def.model || def.id;
-    const vm = (key === 'he' || key === 'flash' || key === 'smoke') ? this.grenade(key) : this[key](def);
+    const vm = (key === 'he' || key === 'flash' || key === 'smoke') ? this.grenade(key) : (def.sf2Rig && this.fromRig(def.sf2Rig + '_sf2_rig', this._rigOpts(def))) || this[key](def); // v62i def.sf2Rig: SF2's own rig, the old model until it is parsed
     if (def.kind !== 'grenade' && def.kind !== 'knife' && !vm.rig) this._fitAds(vm, def); // (a rig's camera is SF2's own)
     if (def.modelUrl) this.attachGLTF(vm, def.modelUrl);
     return vm;
@@ -306,7 +306,7 @@ class WeaponModels {
   // reloadSounds: when SF2's Reload clip pulls the mag (frame 5 of 75), seats it (27) and works the charging handle (55).
   fromRig(id, o = {}) {
     const G = GUN_RIGS[id]; if (!G) return null;
-    const rig = new SF2Rig(G, Object.assign({ reloadSounds: [[0.07, 'magout'], [0.36, 'magin'], [0.73, 'charge']] }, o)), g = new THREE.Group(); g.add(rig.model);
+    const rig = new SF2Rig(G, Object.assign({}, o, { reloadSounds: o.reloadSounds || [[0.07, 'magout'], [0.36, 'magin'], [0.73, 'charge']] })), g = new THREE.Group(); g.add(rig.model);
     const V = THREE.Vector3, out = { group: g, nodes: {}, rig, mag: null, bolt: null, slide: null, charge: null, pin: null, nade: null, pump: null, cover: null, lhand: null };
     out.hipPos = new V(); out.adsPos = new V(); out.hipRot = new THREE.Euler(); out.adsRot = new THREE.Euler(); out.magMove = new V(); out.magRot = 0;
     out.muzzle = rig.model.getObjectByName('MUZZLE'); out.flash = this._flash(out.muzzle, 0, 0, 0, o.flash ?? 0.2);
@@ -320,8 +320,8 @@ class WeaponModels {
   // v62h SF2's own AK-103 / black G36C (tools/sf2_rig_build.mjs ak103 / g36c); the AK-47 / gold G36C stand in until the pack is parsed
   ak103(def) { return this.fromRig('ak103_sf2_rig', this._rigOpts(def)) || this.ak47(def); }
   g36c_sf2(def) { return this.fromRig('g36c_sf2_rig', this._rigOpts(def)) || this.g36c(def); }
-  _rigOpts(def) { return def ? { equipTime: def.equipTime, zoomIn: def.sf2ZoomIn, reloadSounds: def.sf2ReloadSounds || undefined } : {}; }
-  m4(def) { return this.fromRig('m4a1_sf2_rig', { equipTime: def && def.equipTime }) || this.fromGLB('m4a1_sf2', { eye: 0.03, eyeRelief: 0.025, reticle: 'tritium', reticleScale: 0.22 }) || this.fromGLB('m4a1', { eye: 0.2, eyeRelief: 0.03 }) || this.m4Proc(); } // v61 SF2's own M4A1 first (tools/blender/sf2_gun_build.py): like SF2's ADS, the eye right at the carry handle's peep and a green dot on the front post // eye 20 cm behind the hood: the holo frame fills about a quarter of the view
+  _rigOpts(def) { return def ? { equipTime: def.equipTime, zoomIn: def.sf2ZoomIn, zoomOut: def.sf2ZoomOut, reloadSounds: def.sf2ReloadSounds || undefined } : {}; }
+  m4(def) { return this.fromRig('m4a1_sf2_rig', Object.assign(this._rigOpts(def), { reloadSounds: undefined })) || this.fromGLB('m4a1_sf2', { eye: 0.03, eyeRelief: 0.025, reticle: 'tritium', reticleScale: 0.22 }) || this.fromGLB('m4a1', { eye: 0.2, eyeRelief: 0.03 }) || this.m4Proc(); } // v61 SF2's own M4A1 first (tools/blender/sf2_gun_build.py): like SF2's ADS, the eye right at the carry handle's peep and a green dot on the front post // eye 20 cm behind the hood: the holo frame fills about a quarter of the view
   m4Proc() {
     const M = this.M, gb = new GunBuilder(M);
     gb.node('mag', new THREE.Vector3(0, -0.035, -0.03)).node('charge', new THREE.Vector3(0, 0.024, 0.13));
