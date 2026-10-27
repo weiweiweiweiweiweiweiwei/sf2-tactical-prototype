@@ -1047,7 +1047,7 @@ const WEAPON_DATABASE = {
     name: 'M4A1', type: 'assault', slot: 'primary', damageNear: 26, damageFar: 20, falloffStart: 25, falloffEnd: 60, fireRate: 0.09,
     recoilPitch: 0.012, recoilYaw: 0.009, recoilRecovery: 9,
     hipSpread: 0.075, adsSpread: 0.0022, adsFov: 55, adsType: '3d_sight', mobility: 0.95, maxAmmo: 30, reloadTime: 2.2, modelUrl: null,
-    model: 'm4', sound: 'm4', tracerEvery: 2, penetration: 1, desc: '均衡的全自動步槍，全息瞄具。',
+    model: 'm4', sound: 'm4', sf2: 'm4a1', tracerEvery: 2, penetration: 1, desc: '均衡的全自動步槍，全息瞄具。',
   },
   g36c: {
     name: 'G36C 黃金 消音', type: 'assault', slot: 'primary', damageNear: 25, damageFar: 19, falloffStart: 25, falloffEnd: 60, fireRate: 0.08,
@@ -1815,9 +1815,14 @@ class AudioEngine {
       if (window.SF2_SFX_MECH) { res(); return; }
       const s = document.createElement('script'); s.src = 'assets/sfx_mech.js'; s.async = true; s.onload = () => res(); s.onerror = () => res();
       document.head.appendChild(s);
+    })).then(() => new Promise((res) => { // v61 Special Force 2's own gun sounds (tools/sfx_sf2.mjs): a third pack, merged too
+      if (window.SF2_SFX_ORIG) { res(); return; }
+      const s = document.createElement('script'); s.src = 'assets/sfx_sf2.js'; s.async = true; s.onload = () => res(); s.onerror = () => res();
+      document.head.appendChild(s);
     })).then(async () => {
       const pack = window.SF2_SFX;
       if (pack && window.SF2_SFX_MECH) { Object.assign(pack, window.SF2_SFX_MECH); delete window.SF2_SFX_MECH; }
+      if (pack && window.SF2_SFX_ORIG) { Object.assign(pack, window.SF2_SFX_ORIG); delete window.SF2_SFX_ORIG; }
       if (!pack || !window.OfflineAudioContext) { console.warn('[audio] recorded sound pack not available — procedural sounds'); return false; }
       const oc = new OfflineAudioContext(1, 1, 48000), jobs = [];
       AudioEngine.sampleRate = pack._rate || {};
@@ -2095,8 +2100,15 @@ class AudioEngine {
   // v34: near shots (own + within 30 m) = the procedural banks (deep, dry, punchy — the user preferred them to the CC0 recordings,
   // which sounded thin) plus a live sub-bass kick; beyond 30 m the far-perspective recording (its natural echo is the point there).
   // Room reverb / echo scale with distance: up close it is almost dry.
-  gunshot(sound, pos = null, rate = 1) {
+  gunshot(sound, pos = null, rate = 1, sf2 = null) {
     if (!this.ctx) return;
+    // v61 a gun with SF2's own recordings (def.sf2): its fire takes up close, its _T takes past 30 m
+    const own = sf2 && AudioEngine.samplesReady && this._s(`sf2_${sf2}_fire`);
+    if (own) {
+      const d = pos ? this.listener.distanceTo(pos) : 0, far = d > 30 && this._s(`sf2_${sf2}_far`), wet = clamp(d / 30, 0, 1);
+      this._playBuf(far || own, pos, far ? { gain: 1.35, rate, lpDist: 95, send: 0.75 } : { gain: pos ? 1.1 : 0.95, rate, send: 0.08 + wet * 0.5, echo: 0.1 + wet * 0.6 });
+      return;
+    }
     const fs = this._s('gunfar_' + sound) ? sound : GUN_FAR[sound] || sound; // v47 own-voice guns borrow a far recording
     const d = pos ? this.listener.distanceTo(pos) : 0, far = d > 30 && AudioEngine.samplesReady ? this._s('gunfar_' + fs) : null;
     if (far) { this._playBuf(far, pos, { gain: 1.35, rate: (AudioEngine.sampleRate[fs] || 1) * rate, lpDist: 95, send: 0.75 }); return; }
@@ -2253,9 +2265,11 @@ class AudioEngine {
     if (surface === 'metal') this._nb(t, out, 'bandpass', 2200, 6, 0.3 * s, 0.002, 0.25);
   }
 
-  mech(type, pos = null) {
+  mech(type, pos = null, sf2 = null) {
     if (!this.ctx) return;
     const t = this.ctx.currentTime, out = this._bus(pos, 0.06, 2);
+    const own = sf2 && this._s(`sf2_${sf2}_${type.replace(/_p$|_rifle$|_pistol$/, '')}`); // v61 the gun's own SF2 recording (magout / magin / charge / draw)
+    if (own) { this._one(pick(own), out, 0.8, 0.98 + Math.random() * 0.04); return; }
     const R = MECH_REC[type], rec = R && this._s(R[0]);
     if (rec) { this._one(pick(rec), out, R[1], R[2] * (0.96 + Math.random() * 0.08)); return; } // v54 real recording first
     if (type.endsWith('_p')) type = type.slice(0, -2);
@@ -8595,7 +8609,7 @@ function loadGunModels() {
         const bin = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0)).buffer, gltf = await L.parseAsync(bin, ''), parts = [], marks = {};
         gltf.scene.updateMatrixWorld(true);
         gltf.scene.traverse((o) => {
-          if (o.isMesh) { const g = o.geometry.clone(); g.applyMatrix4(o.matrixWorld); const nm = o.name.split('__'); parts.push({ node: nm[0], mat: ((o.material && o.material.name) || '').replace('gun:', '') || (nm[1] || '').replace(/_\d+$/, ''), geo: g }); }
+          if (o.isMesh) { const g = o.geometry.clone(); g.applyMatrix4(o.matrixWorld); const nm = o.name.split('__'); parts.push({ node: nm[0], mat: ((o.material && o.material.name) || '').replace('gun:', '') || (nm[1] || '').replace(/_\d+$/, ''), geo: g, material: o.material }); }
           else if (/^(SIGHT|HOOD|MUZZLE|MUZZLE_S|SUPPORT|GRIP|MAGPIV|CHARGEPIV|BOLTPIV)$/.test(o.name)) marks[o.name] = o.getWorldPosition(new THREE.Vector3());
         });
         GUN_MODELS[id] = { parts, marks };
@@ -8760,8 +8774,8 @@ class WeaponModels {
     s.position.set(x, y, -u); s.scale.set(size, size, 1); s.visible = false; s.renderOrder = 10; s.userData.baseScale = size; parent.add(s);
     return s;
   }
-  _reticle(parent, y, dot = false, scale = 1) {
-    const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: dot ? this.M.dotTex : this.M.reticle, blending: THREE.AdditiveBlending, depthWrite: false, depthTest: true, transparent: true, color: new THREE.Color(1, 0.22, 0.16).multiplyScalar(dot ? 3.2 : 2.2), opacity: 0 }));
+  _reticle(parent, y, dot = false, scale = 1, rgb = [1, 0.22, 0.16]) { // (v61 rgb: the green tritium dot of an iron front post)
+    const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: dot ? this.M.dotTex : this.M.reticle, blending: THREE.AdditiveBlending, depthWrite: false, depthTest: true, transparent: true, color: new THREE.Color(...rgb).multiplyScalar(dot ? 3.2 : 2.2), opacity: 0 }));
     s.position.set(0, y, -3); const k = (dot ? 0.075 : 0.32) * scale; s.scale.set(k, k, 1); s.renderOrder = 4; parent.add(s);
     return s;
   }
@@ -8808,7 +8822,8 @@ class WeaponModels {
     const MAT = { tan: M.tan, magClear: M.magClear, gold: M.goldSatin, goldDark: M.goldDark, polymer: M.polymer, rubber: M.rubber, steel: M.steel, black: M.black, bright: M.bright, magBlack: M.magBlack, brass: M.brass, suppressor: M.suppressor, dotW: M.dotW, dotR: M.dotR };
     for (const p of G.parts) {
       if (p.mat === 'lens' || (o.skip && o.skip(p.node))) continue;
-      gb.add(p.geo.clone(), MAT[p.mat] || M.black, MOVING.has(p.node) ? p.node : 'body');
+      if (p.mat.startsWith('tex_') && p.material) p.material.side = THREE.DoubleSide; // (SF2 parts: some come out inside-out)
+      gb.add(p.geo.clone(), (p.mat.startsWith('tex_') && p.material) || MAT[p.mat] || M.black, MOVING.has(p.node) ? p.node : 'body'); // v61 'tex_*': the GLB's own textured material (SF2 originals)
     }
     const sightY = K.SIGHT.y, mz = K[o.muzzle || 'MUZZLE'] || K.MUZZLE, gu = K.GRIP ? -K.GRIP.z : 0.078, su = K.SUPPORT ? -K.SUPPORT.z : 0.3, sv = K.SUPPORT ? K.SUPPORT.y : -0.028;
     this.arm(gb, [0.02, -0.115, gu + 0.03], [0.19, -0.3, gu + 0.36]); this.gripHand(gb, 0.001, -0.082, -gu, -0.36);
@@ -8829,7 +8844,7 @@ class WeaponModels {
 
   /* ------------------------------------------------------------------ */
   // v49 M4A1 from Blender (tools/blender/m4a1_build.py); the procedural one below stays as the fallback
-  m4() { return this.fromGLB('m4a1', { eye: 0.2, eyeRelief: 0.03 }) || this.m4Proc(); } // eye 20 cm behind the hood: the holo frame fills about a quarter of the view
+  m4() { return this.fromGLB('m4a1_sf2', { eye: 0.01, eyeRelief: 0.02, reticle: 'tritium', reticleScale: 0.22 }) || this.fromGLB('m4a1', { eye: 0.2, eyeRelief: 0.03 }) || this.m4Proc(); } // v61 SF2's own M4A1 first (tools/blender/sf2_gun_build.py): like SF2's ADS, the eye right at the carry handle's peep and a green dot on the front post // eye 20 cm behind the hood: the holo frame fills about a quarter of the view
   m4Proc() {
     const M = this.M, gb = new GunBuilder(M);
     gb.node('mag', new THREE.Vector3(0, -0.035, -0.03)).node('charge', new THREE.Vector3(0, 0.024, 0.13));
@@ -9168,7 +9183,7 @@ class WeaponModels {
     out.hipPos = new THREE.Vector3(...o.hipPos); out.hipRot = new THREE.Euler(...(o.hipRot || [0, 0.035, 0]));
     out.adsPos = o.adsPos ? new THREE.Vector3(...o.adsPos) : out.hipPos.clone(); out.adsRot = o.adsPos ? new THREE.Euler(0, 0, 0) : out.hipRot.clone();
     if (o.muzzleU) { out.muzzle = new THREE.Object3D(); out.muzzle.position.set(0, 0, -o.muzzleU); g.add(out.muzzle); out.flash = this._flash(g, 0, 0, o.muzzleU + 0.03, o.flash); }
-    if (o.reticle) out.reticle = this._reticle(g, o.sightY, o.reticle === 'dot', o.reticleScale || 1);
+    if (o.reticle) out.reticle = this._reticle(g, o.sightY, o.reticle === 'dot' || o.reticle === 'tritium', o.reticleScale || 1, o.reticle === 'tritium' ? [0.25, 1, 0.3] : undefined);
     return out;
   }
 
@@ -10325,7 +10340,7 @@ class Weapon {
   holster() { this.reloading = false; this.queued = 0; this.autoReloadT = 0; if (this.vm.flash) this.vm.flash.visible = false; }
   get reloadPhase() { return this.reloading ? clamp(this.reloadT / this.reloadTime, 0, 1) : 0; }
   // mechanical sounds: in your head for your own gun, positional for anyone else's
-  _mech(name) { this.game.audio.mech(name, this.local ? null : this.owner.motor.pos); }
+  _mech(name) { this.game.audio.mech(name, this.local ? null : this.owner.motor.pos, this.sf2); }
 
   tryReload() {
     if (!this.mag || this.reloading || this.ammo >= this.mag || this.reserveAmmo <= 0) return false;
@@ -10416,7 +10431,7 @@ class Weapon {
       ws.muzzleLight(this.suppressed ? 0.25 : 1);
       if (this.tracerEvery && this.shots % this.tracerEvery === 0 && !(ws.scopedIn && this.scoped)) g.effects.tracer(mz, res.end, this.kind === 'sniper' ? 520 : 400, this.kind === 'sniper' ? 6 : 3.5);
       if (this.kind !== 'sniper' && this.kind !== 'shotgun') this.ejectCasing(ray, false);
-      g.audio.gunshot(this.sound, null, this.soundRate);
+      g.audio.gunshot(this.sound, null, this.soundRate, this.sf2);
     } else g.thirdPersonShot(p, this.def, mz, res.end, this.shots);
     g.recordShot(p, mz, res.end, this.def);
     g.emitNoise(p.motor.pos, this.noise, p.team);
@@ -12036,7 +12051,7 @@ class BotAI {
       if (!def.suppressed) g.effects.worldFlash(mz, def.kind === 'sniper' || def.kind === 'shotgun' ? 0.8 : 0.5);
       if (def.tracerEvery || def.kind === 'sniper') g.effects.tracer(mz, res.end, 330, 3, 0xffc070);
     }
-    g.audio.gunshot(def.sound, mz, def.soundRate);
+    g.audio.gunshot(def.sound, mz, def.soundRate, def.sf2);
     g.recordShot(bot, mz, res.end, def);
     bot.spottedT = g.time;
     if (!res.hitPlayer && g.player.alive) {
@@ -13669,7 +13684,7 @@ class Match {
       if (!def.suppressed) this.effects.worldFlash(from, def.kind === 'sniper' || def.kind === 'shotgun' ? 0.8 : 0.5);
       if (def.kind === 'sniper' || (def.tracerEvery && n % def.tracerEvery === 0)) this.effects.tracer(from, to, 330, 3, 0xffc070);
     }
-    this.audio.gunshot(def.sound, from, def.soundRate);
+    this.audio.gunshot(def.sound, from, def.soundRate, def.sf2);
   }
 
   meleeTrace(shooter, origin, dir, range) {
@@ -13807,7 +13822,7 @@ class Match {
     while (K.shotIdx < S.length && S[K.shotIdx].t <= K.t) {
       const s = S[K.shotIdx++]; if (s.t < K.t0) continue;
       this.effects.tracer(s.from, s.to, 400, 3.5, 0xffc070); this.effects.worldFlash(s.from, 0.6);
-      if (s.i === K.ki) this.audio.gunshot(s.def.sound, s.from, s.def.soundRate);
+      if (s.i === K.ki) this.audio.gunshot(s.def.sound, s.from, s.def.soundRate, s.def.sf2);
     }
   }
   _endKillcam(skipped) {

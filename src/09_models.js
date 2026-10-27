@@ -66,7 +66,7 @@ function loadGunModels() {
         const bin = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0)).buffer, gltf = await L.parseAsync(bin, ''), parts = [], marks = {};
         gltf.scene.updateMatrixWorld(true);
         gltf.scene.traverse((o) => {
-          if (o.isMesh) { const g = o.geometry.clone(); g.applyMatrix4(o.matrixWorld); const nm = o.name.split('__'); parts.push({ node: nm[0], mat: ((o.material && o.material.name) || '').replace('gun:', '') || (nm[1] || '').replace(/_\d+$/, ''), geo: g }); }
+          if (o.isMesh) { const g = o.geometry.clone(); g.applyMatrix4(o.matrixWorld); const nm = o.name.split('__'); parts.push({ node: nm[0], mat: ((o.material && o.material.name) || '').replace('gun:', '') || (nm[1] || '').replace(/_\d+$/, ''), geo: g, material: o.material }); }
           else if (/^(SIGHT|HOOD|MUZZLE|MUZZLE_S|SUPPORT|GRIP|MAGPIV|CHARGEPIV|BOLTPIV)$/.test(o.name)) marks[o.name] = o.getWorldPosition(new THREE.Vector3());
         });
         GUN_MODELS[id] = { parts, marks };
@@ -231,8 +231,8 @@ class WeaponModels {
     s.position.set(x, y, -u); s.scale.set(size, size, 1); s.visible = false; s.renderOrder = 10; s.userData.baseScale = size; parent.add(s);
     return s;
   }
-  _reticle(parent, y, dot = false, scale = 1) {
-    const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: dot ? this.M.dotTex : this.M.reticle, blending: THREE.AdditiveBlending, depthWrite: false, depthTest: true, transparent: true, color: new THREE.Color(1, 0.22, 0.16).multiplyScalar(dot ? 3.2 : 2.2), opacity: 0 }));
+  _reticle(parent, y, dot = false, scale = 1, rgb = [1, 0.22, 0.16]) { // (v61 rgb: the green tritium dot of an iron front post)
+    const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: dot ? this.M.dotTex : this.M.reticle, blending: THREE.AdditiveBlending, depthWrite: false, depthTest: true, transparent: true, color: new THREE.Color(...rgb).multiplyScalar(dot ? 3.2 : 2.2), opacity: 0 }));
     s.position.set(0, y, -3); const k = (dot ? 0.075 : 0.32) * scale; s.scale.set(k, k, 1); s.renderOrder = 4; parent.add(s);
     return s;
   }
@@ -279,7 +279,8 @@ class WeaponModels {
     const MAT = { tan: M.tan, magClear: M.magClear, gold: M.goldSatin, goldDark: M.goldDark, polymer: M.polymer, rubber: M.rubber, steel: M.steel, black: M.black, bright: M.bright, magBlack: M.magBlack, brass: M.brass, suppressor: M.suppressor, dotW: M.dotW, dotR: M.dotR };
     for (const p of G.parts) {
       if (p.mat === 'lens' || (o.skip && o.skip(p.node))) continue;
-      gb.add(p.geo.clone(), MAT[p.mat] || M.black, MOVING.has(p.node) ? p.node : 'body');
+      if (p.mat.startsWith('tex_') && p.material) p.material.side = THREE.DoubleSide; // (SF2 parts: some come out inside-out)
+      gb.add(p.geo.clone(), (p.mat.startsWith('tex_') && p.material) || MAT[p.mat] || M.black, MOVING.has(p.node) ? p.node : 'body'); // v61 'tex_*': the GLB's own textured material (SF2 originals)
     }
     const sightY = K.SIGHT.y, mz = K[o.muzzle || 'MUZZLE'] || K.MUZZLE, gu = K.GRIP ? -K.GRIP.z : 0.078, su = K.SUPPORT ? -K.SUPPORT.z : 0.3, sv = K.SUPPORT ? K.SUPPORT.y : -0.028;
     this.arm(gb, [0.02, -0.115, gu + 0.03], [0.19, -0.3, gu + 0.36]); this.gripHand(gb, 0.001, -0.082, -gu, -0.36);
@@ -300,7 +301,7 @@ class WeaponModels {
 
   /* ------------------------------------------------------------------ */
   // v49 M4A1 from Blender (tools/blender/m4a1_build.py); the procedural one below stays as the fallback
-  m4() { return this.fromGLB('m4a1', { eye: 0.2, eyeRelief: 0.03 }) || this.m4Proc(); } // eye 20 cm behind the hood: the holo frame fills about a quarter of the view
+  m4() { return this.fromGLB('m4a1_sf2', { eye: 0.01, eyeRelief: 0.02, reticle: 'tritium', reticleScale: 0.22 }) || this.fromGLB('m4a1', { eye: 0.2, eyeRelief: 0.03 }) || this.m4Proc(); } // v61 SF2's own M4A1 first (tools/blender/sf2_gun_build.py): like SF2's ADS, the eye right at the carry handle's peep and a green dot on the front post // eye 20 cm behind the hood: the holo frame fills about a quarter of the view
   m4Proc() {
     const M = this.M, gb = new GunBuilder(M);
     gb.node('mag', new THREE.Vector3(0, -0.035, -0.03)).node('charge', new THREE.Vector3(0, 0.024, 0.13));
@@ -639,7 +640,7 @@ class WeaponModels {
     out.hipPos = new THREE.Vector3(...o.hipPos); out.hipRot = new THREE.Euler(...(o.hipRot || [0, 0.035, 0]));
     out.adsPos = o.adsPos ? new THREE.Vector3(...o.adsPos) : out.hipPos.clone(); out.adsRot = o.adsPos ? new THREE.Euler(0, 0, 0) : out.hipRot.clone();
     if (o.muzzleU) { out.muzzle = new THREE.Object3D(); out.muzzle.position.set(0, 0, -o.muzzleU); g.add(out.muzzle); out.flash = this._flash(g, 0, 0, o.muzzleU + 0.03, o.flash); }
-    if (o.reticle) out.reticle = this._reticle(g, o.sightY, o.reticle === 'dot', o.reticleScale || 1);
+    if (o.reticle) out.reticle = this._reticle(g, o.sightY, o.reticle === 'dot' || o.reticle === 'tritium', o.reticleScale || 1, o.reticle === 'tritium' ? [0.25, 1, 0.3] : undefined);
     return out;
   }
 

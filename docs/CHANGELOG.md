@@ -873,3 +873,13 @@
   - 碰撞資料 gzip（瀏覽器內建 `DecompressionStream` 解壓，`apexGunzip`）：22 → 10 MB。
   - 每個物件群都帶物件亮度色彩，著色器變體 65 → 59（Windows ANGLE 上每個約 70 ms）。
   - 打包檔（base64）：Skull Town 85 → 38 MB、訓練場 72 → 30 MB；JS 記憶體 667 → 536 MB、619 → 477 MB；載入約 9–10 秒（大半是著色器編譯）。
+
+## v61（2026-10-27）：SF2 原版 M4A1（模型、貼圖、槍聲）
+- 使用者同意改用自己安裝的 SF2 原版素材（原本規則是只參考、自己重做；`docs/research/sf2/SF2_RESEARCH.md` 的舊規則以這次決定為準）。
+- 工具：UModel（使用者手動下載到 `tools/out/umodel_win32/`，官網擋自動下載）。`-game=sf2 -path=D:/SpecialForce2/SFGame/CookedPCConsole`：
+  `-export -gltf rif_m4a1`（31 個骨架模型、60 段動畫、4 組動畫集）、`-export -png rif_m4a1_texture`（248 張）、`-export -sounds Sound_M4A1`（26 段）。
+- `tools/blender/sf2_gun_build.py m4a1`：零件（槍身、槍管、槍托、彈匣、提把）綁在第一人稱骨架上，固化姿勢 → 轉成 gunlib 的槍座標（槍口 +Y、膛線 Z = 0、握把 u −0.078）→ 定位點（SIGHT／HOOD 在提把覘孔、MUZZLE、GRIP、SUPPORT、MAGPIV、CHARGEPIV）→ 材質 `gun:tex_*`（原版 _d 顏色＋_n 法線）→ `tools/guns/m4a1_sf2.glb`（400 KB，貼圖 WebP 內嵌）。
+  - 預設造型沒有前準星零件；`rif_m4a1_sight_up` 是 A2 前準星（插槽沒匯出，放在護木導軌前端，準星頂端對齊覘孔高度）。
+- `src/09_models.js`：`fromGLB` 遇到 `tex_*` 材質就用 GLB 自己的貼圖材質（雙面，部分零件匯出後面朝反）；`m4()` 先用 `m4a1_sf2`，開鏡照使用者給的原版畫面：眼睛貼著覘孔（eye 0.01）、前準星綠色夜光點（新增 `reticle: 'tritium'`）。
+- 原版槍聲：`tools/sfx_sf2.mjs` → `assets/sfx_sf2.js`（191 KB，併進音效包）；武器資料 `sf2: 'm4a1'` 才使用（其他共用 `m4` 聲音的槍不受影響）：近距離 WeaponFire、30 m 外 `_T`、換彈 ClipOut／ClipIn／Slide。
+- 還沒做：原版動畫（UModel 指令列只匯出 PSA）、第三人稱槍模、其他槍。

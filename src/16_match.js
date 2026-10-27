@@ -315,7 +315,7 @@ class Match {
       if (!def.suppressed) this.effects.worldFlash(from, def.kind === 'sniper' || def.kind === 'shotgun' ? 0.8 : 0.5);
       if (def.kind === 'sniper' || (def.tracerEvery && n % def.tracerEvery === 0)) this.effects.tracer(from, to, 330, 3, 0xffc070);
     }
-    this.audio.gunshot(def.sound, from, def.soundRate);
+    this.audio.gunshot(def.sound, from, def.soundRate, def.sf2);
   }
 
   meleeTrace(shooter, origin, dir, range) {
@@ -453,7 +453,7 @@ class Match {
     while (K.shotIdx < S.length && S[K.shotIdx].t <= K.t) {
       const s = S[K.shotIdx++]; if (s.t < K.t0) continue;
       this.effects.tracer(s.from, s.to, 400, 3.5, 0xffc070); this.effects.worldFlash(s.from, 0.6);
-      if (s.i === K.ki) this.audio.gunshot(s.def.sound, s.from, s.def.soundRate);
+      if (s.i === K.ki) this.audio.gunshot(s.def.sound, s.from, s.def.soundRate, s.def.sf2);
     }
   }
   _endKillcam(skipped) {

@@ -673,7 +673,7 @@ class BotAI {
       if (!def.suppressed) g.effects.worldFlash(mz, def.kind === 'sniper' || def.kind === 'shotgun' ? 0.8 : 0.5);
       if (def.tracerEvery || def.kind === 'sniper') g.effects.tracer(mz, res.end, 330, 3, 0xffc070);
     }
-    g.audio.gunshot(def.sound, mz, def.soundRate);
+    g.audio.gunshot(def.sound, mz, def.soundRate, def.sf2);
     g.recordShot(bot, mz, res.end, def);
     bot.spottedT = g.time;
     if (!res.hitPlayer && g.player.alive) {

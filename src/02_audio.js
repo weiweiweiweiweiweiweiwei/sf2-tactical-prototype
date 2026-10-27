@@ -174,9 +174,14 @@ class AudioEngine {
       if (window.SF2_SFX_MECH) { res(); return; }
       const s = document.createElement('script'); s.src = 'assets/sfx_mech.js'; s.async = true; s.onload = () => res(); s.onerror = () => res();
       document.head.appendChild(s);
+    })).then(() => new Promise((res) => { // v61 Special Force 2's own gun sounds (tools/sfx_sf2.mjs): a third pack, merged too
+      if (window.SF2_SFX_ORIG) { res(); return; }
+      const s = document.createElement('script'); s.src = 'assets/sfx_sf2.js'; s.async = true; s.onload = () => res(); s.onerror = () => res();
+      document.head.appendChild(s);
     })).then(async () => {
       const pack = window.SF2_SFX;
       if (pack && window.SF2_SFX_MECH) { Object.assign(pack, window.SF2_SFX_MECH); delete window.SF2_SFX_MECH; }
+      if (pack && window.SF2_SFX_ORIG) { Object.assign(pack, window.SF2_SFX_ORIG); delete window.SF2_SFX_ORIG; }
       if (!pack || !window.OfflineAudioContext) { console.warn('[audio] recorded sound pack not available — procedural sounds'); return false; }
       const oc = new OfflineAudioContext(1, 1, 48000), jobs = [];
       AudioEngine.sampleRate = pack._rate || {};
@@ -454,8 +459,15 @@ class AudioEngine {
   // v34: near shots (own + within 30 m) = the procedural banks (deep, dry, punchy — the user preferred them to the CC0 recordings,
   // which sounded thin) plus a live sub-bass kick; beyond 30 m the far-perspective recording (its natural echo is the point there).
   // Room reverb / echo scale with distance: up close it is almost dry.
-  gunshot(sound, pos = null, rate = 1) {
+  gunshot(sound, pos = null, rate = 1, sf2 = null) {
     if (!this.ctx) return;
+    // v61 a gun with SF2's own recordings (def.sf2): its fire takes up close, its _T takes past 30 m
+    const own = sf2 && AudioEngine.samplesReady && this._s(`sf2_${sf2}_fire`);
+    if (own) {
+      const d = pos ? this.listener.distanceTo(pos) : 0, far = d > 30 && this._s(`sf2_${sf2}_far`), wet = clamp(d / 30, 0, 1);
+      this._playBuf(far || own, pos, far ? { gain: 1.35, rate, lpDist: 95, send: 0.75 } : { gain: pos ? 1.1 : 0.95, rate, send: 0.08 + wet * 0.5, echo: 0.1 + wet * 0.6 });
+      return;
+    }
     const fs = this._s('gunfar_' + sound) ? sound : GUN_FAR[sound] || sound; // v47 own-voice guns borrow a far recording
     const d = pos ? this.listener.distanceTo(pos) : 0, far = d > 30 && AudioEngine.samplesReady ? this._s('gunfar_' + fs) : null;
     if (far) { this._playBuf(far, pos, { gain: 1.35, rate: (AudioEngine.sampleRate[fs] || 1) * rate, lpDist: 95, send: 0.75 }); return; }
@@ -612,9 +624,11 @@ class AudioEngine {
     if (surface === 'metal') this._nb(t, out, 'bandpass', 2200, 6, 0.3 * s, 0.002, 0.25);
   }
 
-  mech(type, pos = null) {
+  mech(type, pos = null, sf2 = null) {
     if (!this.ctx) return;
     const t = this.ctx.currentTime, out = this._bus(pos, 0.06, 2);
+    const own = sf2 && this._s(`sf2_${sf2}_${type.replace(/_p$|_rifle$|_pistol$/, '')}`); // v61 the gun's own SF2 recording (magout / magin / charge / draw)
+    if (own) { this._one(pick(own), out, 0.8, 0.98 + Math.random() * 0.04); return; }
     const R = MECH_REC[type], rec = R && this._s(R[0]);
     if (rec) { this._one(pick(rec), out, R[1], R[2] * (0.96 + Math.random() * 0.08)); return; } // v54 real recording first
     if (type.endsWith('_p')) type = type.slice(0, -2);

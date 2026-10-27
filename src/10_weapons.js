@@ -34,7 +34,7 @@ class Weapon {
   holster() { this.reloading = false; this.queued = 0; this.autoReloadT = 0; if (this.vm.flash) this.vm.flash.visible = false; }
   get reloadPhase() { return this.reloading ? clamp(this.reloadT / this.reloadTime, 0, 1) : 0; }
   // mechanical sounds: in your head for your own gun, positional for anyone else's
-  _mech(name) { this.game.audio.mech(name, this.local ? null : this.owner.motor.pos); }
+  _mech(name) { this.game.audio.mech(name, this.local ? null : this.owner.motor.pos, this.sf2); }
 
   tryReload() {
     if (!this.mag || this.reloading || this.ammo >= this.mag || this.reserveAmmo <= 0) return false;
@@ -125,7 +125,7 @@ class Weapon {
       ws.muzzleLight(this.suppressed ? 0.25 : 1);
       if (this.tracerEvery && this.shots % this.tracerEvery === 0 && !(ws.scopedIn && this.scoped)) g.effects.tracer(mz, res.end, this.kind === 'sniper' ? 520 : 400, this.kind === 'sniper' ? 6 : 3.5);
       if (this.kind !== 'sniper' && this.kind !== 'shotgun') this.ejectCasing(ray, false);
-      g.audio.gunshot(this.sound, null, this.soundRate);
+      g.audio.gunshot(this.sound, null, this.soundRate, this.sf2);
     } else g.thirdPersonShot(p, this.def, mz, res.end, this.shots);
     g.recordShot(p, mz, res.end, this.def);
     g.emitNoise(p.motor.pos, this.noise, p.team);
