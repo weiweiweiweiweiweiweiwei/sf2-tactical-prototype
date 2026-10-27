@@ -24,6 +24,7 @@ class SF2Rig {
     m.rotation.y = Math.PI; m.position.set(eye.x, -eye.y, eye.z);
     this.reloadSounds = o.reloadSounds || null;
     this.equipRate = o.equipRate || 1.6; // SF2's Equip is ~1 s; here a drawn gun can fire at once, so it plays faster
+    this.zoomFireWeight = o.zoomFireWeight ?? 0.3;
     this.idleT = 0; this.zoomT = 0; this.dashT = 0; this.fireT = -1; this.fireClip = 'Fire'; this.equipT = -1; this.lastDraw = 0;
   }
   dur(k) { return this.a[k] ? this.a[k].getClip().duration : 0; }
@@ -49,7 +50,10 @@ class SF2Rig {
     }
     if (this.fireT >= 0) {
       const d = this.dur(this.fireClip); this.fireT += dt;
-      if (this.fireT >= d) this.fireT = -1; else { const k = rest * fade(this.fireT, d, 0, 0.18); w[this.fireClip] = [this.fireT, k]; rest -= k; }
+      // ZoomFire is a straight 2 cm push back; with the eye 3 cm behind the peep that slams the rear sight into the camera
+      // (user 10-27) — at 0.3 over Zoom it is the 0.6 cm the v61b kick settled on, still SF2's own motion
+      const cap = this.fireClip === 'ZoomFire' ? this.zoomFireWeight : 1;
+      if (this.fireT >= d) this.fireT = -1; else { const k = rest * cap * fade(this.fireT, d, 0, 0.18); w[this.fireClip] = [this.fireT, k]; rest -= k; }
     }
     const run = rest * s.sprint, aim = (rest - run) * s.ads;
     if (run > 0) w.dash = [this.dashT, run];
