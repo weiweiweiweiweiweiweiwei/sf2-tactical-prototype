@@ -1,4 +1,5 @@
 import { CANNON, THREE, clamp } from './01_core.js';
+import { TriSoup } from './04_collision.js';
 import { MAPS } from './07_maps.js';
 import { apexGLTF, apexPack } from './07u_apex.js';
 import { ApexDoors, apexBakedSpawns, apexNav } from './07v_apex_full.js';
@@ -124,10 +125,13 @@ function apexTriMap(def) {
     },
     async preload() {
       if (this._tri) return;
-      const p = await apexPack(this.id, this.packDir), text = (b) => JSON.parse(new TextDecoder().decode(b));
+      const LT = window.__loadT = {}, t0 = performance.now(), lap = (k) => { LT[k] = Math.round(performance.now() - t0 - Object.values(LT).reduce((a, v) => a + v, 0)); }; // v62t load profile (tools/_loadprof.mjs)
+      const p = await apexPack(this.id, this.packDir), text = (b) => JSON.parse(new TextDecoder().decode(b)); lap('pack scripts + base64');
       const manifest = text(p.manifest), navMeta = p.navMeta ? text(p.navMeta) : null;
-      const [lmInner, lmOuter, gltf, door] = await Promise.all([skullTexture(p.lm_inner), skullTexture(p.lm_outer), apexGLTF(p.glb), apexGLTF(p.door)]);
-      this._tri = { manifest, navMeta, nav: p.nav ? apexNav(p.nav) : null, tris: skullTris(await apexGunzip(p.collision)), gltf, door: door.scene, lm: { inner: lmInner, outer: lmOuter } };
+      const [lmInner, lmOuter, gltf, door] = await Promise.all([skullTexture(p.lm_inner), skullTexture(p.lm_outer), apexGLTF(p.glb), apexGLTF(p.door)]); lap('glb (Draco, WebP) + lightmaps');
+      const nav = p.nav ? apexNav(p.nav) : null; lap('nav'); const tris = skullTris(await apexGunzip(p.collision)); lap('collision gunzip');
+      const soup = new TriSoup(tris.pos, tris.idx, 'concrete', tris.mats); lap('collision grid'); // (v62t here, not in build: the room's preload pays for it)
+      this._tri = { manifest, navMeta, nav, tris, soup, gltf, door: door.scene, lm: { inner: lmInner, outer: lmOuter } };
       const B = manifest.playBounds; this.bounds = { minX: Math.floor(B.minX), maxX: Math.ceil(B.maxX), minZ: Math.floor(B.minZ), maxZ: Math.ceil(B.maxZ) };
       this.killY = manifest.killY;
       if (navMeta) {
@@ -143,7 +147,8 @@ function apexTriMap(def) {
       const { manifest, tris, gltf, lm, nav } = this._tri;
       if (nav) b.navBaked = nav;
       b.game.camera.far = 1600; b.game.camera.updateProjectionMatrix();
-      const soup = b.col.addTris(tris.pos, tris.idx, 'concrete', tris.mats);
+      const LT = window.__loadT || {}, t1 = performance.now();
+      const soup = b.col.useTris(this._tri.soup);
       b.phys.triGround = new TriGround(soup);
       // the edge of the arena: invisible walls 2 m outside the play bounds (moves, shots, grenades)
       const B = this.bounds, H = 120, L = -60;
@@ -189,6 +194,7 @@ function apexTriMap(def) {
       const doors = new ApexDoors(b, manifest.doors, this._tri.door);
       b.mechs.push(doors, new SkullStreaming(b, soup, meshes));
       window.__triMap = { objects, drawGroups: batches.size, doors: doors.doors.length, triangles: soup.n, manifest };
+      LT['visuals + doors'] = Math.round(performance.now() - t1);
     }
   }, def);
 }

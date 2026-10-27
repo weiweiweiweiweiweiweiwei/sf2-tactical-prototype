@@ -502,6 +502,8 @@ class App {
   async warm(i) {
     const token = this.warmToken = (this.warmToken || 0) + 1, def = MAPS[i];
     if (Settings.data.hdri && def.hdri) this.loadHDR(def.hdri);
+    // v62t the map's own data too (the Apex packs: ≈ 4.5 s of a cold start) while the room waits — the match then skips it
+    if (def.preload && !def._preloadP) { const t0 = performance.now(); def._preloadP = def.preload().then(() => { window.__warmLoad = Object.assign(window.__warmLoad || {}, { [def.id]: Math.round(performance.now() - t0) }); }, (e) => { def._preloadP = null; console.warn('map preload', def.id, e); }); }
     for (const name of this.dry[i].used) {
       if (this.warmToken !== token || this.state !== 'lobby') return;
       if (!this.mats.cache.has(name)) { this.mats.get(name); await sleep(40); }

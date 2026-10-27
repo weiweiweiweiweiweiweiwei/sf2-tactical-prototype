@@ -150,6 +150,16 @@ class PostFX {
     const q = QUALITY[qName] || QUALITY.high, r = this.r;
     this.q = q; this.qName = qName; this.match = match; this.scale = clamp(this.scale, q.minScale, 1);
     r.setPixelRatio(this.pixelRatio()); r.setSize(innerWidth, innerHeight);
+    this.applyWorld(match, qName);
+    r.shadowMap.autoUpdate = true; this.frameN = 0;
+    if (!q.post) { this.applyLook(resolveLook(match.def)); return; }
+    this._composer(match, q);
+  }
+
+  // v62t what of a preset reaches the world's shader programs (shadow filter, which point lights exist, world IBL): Match.build
+  // runs it as soon as the level is lit, so the shaders compile in the background while the rest loads; configure() repeats it
+  applyWorld(match, qName) {
+    const q = QUALITY[qName] || QUALITY.high, r = this.r;
     const sun = match.sun, type = q.soft ? THREE.PCFSoftShadowMap : q.hard ? THREE.BasicShadowMap : THREE.PCFShadowMap, relink = r.shadowMap.type !== type;
     r.shadowMap.type = type;
     if (sun && (sun.shadow.mapSize.x !== q.shadow || relink)) { sun.shadow.mapSize.set(q.shadow, q.shadow); if (sun.shadow.map) { sun.shadow.map.dispose(); sun.shadow.map = null; } }
@@ -163,9 +173,10 @@ class PostFX {
       const ml = (match.vmEnv && match.vmEnv.userData.meanLum) || 0.35;
       match.ambFill.intensity = q.worldEnv === false ? clamp(5.8 * match.envK * ml, 0.35, 2.4) : 0;
     }
-    r.shadowMap.autoUpdate = true; this.frameN = 0;
-    if (!q.post) { this.applyLook(resolveLook(match.def)); return; }
-    const size = r.getDrawingBufferSize(new THREE.Vector2());
+  }
+
+  _composer(match, q) {
+    const r = this.r, size = r.getDrawingBufferSize(new THREE.Vector2());
     // no MSAA on composer targets: UnrealBloom blends into readBuffer, which three invalidates after an MSAA resolve (→ black frame). SMAA is used instead.
     const rt = new THREE.WebGLRenderTarget(size.x, size.y, { type: THREE.HalfFloatType });
     const c = this.composer = new EffectComposer(r, rt);
