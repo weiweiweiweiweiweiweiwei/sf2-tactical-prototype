@@ -919,3 +919,8 @@
 - **訓練場選圖縮圖、載入畫面**：使用者 Blender 截圖的視角（從低處仰看紅色面板塔後面的高腳建築）。座標軸 → 方向（仰 12°、朝西北），在地圖上撒 12 個位置找到同一棟樓，再用 5 個地標（三個窗戶／通風口、吊艙看板、紅色面板塔）解出相機：`pos [72.0, 15.9, 97.9]`、誤差約 2 px，解出的視角 42.5°（Blender 鏡頭換算 43.8°，採用後者）。
 - **倉庫槍卡**：大廳一開就開始畫槍卡縮圖，那時槍模 GLB 還沒解析完，先畫成程式做的備用槍；GLB 載入後只清了預覽快取。現在載入後把已畫好的縮圖清掉重畫（卡片原地換圖）。實測：先畫的是備用槍，9 秒內自動換成 SF2 原版 M4A1。
 - 待辦加一項：材質照 SF2 原版的 Phong 著色（高光貼圖 `_s`、邊緣光、cubemap 反射）。
+
+## v62c（2026-10-27）：讀出 SF2 原版武器數值
+- 使用者要查後座力的原版數字。武器設定檔 `SFGame/Config/SFWeapon.ini` 等 46 個 .ini 是加密的（8 位元組區塊＋CFB），金鑰在有商業加殼的 `sf2.exe` 裡，沒有追下去。
+- 改從資料包讀：`SFGameContent.upk` 有每把槍的類別預設物件（`Default__SFCWeaponM4A1`…），`SFGame.upk`（LZO 壓縮）有基底類別。新工具：`tools/sf2_props.py`（UE3 屬性標籤解析）、`tools/sf2_unlzo.py`（純 Python LZO1X 解壓）、`tools/sf2_weapon_dump.py`（805 把槍、合併繼承）→ `docs/research/sf2/client-data/weapons.json`、`README.md`。
+- 後座力運算函式（`StartRecoil` 等）是原生函式，公式在加殼的 exe 裡，只讀得到參數；欄位意義是推測（見 README）。
