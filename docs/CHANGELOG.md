@@ -1012,3 +1012,9 @@
 ### v62p（2026-10-27）：開鏡上跳照 SF2 比例（使用者選 A）、M4A1 覘孔水平置中
 - 開鏡每發上跳 = 腰射 × SF2 的 `RecoilZoomModifier`（M4A1 0.6）：0.31°／發，30 發約 9.3°（腰射約 16°）。v62j 的 22.7° 是把那張腰射截圖當成開鏡算的。
 - 覘孔置中：使用者截圖（10-27）提把覘孔環比綠點偏左；量測（1920×1080，世界隱藏、白底，`tools/out/_ringcenter.mjs`＋`_ringmeasure.py`）偏左 26 px。`PEEP_DX` 0.0007 → 0.00136（舊值是給可拆式照門調的）：現在差 0.2 px（垂直 2 px），孔寬 268 px（SF2 265）。
+
+### v62q（2026-10-27）：Three.js r160 → r170
+- 所有 `three@0.160.0`（importmap、5 個 Draco 解碼路徑）改 `0.170.0`。
+- Apex 地圖的光照貼圖著色器：r169 起 `getShadow()` 多了 `shadowIntensity` 參數，舊呼叫在 Skull Town 編譯失敗（地面、骨頭材質）。
+- 環境光（IBL）：r163 起「沒有自己 envMap、吃 `scene.environment` 的材質」，`envMapIntensity` 會被 `scene.environmentIntensity` 蓋掉，地圖各自的 `envIntensity`（倉庫 0.3）失效，倉庫亮了 2.5 倍。`applyEnvIntensity` 改成把場景環境指定為材質自己的 envMap（低畫質關掉 IBL 時同步清掉）。
+- 驗證（`tools/out/_pagecmp.mjs` 同視角截圖比 r160）：倉庫 0.9、旅館 3.7（雲）、天空城 0.7、Skull Town 1.8、訓練場 0.8（平均像素差，0–255）；低畫質倉庫 0.7；槍模開鏡 3.1。`check.mjs`、`_nettest`、`check-apex-full` 都過。

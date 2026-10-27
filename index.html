@@ -969,8 +969,8 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
 </script>
 <script type="importmap">
 { "imports": {
-  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
-  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/",
+  "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/",
   "cannon-es": "https://cdn.jsdelivr.net/npm/cannon-es@0.20.0/dist/cannon-es.js"
 } }
 </script>
@@ -7128,7 +7128,7 @@ MAPS.push({
       if (!window.RYOKAN_GLB) await new Promise((res) => { const s = document.createElement('script'); s.src = 'assets/maps/ryokan.js'; s.async = true; s.onload = res; s.onerror = res; document.head.appendChild(s); });
       if (window.RYOKAN_GLB) {
         const bin = Uint8Array.from(atob(window.RYOKAN_GLB), (c) => c.charCodeAt(0)).buffer, L = new GLTFLoader(), D = new DRACOLoader();
-        D.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/libs/draco/gltf/'); L.setDRACOLoader(D);
+        D.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/libs/draco/gltf/'); L.setDRACOLoader(D);
         this._glb = await L.parseAsync(bin, ''); D.dispose();
       }
     } catch (e) { console.warn('Ryokan GLB unavailable, using fallback visuals', e && e.message); this._glb = null; }
@@ -7702,7 +7702,7 @@ MAPS.push({
       if (!window.SKY_GLB) await new Promise((res) => { const s = document.createElement('script'); s.src = 'assets/maps/skycity.js'; s.async = true; s.onload = res; s.onerror = res; document.head.appendChild(s); });
       if (window.SKY_GLB) {
         const bin = Uint8Array.from(atob(window.SKY_GLB), (c) => c.charCodeAt(0)).buffer, L = new GLTFLoader(), D = new DRACOLoader();
-        D.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/libs/draco/gltf/'); L.setDRACOLoader(D);
+        D.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/libs/draco/gltf/'); L.setDRACOLoader(D);
         this._glb = await L.parseAsync(bin, ''); D.dispose();
       }
     } catch (e) { console.warn('Sky City GLB unavailable, using fallback visuals', e && e.message); this._glb = null; }
@@ -7729,7 +7729,7 @@ async function satPreload(def) {
     if (!window.SAT_GLB) await new Promise((res) => { const s = document.createElement('script'); s.src = 'assets/maps/satellite.js'; s.async = true; s.onload = res; s.onerror = res; document.head.appendChild(s); });
     if (window.SAT_GLB) {
       const bin = Uint8Array.from(atob(window.SAT_GLB), (c) => c.charCodeAt(0)).buffer, L = new GLTFLoader(), D = new DRACOLoader();
-      D.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/libs/draco/gltf/'); L.setDRACOLoader(D);
+      D.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/libs/draco/gltf/'); L.setDRACOLoader(D);
       def._glb = await L.parseAsync(bin, ''); D.dispose();
     }
   } catch (e) { console.warn('Satellite GLB unavailable, using fallback visuals', e && e.message); def._glb = null; }
@@ -7890,7 +7890,7 @@ async function apexPack(id, dir) {
 // the packed GLBs carry Draco geometry; the decoder comes from the same three.js CDN as the other Blender maps
 async function apexGLTF(buf) {
   const L = new GLTFLoader(), D = new DRACOLoader();
-  D.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/libs/draco/gltf/'); L.setDRACOLoader(D);
+  D.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/libs/draco/gltf/'); L.setDRACOLoader(D);
   try { return await L.parseAsync(buf, ''); } finally { D.dispose(); }
 }
 // Apex maps shared by the triangle-collision maps (src/07w_skulltown.js): doors, baked navigation, baked spawns.
@@ -8059,7 +8059,7 @@ function skullWorldMaterial(src, lm, scale) {
       float sunVis = 1.0;
       #if defined( USE_SHADOWMAP ) && NUM_DIR_LIGHT_SHADOWS > 0
         DirectionalLightShadow sunSh = directionalLightShadows[ 0 ];
-        sunVis = getShadow( directionalShadowMap[ 0 ], sunSh.shadowMapSize, sunSh.shadowBias, sunSh.shadowRadius, vDirectionalShadowCoord[ 0 ] );
+        sunVis = getShadow( directionalShadowMap[ 0 ], sunSh.shadowMapSize, sunSh.shadowIntensity, sunSh.shadowBias, sunSh.shadowRadius, vDirectionalShadowCoord[ 0 ] ); // (r169+: shadowIntensity)
       #endif
       #ifdef USE_LIGHTMAP
         vec4 lightMapTexel = texture2D( lightMap, vLightMapUv );
@@ -8567,7 +8567,7 @@ function loadGunModels() {
       const script = (src) => new Promise((res) => { const s = document.createElement('script'); s.src = src; s.async = true; s.onload = res; s.onerror = res; document.head.appendChild(s); });
       await Promise.all([window.GUN_GLB ? null : script('assets/guns/guns.js'), window.SF2_FX ? null : script('assets/fx_sf2.js')]); // v62m + SF2's own muzzle-flash textures
       const L = new GLTFLoader(), D = new DRACOLoader(); // v49 gunlib exports Draco-compressed GLBs (older ones are plain; both load)
-      D.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/libs/draco/gltf/'); L.setDRACOLoader(D);
+      D.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/libs/draco/gltf/'); L.setDRACOLoader(D);
       for (const [id, b64] of Object.entries(window.GUN_GLB || {})) {
         const bin = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0)).buffer, gltf = await L.parseAsync(bin, ''), parts = [], marks = {};
         if (gltf.animations.length) { GUN_RIGS[id] = gltf; continue; }
@@ -13081,7 +13081,7 @@ class PostFX {
     // point lights are shaded for every pixel whether lit or not: the preset decides which exist (changing the count recompiles once)
     match.scene.traverse((o) => { if (o.isPointLight) o.visible = o.userData.fx ? q.fxLights : q.mapLights; if (relink && o.material) o.material.needsUpdate = true; });
     if (match.envTex) {
-      match.scene.environment = q.worldEnv === false ? null : match.envTex;
+      match.scene.environment = q.worldEnv === false ? null : match.envTex; if (match.applyEnvIntensity) match.applyEnvIntensity(); // (v62q the materials carry it as their own envMap)
       // without IBL the shadowed side goes black (warehouse median luma 0.076 → 0.001): a uniform ambient fill sized from the map's
       // own IBL strength (envIntensity × HDRI mean luminance, factor measured to match the lit preset) keeps enemies visible for free
       if (!match.ambFill) { match.ambFill = new THREE.AmbientLight(0xdde2e8, 0); match.scene.add(match.ambFill); }
@@ -13703,13 +13703,20 @@ class Match {
 
   // Scale image-based lighting on every material (world, soldiers, viewmodel) so HDRI skies with a baked sun do not double-light the scene.
   applyEnvIntensity() {
+    // v62q (three r170): a material lit by scene.environment has its envMapIntensity replaced by scene.environmentIntensity
+    // (r163+), so the per-material scale below was dropped — the warehouse's IBL came out 2.5× brighter. Each such material gets
+    // the scene's environment as its OWN envMap (sceneEnv: re-pointed, or cleared when a preset drops the IBL, on every call)
     const k = this.envK, seen = new Set();
-    const set = (m, mul) => { if (!m || seen.has(m) || !('envMapIntensity' in m)) return; seen.add(m); if (m.userData.env === undefined) m.userData.env = m.envMapIntensity || 1; m.envMapIntensity = m.userData.env * k * mul; };
-    this.scene.traverse((o) => { const ms = Array.isArray(o.material) ? o.material : [o.material]; ms.forEach((m) => set(m, 1)); });
+    const set = (m, mul, env) => {
+      if (!m || seen.has(m) || !('envMapIntensity' in m)) return; seen.add(m);
+      if (!m.envMap || m.userData.sceneEnv) { m.envMap = env || null; m.userData.sceneEnv = true; }
+      if (m.userData.env === undefined) m.userData.env = m.envMapIntensity || 1; m.envMapIntensity = m.userData.env * k * mul;
+    };
+    this.scene.traverse((o) => { const ms = Array.isArray(o.material) ? o.material : [o.material]; ms.forEach((m) => set(m, 1, this.scene.environment)); });
     // viewmodel: reflections normalised to the same average brightness on every map (v19) — dark gun metal still reads as metal on dim maps
     // (up to ×2.2, the v16 value) but no longer turns chrome-white under bright HDRI skies (harbor sunset was ×4 brighter than desert)
     const ml = this.vmEnv && this.vmEnv.userData.meanLum, vmMul = ml ? clamp(0.2 / (ml * k), 0.6, 2.2) : 2.2;
-    this.weapons.scene.traverse((o) => { const ms = Array.isArray(o.material) ? o.material : [o.material]; ms.forEach((m) => set(m, vmMul)); });
+    this.weapons.scene.traverse((o) => { const ms = Array.isArray(o.material) ? o.material : [o.material]; ms.forEach((m) => set(m, vmMul, this.weapons.scene.environment)); });
   }
 
   _zonePoints(z) {

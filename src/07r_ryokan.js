@@ -511,7 +511,7 @@ MAPS.push({
       if (!window.RYOKAN_GLB) await new Promise((res) => { const s = document.createElement('script'); s.src = 'assets/maps/ryokan.js'; s.async = true; s.onload = res; s.onerror = res; document.head.appendChild(s); });
       if (window.RYOKAN_GLB) {
         const bin = Uint8Array.from(atob(window.RYOKAN_GLB), (c) => c.charCodeAt(0)).buffer, L = new GLTFLoader(), D = new DRACOLoader();
-        D.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/libs/draco/gltf/'); L.setDRACOLoader(D);
+        D.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/libs/draco/gltf/'); L.setDRACOLoader(D);
         this._glb = await L.parseAsync(bin, ''); D.dispose();
       }
     } catch (e) { console.warn('Ryokan GLB unavailable, using fallback visuals', e && e.message); this._glb = null; }

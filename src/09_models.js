@@ -62,7 +62,7 @@ function loadGunModels() {
       const script = (src) => new Promise((res) => { const s = document.createElement('script'); s.src = src; s.async = true; s.onload = res; s.onerror = res; document.head.appendChild(s); });
       await Promise.all([window.GUN_GLB ? null : script('assets/guns/guns.js'), window.SF2_FX ? null : script('assets/fx_sf2.js')]); // v62m + SF2's own muzzle-flash textures
       const L = new GLTFLoader(), D = new DRACOLoader(); // v49 gunlib exports Draco-compressed GLBs (older ones are plain; both load)
-      D.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/libs/draco/gltf/'); L.setDRACOLoader(D);
+      D.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/libs/draco/gltf/'); L.setDRACOLoader(D);
       for (const [id, b64] of Object.entries(window.GUN_GLB || {})) {
         const bin = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0)).buffer, gltf = await L.parseAsync(bin, ''), parts = [], marks = {};
         if (gltf.animations.length) { GUN_RIGS[id] = gltf; continue; }

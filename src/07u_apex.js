@@ -27,6 +27,6 @@ async function apexPack(id, dir) {
 // the packed GLBs carry Draco geometry; the decoder comes from the same three.js CDN as the other Blender maps
 async function apexGLTF(buf) {
   const L = new GLTFLoader(), D = new DRACOLoader();
-  D.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/libs/draco/gltf/'); L.setDRACOLoader(D);
+  D.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/libs/draco/gltf/'); L.setDRACOLoader(D);
   try { return await L.parseAsync(buf, ''); } finally { D.dispose(); }
 }

@@ -142,13 +142,20 @@ class Match {
 
   // Scale image-based lighting on every material (world, soldiers, viewmodel) so HDRI skies with a baked sun do not double-light the scene.
   applyEnvIntensity() {
+    // v62q (three r170): a material lit by scene.environment has its envMapIntensity replaced by scene.environmentIntensity
+    // (r163+), so the per-material scale below was dropped — the warehouse's IBL came out 2.5× brighter. Each such material gets
+    // the scene's environment as its OWN envMap (sceneEnv: re-pointed, or cleared when a preset drops the IBL, on every call)
     const k = this.envK, seen = new Set();
-    const set = (m, mul) => { if (!m || seen.has(m) || !('envMapIntensity' in m)) return; seen.add(m); if (m.userData.env === undefined) m.userData.env = m.envMapIntensity || 1; m.envMapIntensity = m.userData.env * k * mul; };
-    this.scene.traverse((o) => { const ms = Array.isArray(o.material) ? o.material : [o.material]; ms.forEach((m) => set(m, 1)); });
+    const set = (m, mul, env) => {
+      if (!m || seen.has(m) || !('envMapIntensity' in m)) return; seen.add(m);
+      if (!m.envMap || m.userData.sceneEnv) { m.envMap = env || null; m.userData.sceneEnv = true; }
+      if (m.userData.env === undefined) m.userData.env = m.envMapIntensity || 1; m.envMapIntensity = m.userData.env * k * mul;
+    };
+    this.scene.traverse((o) => { const ms = Array.isArray(o.material) ? o.material : [o.material]; ms.forEach((m) => set(m, 1, this.scene.environment)); });
     // viewmodel: reflections normalised to the same average brightness on every map (v19) — dark gun metal still reads as metal on dim maps
     // (up to ×2.2, the v16 value) but no longer turns chrome-white under bright HDRI skies (harbor sunset was ×4 brighter than desert)
     const ml = this.vmEnv && this.vmEnv.userData.meanLum, vmMul = ml ? clamp(0.2 / (ml * k), 0.6, 2.2) : 2.2;
-    this.weapons.scene.traverse((o) => { const ms = Array.isArray(o.material) ? o.material : [o.material]; ms.forEach((m) => set(m, vmMul)); });
+    this.weapons.scene.traverse((o) => { const ms = Array.isArray(o.material) ? o.material : [o.material]; ms.forEach((m) => set(m, vmMul, this.weapons.scene.environment)); });
   }
 
   _zonePoints(z) {

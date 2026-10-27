@@ -36,7 +36,7 @@ function skullWorldMaterial(src, lm, scale) {
       float sunVis = 1.0;
       #if defined( USE_SHADOWMAP ) && NUM_DIR_LIGHT_SHADOWS > 0
         DirectionalLightShadow sunSh = directionalLightShadows[ 0 ];
-        sunVis = getShadow( directionalShadowMap[ 0 ], sunSh.shadowMapSize, sunSh.shadowBias, sunSh.shadowRadius, vDirectionalShadowCoord[ 0 ] );
+        sunVis = getShadow( directionalShadowMap[ 0 ], sunSh.shadowMapSize, sunSh.shadowIntensity, sunSh.shadowBias, sunSh.shadowRadius, vDirectionalShadowCoord[ 0 ] ); // (r169+: shadowIntensity)
       #endif
       #ifdef USE_LIGHTMAP
         vec4 lightMapTexel = texture2D( lightMap, vLightMapUv );

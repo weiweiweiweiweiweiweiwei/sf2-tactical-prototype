@@ -169,7 +169,7 @@ class PostFX {
     // point lights are shaded for every pixel whether lit or not: the preset decides which exist (changing the count recompiles once)
     match.scene.traverse((o) => { if (o.isPointLight) o.visible = o.userData.fx ? q.fxLights : q.mapLights; if (relink && o.material) o.material.needsUpdate = true; });
     if (match.envTex) {
-      match.scene.environment = q.worldEnv === false ? null : match.envTex;
+      match.scene.environment = q.worldEnv === false ? null : match.envTex; if (match.applyEnvIntensity) match.applyEnvIntensity(); // (v62q the materials carry it as their own envMap)
       // without IBL the shadowed side goes black (warehouse median luma 0.076 → 0.001): a uniform ambient fill sized from the map's
       // own IBL strength (envIntensity × HDRI mean luminance, factor measured to match the lit preset) keeps enemies visible for free
       if (!match.ambFill) { match.ambFill = new THREE.AmbientLight(0xdde2e8, 0); match.scene.add(match.ambFill); }

@@ -14,7 +14,7 @@ async function satPreload(def) {
     if (!window.SAT_GLB) await new Promise((res) => { const s = document.createElement('script'); s.src = 'assets/maps/satellite.js'; s.async = true; s.onload = res; s.onerror = res; document.head.appendChild(s); });
     if (window.SAT_GLB) {
       const bin = Uint8Array.from(atob(window.SAT_GLB), (c) => c.charCodeAt(0)).buffer, L = new GLTFLoader(), D = new DRACOLoader();
-      D.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/libs/draco/gltf/'); L.setDRACOLoader(D);
+      D.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/libs/draco/gltf/'); L.setDRACOLoader(D);
       def._glb = await L.parseAsync(bin, ''); D.dispose();
     }
   } catch (e) { console.warn('Satellite GLB unavailable, using fallback visuals', e && e.message); def._glb = null; }
