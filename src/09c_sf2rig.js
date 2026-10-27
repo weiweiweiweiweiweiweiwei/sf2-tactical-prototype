@@ -15,17 +15,19 @@ class SF2Rig {
     });
     this.mixer = new THREE.AnimationMixer(m); this.a = {};
     for (const c of gltf.animations) { const a = this.mixer.clipAction(c); a.play(); a.paused = true; a.setEffectiveWeight(0); this.a[c.name] = a; }
-    // the camera: on the aimed sight line (Zoom's last frame, the peep → post line runs along +Z), eyeRelief behind the peep's
-    // rear face. 3 cm reproduces the user's SF2 ADS screenshot (v61: the post the same size, the ring as big); the head bone
-    // would put it 6.4 cm back and the ring a third smaller. One camera for every pose, as in SF2 — the clips do the rest.
+    // the camera: on the aimed sight line (Zoom's last frame, the peep → post line runs along +Z), as deep as the head bone
+    // (6.4 cm behind the peep), with SF2's own viewmodel lenses (def.vmHFov / vmAdsHFov, horizontal). v62f: checked on the
+    // user's SF2 ADS screenshot (10-27) — the peep ring 267 px at 1080p there and here. (v62 had the eye 3 cm back with a
+    // 48° vertical lens: the right ring from the wrong pair, the gun 1.8× too small.) One camera for every pose, as in SF2.
     // Rig space is +Z forward, −X right, +Y up: turned half a turn about Y it is camera space.
     this.pose({ Zoom: [this.dur('Zoom'), 1] });
-    const s = m.getObjectByName('SIGHT').getWorldPosition(new THREE.Vector3()), eye = new THREE.Vector3(s.x, s.y, s.z - (o.eyeRelief ?? 0.03));
+    const s = m.getObjectByName('SIGHT').getWorldPosition(new THREE.Vector3()), head = m.getObjectByName('Bip01-Head').getWorldPosition(new THREE.Vector3());
+    const eye = new THREE.Vector3(s.x, s.y, o.eyeRelief != null ? s.z - o.eyeRelief : head.z);
     m.rotation.y = Math.PI; m.position.set(eye.x, -eye.y, eye.z);
     this.reloadSounds = o.reloadSounds || null;
     // v62d play the Equip clip over the gun's draw time (def.equipTime, SF2's own 0.8 s for the M4A1); with none, the old 1.6×
     this.equipRate = o.equipTime ? this.dur('Equip') / o.equipTime : (o.equipRate || 1.6);
-    this.zoomFireWeight = o.zoomFireWeight ?? 0.3;
+    this.zoomFireWeight = o.zoomFireWeight ?? 1; // v62f full again: 2 cm back with the eye 6.4 cm behind the peep is SF2's own (v62 had 0.3 for a 3 cm eye)
     this.idleT = 0; this.zoomT = 0; this.dashT = 0; this.fireT = -1; this.fireClip = 'Fire'; this.equipT = -1; this.lastDraw = 0;
   }
   dur(k) { return this.a[k] ? this.a[k].getClip().duration : 0; }
@@ -51,8 +53,7 @@ class SF2Rig {
     }
     if (this.fireT >= 0) {
       const d = this.dur(this.fireClip); this.fireT += dt;
-      // ZoomFire is a straight 2 cm push back; with the eye 3 cm behind the peep that slams the rear sight into the camera
-      // (user 10-27) — at 0.3 over Zoom it is the 0.6 cm the v61b kick settled on, still SF2's own motion
+      // ZoomFire is a straight 2 cm push back (zoomFireWeight scales it over Zoom; a nearer eye would need it smaller)
       const cap = this.fireClip === 'ZoomFire' ? this.zoomFireWeight : 1;
       if (this.fireT >= d) this.fireT = -1; else { const k = rest * cap * fade(this.fireT, d, 0, 0.18); w[this.fireClip] = [this.fireT, k]; rest -= k; }
     }

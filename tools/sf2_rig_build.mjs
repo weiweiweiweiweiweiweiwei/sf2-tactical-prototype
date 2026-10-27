@@ -35,6 +35,12 @@ const TEX = {
 };
 const ROUGH = { barrel: 0.78, stock: 0.8, magazine: 0.72, sight: 0.66, body: 0.68, sleeve: 0.9, glove: 0.82 }; // matte, dielectric (as sf2_gun_build.py)
 const PEEP_DROP = 0.0048, PEEP_DX = 0.0007; // the rear sight's aperture under its top / off its top's mean x (tuned on ADS shots, v61b)
+// v62f the flip-up front sight sits this far behind the rail's front end (its socket is not exported): measured on the user's SF2 ADS
+// screenshot (10-27) — with the peep ring matched (267 px at 1080p), the front sight's ears were 73 px there and 59 px here, i.e.
+// SF2's post is 21.6 cm ahead of the peep, not 28.2
+const SIGHT_BACK = 0.086;
+// and its green dot where SF2's is (958.8, 544.4 at 1080p: 4.4 px under the screen centre): 1.4 mm lower, 0.3 mm to the left (+X)
+const POST_DROP = 0.0014, POST_DX = 0.0003;
 
 const io = new NodeIO().registerExtensions(ALL_EXTENSIONS).registerDependencies({ 'draco3d.decoder': await draco3d.createDecoderModule(), 'draco3d.encoder': await draco3d.createEncoderModule() });
 const doc = await io.read(SRC + G.base), root = doc.getRoot(), buf = root.listBuffers()[0];
@@ -109,21 +115,21 @@ await addPart('rearsight', G.rear[0], G.rear[1], { p: (v) => { const w = xf(R.M,
 // front sight: on the front end of the handguard's top rail, its post tip on the sight line through the peep
 const S = await bakedPoints(G.sight[0]); let sp = S.pts;
 const railp = V.barrel.filter((p) => p[1] > bore[1] + 0.012), rzmax = max(railp, 2), ry = max(railp.filter((p) => p[2] > rzmax - 0.03), 1);
-const sc = [mean(sp, 0), min(sp, 1), mean(sp, 2)]; let sOff = [bore[0] - sc[0], ry - sc[1], rzmax - 0.02 - sc[2]];
+const sc = [mean(sp, 0), min(sp, 1), mean(sp, 2)]; let sOff = [bore[0] - sc[0], ry - sc[1], rzmax - SIGHT_BACK - sc[2]];
 sp = sp.map((p) => [p[0] + sOff[0], p[1] + sOff[1], p[2] + sOff[2]]);
-sOff = [sOff[0] + peepx - (min(sp, 0) + max(sp, 0)) / 2, sOff[1] + aperture - (max(sp, 1) - 0.004), sOff[2]];
+sOff = [sOff[0] + peepx - (min(sp, 0) + max(sp, 0)) / 2 + POST_DX, sOff[1] + aperture - (max(sp, 1) - 0.004) - POST_DROP, sOff[2]];
 await addPart('frontsight', G.sight[0], G.sight[1], { p: (v) => { const w = xf(S.M, v); return [w[0] + sOff[0], w[1] + sOff[1], w[2] + sOff[2]]; }, n: rot3(S.M, 1) });
 
 // marks on weapon_root (bind space → that bone's space): the peep (SIGHT), the post tip (POST) and the muzzle; the game reads
 // them as empties under the bone
 const wr = joints[jix.weapon_root], wrInv = Array.from(skin.getInverseBindMatrices().getArray()).slice(jix.weapon_root * 16, jix.weapon_root * 16 + 16);
-const marks = { SIGHT: [peepx, aperture, peepZ], POST: [peepx, aperture, rzmax - 0.02], MUZZLE: bore };
+const marks = { SIGHT: [peepx, aperture, peepZ], POST: [peepx, aperture, rzmax - SIGHT_BACK], MUZZLE: bore };
 for (const [k, p] of Object.entries(marks)) wr.addChild(doc.createNode(k).setTranslation(xf(wrInv, p)));
 
 // ---- the animset
 // ActorX PSA: BONENAMES (names only from UModel), ANIMINFO (name, rate, first frame, frames), ANIMKEYS (per frame, per bone: p, q)
 function readPSA(file) {
-  const b = fs.readFileSync(file), out = { bones: [], anims: [] }, keys = [], str = (s, n) => b.toString('latin1', s, s + n).replace(/ .*$/s, '');
+  const b = fs.readFileSync(file), out = { bones: [], anims: [] }, keys = [], str = (s, n) => b.toString('latin1', s, s + n).replace(/\0.*$/s, '');
   for (let o = 0; o + 32 <= b.length;) {
     const id = str(o, 20), size = b.readInt32LE(o + 24), count = b.readInt32LE(o + 28); o += 32;
     for (let i = 0, s = o; i < count; i++, s += size) {

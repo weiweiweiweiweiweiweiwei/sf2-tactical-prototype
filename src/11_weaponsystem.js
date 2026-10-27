@@ -294,7 +294,10 @@ class WeaponSystem extends Arsenal {
     const fovNow = this.fov + p.fovPunch;
     if (Math.abs(cam.fov - fovNow) > 1e-4) { cam.fov = fovNow; cam.updateProjectionMatrix(); }
     this.sprintT = damp(this.sprintT, p.sprinting ? 1 : 0, 12, dt);
-    const vmFov = lerp(58, w.def.vmAdsFov || 48, this.adsT * (w.scoped ? 0 : 1)); // v45 vmAdsFov: narrower viewmodel lens = bigger holo window
+    // v45 vmAdsFov: narrower viewmodel lens = bigger holo window; v62f vmHFov / vmAdsHFov: SF2's own lenses, horizontal like UE3
+    // (so the gun keeps its size across screen shapes), turned into three.js's vertical FOV for this screen
+    const vert = (h) => 2 * Math.atan(Math.tan(h * Math.PI / 360) / this.camera.aspect) * 180 / Math.PI;
+    const vmFov = lerp(w.def.vmHFov ? vert(w.def.vmHFov) : 58, w.def.vmAdsHFov ? vert(w.def.vmAdsHFov) : (w.def.vmAdsFov || 48), this.adsT * (w.scoped ? 0 : 1));
     if (Math.abs(this.camera.fov - vmFov) > 0.01) { this.camera.fov = vmFov; this.camera.updateProjectionMatrix(); }
 
     // viewmodel lives at the camera's world transform

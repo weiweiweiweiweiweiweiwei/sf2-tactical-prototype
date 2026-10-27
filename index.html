@@ -1053,6 +1053,10 @@ const WEAPON_DATABASE = {
     name: 'M4A1', type: 'assault', slot: 'primary', damageNear: 26, damageFar: 20, falloffStart: 25, falloffEnd: 60, fireRate: 0.096,
     recoilPitch: 0.012, recoilYaw: 0.009, recoilRecovery: 9,
     hipSpread: 0.075, adsSpread: 0.0022, adsFov: 55, adsType: '3d_sight', mobility: 0.95, maxAmmo: 30, reloadTime: 2.3, equipTime: 0.8, adsSpeed: 12, modelUrl: null,
+    // v62f SF2's own viewmodel lenses — UE3 FOVs are HORIZONTAL: aimed fZoomedMeshFOV 35 (16:9: 20.1° vertical, matches the user's SF2
+    // ADS screenshot to the pixel); hip the player's DefaultFOV 90 (58.7°). fZoomOutMeshFOV 60 is not the hip lens: at 36° the gun
+    // falls off the bottom-right corner
+    vmHFov: 90, vmAdsHFov: 35,
     model: 'm4', sound: 'm4', sf2: 'm4a1', tracerEvery: 2, penetration: 1, desc: '均衡的全自動步槍，全息瞄具。',
     // v62e SF2's own recoil block (Default__SFCWeaponM4A1.RecoilDefault over SFCWeaponARBase, RecoilZoomModifier, RecoilCrouchModifier)
     sf2Recoil: { nextCrossVert: 1.26, maxCrossVert: 14, vertInc: 9000, vertDec: 12, crossDecreasInc: 9, incline: 0.5, forceCorrection: 50,
@@ -1383,7 +1387,7 @@ function compileWeapon(id, s) {
     pellets: s.pellets || 1, headKill: s.headKill ?? (s.type === 'sniper'), headMult: s.headMult || PART_MULT.head, range: s.range || 260, penetration: s.penetration || 0,
     hipBase: s.hipSpread, adsBase: s.adsSpread, spreadBase: s.hipSpread, spreadCrouch: 0.8,
     recoil: { first: s.recoilPitch * 0.75, climb: s.recoilPitch, climbShots: 10, late: s.recoilPitch * 0.75, h: s.recoilYaw, hStart: 6, jitter: s.recoilYaw * 0.35 },
-    recoilRecovery: s.recoilRecovery, adsFov: s.adsFov, vmAdsFov: s.vmAdsFov, adsVertical: s.adsVertical || 0, adsType: s.adsType, adsRecoilMult: 1, adsSpeed: s.adsSpeed || (s.type === 'smg' ? 24 : 20),
+    recoilRecovery: s.recoilRecovery, adsFov: s.adsFov, vmAdsFov: s.vmAdsFov, vmHFov: s.vmHFov || 0, vmAdsHFov: s.vmAdsHFov || 0, adsVertical: s.adsVertical || 0, adsType: s.adsType, adsRecoilMult: 1, adsSpeed: s.adsSpeed || (s.type === 'smg' ? 24 : 20),
     moveSpeed: CFG.player.baseSpeed * s.mobility, mobility: s.mobility, reloadTime: s.reloadTime, equipTime: s.equipTime || 0, sf2Recoil: s.sf2Recoil || null, sound: s.sound || id,
     suppressed: !!s.suppressed, tracerEvery: s.tracerEvery ?? 2, shellReload: s.shellReload || 0, zoomFovs: s.zoomFovs || [s.adsFov],
     noise: s.suppressed ? 14 : t.noise, pump, bolt, soundRate: s.rate || 1, tpSpec: s.tp || null,
@@ -8777,7 +8781,7 @@ class WeaponModels {
 
   /* ------------------------------------------------------------------ */
   // v49 M4A1 from Blender (tools/blender/m4a1_build.py); the procedural one below stays as the fallback
-  m4(def) { return this.fromRig('m4a1_sf2_rig', { reticle: true, reticleScale: 0.22, equipTime: def && def.equipTime }) || this.fromGLB('m4a1_sf2', { eye: 0.03, eyeRelief: 0.025, reticle: 'tritium', reticleScale: 0.22 }) || this.fromGLB('m4a1', { eye: 0.2, eyeRelief: 0.03 }) || this.m4Proc(); } // v61 SF2's own M4A1 first (tools/blender/sf2_gun_build.py): like SF2's ADS, the eye right at the carry handle's peep and a green dot on the front post // eye 20 cm behind the hood: the holo frame fills about a quarter of the view
+  m4(def) { return this.fromRig('m4a1_sf2_rig', { reticle: true, reticleScale: 0.1, equipTime: def && def.equipTime }) || this.fromGLB('m4a1_sf2', { eye: 0.03, eyeRelief: 0.025, reticle: 'tritium', reticleScale: 0.22 }) || this.fromGLB('m4a1', { eye: 0.2, eyeRelief: 0.03 }) || this.m4Proc(); } // v61 SF2's own M4A1 first (tools/blender/sf2_gun_build.py): like SF2's ADS, the eye right at the carry handle's peep and a green dot on the front post // eye 20 cm behind the hood: the holo frame fills about a quarter of the view
   m4Proc() {
     const M = this.M, gb = new GunBuilder(M);
     gb.node('mag', new THREE.Vector3(0, -0.035, -0.03)).node('charge', new THREE.Vector3(0, 0.024, 0.13));
@@ -10261,17 +10265,19 @@ class SF2Rig {
     });
     this.mixer = new THREE.AnimationMixer(m); this.a = {};
     for (const c of gltf.animations) { const a = this.mixer.clipAction(c); a.play(); a.paused = true; a.setEffectiveWeight(0); this.a[c.name] = a; }
-    // the camera: on the aimed sight line (Zoom's last frame, the peep → post line runs along +Z), eyeRelief behind the peep's
-    // rear face. 3 cm reproduces the user's SF2 ADS screenshot (v61: the post the same size, the ring as big); the head bone
-    // would put it 6.4 cm back and the ring a third smaller. One camera for every pose, as in SF2 — the clips do the rest.
+    // the camera: on the aimed sight line (Zoom's last frame, the peep → post line runs along +Z), as deep as the head bone
+    // (6.4 cm behind the peep), with SF2's own viewmodel lenses (def.vmHFov / vmAdsHFov, horizontal). v62f: checked on the
+    // user's SF2 ADS screenshot (10-27) — the peep ring 267 px at 1080p there and here. (v62 had the eye 3 cm back with a
+    // 48° vertical lens: the right ring from the wrong pair, the gun 1.8× too small.) One camera for every pose, as in SF2.
     // Rig space is +Z forward, −X right, +Y up: turned half a turn about Y it is camera space.
     this.pose({ Zoom: [this.dur('Zoom'), 1] });
-    const s = m.getObjectByName('SIGHT').getWorldPosition(new THREE.Vector3()), eye = new THREE.Vector3(s.x, s.y, s.z - (o.eyeRelief ?? 0.03));
+    const s = m.getObjectByName('SIGHT').getWorldPosition(new THREE.Vector3()), head = m.getObjectByName('Bip01-Head').getWorldPosition(new THREE.Vector3());
+    const eye = new THREE.Vector3(s.x, s.y, o.eyeRelief != null ? s.z - o.eyeRelief : head.z);
     m.rotation.y = Math.PI; m.position.set(eye.x, -eye.y, eye.z);
     this.reloadSounds = o.reloadSounds || null;
     // v62d play the Equip clip over the gun's draw time (def.equipTime, SF2's own 0.8 s for the M4A1); with none, the old 1.6×
     this.equipRate = o.equipTime ? this.dur('Equip') / o.equipTime : (o.equipRate || 1.6);
-    this.zoomFireWeight = o.zoomFireWeight ?? 0.3;
+    this.zoomFireWeight = o.zoomFireWeight ?? 1; // v62f full again: 2 cm back with the eye 6.4 cm behind the peep is SF2's own (v62 had 0.3 for a 3 cm eye)
     this.idleT = 0; this.zoomT = 0; this.dashT = 0; this.fireT = -1; this.fireClip = 'Fire'; this.equipT = -1; this.lastDraw = 0;
   }
   dur(k) { return this.a[k] ? this.a[k].getClip().duration : 0; }
@@ -10297,8 +10303,7 @@ class SF2Rig {
     }
     if (this.fireT >= 0) {
       const d = this.dur(this.fireClip); this.fireT += dt;
-      // ZoomFire is a straight 2 cm push back; with the eye 3 cm behind the peep that slams the rear sight into the camera
-      // (user 10-27) — at 0.3 over Zoom it is the 0.6 cm the v61b kick settled on, still SF2's own motion
+      // ZoomFire is a straight 2 cm push back (zoomFireWeight scales it over Zoom; a nearer eye would need it smaller)
       const cap = this.fireClip === 'ZoomFire' ? this.zoomFireWeight : 1;
       if (this.fireT >= d) this.fireT = -1; else { const k = rest * cap * fade(this.fireT, d, 0, 0.18); w[this.fireClip] = [this.fireT, k]; rest -= k; }
     }
@@ -11021,7 +11026,10 @@ class WeaponSystem extends Arsenal {
     const fovNow = this.fov + p.fovPunch;
     if (Math.abs(cam.fov - fovNow) > 1e-4) { cam.fov = fovNow; cam.updateProjectionMatrix(); }
     this.sprintT = damp(this.sprintT, p.sprinting ? 1 : 0, 12, dt);
-    const vmFov = lerp(58, w.def.vmAdsFov || 48, this.adsT * (w.scoped ? 0 : 1)); // v45 vmAdsFov: narrower viewmodel lens = bigger holo window
+    // v45 vmAdsFov: narrower viewmodel lens = bigger holo window; v62f vmHFov / vmAdsHFov: SF2's own lenses, horizontal like UE3
+    // (so the gun keeps its size across screen shapes), turned into three.js's vertical FOV for this screen
+    const vert = (h) => 2 * Math.atan(Math.tan(h * Math.PI / 360) / this.camera.aspect) * 180 / Math.PI;
+    const vmFov = lerp(w.def.vmHFov ? vert(w.def.vmHFov) : 58, w.def.vmAdsHFov ? vert(w.def.vmAdsHFov) : (w.def.vmAdsFov || 48), this.adsT * (w.scoped ? 0 : 1));
     if (Math.abs(this.camera.fov - vmFov) > 0.01) { this.camera.fov = vmFov; this.camera.updateProjectionMatrix(); }
 
     // viewmodel lives at the camera's world transform

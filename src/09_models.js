@@ -317,7 +317,7 @@ class WeaponModels {
 
   /* ------------------------------------------------------------------ */
   // v49 M4A1 from Blender (tools/blender/m4a1_build.py); the procedural one below stays as the fallback
-  m4(def) { return this.fromRig('m4a1_sf2_rig', { reticle: true, reticleScale: 0.22, equipTime: def && def.equipTime }) || this.fromGLB('m4a1_sf2', { eye: 0.03, eyeRelief: 0.025, reticle: 'tritium', reticleScale: 0.22 }) || this.fromGLB('m4a1', { eye: 0.2, eyeRelief: 0.03 }) || this.m4Proc(); } // v61 SF2's own M4A1 first (tools/blender/sf2_gun_build.py): like SF2's ADS, the eye right at the carry handle's peep and a green dot on the front post // eye 20 cm behind the hood: the holo frame fills about a quarter of the view
+  m4(def) { return this.fromRig('m4a1_sf2_rig', { reticle: true, reticleScale: 0.1, equipTime: def && def.equipTime }) || this.fromGLB('m4a1_sf2', { eye: 0.03, eyeRelief: 0.025, reticle: 'tritium', reticleScale: 0.22 }) || this.fromGLB('m4a1', { eye: 0.2, eyeRelief: 0.03 }) || this.m4Proc(); } // v61 SF2's own M4A1 first (tools/blender/sf2_gun_build.py): like SF2's ADS, the eye right at the carry handle's peep and a green dot on the front post // eye 20 cm behind the hood: the holo frame fills about a quarter of the view
   m4Proc() {
     const M = this.M, gb = new GunBuilder(M);
     gb.node('mag', new THREE.Vector3(0, -0.035, -0.03)).node('charge', new THREE.Vector3(0, 0.024, 0.13));
