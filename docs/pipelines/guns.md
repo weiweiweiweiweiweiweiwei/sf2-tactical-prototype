@@ -116,6 +116,11 @@ node tools/check.mjs --map 0 --gpu intel
 4. 遊戲端 `src/09c_sf2rig.js`（`SF2Rig`）：鏡頭放在開鏡姿勢（`Zoom` 最後一格）的瞄準線上、覘孔後 3 cm（和原版開鏡截圖一樣大），整個 viewmodel 不再用程式移動，每幀依狀態混合動畫：`Idle`↔`Zoom`（開鏡程度）、`dash`（衝刺程度），上層 `Reload`（拉長到遊戲的換彈時間）、`Equip`（拔槍，1.6 倍速）、`Fire`／`ZoomFire`（每發）。權重加總永遠是 1。
 5. 換彈音效的時間點要照動畫：M4A1 是第 5 格退彈匣、第 27 格插回、第 55 格拉槍機（共 75 格）→ `fromRig` 的 `reloadSounds`。
 6. 檢查：`tools/out/rig/` 的渲染（腰射、開鏡、換彈、衝刺、拔槍、開槍），開鏡畫面要和舊版（照原版截圖調的）一樣大。
+7. **加一把新槍（v62h）**：
+   - UModel：`-export -gltf -png rif_<id>`、`-export -png rif_<id>_texture`、`-export -psk rif_<id>`（動畫集＋含插槽的 `.props.txt`）→ `tools/out/sf2/<id>/`、`<id>_anim/`；槍聲 `-export -sounds Sound_<ID>` → `node tools/sfx_sf2.mjs m4a1 ak103 g36c …`。
+   - `tools/sf2_rig_build.mjs` 的 `G` 加一行 `gun('<id>', {...})`：瞄具零件（類別的 `SightOnMesh`）用 `socketSights` 放到 `SightBaseSocketName` 插槽（零件自己的根骨頭對齊插槽）；前準星有一整圈護圈的加 `hoodedPost`。槍口是 `flame` 插槽；`POST` 是槍管中線上最高點（護圈要跳過）。
+   - `src/01_core.js` 加武器：時間、`sf2Recoil`、`vmHFov` 90／`vmAdsHFov`（`fZoomedMeshFOV`）、`sf2ZoomIn`（`vLocZoomIN`）、`sf2ReloadSounds`（量 Reload 片段裡 `weapon_magazine`／`weapon_cartridge` 動的格數）、`sf2`（槍聲 id）、`tp`；`src/09_models.js` 加 `<model>(def) { return this.fromRig('<id>_sf2_rig', this._rigOpts(def)) || 備用槍; }`。
+   - 開鏡鏡頭：有 `SIGHT` 標記（M4A1）照截圖校正；其他槍眼睛和 `POST` 等高，深度 = 頭部骨頭 − 3 cm − `vLocZoomIN.x`。
 
 ## 下一批
 - **CheyTac M200**：`m200()`。開鏡用 2D 狙擊鏡畫面，所以 `SIGHT` 可以放在鏡管中心。要另外加 `bolt` 部件，供拉栓動畫使用（目前 `fromGLB` 只處理 `mag` 和 `charge`，這部分需要擴充）。

@@ -99,6 +99,19 @@ const WEAPON_DATABASE = {
     hipSpread: 0.07, adsSpread: 0.0018, adsFov: 42, vmAdsFov: 17, adsVertical: 0.075, adsType: 'red_dot', mobility: 0.95, maxAmmo: 30, reloadTime: 2.0, modelUrl: null,
     model: 'g36c', sound: 'g36', tracerEvery: 2, penetration: 1, desc: 'EOTech 全息瞄具 + 四叉消焰器，5.56 清脆槍聲，開火會上敵方雷達。',
   },
+  // v62h Special Force 2's own (black) G36C, its flip-up iron sight on the 'Sight' socket; timing / recoil from Default__SFCWeaponG36C.
+  // Damage on the balance rules, as the gold ones.
+  g36c_sf2: {
+    name: 'G36C', type: 'assault', slot: 'primary', damageNear: 25, damageFar: 19, falloffStart: 25, falloffEnd: 60, fireRate: 0.109,
+    recoilPitch: 0.011, recoilYaw: 0.012, recoilRecovery: 10,
+    hipSpread: 0.07, adsSpread: 0.0018, adsFov: 55, adsType: '3d_sight', mobility: 0.95, maxAmmo: 30, reloadTime: 2.28, equipTime: 0.85, adsSpeed: 12, modelUrl: null,
+    vmHFov: 90, vmAdsHFov: 40, model: 'g36c_sf2', sound: 'g36', sf2: 'g36c', tracerEvery: 2, penetration: 1, tp: { len: 0.72, body: 'dark', mag: 'box' },
+    sf2Recoil: { nextCrossVert: 1.78, maxCrossVert: 10.6, vertInc: 15000, vertDec: 13, crossDecreasInc: 15, incline: 0.05, forceCorrection: 50,
+      domDefault: 0.15, domZoomDefault: 0, domInc: 0.3, domMax: 2.2, domMin: 0, domDec: 1.4, maxMovingValue: 0.8, mulValueRun: 0.4, mulValueJump: 6,
+      zoomMod: 0.35, crouchMod: 0.9 },
+    sf2ZoomIn: [2.4, -0.002, 0.3], sf2ReloadSounds: [[0.12, 'magout'], [0.32, 'magin'], [0.76, 'charge']],
+    desc: 'SF2 原版 G36C：5.56mm、輕巧，後座力小、開鏡穩，翻轉式機械瞄具。',
+  },
   mp5: {
     name: 'MP5', type: 'smg', slot: 'primary', damageNear: 25, damageFar: 16, falloffStart: 10, falloffEnd: 35, fireRate: 0.07,
     recoilPitch: 0.008, recoilYaw: 0.008, recoilRecovery: 12,
@@ -146,6 +159,18 @@ const WEAPON_DATABASE = {
     name: 'AK-47', type: 'assault', slot: 'primary', damageNear: 34, damageFar: 25, falloffStart: 25, falloffEnd: 60, fireRate: 0.113, recoilPitch: 0.016, recoilYaw: 0.012, recoilRecovery: 7,
     hipSpread: 0.08, adsSpread: 0.0028, adsFov: 58, adsType: '3d_sight', mobility: 0.93, maxAmmo: 30, reloadTime: 2.4, modelUrl: null, adsSpeed: 12,
     sound: 'ak', penetration: 2, bloomPerShot: 0.005, bloomMax: 0.032, tp: { len: 0.9, body: 'wood', mag: 'curve' }, desc: '7.62mm 重火力，後座力大、穿透強，機械瞄具。', // v53 SF2 EU wiki (unverified): RPM/reload/ADS
+  },
+  // v62h Special Force 2's own AK-103 (model, animation, sounds from the user's install; timing / recoil from Default__SFCWeaponAK103,
+  // docs/research/sf2/client-data). Damage on the balance rules, as the AK-47 (same 7.62 mm).
+  ak103: {
+    name: 'AK-103', type: 'assault', slot: 'primary', damageNear: 34, damageFar: 25, falloffStart: 25, falloffEnd: 60, fireRate: 0.115, recoilPitch: 0.016, recoilYaw: 0.012, recoilRecovery: 7,
+    hipSpread: 0.08, adsSpread: 0.0028, adsFov: 55, adsType: '3d_sight', mobility: 0.93, maxAmmo: 30, reloadTime: 2.4, equipTime: 0.9, adsSpeed: 12, modelUrl: null,
+    vmHFov: 90, vmAdsHFov: 40, model: 'ak103', sound: 'ak', sf2: 'ak103', penetration: 2, tracerEvery: 2, tp: { len: 0.9, body: 'dark', mag: 'curve' },
+    sf2Recoil: { nextCrossVert: 2.04, maxCrossVert: 13, vertInc: 15000, vertDec: 13, crossDecreasInc: 15, incline: 0.15, forceCorrection: 50,
+      domDefault: 0.1, domZoomDefault: 0, domInc: 0.4, domMax: 2.5, domMin: 0, domDec: 1.35, maxMovingValue: 1.2, mulValueRun: 0.1, mulValueJump: 6,
+      zoomMod: 0.3, crouchMod: 0.8 },
+    sf2ZoomIn: [-3, 0, -0.28], sf2ReloadSounds: [[0.13, 'magout'], [0.39, 'magin'], [0.76, 'charge']],
+    desc: 'SF2 原版 AK-103：7.62mm、黑色聚合物護木，後座力大但開鏡穩，機械瞄具。',
   },
   scarl: {
     name: 'SCAR-L', type: 'assault', slot: 'primary', damageNear: 28, damageFar: 21, falloffStart: 25, falloffEnd: 60, fireRate: 0.103, recoilPitch: 0.011, recoilYaw: 0.008, recoilRecovery: 10,
@@ -413,6 +438,7 @@ function compileWeapon(id, s) {
     recoil: { first: s.recoilPitch * 0.75, climb: s.recoilPitch, climbShots: 10, late: s.recoilPitch * 0.75, h: s.recoilYaw, hStart: 6, jitter: s.recoilYaw * 0.35 },
     recoilRecovery: s.recoilRecovery, adsFov: s.adsFov, vmAdsFov: s.vmAdsFov, vmHFov: s.vmHFov || 0, vmAdsHFov: s.vmAdsHFov || 0, adsVertical: s.adsVertical || 0, adsType: s.adsType, adsRecoilMult: 1, adsSpeed: s.adsSpeed || (s.type === 'smg' ? 24 : 20),
     moveSpeed: CFG.player.baseSpeed * s.mobility, mobility: s.mobility, reloadTime: s.reloadTime, equipTime: s.equipTime || 0, sf2Recoil: s.sf2Recoil || null, sound: s.sound || id,
+    sf2: s.sf2 || null, sf2ZoomIn: s.sf2ZoomIn || null, sf2ReloadSounds: s.sf2ReloadSounds || null, // v62h (sf2 never reached the def before: v61's SF2 gun sounds never played)
     suppressed: !!s.suppressed, tracerEvery: s.tracerEvery ?? 2, shellReload: s.shellReload || 0, zoomFovs: s.zoomFovs || [s.adsFov],
     noise: s.suppressed ? 14 : t.noise, pump, bolt, soundRate: s.rate || 1, tpSpec: s.tp || null,
     fireMode: auto ? 'AUTO' : pump ? 'PUMP' : bolt ? 'BOLT' : 'SEMI',

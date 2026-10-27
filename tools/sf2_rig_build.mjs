@@ -1,13 +1,14 @@
 // v62 SF2's own first-person rig: the gun parts, sleeves and gloves skinned to one Bip01 skeleton plus the animset's clips
 // (Equip, Idle, Fire, Zoom, ZoomFire, Reload, dash …) → tools/guns/<id>_sf2_rig.glb (packed by tools/guns/pack.mjs).
-//   node tools/sf2_rig_build.mjs [m4a1]
+//   node tools/sf2_rig_build.mjs [m4a1|ak103|g36c]
 // Input (UModel, see docs/pipelines/guns.md): tools/out/sf2/<id>/ (-export -gltf -png of the gun), tools/out/sf2/<id>_anim/ (-export
 // -psk: the .psa animset) and tools/out/sf2/arms/ (com_1starm_b01 / com_1stglove_b01 from c_comm_skelet, their textures).
 // No Blender: the parts already share the bind pose of the gun's skeleton (UModel glTF: metres, Y up), so their skins are joined
 // node for node and the PSA keys are written on those same nodes. PSA → these nodes: position (x, z, −y) / 100; rotation with
 // the axes swapped the same way, conjugated on every bone but the root (ActorX keeps child rotations inverted).
-// The front / rear sights have no socket in the export: placed on the rails like tools/blender/sf2_gun_build.py and riveted
-// to weapon_root.
+// Sights: the M4A1's front / rear sights are placed on the rails (fitted to the user's SF2 ADS screenshot, v62f); other guns'
+// sight meshes go on their own SF2 socket (the body's .props.txt from `-export -psk`: the part's root bone onto the socket,
+// v62h), and an AK's iron sights are part of its body. All riveted to weapon_root. The muzzle is the 'flame' socket.
 import { NodeIO } from '@gltf-transform/core';
 import { ALL_EXTENSIONS } from '@gltf-transform/extensions';
 import { draco, textureCompress, prune, dedup } from '@gltf-transform/functions';
@@ -16,23 +17,25 @@ import sharp from 'sharp';
 import fs from 'node:fs';
 
 const GID = process.argv[2] || 'm4a1', SRC = 'tools/out/sf2/', OUT = `tools/guns/${GID}_sf2_rig.glb`;
+// one gun: its four parts rif_<id>_<part> (UModel `-export -gltf -png rif_<id>` → <id>/, `-export -psk rif_<id>` → <id>_anim/),
+// textures <id>_<part>_d / _n from rif_<id>_texture, the animset 1st_anim_<id>
+const ARMS = [['sleeve', 'arms/c_comm_skelet/SkeletalMesh3/com_1starm_b01.gltf', 'sleeve'], ['glove', 'arms/c_comm_skelet/SkeletalMesh3/com_1stglove_b01.gltf', 'glove']];
+const gun = (id, o = {}) => Object.assign({
+  base: `${id}/rif_${id}/SkeletalMesh3/rif_${id}_body.gltf`, props: `${id}_anim/rif_${id}/SkeletalMesh3/rif_${id}_body.props.txt`,
+  parts: [...['body', 'barrel', 'stock', 'magazine'].map((k) => [k, `${id}/rif_${id}/SkeletalMesh3/rif_${id}_${k}.gltf`, `${id}_${k}`]), ...ARMS],
+  psa: `${id}_anim/rif_${id}/AnimSet/1st_anim_${id}.psa`, socketSights: [],
+}, o);
 const G = {
-  m4a1: {
-    base: 'm4a1/rif_m4a1/SkeletalMesh3/rif_m4a1_body.gltf',
-    parts: [['body', 'm4a1/rif_m4a1/SkeletalMesh3/rif_m4a1_body.gltf', 'm4a1_body'], ['barrel', 'm4a1/rif_m4a1/SkeletalMesh3/rif_m4a1_barrel.gltf', 'm4a1_barrel'],
-      ['stock', 'm4a1/rif_m4a1/SkeletalMesh3/rif_m4a1_stock.gltf', 'm4a1_stock'], ['magazine', 'm4a1/rif_m4a1/SkeletalMesh3/rif_m4a1_magazine.gltf', 'm4a1_magazine'],
-      ['sleeve', 'arms/c_comm_skelet/SkeletalMesh3/com_1starm_b01.gltf', 'sleeve'], ['glove', 'arms/c_comm_skelet/SkeletalMesh3/com_1stglove_b01.gltf', 'glove']],
-    sight: ['m4a1/rif_m4a1_sight/SkeletalMesh3/rif_m4a1_sight_up.gltf', 'm4a1_sight'],
-    rear: ['m4a1/weapon_common_part01/SkeletalMesh3/rif_m4a1_rearsight.gltf', 'm4a1_rearsight'],
-    psa: 'm4a1_anim/rif_m4a1/AnimSet/1st_anim_m4a1.psa',
-  },
+  m4a1: gun('m4a1', { railSights: { sight: ['m4a1/rif_m4a1_sight/SkeletalMesh3/rif_m4a1_sight_up.gltf', 'm4a1_sight'], rear: ['m4a1/weapon_common_part01/SkeletalMesh3/rif_m4a1_rearsight.gltf', 'm4a1_rearsight'] } }),
+  ak103: gun('ak103'), // iron sights on the body
+  g36c: gun('g36c', { hoodedPost: true, socketSights: [['sight', 'g36c/rif_g36c/SkeletalMesh3/rif_g36c_sight_up.gltf', 'g36c_frontsight', 'Sight']] }), // SightOnMesh on SightBaseSocketName
 }[GID];
 const TEX = {
-  m4a1_body: ['m4a1/rif_m4a1_texture/Texture2D/m4a1_body'], m4a1_barrel: ['m4a1/rif_m4a1_texture/Texture2D/m4a1_barrel'], m4a1_stock: ['m4a1/rif_m4a1_texture/Texture2D/m4a1_stock'],
-  m4a1_magazine: ['m4a1/rif_m4a1_texture/Texture2D/m4a1_magazine'], m4a1_sight: ['m4a1/rif_m4a1_sight/Texture2D/m4a1_sight'], m4a1_rearsight: ['m4a1/weapon_common_part01/Texture2D/m4a1_rearsight'],
+  m4a1_sight: ['m4a1/rif_m4a1_sight/Texture2D/m4a1_sight'], m4a1_rearsight: ['m4a1/weapon_common_part01/Texture2D/m4a1_rearsight'],
   sleeve: ['arms/c_delta_1st_texture/Texture2D/delm_1st_b01', 'arms/c_comm_1st_texture/Texture2D/com_1st_b01'], // the Delta Force sleeve colour, the common sleeve's normals
   glove: ['arms/c_comm_1sthand_texture/Texture2D/com_1st_glove_b01'],
 };
+const texDirs = (stem) => TEX[stem] || [`${GID}/rif_${GID}_texture/Texture2D/${stem}`];
 const ROUGH = { barrel: 0.78, stock: 0.8, magazine: 0.72, sight: 0.66, body: 0.68, sleeve: 0.9, glove: 0.82 }; // matte, dielectric (as sf2_gun_build.py)
 const PEEP_DROP = 0.0048, PEEP_DX = 0.0007; // the rear sight's aperture under its top / off its top's mean x (tuned on ADS shots, v61b)
 // v62f the flip-up front sight sits this far behind the rail's front end (its socket is not exported): measured on the user's SF2 ADS
@@ -54,7 +57,7 @@ const norm = (v) => { const l = Math.hypot(...v) || 1; return v.map((x) => x / l
 
 async function material(stem) {
   const key = Object.keys(ROUGH).find((k) => stem.includes(k)), m = doc.createMaterial(`gun:tex_${stem}`).setMetallicFactor(0).setRoughnessFactor(ROUGH[key] ?? 0.75).setDoubleSided(true);
-  const dirs = TEX[stem], find = (kind) => dirs.map((d) => `${SRC}${d}_${kind}.png`).find((p) => fs.existsSync(p));
+  const dirs = texDirs(stem), find = (kind) => dirs.map((d) => `${SRC}${d}_${kind}.png`).find((p) => fs.existsSync(p));
   const d = find('d'), n = find('n');
   if (d) m.setBaseColorTexture(doc.createTexture(stem + '_d').setImage(await sharp(d).removeAlpha().png().toBuffer()).setMimeType('image/png')); // (the alpha is a spec mask: opaque here, and it doubled the WebP)
   if (n) m.setNormalTexture(doc.createTexture(stem + '_n').setImage(fs.readFileSync(n)).setMimeType('image/png'));
@@ -100,30 +103,52 @@ for (const [name, file, stem] of G.parts) V[name] = await addPart(name, file, st
 for (const c of meshNode0.listChildren()) { meshNode0.removeChild(c); scene.addChild(c); } // the skeleton (Bip01) to the scene root
 meshNode0.dispose(); // the body was re-added as 'body' with its own material
 const min = (a, k) => Math.min(...a.map((p) => p[k])), max = (a, k) => Math.max(...a.map((p) => p[k])), mean = (a, k) => a.reduce((s, p) => s + p[k], 0) / a.length;
-// bore: the barrel's front 5 cm (muzzle toward +Z here)
-const zmax = max(V.barrel, 2), front = V.barrel.filter((p) => p[2] > zmax - 0.05), bore = [mean(front, 0), mean(front, 1), zmax];
-// rear sight: peep end to the rear (−Z), standing on the receiver's top rail at its rear end
-const R = await bakedPoints(G.rear[0]); let rp = R.pts, flip = 1;
-if (rp.reduce((a, p) => (p[1] > a[1] ? p : a))[2] > mean(rp, 2)) flip = -1; // turned 180° about Y
-rp = rp.map((p) => [p[0] * flip, p[1], p[2] * flip]);
-const rtop = max(V.body, 1), rz = min(V.body.filter((p) => p[1] > rtop - 0.004), 2);
-const rc = [(min(rp, 0) + max(rp, 0)) / 2, min(rp, 1), min(rp, 2)], rOff = [bore[0] - rc[0], rtop - rc[1], rz - rc[2]];
-rp = rp.map((p) => [p[0] + rOff[0], p[1] + rOff[1], p[2] + rOff[2]]);
-const top = max(rp, 1), tp = rp.filter((p) => p[1] > top - 0.002), peepx = mean(tp, 0) + PEEP_DX, aperture = top - PEEP_DROP, peepZ = min(rp, 2);
+// SF2's sockets on the body (SocketName, BoneName, RelativeLocation in cm); a bone-local UE vector maps to these nodes like a
+// PSA key, (x, z, −y) / 100
+const SOCK = {};
+for (const m of fs.readFileSync(SRC + G.props, 'utf8').matchAll(/SocketName = (\S+)\s+BoneName = (\S+)\s+RelativeLocation = \{ X=([-\d.e]+), Y=([-\d.e]+), Z=([-\d.e]+) \}/g))
+  SOCK[m[1]] = { bone: m[2], p: [+m[3] / 100, +m[5] / 100, -m[4] / 100] };
+const sockAt = (name) => { const k = SOCK[name], b = joints[jix[k.bone]]; return mul(b.getWorldMatrix(), [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, k.p[0], k.p[1], k.p[2], 1]); };
+const bore = sockAt('flame').slice(12, 15); // the muzzle
 const rot3 = (M, f) => (v) => { const w = xf(M, v, 0); return [w[0] * f, w[1], w[2] * f]; };
-await addPart('rearsight', G.rear[0], G.rear[1], { p: (v) => { const w = xf(R.M, v); return [w[0] * flip + rOff[0], w[1] + rOff[1], w[2] * flip + rOff[2]]; }, n: rot3(R.M, flip) });
-// front sight: on the front end of the handguard's top rail, its post tip on the sight line through the peep
-const S = await bakedPoints(G.sight[0]); let sp = S.pts;
-const railp = V.barrel.filter((p) => p[1] > bore[1] + 0.012), rzmax = max(railp, 2), ry = max(railp.filter((p) => p[2] > rzmax - 0.03), 1);
-const sc = [mean(sp, 0), min(sp, 1), mean(sp, 2)]; let sOff = [bore[0] - sc[0], ry - sc[1], rzmax - SIGHT_BACK - sc[2]];
-sp = sp.map((p) => [p[0] + sOff[0], p[1] + sOff[1], p[2] + sOff[2]]);
-sOff = [sOff[0] + peepx - (min(sp, 0) + max(sp, 0)) / 2 + POST_DX, sOff[1] + aperture - (max(sp, 1) - 0.004) - POST_DROP, sOff[2]];
-await addPart('frontsight', G.sight[0], G.sight[1], { p: (v) => { const w = xf(S.M, v); return [w[0] + sOff[0], w[1] + sOff[1], w[2] + sOff[2]]; }, n: rot3(S.M, 1) });
+const marks = { MUZZLE: bore };
+for (const [name, file, stem, socket] of G.socketSights) { // the part's own root bone onto the socket
+  const pd = await io.read(SRC + file), sk = pd.getRoot().listSkins()[0], ibm = Array.from(sk.getInverseBindMatrices().getArray()).slice(0, 16), M = mul(sockAt(socket), ibm);
+  V[name] = await addPart(name, file, stem, { p: (v) => xf(M, v), n: rot3(M, 1) });
+}
+if (!G.railSights) { // POST: the front sight's tip — the highest point on the bore's centre line (±1.2 mm: not the ears) in the front 25 cm
+  const pts = [V.barrel, V.body, ...G.socketSights.map(([n]) => V[n])].flat().filter((p) => Math.abs(p[0] - bore[0]) < 0.0012 && p[2] > bore[2] - 0.25).sort((a, b) => b[1] - a[1]);
+  let i = 0;
+  if (G.hoodedPost) { // a ring hood over the post (G36C): its top is on the centre line too — step down through the ring, over the hole
+    while (i + 1 < pts.length && pts[i][1] - pts[i + 1][1] < 0.0025) i++; // (G36C: hood 1207.8 → 1205.8 mm, a 6.6 mm hole, the tip at 1199.2)
+    i++;
+  }
+  marks.POST = pts[i];
+}
+if (G.railSights) {
+  const { sight: SG, rear: RG } = G.railSights;
+  // rear sight: peep end to the rear (−Z), standing on the receiver's top rail at its rear end
+  const R = await bakedPoints(RG[0]); let rp = R.pts, flip = 1;
+  if (rp.reduce((a, p) => (p[1] > a[1] ? p : a))[2] > mean(rp, 2)) flip = -1; // turned 180° about Y
+  rp = rp.map((p) => [p[0] * flip, p[1], p[2] * flip]);
+  const rtop = max(V.body, 1), rz = min(V.body.filter((p) => p[1] > rtop - 0.004), 2);
+  const rc = [(min(rp, 0) + max(rp, 0)) / 2, min(rp, 1), min(rp, 2)], rOff = [bore[0] - rc[0], rtop - rc[1], rz - rc[2]];
+  rp = rp.map((p) => [p[0] + rOff[0], p[1] + rOff[1], p[2] + rOff[2]]);
+  const top = max(rp, 1), tp = rp.filter((p) => p[1] > top - 0.002), peepx = mean(tp, 0) + PEEP_DX, aperture = top - PEEP_DROP, peepZ = min(rp, 2);
+  await addPart('rearsight', RG[0], RG[1], { p: (v) => { const w = xf(R.M, v); return [w[0] * flip + rOff[0], w[1] + rOff[1], w[2] * flip + rOff[2]]; }, n: rot3(R.M, flip) });
+  // front sight: on the handguard's top rail, its post tip on the sight line through the peep
+  const S = await bakedPoints(SG[0]); let sp = S.pts;
+  const railp = V.barrel.filter((p) => p[1] > bore[1] + 0.012), rzmax = max(railp, 2), ry = max(railp.filter((p) => p[2] > rzmax - 0.03), 1);
+  const sc = [mean(sp, 0), min(sp, 1), mean(sp, 2)]; let sOff = [bore[0] - sc[0], ry - sc[1], rzmax - SIGHT_BACK - sc[2]];
+  sp = sp.map((p) => [p[0] + sOff[0], p[1] + sOff[1], p[2] + sOff[2]]);
+  sOff = [sOff[0] + peepx - (min(sp, 0) + max(sp, 0)) / 2 + POST_DX, sOff[1] + aperture - (max(sp, 1) - 0.004) - POST_DROP, sOff[2]];
+  await addPart('frontsight', SG[0], SG[1], { p: (v) => { const w = xf(S.M, v); return [w[0] + sOff[0], w[1] + sOff[1], w[2] + sOff[2]]; }, n: rot3(S.M, 1) });
+  Object.assign(marks, { SIGHT: [peepx, aperture, peepZ], POST: [peepx, aperture, rzmax - SIGHT_BACK] });
+}
 
-// marks on weapon_root (bind space → that bone's space): the peep (SIGHT), the post tip (POST) and the muzzle; the game reads
-// them as empties under the bone
+// marks on weapon_root (bind space → that bone's space): the muzzle, and for railed sights the peep (SIGHT) and post tip (POST);
+// the game reads them as empties under the bone
 const wr = joints[jix.weapon_root], wrInv = Array.from(skin.getInverseBindMatrices().getArray()).slice(jix.weapon_root * 16, jix.weapon_root * 16 + 16);
-const marks = { SIGHT: [peepx, aperture, peepZ], POST: [peepx, aperture, rzmax - SIGHT_BACK], MUZZLE: bore };
 for (const [k, p] of Object.entries(marks)) wr.addChild(doc.createNode(k).setTranslation(xf(wrInv, p)));
 
 // ---- the animset

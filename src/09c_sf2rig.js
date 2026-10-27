@@ -19,10 +19,14 @@ class SF2Rig {
     // (6.4 cm behind the peep), with SF2's own viewmodel lenses (def.vmHFov / vmAdsHFov, horizontal). v62f: checked on the
     // user's SF2 ADS screenshot (10-27) — the peep ring 267 px at 1080p there and here. (v62 had the eye 3 cm back with a
     // 48° vertical lens: the right ring from the wrong pair, the gun 1.8× too small.) One camera for every pose, as in SF2.
+    // v62h guns without a fitted peep (no SIGHT mark: AK-103, G36C): the eye level with the front sight's tip (POST), as deep as
+    // SF2 puts it through the weapon's own vLocZoomIN (the mesh's aimed offset, UE cm, x forward): head z − 3 cm − x / 100 —
+    // the M4A1's −3 gives the head depth the screenshot fit found.
     // Rig space is +Z forward, −X right, +Y up: turned half a turn about Y it is camera space.
     this.pose({ Zoom: [this.dur('Zoom'), 1] });
-    const s = m.getObjectByName('SIGHT').getWorldPosition(new THREE.Vector3()), head = m.getObjectByName('Bip01-Head').getWorldPosition(new THREE.Vector3());
-    const eye = new THREE.Vector3(s.x, s.y, o.eyeRelief != null ? s.z - o.eyeRelief : head.z);
+    const sm = m.getObjectByName('SIGHT'), head = m.getObjectByName('Bip01-Head').getWorldPosition(new THREE.Vector3());
+    const s = (sm || m.getObjectByName('POST')).getWorldPosition(new THREE.Vector3());
+    const eye = new THREE.Vector3(s.x, s.y, sm ? (o.eyeRelief != null ? s.z - o.eyeRelief : head.z) : head.z - 0.03 - (o.zoomIn ? o.zoomIn[0] : -3) / 100);
     m.rotation.y = Math.PI; m.position.set(eye.x, -eye.y, eye.z);
     this.reloadSounds = o.reloadSounds || null;
     // v62d play the Equip clip over the gun's draw time (def.equipTime, SF2's own 0.8 s for the M4A1); with none, the old 1.6×
