@@ -25,7 +25,11 @@ class App {
     this.tex = new TextureFactory(r); this.tex.setQuality(activeQuality());
     this.mats = new MaterialLib(this.tex);
     this.models = new WeaponModels(this.tex);
-    loadGunModels().then(() => this.models.previews.clear()); // armory previews rebuild with the Blender guns once parsed
+    loadGunModels().then(() => { // armory previews rebuild with the Blender guns once parsed
+      this.models.previews.clear();
+      // v62 card pictures drawn before that showed the procedural stand-in: draw them again (each card swaps in place)
+      const drawn = Object.keys(this.thumbs || {}); this.thumbs = {}; this._queueThumbs(drawn);
+    });
     this.soldiers = new SoldierFactory(this.tex, this.models);
     this.audio = new AudioEngine(); this.input = new InputManager(this.canvas); this.cmds = new CmdBuilder(this.input); this.hud = new HUD(this); this.post = new PostFX(r);
     this.hdrCache = new Map(); this.match = null; this.room = null; this.state = 'hub';

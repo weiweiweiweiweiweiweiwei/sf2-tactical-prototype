@@ -213,6 +213,7 @@ MAPS.push(apexTriMap({
   sun: { pos: [-20, 70, 25], color: 0xfff1de, intensity: 2.6, auto: true }, hemi: [0xbcd6ee, 0x6f6450, 0.8],
   fog: { color: 0xc4ced8, near: 180, far: 1100 }, acoustics: 'outdoor', ambience: 'wind', shadowFollow: 60,
   shot: { pos: [0, 300, 140], target: [0, 0, 0] },
-  thumb: { pos: [85, 45, 1], target: [10, 5, 86] }, // the village
+  // the user's Blender view (10-27): up at the stilt houses past the red-panel tower; solved from the axis gizmo and 5 landmarks
+  thumb: { pos: [72.0, 15.9, 97.9], target: [-6.6, 35.9, 39.4], fov: 43.8 },
   objectives: { dom: [[-30, 0, 0], [0, 0, 0], [30, 0, 0]], relic: [0, 0, 0], domRadius: 5 }, // replaced by the baked ones on load
 }));
