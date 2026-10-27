@@ -8564,7 +8564,8 @@ function loadGunModels() {
   if (loadGunModels.p) return loadGunModels.p;
   return (loadGunModels.p = (async () => {
     try {
-      if (!window.GUN_GLB) await new Promise((res) => { const s = document.createElement('script'); s.src = 'assets/guns/guns.js'; s.async = true; s.onload = res; s.onerror = res; document.head.appendChild(s); });
+      const script = (src) => new Promise((res) => { const s = document.createElement('script'); s.src = src; s.async = true; s.onload = res; s.onerror = res; document.head.appendChild(s); });
+      await Promise.all([window.GUN_GLB ? null : script('assets/guns/guns.js'), window.SF2_FX ? null : script('assets/fx_sf2.js')]); // v62m + SF2's own muzzle-flash textures
       const L = new GLTFLoader(), D = new DRACOLoader(); // v49 gunlib exports Draco-compressed GLBs (older ones are plain; both load)
       D.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/libs/draco/gltf/'); L.setDRACOLoader(D);
       for (const [id, b64] of Object.entries(window.GUN_GLB || {})) {
@@ -8814,7 +8815,8 @@ class WeaponModels {
     const rig = new SF2Rig(G, Object.assign({}, o, { reloadSounds: o.reloadSounds || [[0.07, 'magout'], [0.36, 'magin'], [0.73, 'charge']] })), g = new THREE.Group(); g.add(rig.model);
     const V = THREE.Vector3, out = { group: g, nodes: {}, rig, mag: null, bolt: null, slide: null, charge: null, pin: null, nade: null, pump: null, cover: null, lhand: null };
     out.hipPos = new V(); out.adsPos = new V(); out.hipRot = new THREE.Euler(); out.adsRot = new THREE.Euler(); out.magMove = new V(); out.magRot = 0;
-    out.muzzle = rig.model.getObjectByName('MUZZLE'); out.flash = this._flash(out.muzzle, 0, 0, 0, o.flash ?? 0.2);
+    out.muzzle = rig.model.getObjectByName('MUZZLE');
+    const sf = new SF2Flash(out.muzzle, o.flashScale ?? 0.5); if (sf.ok) out.sf2flash = sf; else out.flash = this._flash(out.muzzle, 0, 0, 0, o.flash ?? 0.2); // v62m SF2's own flash
     if (o.reticle) out.reticle = this._reticle(g, 0, true, o.reticleScale || 1, [0.25, 1, 0.3]);
     out.reloadSounds = rig.reloadSounds;
     return out;
@@ -10369,6 +10371,67 @@ class SF2Rig {
     this.pose(w); this.place(s.ads);
   }
 }
+
+/* v62m SF2's OWN MUZZLE FLASH (user 10-27: SF2's is a soft yellow-white glow, not our star) — the rifle systems
+   P_WP_MF_AR_03_NoZoom (hip) and _Zoom (aimed) in SF2_Weapon_fx.upk, their textures from SF2_Env_fx (assets/fx_sf2.js,
+   tools/fx_sf2.py). Each layer is one camera-facing sprite per shot (BurstList Count 1): life, size (UE cm = the rig's cm,
+   × SizeMultiplyLife), colour (ColorOverLife; additive, over 1 burns to the white core), start spin (turns), offset along
+   the barrel. Hip: front flare, 4×4 explosion sequence, star flare, lens glow; aimed: the front flare alone (its four
+   prongs round the post) and one slow smoke puff (translucent). scale 0.5 (fromRig): SF2's sizes as they are filled the middle
+   of the hip view white and spread the aimed flare's prongs past the rear sight; half reads as SF2's burst (tools/out/_flashshot.mjs). */
+const SF2_FLASH = {
+  hip: [
+    { tex: 'front', life: [0.03, 0.06], size: [10, 21], grow: [1.732, 1.732], rgb: [0.544, 0.402, 0.248], fadeFrom: 0.3, spin: 0.05 },
+    { tex: 'explo', life: [0.03, 0.05], size: [5, 25], grow: [1.742, 1.026], rgb: [7.036, 3.104, 1.973], fwd: 10, sub: 4 },
+    { tex: 'star', life: [0.03, 0.05], size: [10, 20], grow: [2.6, 2.981], rgb: [4.638, 2.009, 1.228] },
+    { tex: 'lens', life: [0.03, 0.05], size: [25, 50], grow: [1.165, 1.174], rgb: [1.78, 0.929, 0.726], fwd: 10 },
+  ],
+  ads: [
+    { tex: 'front', life: [0.03, 0.06], size: [10, 27], grow: [1.732, 1.732], rgb: [4.657, 1.89, 0.983], spin: 0.03 },
+    { tex: 'smoke', life: [0.5, 0.8], size: [30, 50], grow: [1.008, 2.295], rgb: [0.78, 0.78, 0.78], vel: [20, 50], smoke: true },
+  ],
+};
+class SF2Flash {
+  static tex() {
+    if (SF2Flash._t || !window.SF2_FX) return SF2Flash._t || null;
+    const L = new THREE.TextureLoader(), t = SF2Flash._t = {};
+    for (const [k, url] of Object.entries(window.SF2_FX)) { t[k] = L.load(url); t[k].colorSpace = THREE.SRGBColorSpace; }
+    return t;
+  }
+  // muzzle: the MUZZLE mark (weapon_root's space: +x along the barrel, in metres)
+  constructor(muzzle, scale = 1) {
+    const T = SF2Flash.tex(); this.ok = !!T; if (!T) return;
+    this.scale = scale; this.layers = { hip: [], ads: [] };
+    for (const [mode, defs] of Object.entries(SF2_FLASH)) {
+      for (const d of defs) {
+        let map = T[d.tex];
+        if (d.sub) { map = map.clone(); map.repeat.set(1 / d.sub, 1 / d.sub); } // (a clone shares the image; its own offset per frame)
+        const m = new THREE.SpriteMaterial({ map, transparent: true, depthWrite: false, blending: d.smoke ? THREE.NormalBlending : THREE.AdditiveBlending, opacity: d.smoke ? 0 : 1 });
+        const s = new THREE.Sprite(m); s.visible = false; s.renderOrder = d.smoke ? 9 : 10; muzzle.add(s);
+        this.layers[mode].push({ d, s, t: 0, life: 0, size: 0, x: 0, v: 0 });
+      }
+    }
+  }
+  fire(ads) {
+    if (!this.ok) return;
+    for (const L of this.layers[ads ? 'ads' : 'hip']) {
+      const d = L.d; L.t = 0; L.life = rand(d.life[0], d.life[1]); L.size = rand(d.size[0], d.size[1]) / 100 * this.scale;
+      L.x = (d.fwd || 0) / 100; L.v = d.vel ? rand(d.vel[0], d.vel[1]) / 100 : 0;
+      L.s.material.rotation = d.spin ? rand(-d.spin, d.spin) * Math.PI * 2 : 0; L.s.visible = true; this.step(L, 0);
+    }
+  }
+  step(L, dt) {
+    const d = L.d, s = L.s; L.t += dt; L.x += L.v * dt;
+    const k = L.t / L.life; if (k >= 1) { s.visible = false; return; }
+    s.position.set(L.x, 0, 0); s.scale.setScalar(L.size * lerp(d.grow[0], d.grow[1], k));
+    if (d.smoke) s.material.opacity = 0.5 * Math.min(1, k / 0.15) * Math.min(1, (1 - k) / 0.85); // AlphaOverLife: up to 0.5, then down
+    const f = d.fadeFrom != null ? clamp((1 - k) / (1 - d.fadeFrom), 0, 1) : 1;
+    s.material.color.setRGB(d.rgb[0] * f, d.rgb[1] * f, d.rgb[2] * f);
+    if (d.sub) { const n = d.sub, i = Math.min(n * n - 1, Math.floor(k * n * n)); s.material.map.offset.set((i % n) / n, 1 - (Math.floor(i / n) + 1) / n); }
+  }
+  update(dt) { if (this.ok) for (const m of ['hip', 'ads']) for (const L of this.layers[m]) if (L.s.visible) this.step(L, dt); }
+  hide() { if (this.ok) for (const m of ['hip', 'ads']) for (const L of this.layers[m]) L.s.visible = false; }
+}
 /* =====================================================================
    PLAYER WEAPONS — per-class behaviour, all numbers come from the
    compiled WEAPON_DATABASE entry. Spread values are cone radii in
@@ -10404,7 +10467,7 @@ class Weapon {
     if (this.vm.cover) this.vm.cover.rotation.x = 0;
     if (this.ammo === 0 && this.reserveAmmo > 0) this.autoReloadT = 0.2; // auto reload an empty gun on draw
   }
-  holster() { this.reloading = false; this.queued = 0; this.autoReloadT = 0; if (this.vm.flash) this.vm.flash.visible = false; }
+  holster() { this.reloading = false; this.queued = 0; this.autoReloadT = 0; if (this.vm.flash) this.vm.flash.visible = false; if (this.vm.sf2flash) this.vm.sf2flash.hide(); }
   get reloadPhase() { return this.reloading ? clamp(this.reloadT / this.reloadTime, 0, 1) : 0; }
   // mechanical sounds: in your head for your own gun, positional for anyone else's
   _mech(name) { this.game.audio.mech(name, this.local ? null : this.owner.motor.pos, this.sf2); }
@@ -11028,7 +11091,8 @@ class WeaponSystem extends Arsenal {
   // Viewmodel kick is cosmetic only: a backward z kickback + a tiny rotational shake (almost none in ADS, so the
   // sight stays on the screen centre). The real recoil is the camera rotation in Player.addRecoil.
   kick(k) {
-    if (this.current.vm.rig) { this.current.vm.rig.fire(this.ads); return; } // v62 SF2's own Fire / ZoomFire clip is the kick
+    const w = this.current; if (w.vm.sf2flash && !w.suppressed && !(this.scopedIn && w.scoped)) w.vm.sf2flash.fire(this.ads); // v62m
+    if (w.vm.rig) { w.vm.rig.fire(this.ads); return; } // v62 SF2's own Fire / ZoomFire clip is the kick
     // ADS: the eye is 2–3 cm behind an iron sight's peep, so a hip-sized kickback (≈3.6 cm) slammed the rear sight into the
     // camera (user 10-27: "the stock shakes fore and aft, the sight hardly moves"). SF2's own ZoomFire (rif_m4a1 animset)
     // is a straight 2 cm push back with no rotation at all, ≈ ¼ of its 8.5 cm eye relief — the same quarter here (≈6 mm);
@@ -11105,6 +11169,7 @@ class WeaponSystem extends Arsenal {
       w.vm.flash.visible = on;
       if (on) { w.vm.flash.material.rotation = Math.random() * Math.PI * 2; w.vm.flash.scale.setScalar(w.vm.flash.userData.baseScale * rand(0.8, 1.25)); }
     }
+    if (w.vm.sf2flash) w.vm.sf2flash.update(dt);
     if (this.flashLightT > 0) { this.flashLightT -= dt; if (w.vm.muzzle) { w.vm.group.updateMatrixWorld(); w.vm.muzzle.getWorldPosition(this.flashLight.position); } if (this.flashLightT <= 0) this.flashLight.intensity = 0; }
     if (w.vm.reticle) w.vm.reticle.material.opacity = clamp((this.adsT - 0.55) / 0.35, 0, 1);
     this._barrelSmoke(dt, w);

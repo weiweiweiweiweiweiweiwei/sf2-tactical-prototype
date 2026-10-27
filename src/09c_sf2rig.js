@@ -74,3 +74,64 @@ class SF2Rig {
     this.pose(w); this.place(s.ads);
   }
 }
+
+/* v62m SF2's OWN MUZZLE FLASH (user 10-27: SF2's is a soft yellow-white glow, not our star) — the rifle systems
+   P_WP_MF_AR_03_NoZoom (hip) and _Zoom (aimed) in SF2_Weapon_fx.upk, their textures from SF2_Env_fx (assets/fx_sf2.js,
+   tools/fx_sf2.py). Each layer is one camera-facing sprite per shot (BurstList Count 1): life, size (UE cm = the rig's cm,
+   × SizeMultiplyLife), colour (ColorOverLife; additive, over 1 burns to the white core), start spin (turns), offset along
+   the barrel. Hip: front flare, 4×4 explosion sequence, star flare, lens glow; aimed: the front flare alone (its four
+   prongs round the post) and one slow smoke puff (translucent). scale 0.5 (fromRig): SF2's sizes as they are filled the middle
+   of the hip view white and spread the aimed flare's prongs past the rear sight; half reads as SF2's burst (tools/out/_flashshot.mjs). */
+const SF2_FLASH = {
+  hip: [
+    { tex: 'front', life: [0.03, 0.06], size: [10, 21], grow: [1.732, 1.732], rgb: [0.544, 0.402, 0.248], fadeFrom: 0.3, spin: 0.05 },
+    { tex: 'explo', life: [0.03, 0.05], size: [5, 25], grow: [1.742, 1.026], rgb: [7.036, 3.104, 1.973], fwd: 10, sub: 4 },
+    { tex: 'star', life: [0.03, 0.05], size: [10, 20], grow: [2.6, 2.981], rgb: [4.638, 2.009, 1.228] },
+    { tex: 'lens', life: [0.03, 0.05], size: [25, 50], grow: [1.165, 1.174], rgb: [1.78, 0.929, 0.726], fwd: 10 },
+  ],
+  ads: [
+    { tex: 'front', life: [0.03, 0.06], size: [10, 27], grow: [1.732, 1.732], rgb: [4.657, 1.89, 0.983], spin: 0.03 },
+    { tex: 'smoke', life: [0.5, 0.8], size: [30, 50], grow: [1.008, 2.295], rgb: [0.78, 0.78, 0.78], vel: [20, 50], smoke: true },
+  ],
+};
+class SF2Flash {
+  static tex() {
+    if (SF2Flash._t || !window.SF2_FX) return SF2Flash._t || null;
+    const L = new THREE.TextureLoader(), t = SF2Flash._t = {};
+    for (const [k, url] of Object.entries(window.SF2_FX)) { t[k] = L.load(url); t[k].colorSpace = THREE.SRGBColorSpace; }
+    return t;
+  }
+  // muzzle: the MUZZLE mark (weapon_root's space: +x along the barrel, in metres)
+  constructor(muzzle, scale = 1) {
+    const T = SF2Flash.tex(); this.ok = !!T; if (!T) return;
+    this.scale = scale; this.layers = { hip: [], ads: [] };
+    for (const [mode, defs] of Object.entries(SF2_FLASH)) {
+      for (const d of defs) {
+        let map = T[d.tex];
+        if (d.sub) { map = map.clone(); map.repeat.set(1 / d.sub, 1 / d.sub); } // (a clone shares the image; its own offset per frame)
+        const m = new THREE.SpriteMaterial({ map, transparent: true, depthWrite: false, blending: d.smoke ? THREE.NormalBlending : THREE.AdditiveBlending, opacity: d.smoke ? 0 : 1 });
+        const s = new THREE.Sprite(m); s.visible = false; s.renderOrder = d.smoke ? 9 : 10; muzzle.add(s);
+        this.layers[mode].push({ d, s, t: 0, life: 0, size: 0, x: 0, v: 0 });
+      }
+    }
+  }
+  fire(ads) {
+    if (!this.ok) return;
+    for (const L of this.layers[ads ? 'ads' : 'hip']) {
+      const d = L.d; L.t = 0; L.life = rand(d.life[0], d.life[1]); L.size = rand(d.size[0], d.size[1]) / 100 * this.scale;
+      L.x = (d.fwd || 0) / 100; L.v = d.vel ? rand(d.vel[0], d.vel[1]) / 100 : 0;
+      L.s.material.rotation = d.spin ? rand(-d.spin, d.spin) * Math.PI * 2 : 0; L.s.visible = true; this.step(L, 0);
+    }
+  }
+  step(L, dt) {
+    const d = L.d, s = L.s; L.t += dt; L.x += L.v * dt;
+    const k = L.t / L.life; if (k >= 1) { s.visible = false; return; }
+    s.position.set(L.x, 0, 0); s.scale.setScalar(L.size * lerp(d.grow[0], d.grow[1], k));
+    if (d.smoke) s.material.opacity = 0.5 * Math.min(1, k / 0.15) * Math.min(1, (1 - k) / 0.85); // AlphaOverLife: up to 0.5, then down
+    const f = d.fadeFrom != null ? clamp((1 - k) / (1 - d.fadeFrom), 0, 1) : 1;
+    s.material.color.setRGB(d.rgb[0] * f, d.rgb[1] * f, d.rgb[2] * f);
+    if (d.sub) { const n = d.sub, i = Math.min(n * n - 1, Math.floor(k * n * n)); s.material.map.offset.set((i % n) / n, 1 - (Math.floor(i / n) + 1) / n); }
+  }
+  update(dt) { if (this.ok) for (const m of ['hip', 'ads']) for (const L of this.layers[m]) if (L.s.visible) this.step(L, dt); }
+  hide() { if (this.ok) for (const m of ['hip', 'ads']) for (const L of this.layers[m]) L.s.visible = false; }
+}

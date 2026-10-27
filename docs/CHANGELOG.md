@@ -988,3 +988,10 @@
 
 ### v62l（2026-10-27）：腰射上跳上限（使用者選 A）
 - 腰射的鏡頭上跳以 SF2 參數 `maxCrossVert` 為上限（M4A1 14°，約第 11 發到頂）；開鏡照 v62j 不設上限（M4A1 30 發 22.7°）。`tools/out/_recoilmeasure.mjs`：腰射 peak 14°、約 1 秒回正。
+
+### v62m（2026-10-27）：SF2 正版槍口火光
+- 來源：SF2 安裝檔 `SF2_Weapon_fx.upk` 的步槍火光 `P_WP_MF_AR_03_NoZoom`（腰射）／`_Zoom`（開鏡），貼圖從 `SF2_Env_fx` 匯出（`tools/fx_sf2.py` → `assets/fx_sf2.js`，28 KB）。
+- 腰射 4 層（都疊加發光、每發 1 個、只亮 0.03–0.06 秒）：前方火光 `T_Muzzle_front_01`（暖色、30% 後淡出）、4×4 爆炸序列 `T_Multi_Explo_seq_01`（往前 10 cm）、星芒 `T_Muzzle_02`、光暈 `T_Lens_03`；顏色、大小、壽命照 SF2 的粒子參數。
+- 開鏡：只有前方四叉火光（大部分被照門擋住）＋一團 0.5–0.8 秒的淡煙。
+- 大小用 SF2 數值的一半：照原數值腰射時畫面中央整片白、開鏡火光的叉超出照門（`tools/out/_flashshot.mjs` 截圖比較 ×1／×0.5／×0.3）。
+- 套用在 SF2 原版槍（M4A1、AK-103、G36C、K2、SCAR、FAMAS、XM8、GALIL、HK417）；其他槍、Bot 和別的玩家的火光不變。

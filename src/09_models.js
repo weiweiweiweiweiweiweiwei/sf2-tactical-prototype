@@ -59,7 +59,8 @@ function loadGunModels() {
   if (loadGunModels.p) return loadGunModels.p;
   return (loadGunModels.p = (async () => {
     try {
-      if (!window.GUN_GLB) await new Promise((res) => { const s = document.createElement('script'); s.src = 'assets/guns/guns.js'; s.async = true; s.onload = res; s.onerror = res; document.head.appendChild(s); });
+      const script = (src) => new Promise((res) => { const s = document.createElement('script'); s.src = src; s.async = true; s.onload = res; s.onerror = res; document.head.appendChild(s); });
+      await Promise.all([window.GUN_GLB ? null : script('assets/guns/guns.js'), window.SF2_FX ? null : script('assets/fx_sf2.js')]); // v62m + SF2's own muzzle-flash textures
       const L = new GLTFLoader(), D = new DRACOLoader(); // v49 gunlib exports Draco-compressed GLBs (older ones are plain; both load)
       D.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/libs/draco/gltf/'); L.setDRACOLoader(D);
       for (const [id, b64] of Object.entries(window.GUN_GLB || {})) {
@@ -309,7 +310,8 @@ class WeaponModels {
     const rig = new SF2Rig(G, Object.assign({}, o, { reloadSounds: o.reloadSounds || [[0.07, 'magout'], [0.36, 'magin'], [0.73, 'charge']] })), g = new THREE.Group(); g.add(rig.model);
     const V = THREE.Vector3, out = { group: g, nodes: {}, rig, mag: null, bolt: null, slide: null, charge: null, pin: null, nade: null, pump: null, cover: null, lhand: null };
     out.hipPos = new V(); out.adsPos = new V(); out.hipRot = new THREE.Euler(); out.adsRot = new THREE.Euler(); out.magMove = new V(); out.magRot = 0;
-    out.muzzle = rig.model.getObjectByName('MUZZLE'); out.flash = this._flash(out.muzzle, 0, 0, 0, o.flash ?? 0.2);
+    out.muzzle = rig.model.getObjectByName('MUZZLE');
+    const sf = new SF2Flash(out.muzzle, o.flashScale ?? 0.5); if (sf.ok) out.sf2flash = sf; else out.flash = this._flash(out.muzzle, 0, 0, 0, o.flash ?? 0.2); // v62m SF2's own flash
     if (o.reticle) out.reticle = this._reticle(g, 0, true, o.reticleScale || 1, [0.25, 1, 0.3]);
     out.reloadSounds = rig.reloadSounds;
     return out;
