@@ -1,7 +1,7 @@
 # PROGRESS — Web 戰術 FPS
 
 > 依 `CLAUDE.md.md` §0 / §3.1 維護：每輪開工前先讀，完成後更新（完成項、數值變更、下一步）。
-> 目前版本：**v62j（2026-10-27）**。`versions/` 只保存重大改版的可遊玩單檔（使用者 09-25 指示），其餘版本在 git 歷史裡。
+> 目前版本：**v62t（2026-10-27）**。`versions/` 只保存重大改版的可遊玩單檔（使用者 09-25 指示），其餘版本在 git 歷史裡。
 > `CLAUDE.md` 已在 v18 的 commit 中刪除，下表的「CLAUDE.md 要求」是當時的紀錄。
 
 ## 架構現況（和新版 CLAUDE.md 的差異，**待使用者決定**要不要遷移）
@@ -13,7 +13,7 @@
 | 物理 | cannon-es（手榴彈、彈殼、屍體） | cannon-es 只用於手榴彈 / 彈殼 / 掉落物 ✅ |
 | 模組 | `src/` 34 個 ES 模組（`src/main.js` 依序載入），`sh src/build.sh`（esbuild）打包成單一 `index.html`，可雙擊遊玩（v62s） | 分資料夾 |
 | 檔案長度 | 5 個檔超過 600 行：07_maps 762、09_models 705、06_mapbuilder 691、16_match 685、13_bots 655 | 每檔 < 600 行 |
-| 自動檢查 | ✅ `node tools/check.mjs`（Playwright 1.63.0，驅動系統已安裝的 Chrome / Edge） | ✅ |
+| 自動檢查 | ✅ `node tools/check.mjs`（Playwright 1.63.0，驅動系統已安裝的 Chrome / Edge；雲端用預裝 Chromium，CDN 由 `npm install --no-save three@0.170.0 cannon-es@0.20.0` 的本機副本提供） | ✅ |
 | 版本控制 | ✅ git（v17 起） | ✅ |
 
 ## 里程碑對照（✅ 完成 · ⚠️ 部分 · ❌ 未做 · 🔍 尚未稽核）

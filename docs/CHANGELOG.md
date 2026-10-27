@@ -1030,3 +1030,11 @@
 - 保持原本的執行順序：轉換前把 18 個「前面的檔用到後面的檔」的名稱搬到前面——`QUALITY`／`AUTO_Q`／`activeQuality` 移到 `01_core`（`17_app` 改用 `setAutoQ()`：模組不能改別的模組的變數）、`TEAM_CSS` 移到 `14b_emblems`、網路小工具（`NET_WEAPONS`、`v3arr`、`netV3`、`safeName`、`esc`）移到新檔 `12c_netutil.js`，`07t`／`09c`／`12b`／`14b` 往前排。現在每個檔只 import 比它早的檔，沒有循環。
 - `tools/esm/convert.mjs`（一次性轉換）、`tools/esm/analyze.mjs`（檢查漏掉的 import、往後的 import：`MODULES_OK 34 parts`）。
 - 驗證：雙擊開啟（file://）進大廳、開戰、SF2 槍和火光正常、0 錯誤；5 張地圖畫面和轉換前一致（0.4–3.6）；`check.mjs`、`_nettest`、`_gear`、`check-apex-full` 全過。
+
+### v62t（2026-10-27）：Apex 29 把槍的完整數值（`docs/research/apex/weapons-full.json`）
+- 來源：S30.1 資料（傷害、RPM、彈匣、換彈、初速、開鏡）＋官方 patch notes 的修正（Hemlok 21、30-30 51、RE-45 16／紫彈匣 24）＋**遊戲原始武器腳本 S14**（[metafysika/ApexWeaponData](https://github.com/metafysika/ApexWeaponData)，複製到 `docs/research/apex/gamefiles-s14/`）：散布（站、跑、衝刺、蹲、空中、開鏡、開火擴散）、`viewkick_*` 後座參數和每發後座表、彈道（初速、重力 1.3、阻力）、爆頭生效距離（步槍 300 m、衝鋒槍 38 m、狙擊 750 m）、拔槍／收槍／衝刺後開火時間、開鏡移速 ×0.5、每個配件和 Hop-up 的效果（例：紫槍托開鏡、拔槍 ×0.75）。
+- `tools/apex_weapon_data.py`：解析遊戲的 KeyValues 格式（含 `#base` 繼承和配件 Mods）→ JSON，逐欄標來源（`current_src`），產生 TTK 表（0／50／75／100／125 護盾）到 `docs/research/apex/README.md`。自選決策 D1–D3（來源優先順序、頭部倍率、上膛／連發的 TTK 算法），見 `docs/DECISIONS.md`。
+- 例：R-301 15 傷害、810 RPM、對紫甲 14 發 0.96 s；Peacekeeper 11×9、對紫甲 3 發 2.70 s；Kraber 對無甲 1 發。
+- `tools/check.mjs` 能在雲端跑：沒有 Chrome 就跳過顯卡偵測、改用 `/opt/pw-browsers/chromium`（或 `PW_CHROMIUM`）；被擋的 jsDelivr 由版本相符的 `node_modules` 副本提供（沒有副本就照常連線）。
+- 驗證：`analyze.mjs` MODULES_OK、`build` 後 `index.html` 不變（這一版沒改遊戲程式）、`check.mjs` CHECK_OK（雲端軟體繪圖，FPS 不具參考性）。
+

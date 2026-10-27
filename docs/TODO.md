@@ -39,8 +39,13 @@
 - ⬜ 載入時間：約 9–10 秒，大半是著色器編譯（約 4.5 秒）
 - ⬜ 依遊玩回饋繼續修（卡點、亮度、碰撞）
 
-## 3. Apex 槍枝（資料：`docs/research/apex/weapons-2026-10-27.*`）
-- ⬜ 29 把槍的數值接進 Apex 扣血模式（注意資料裡標出的版本差異）
+## 3. Apex 槍枝（資料：`docs/research/apex/weapons-full.json`，說明 `docs/research/apex/README.md`）
+- 🔄 29 把槍的數值接進 Apex 扣血模式
+  - ✅ 完整數值（v62t）：S30.1＋官方 patch notes＋S14 原始武器腳本（散布、後座表、彈道、拔槍、配件效果），逐欄標來源；TTK 表（`tools/apex_weapon_data.py`）
+  - ⬜ 扣血接線：Apex 模式用 `current` 的傷害、頭／腿倍率、爆頭生效距離、射速、連發、上膛（資料表由 JSON 產生，仿 `tools/sf2_weapon_table.py`）
+  - ⬜ TTK 自動測試：遊戲裡實際算出的 TTK 和 `weapons-full.json` 一致；和公開 TTK 表比對差距 > 5% 的列出來（公開表要找能連上的來源：這個環境擋 wiki、apex.source.gs）
+  - ⬜ 散布、後座：照 S14 的 `spread_*`、`viewkick_*`、每發後座表
+  - ⬜ Nemesis 的 S14 欄位（S16 才加入）：散布、後座、拔槍找其他來源
 - ⬜ 配件系統（瞄具、彈匣、槍托、槍管、Hop-up）
 - ⬜ 用 RSX 從 Apex 安裝檔匯出原版槍模和音效
 

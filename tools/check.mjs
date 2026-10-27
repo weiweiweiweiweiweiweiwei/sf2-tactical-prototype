@@ -34,8 +34,9 @@ const base = `http://127.0.0.1:${server.address().port}/`;
 const launchArgs = ['--use-angle=d3d11', '--enable-gpu', '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required', ...(NOVSYNC ? ['--disable-gpu-vsync', '--disable-frame-rate-limit'] : [])];
 // --gpu intel|nvidia: pin Chrome to one adapter of a hybrid laptop (LUIDs change per boot → read them from chrome://gpu first)
 const GPU_ARG = arg('gpu', ''), GPU = GPU_ARG || 'nvidia', NOPACE = !!arg('nopace', false); // default: the discrete GPU (Chrome's default adapter flips between the two)
-if (GPU) {
-  const probe = await chromium.launch({ channel: 'chrome', args: ['--use-angle=d3d11', '--enable-gpu'] }), pg = await probe.newPage();
+const probe = GPU && await chromium.launch({ channel: 'chrome', args: ['--use-angle=d3d11', '--enable-gpu'] }).catch(() => null); // no Chrome (the cloud box): skip the adapter pick
+if (probe) {
+  const pg = await probe.newPage();
   await pg.goto('chrome://gpu').catch(() => {}); await pg.waitForTimeout(2500);
   const txt = await pg.evaluate(() => { const iv = document.querySelector('info-view'); return iv && iv.shadowRoot ? iv.shadowRoot.textContent : document.body.innerText; });
   await probe.close();
@@ -44,8 +45,10 @@ if (GPU) {
   else if (GPU_ARG) { console.error('GPU not found:', GPU); process.exit(2); }
 }
 let browser = null;
-for (const channel of ['chrome', 'msedge', undefined]) {
-  try { browser = await chromium.launch({ channel, headless: !HEADED, args: launchArgs }); break; } catch (e) { /* try next */ }
+// last: a Chromium at PW_CHROMIUM or the cloud box's preinstalled /opt/pw-browsers/chromium (Playwright's own download times out here)
+const CHROMIUM = process.env.PW_CHROMIUM || (fs.existsSync('/opt/pw-browsers/chromium') ? '/opt/pw-browsers/chromium' : undefined);
+for (const o of [{ channel: 'chrome' }, { channel: 'msedge' }, {}, ...(CHROMIUM ? [{ executablePath: CHROMIUM }] : [])]) {
+  try { browser = await chromium.launch({ ...o, headless: !HEADED, args: launchArgs }); break; } catch (e) { /* try next */ }
 }
 if (!browser) { console.error('No Chrome / Edge / Playwright Chromium found'); process.exit(2); }
 
@@ -57,6 +60,11 @@ for (const map of MAPS) {
   page.on('console', (m) => { if (m.type() === 'error' && !/^Failed to load resource/.test(m.text())) errors.push(m.text()); });
   page.on('pageerror', (e) => errors.push('uncaught: ' + e.message));
   page.on('response', (res) => { if (res.status() >= 400) errors.push(`HTTP ${res.status()} ${res.url()}`); });
+  await page.route('https://cdn.jsdelivr.net/npm/**', (route) => { // CDN blocked (the cloud box): serve a matching node_modules copy if there is one
+    const m = /\/npm\/((?:@[^/]+\/)?[^@/]+)@([^/]+)\/(.*)$/.exec(new URL(route.request().url()).pathname), dir = m && path.join(ROOT, 'node_modules', m[1]);
+    const ok = dir && fs.existsSync(dir + '/package.json') && JSON.parse(fs.readFileSync(dir + '/package.json', 'utf8')).version === m[2] && fs.existsSync(path.join(dir, m[3]));
+    return ok ? route.fulfill({ path: path.join(dir, m[3]), contentType: TYPES[path.extname(m[3])] || 'application/octet-stream' }) : route.continue();
+  });
   let r = null;
   try {
     await page.goto(base + encodeURI(FILE) + '?check=' + Date.now(), { waitUntil: 'load', timeout: 60000 });
