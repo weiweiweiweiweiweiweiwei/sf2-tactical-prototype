@@ -8,6 +8,7 @@
 // and transforms stay as exported; positions 16-bit — 1.7 cm over the 1.1 km terrain shell).
 import fs from 'node:fs';
 import path from 'node:path';
+import zlib from 'node:zlib';
 import { NodeIO } from '@gltf-transform/core';
 import { ALL_EXTENSIONS } from '@gltf-transform/extensions';
 import { draco, prune } from '@gltf-transform/functions';
@@ -38,7 +39,7 @@ const glbFromGltf = (dir, file) => {
   for (const img of gltf.images || []) {
     if (!img.uri) continue;
     const data = fs.readFileSync(path.join(dir, decodeURIComponent(img.uri)));
-    img.mimeType = /\.jpe?g$/i.test(img.uri) ? 'image/jpeg' : 'image/png';
+    img.mimeType = /\.jpe?g$/i.test(img.uri) ? 'image/jpeg' : /\.webp$/i.test(img.uri) ? 'image/webp' : 'image/png';
     img.bufferView = gltf.bufferViews.push({ buffer: 0, byteOffset: append(data), byteLength: data.length }) - 1;
     delete img.uri;
   }
@@ -90,7 +91,7 @@ if (TRI[process.argv[2]]) {
   fs.mkdirSync(D, { recursive: true });
   pack(ID, D, {
     glb: await compress(glbFromGltf(X, 'scene.gltf'), true),
-    collision: skullTris(fs.readFileSync(path.join(X, 'collision.bin')), JSON.parse(fs.readFileSync(path.join(X, 'manifest.json'))).playBounds),
+    collision: zlib.gzipSync(skullTris(fs.readFileSync(path.join(X, 'collision.bin')), JSON.parse(fs.readFileSync(path.join(X, 'manifest.json'))).playBounds), { level: 9 }), // (apexGunzip in the game)
     manifest: fs.readFileSync(path.join(X, 'manifest.json')),
     lm_inner: fs.readFileSync(path.join(X, 'lm_inner.jpg')),
     lm_outer: fs.readFileSync(path.join(X, 'lm_outer.jpg')),

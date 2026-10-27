@@ -1,2 +1,2 @@
 /* apex_full: built by tools/pack-apex-js.mjs */
-APEX_PACK.layout("apex_full", {"bytes":72604248,"chunk":15728640,"chunks":5,"parts":{"glb":[0,47515644],"collision":[47515648,21650960],"manifest":[69166608,4572],"lm_inner":[69171184,2068106],"lm_outer":[71239296,349989],"door":[71589288,552252],"nav":[72141544,461020],"navMeta":[72602568,1674]}});
+APEX_PACK.layout("apex_full", {"bytes":29700264,"chunk":15728640,"chunks":2,"parts":{"glb":[0,17392584],"collision":[17392584,8870040],"manifest":[26262624,4572],"lm_inner":[26267200,2068106],"lm_outer":[28335312,349989],"door":[28685304,552252],"nav":[29237560,461020],"navMeta":[29698584,1674]}});

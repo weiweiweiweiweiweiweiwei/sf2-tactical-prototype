@@ -8054,6 +8054,11 @@ function apexBakedSpawns(S, team, game) {
 
 // Packed triangles (tools/pack-apex-js.mjs): 'STRQ', version 1, vertex count, triangle count, scale; Int16 x y z per vertex
 // (metres × scale), Uint32 indices, Uint8 surface per triangle (TRI_SURFACES).
+// gzip-packed parts (tools/pack-apex-js.mjs gzips the collision): the browser's own DecompressionStream, no library
+async function apexGunzip(buf) {
+  const b = new Uint8Array(buf); if (b[0] !== 0x1f || b[1] !== 0x8b) return buf;
+  return new Response(new Blob([b]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer();
+}
 function skullTris(buf) {
   const v = new DataView(buf);
   if (v.getUint32(0, true) !== 0x51525453 || v.getUint32(4, true) !== 1) throw new Error('Skull Town collision: unknown format');
@@ -8167,7 +8172,7 @@ function apexTriMap(def) {
       const p = await apexPack(this.id, this.packDir), text = (b) => JSON.parse(new TextDecoder().decode(b));
       const manifest = text(p.manifest), navMeta = p.navMeta ? text(p.navMeta) : null;
       const [lmInner, lmOuter, gltf, door] = await Promise.all([skullTexture(p.lm_inner), skullTexture(p.lm_outer), apexGLTF(p.glb), apexGLTF(p.door)]);
-      this._tri = { manifest, navMeta, nav: p.nav ? apexNav(p.nav) : null, tris: skullTris(p.collision), gltf, door: door.scene, lm: { inner: lmInner, outer: lmOuter } };
+      this._tri = { manifest, navMeta, nav: p.nav ? apexNav(p.nav) : null, tris: skullTris(await apexGunzip(p.collision)), gltf, door: door.scene, lm: { inner: lmInner, outer: lmOuter } };
       const B = manifest.playBounds; this.bounds = { minX: Math.floor(B.minX), maxX: Math.ceil(B.maxX), minZ: Math.floor(B.minZ), maxZ: Math.ceil(B.maxZ) };
       this.killY = manifest.killY;
       if (navMeta) {
@@ -8219,7 +8224,7 @@ function apexTriMap(def) {
         batch.matrices.forEach((m, i) => mesh.setMatrixAt(i, m)); mesh.computeBoundingSphere();
         // the bake under each prop (tools/blender/skulltown_export.py 'lm'): live sun and sky light it, so one indoors or in deep
         // shade is dimmed toward what the room around it got (full brightness from half the sunlit ground up, never below half)
-        if (batch.light.some((v) => v >= 0)) {
+        { // (every batch gets instance colours, even all-1: one shader variant per material instead of two — v60e load time)
           const c = new THREE.Color();
           batch.light.forEach((v, i) => { const k = v < 0 ? 1 : clamp(v / (sunLm * 0.5), 0.5, 1); mesh.setColorAt(i, c.setScalar(k)); }); // (≥ 0.5: the ground under a big rock is in its own shadow)
         }
