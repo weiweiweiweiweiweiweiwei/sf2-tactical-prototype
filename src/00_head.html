@@ -490,6 +490,10 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
 #loader .shade{position:absolute;inset:0;background:linear-gradient(0deg,rgba(0,0,0,.92) 0%,rgba(0,0,0,.35) 38%,rgba(0,0,0,.1) 60%,rgba(0,0,0,.45) 100%)}
 #loader.shot{background:transparent}
 #loader.shot .bgmap{opacity:0;transition:opacity .6s}
+#loader .bgpic{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .25s}
+#loader .bgpic.on{opacity:1}
+#loader .bgpic.on~.bgmap{opacity:0}
+#loader.shot .bgpic{opacity:0;transition:opacity .6s}
 #loader .slogan{margin-top:14px;font-size:14px;letter-spacing:6px;color:var(--dim)}
 #freeze{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(6,9,8,.46);backdrop-filter:blur(7px) saturate(.7) brightness(.8);-webkit-backdrop-filter:blur(7px) saturate(.7) brightness(.8)}
 #freeze.on{display:flex}
@@ -879,7 +883,7 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
     <button class="btn ghost" id="lbCancel">✕ 取消 CANCEL</button></div></div>
 </div>
 
-<div id="loader" class="screen"><canvas class="bgmap" id="ldMap" width="1200" height="700"></canvas><div class="shade"></div>
+<div id="loader" class="screen"><img class="bgpic" id="ldPic" alt=""><canvas class="bgmap" id="ldMap" width="1200" height="700"></canvas><div class="shade"></div>
   <div class="ld"><h1 id="ldTitle">WAREHOUSE<small id="ldSub"></small></h1>
     <div class="pbar"><div class="pfill" id="ldFill"></div></div>
     <div class="pst"><span id="ldStep">LOADING…</span><span id="ldPct">0%</span></div>

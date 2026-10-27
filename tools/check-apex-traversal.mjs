@@ -20,7 +20,7 @@ try{
  await page.waitForFunction(()=>window.app&&window.SF2,null,{timeout:60000});
  await page.evaluate(async()=>{
   const S=SF2.Settings.data;S.quality='high';S.hdri=false;
-  Object.assign(S.lobby,{map:SF2.MAPS.findIndex(m=>m.id==='apex_test'),rule:'tdm',allies:1,enemies:1});
+  Object.assign(S.lobby,{map:SF2.MAPS.findIndex(m=>m.id==='apex_skulltown'),rule:'tdm',allies:1,enemies:1});
   await app.startMatch();app.state='playing';
  });
  await page.waitForTimeout(1500);

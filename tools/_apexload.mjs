@@ -1,5 +1,5 @@
 // Apex load probe: time startMatch (fetch + parse + build, minus the 1.7 s loader shot) and the JS heap after it.
-// node tools/_apexload.mjs [apex_full|apex_test] [--prof] [--play seconds: then profile live play with bots instead]
+// node tools/_apexload.mjs [apex_full|apex_skulltown] [--prof] [--play seconds: then profile live play with bots instead]
 import { chromium } from 'playwright'; import http from 'node:http'; import fs from 'node:fs'; import path from 'node:path';
 const ROOT = process.cwd(), ID = process.argv[2] || 'apex_full';
 const T = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.json': 'application/json', '.png': 'image/png', '.jpg': 'image/jpeg' };

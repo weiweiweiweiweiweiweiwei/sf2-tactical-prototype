@@ -1,87 +1,16 @@
-"""Re-encode the Apex exports' textures: the triangle maps to WebP, the old test region's opaque PNGs to JPEG.
+"""Re-encode the Apex map exports' textures to WebP (and their lightmaps to JPEG).
 
 Run after the Blender exports:
-    python tools/compress-apex-textures.py
-- assets/maps/apex-test/region.glb: embedded PNG images re-encoded in place; the previous file is kept as
-  tools/out/apex/preview/region-png.glb.
+    python tools/compress-apex-textures.py skulltown|range
 - skulltown | range: tools/out/apex/<map>/export (tools/blender/skulltown_export.py) textures -> WebP and both lightmaps
   -> JPEG, in place (the export is rebuilt from the .blend; lightmaps at quality 92, 4:2:0 is fine for smooth light).
 Idempotent: already-converted textures are skipped.
-    python tools/compress-apex-textures.py [skulltown | range]
 """
-import io, json, os, shutil, struct
+import io, json, os
 from PIL import Image
 
 QUALITY = 90
 OUT = 'tools/out/apex'
-
-
-def to_jpeg(data):
-    """JPEG bytes for an opaque image, None when the alpha channel is used (or JPEG would not be smaller)."""
-    im = Image.open(io.BytesIO(data))
-    if im.mode in ('RGBA', 'LA', 'PA') or (im.mode == 'P' and 'transparency' in im.info):
-        im = im.convert('RGBA')
-        if im.getchannel('A').getextrema()[0] < 255:
-            return None
-    buf = io.BytesIO()
-    im.convert('RGB').save(buf, 'JPEG', quality=QUALITY, subsampling=0, optimize=True)  # 4:4:4 keeps normal maps clean
-    return buf.getvalue() if buf.tell() < len(data) else None
-
-
-def read_glb(path):
-    d = open(path, 'rb').read()
-    magic, version, length = struct.unpack_from('<III', d, 0)
-    assert magic == 0x46546C67 and version == 2, 'not a glTF 2 binary'
-    chunks, o = [], 12
-    while o < length:
-        n, kind = struct.unpack_from('<II', d, o)
-        chunks.append((kind, d[o + 8:o + 8 + n]))
-        o += 8 + n
-    j = json.loads(chunks[0][1])
-    return j, (chunks[1][1] if len(chunks) > 1 else b'')
-
-
-def write_glb(path, j, bin_data):
-    js = json.dumps(j, separators=(',', ':')).encode()
-    js += b' ' * (-len(js) % 4)
-    bin_data += b'\0' * (-len(bin_data) % 4)
-    out = struct.pack('<III', 0x46546C67, 2, 12 + 8 + len(js) + 8 + len(bin_data))
-    out += struct.pack('<II', len(js), 0x4E4F534A) + js + struct.pack('<II', len(bin_data), 0x004E4942) + bin_data
-    open(path, 'wb').write(out)
-
-
-def test_region():
-    path = 'assets/maps/apex-test/region.glb'
-    j, binary = read_glb(path)
-    views = j['bufferViews']
-    replaced = {}
-    for img in j.get('images', []):
-        if img.get('mimeType') != 'image/png' or 'bufferView' not in img:
-            continue
-        v = views[img['bufferView']]
-        o = v.get('byteOffset', 0)
-        jpg = to_jpeg(binary[o:o + v['byteLength']])
-        if jpg is not None:
-            replaced[img['bufferView']] = jpg
-            img['mimeType'] = 'image/jpeg'
-    if not replaced:
-        print('apex-test: nothing to convert')
-        return
-    os.makedirs(os.path.join(OUT, 'preview'), exist_ok=True); shutil.copyfile(path, os.path.join(OUT, 'preview', 'region-png.glb'))
-    # rebuild the binary chunk: every view keeps its data (or the JPEG), 4-byte aligned, offsets rewritten
-    out = bytearray()
-    for i, v in enumerate(views):
-        assert v.get('buffer', 0) == 0, 'single-buffer GLB expected'
-        o = v.get('byteOffset', 0)
-        data = replaced.get(i, binary[o:o + v['byteLength']])
-        out += b'\0' * (-len(out) % 4)
-        v['byteOffset'] = len(out)
-        v['byteLength'] = len(data)
-        out += data
-    j['buffers'][0]['byteLength'] = len(out)
-    before = os.path.getsize(path)
-    write_glb(path, j, bytes(out))
-    print(f'apex-test: {len(replaced)} images -> JPEG, {before / 1e6:.1f} MB -> {os.path.getsize(path) / 1e6:.1f} MB')
 
 
 def to_webp(data):
@@ -130,4 +59,4 @@ if __name__ == '__main__':
     if sys.argv[1:2] in (['skulltown'], ['range']):
         tri_map(sys.argv[1])
     else:
-        test_region()
+        print('usage: python tools/compress-apex-textures.py skulltown|range')

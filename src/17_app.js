@@ -642,6 +642,10 @@ class App {
     $('ldTitle').firstChild.textContent = def.en; $('ldSub').textContent = `${def.name} · ${MODES[L.mode].name} · ${RULES[L.rule].name} · ${L.allies} vs ${L.enemies}${L.rule === 'relic' ? ' · 藍隊進攻 / 紅隊防守' : ''}`;
     $('ldTip').textContent = '提示：' + pick(TIPS); $('ldSlogan').textContent = def.slogan;
     drawMapPreview($('ldMap'), def, this.dry[L.map]);
+    // v61 the map's picture right away (user 10-27: Skull Town had none, the range's appeared only once its pack was in); the
+    // floor plan stays as the fallback. def.loadPic: a separate loading picture (<id>_load.jpg) instead of the room thumbnail
+    const pic = $('ldPic'); pic.classList.remove('on'); pic.onload = () => pic.classList.add('on'); pic.onerror = () => pic.classList.remove('on');
+    pic.src = def.loadPic ? mapThumb(def).replace(/\.jpg$/, '_load.jpg') : mapThumb(def);
     this.loadShown = 0; this.loadTarget = 0; this.loadLabel = '初始化';
     await nextFrame();
     const cfg = Object.assign({}, L, { ruleCfg: JSON.parse(JSON.stringify(L.ruleCfg)) });

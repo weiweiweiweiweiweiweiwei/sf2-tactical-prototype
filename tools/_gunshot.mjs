@@ -1,4 +1,4 @@
-// v45 hip + ADS screenshots for chosen guns → tools/out/gun_<id>_hip.jpg / _ads.jpg     node tools/_gunshot.mjs g36c,g36c_gold [map]
+// v45 hip + ADS screenshots for chosen guns → tools/out/gun_<id>_hip.jpg / _ads.jpg     node tools/_gunshot.mjs g36c,g36c_gold [map]   (FIRE=1: + an aimed burst)
 import { chromium } from 'playwright'; import http from 'node:http'; import fs from 'node:fs'; import path from 'node:path';
 const ROOT = process.cwd(), T = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript' }, IDS = (process.argv[2] || 'g36c').split(','), MAP = +(process.argv[3] || 0);
 const srv = http.createServer((q, s) => { const p = path.join(ROOT, decodeURIComponent(new URL(q.url, 'http://x').pathname)); if (!fs.existsSync(p) || fs.statSync(p).isDirectory()) { s.writeHead(404); s.end(); return; } s.writeHead(200, { 'Content-Type': T[path.extname(p)] || 'application/octet-stream' }); fs.createReadStream(p).pipe(s); });
@@ -16,6 +16,12 @@ for (const id of IDS) {
   for (const ads of [false, true]) {
     await p.evaluate(async ([id, ads]) => { const ws = app.match.weapons, sleep = (ms) => new Promise((r) => setTimeout(r, ms)); ws.rebuild([SF2.WEAPON_DEFS[id]]); await sleep(600); if (ads) { ws.setAds(true, true, 1); await sleep(900); } }, [id, ads]);
     await p.screenshot({ path: `tools/out/gun_${id}_${ads ? 'ads' : 'hip'}.jpg`, type: 'jpeg', quality: 86 });
+    if (ads && process.env.FIRE) { // FIRE=1: aimed burst — kick peaks (viewmodel back / flip, camera climb) and a mid-burst shot → _adsfire.jpg
+      const k = await p.evaluate(async () => { const ws = app.match.weapons, pl = app.match.player, m = { back: 0, flip: 0, climb: 0 }; app.input.buttons[0] = true; app.input.onButton(0, true);
+        for (let i = 0; i < 25; i++) { await new Promise((r) => setTimeout(r, 16)); m.back = Math.max(m.back, Math.abs(ws.kickPos.z)); m.flip = Math.max(m.flip, Math.abs(ws.kickRot.x)); m.climb = Math.max(m.climb, pl.recoilTP); } return m; });
+      await p.screenshot({ path: `tools/out/gun_${id}_adsfire.jpg`, type: 'jpeg', quality: 86 }); await p.evaluate(() => { app.input.buttons[0] = false; app.input.onButton(0, false); });
+      console.log(id, 'ADS kick: back', (k.back * 100).toFixed(2), 'cm, flip', (k.flip * 57.3).toFixed(2), '°, camera climb', (k.climb * 57.3).toFixed(2), '°');
+    }
     await p.evaluate(() => app.match.weapons.setAds(false, true));
   }
 }

@@ -301,7 +301,7 @@ class WeaponModels {
 
   /* ------------------------------------------------------------------ */
   // v49 M4A1 from Blender (tools/blender/m4a1_build.py); the procedural one below stays as the fallback
-  m4() { return this.fromGLB('m4a1_sf2', { eye: 0.01, eyeRelief: 0.02, reticle: 'tritium', reticleScale: 0.22 }) || this.fromGLB('m4a1', { eye: 0.2, eyeRelief: 0.03 }) || this.m4Proc(); } // v61 SF2's own M4A1 first (tools/blender/sf2_gun_build.py): like SF2's ADS, the eye right at the carry handle's peep and a green dot on the front post // eye 20 cm behind the hood: the holo frame fills about a quarter of the view
+  m4() { return this.fromGLB('m4a1_sf2', { eye: 0.03, eyeRelief: 0.025, reticle: 'tritium', reticleScale: 0.22 }) || this.fromGLB('m4a1', { eye: 0.2, eyeRelief: 0.03 }) || this.m4Proc(); } // v61 SF2's own M4A1 first (tools/blender/sf2_gun_build.py): like SF2's ADS, the eye right at the carry handle's peep and a green dot on the front post // eye 20 cm behind the hood: the holo frame fills about a quarter of the view
   m4Proc() {
     const M = this.M, gb = new GunBuilder(M);
     gb.node('mag', new THREE.Vector3(0, -0.035, -0.03)).node('charge', new THREE.Vector3(0, 0.024, 0.13));
@@ -676,7 +676,14 @@ class WeaponModels {
       bx(0.044, 0.1, 0.3, 0, -0.02, 0.28, poly); bx(0.012, 0.03, 0.12, 0, 0.075, -0.33, dark);
     } else if (id === 'knife') {
       bx(0.006, 0.03, 0.2, 0, 0, -0.1, C(0xb8bec4)); bx(0.025, 0.03, 0.11, 0, 0, 0.05, poly);
-    } else { const s = new THREE.SphereGeometry(0.04, 10, 8); list.push([s, C(0x3e4a2c)]); }
+    } else if (id === 'smoke' || id === 'flash') { // v61 (user): thrown smoke / flash looked like the frag — same shapes as in hand (grenade())
+      const can = new THREE.CylinderGeometry(id === 'smoke' ? 0.022 : 0.026, id === 'smoke' ? 0.022 : 0.026, id === 'smoke' ? 0.1 : 0.12, 12); list.push([can, id === 'smoke' ? C(0x6f7275) : C(0x3e4a2c)]);
+      if (id === 'flash') { const band = new THREE.CylinderGeometry(0.027, 0.027, 0.02, 12); band.translate(0, 0.05, 0); list.push([band, C(0xe8e8e2)]); }
+      const cap = new THREE.CylinderGeometry(0.012, 0.012, 0.016, 8); cap.translate(0, id === 'smoke' ? 0.056 : 0.066, 0); list.push([cap, C(0xb8bec4)]);
+    } else { // the frag ('he'): olive egg and its fuse cap
+      const s = new THREE.SphereGeometry(0.033, 12, 10); s.scale(1, 1.12, 1); list.push([s, C(0x3e4a2c)]);
+      const cap = new THREE.CylinderGeometry(0.012, 0.012, 0.016, 8); cap.translate(0, 0.04, 0); list.push([cap, C(0xb8bec4)]);
+    }
     const geos = list.map(([g, col]) => { const ng = g.index ? g.toNonIndexed() : g; const n = ng.attributes.position.count, c = new Float32Array(n * 3); for (let i = 0; i < n; i++) { c[i * 3] = col.r; c[i * 3 + 1] = col.g; c[i * 3 + 2] = col.b; } ng.setAttribute('color', new THREE.BufferAttribute(c, 3)); ng.deleteAttribute('uv'); return ng; });
     const geo = mergeGeometries(geos, false);
     this.tpCache.set(id, geo);
