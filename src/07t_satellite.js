@@ -4,6 +4,8 @@
    so the grid in satellitePlan() still decides movement, cover and sight lines. Placeholders 'sat:<name>' become the
    game PBR preset of that name (sat_wall, sat_trim, … in src/03_textures.js) or one of the materials below.
    ===================================================================== */
+import { DRACOLoader, GLTFLoader, THREE, mulberry32 } from './01_core.js';
+import { MAT_PRESETS } from './03_textures.js';
 const SAT_HAS_GLB = true;
 
 async function satPreload(def) {
@@ -146,3 +148,5 @@ function satDressing(b) {
   b.animated.push((dt, t) => { for (const o of holo) o.rotation.y = t * 0.35; for (const m of scroll) if (m.map) m.map.offset.y = (t * m.userData.scroll) % 1; });
   return true;
 }
+
+export { satDressing, satPreload };

@@ -1,3 +1,21 @@
+import { AUTO_Q, CFG, DIFFICULTY, GpuPacer, LOADOUT_KEYS, MODES, PRIMARY_IDS, QUALITY, Q_LABEL, Q_ORDER, RGBELoader, RULES, RoomEnvironment, SECONDARY_IDS, STAR_BADGE, Settings, THREE, TIPS, TYPE_LABEL, WEAPON_BLURBS, WEAPON_DATABASE, WEAPON_DEFS, WEAPON_ICONS, activeQuality, calcDamage, clamp, damp, lerp, loadoutDefs, mapThumb, nextFrame, pick, setAutoQ, sleep, weaponStats } from './01_core.js';
+import { ACOUSTICS, AudioEngine, GUN_PROFILES, HIT_SOUNDS } from './02_audio.js';
+import { CAO, MaterialLib, TextureFactory } from './03_textures.js';
+import { triBox, triHeight } from './04_collision.js';
+import { MapBuilder } from './06_mapbuilder.js';
+import { HDRI_BASE, MAPS, drawMapPreview } from './07_maps.js';
+import { InputManager } from './08_nav_input.js';
+import { SoldierFactory, WeaponModels, loadGunModels } from './09_models.js';
+import { BTN, CmdBuilder } from './12b_cmd.js';
+import { esc, safeName } from './12c_netutil.js';
+import { BOT_NAMES } from './13_bots.js';
+import { HUD } from './14_hud.js';
+import { LOOK_DEFAULT, PostFX, resolveLook } from './15_postfx.js';
+import { Match } from './16_match.js';
+import { LoopbackTransport, NetClient, NetCodec, NetHost } from './18_net.js';
+import { BackgroundTicker, ONLINE, RoomDirectory, RtcClientTransport, RtcHostTransport, fmtCode, inviteLink, parseCode, roomCode } from './18b_online.js';
+import { ROOM_ST, RoomGuest, RoomHost, RoomLink, roomCfgOut, roomCfgSafe } from './18c_room.js';
+import { Friends, fmtFriend } from './18d_friends.js';
 /* =====================================================================
    APP — renderer, shared resources, room/lobby, loading flow, pause,
    settings, end screen and the main loop.
@@ -18,7 +36,7 @@ class App {
     const integrated = /Intel|UHD|Iris|Mali|Adreno|PowerVR|SwiftShader|llvmpipe|Basic Render|Radeon\(TM\) Graphics|Radeon Graphics|Vega/i.test(name) && !/NVIDIA|GeForce|RTX|GTX|Radeon RX|Radeon Pro|Arc/i.test(name);
     this.gpuName = name.replace(/^ANGLE \([^,]*, /, '').replace(/ \(0x[0-9A-Fa-f]+\).*$/, '').replace(/ Direct3D.*$/, '').replace(/, D3D.*$/, '') || '未知'; this.gpuIntegrated = integrated;
     this.gpuShort = this.gpuName.replace(/NVIDIA GeForce |AMD /g, '').replace(/Intel\(R\) /, 'Intel ').replace(/ Graphics$/, '');
-    AUTO_Q = integrated ? 'low' : 'high'; this.autoCeil = AUTO_Q; // v24 auto quality: start point + ceiling for automatic step-ups
+    setAutoQ(integrated ? 'low' : 'high'); this.autoCeil = AUTO_Q; // v24 auto quality: start point + ceiling for automatic step-ups
     if (!Settings.data.qV24) { Settings.data.quality = 'auto'; Settings.data.qV24 = true; Settings.data.qDetected = true; } // v24: everyone moves to auto once (manual choice still possible)
     Settings.data.gpu = name; Settings.save();
     this.frameMs = 16; this.dynT = 0; this.pacer = new GpuPacer(r.getContext()); this.busyN = 0; this.busyF = 0;
@@ -828,7 +846,7 @@ class App {
     bindRange('optVol', 'volume', (v) => Math.round(v * 100) + '%', (v) => this.audio.setVolume(v));
     bindRange('optFov', 'fov', (v) => String(Math.round(v)), (v) => { if (this.match) { this.match.weapons.baseFov = v; if (!this.match.weapons.ads) this.match.weapons.fov = v; } });
     const sel = (id, key, apply) => { const el = $(id); el.value = String(S[key]); el.addEventListener('change', () => { S[key] = el.value; if (apply) apply(el.value); Settings.save(); }); };
-    sel('optQuality', 'quality', (q) => { if (q === 'auto') AUTO_Q = this.autoCeil; this.tex.setQuality(activeQuality()); if (this.match) this.post.configure(this.match, activeQuality()); });
+    sel('optQuality', 'quality', (q) => { if (q === 'auto') setAutoQ(this.autoCeil); this.tex.setQuality(activeQuality()); if (this.match) this.post.configure(this.match, activeQuality()); });
     { const hs = $('optHit'); for (const [k, v] of Object.entries(HIT_SOUNDS)) { const o = document.createElement('option'); o.value = k; o.textContent = v.label; hs.append(o); }
       if (!HIT_SOUNDS[S.hitSound]) S.hitSound = 'flesh';
       const demo = () => { this.audio.init(); AudioEngine.loadSamples(); [0, 260, 520].forEach((d, i) => setTimeout(() => this.audio.hit(['body', 'head', 'kill'][i]), d)); };
@@ -1122,8 +1140,8 @@ class App {
             const q = this.post.q || QUALITY.high, i = Q_ORDER.indexOf(activeQuality());
             this.autoSlow = (this.frameMs > 22 || busy > 0.3) && this.post.scale <= q.minScale + 0.01 ? (this.autoSlow || 0) + 1 : 0;
             this.autoFast = this.frameMs < 11 && busy < 0.02 && this.post.scale >= 0.999 ? (this.autoFast || 0) + 1 : 0;
-            if (this.autoSlow >= 3 && i > 0) { AUTO_Q = Q_ORDER[i - 1]; this.autoSlow = 0; this.post.scale = 1; this.post.configure(m, AUTO_Q); this.hud.toast('畫質自動調整：' + Q_LABEL[AUTO_Q]); }
-            else if (this.autoFast >= 20 && i < Q_ORDER.indexOf(this.autoCeil)) { AUTO_Q = Q_ORDER[i + 1]; this.autoFast = 0; this.post.configure(m, AUTO_Q); }
+            if (this.autoSlow >= 3 && i > 0) { setAutoQ(Q_ORDER[i - 1]); this.autoSlow = 0; this.post.scale = 1; this.post.configure(m, AUTO_Q); this.hud.toast('畫質自動調整：' + Q_LABEL[AUTO_Q]); }
+            else if (this.autoFast >= 20 && i < Q_ORDER.indexOf(this.autoCeil)) { setAutoQ(Q_ORDER[i + 1]); this.autoFast = 0; this.post.configure(m, AUTO_Q); }
           }
         }
         const rm = this.room, nt = rm && rm.online && this.netShared(m) ? ` · 房間 ${fmtCode(rm.code)} · ${m.net.role === 'host' ? m.net.players + ' 人' : m.net.rttWin && m.net.rttWin.length >= 3 ? Math.round(m.net.rtt) + ' ms' : '測量延遲中'}${rm.t && rm.t.via === 'relay' ? ' · 中繼' : ''}` : '';
@@ -1164,6 +1182,3 @@ try {
   console.error(e);
   window.__bootErr('初始化失敗: ' + (e && e.message ? e.message : e));
 }
-</script>
-</body>
-</html>

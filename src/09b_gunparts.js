@@ -1,3 +1,5 @@
+import { THREE, mergeGeometries } from './01_core.js';
+import { GunBuilder, WeaponModels } from './09_models.js';
 /* =====================================================================
    GUN PARTS LIBRARY (v5) — parametric receivers, stocks, grips,
    magazines, handguards, barrels, muzzle devices, iron sights, scopes

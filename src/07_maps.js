@@ -1,3 +1,5 @@
+import { THREE, clamp } from './01_core.js';
+import { satDressing, satPreload } from './07t_satellite.js';
 /* =====================================================================
    MAPS — six point-symmetric arenas (fair for both teams).
    `objectives` = Domination A/B/C [x, y, z] + Relic spawn (snapped to
@@ -1410,3 +1412,5 @@ function drawMapPreview(canvas, def, dryData, opts = {}) {
   }
 }
 
+
+export { HDRI_BASE, MAPS, drawMapPreview, terrainShade };

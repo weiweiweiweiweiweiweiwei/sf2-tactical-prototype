@@ -1,3 +1,5 @@
+import { THREE, lerp, pick } from './01_core.js';
+import { MAX_SLOPE } from './04_collision.js';
 /* =====================================================================
    NAV GRAPH — multi-level walkable grid (auto-sampled at every nav
    level), door nodes, stair/ramp chains, largest-component pruning,
@@ -261,3 +263,5 @@ class InputManager {
   endFrame() { this.wheel = 0; }
 }
 
+
+export { InputManager, NavGraph };

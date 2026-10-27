@@ -1,3 +1,4 @@
+import { CANNON, THREE, clamp } from './01_core.js';
 // Apex maps shared by the triangle-collision maps (src/07w_skulltown.js): doors, baked navigation, baked spawns.
 // Doors at the original prop_door positions (v60: Apex's own leaf, canyonlands_door_single_02_avt, 1.52 × 2.64 m, hinge at its
 // origin — tools/blender/apex_door.py; a box stand-in without it). A leaf linked to another (link_to_guid_0) is half of a double
@@ -126,3 +127,5 @@ function apexBakedSpawns(S, team, game) {
   game.fwdSpawns[team] = S.forward[team].map((f) => ({ pts: f.pts.map(v), c: v(f.pts[0]), yaw: f.yaw }));
   return { pts: S.spawns[team].pts.map(v), yaw: S.spawns[team].yaw };
 }
+
+export { ApexDoors, apexBakedSpawns, apexNav };

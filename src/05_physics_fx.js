@@ -2,6 +2,7 @@
    PHYSICS WORLD (cannon-es) — static level bodies + dynamic debris:
    brass casings, ragdoll-lite corpses and bouncing grenades.
    ===================================================================== */
+import { CANNON, CFG, THREE, TMP_V1, TMP_V2, TMP_V3, TMP_V4, clamp, lerp, rand } from './01_core.js';
 /* v5: static spatial-hash broadphase. The level is ~1000 static boxes and only a handful of
    awake dynamic bodies (casings, grenades, corpses, dropped guns). SAP swept every static pair
    each step (~5 ms); this bins the statics once and tests each AWAKE dynamic body only against
@@ -490,3 +491,4 @@ class Effects {
   }
 }
 
+export { Effects, PhysicsWorld };

@@ -1,15 +1,21 @@
-// Portable equivalent of src/build.sh; the shell manifest remains the source of order.
+// v62s the build: src/ is ES modules (src/main.js imports every part in order); esbuild bundles them into ONE inline module
+// script — 00_head.html + bundle + 99_tail.html → index.html, so the game still opens by double-click (file://) and on Pages.
+// three / cannon-es stay external: the importmap in 00_head.html loads them from the CDN as before.
+//   node tools/build.mjs [out.html]     (src/build.sh calls this)
 import fs from 'node:fs';
 import path from 'node:path';
-import {fileURLToPath} from 'node:url';
-import {spawnSync} from 'node:child_process';
-const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
-const src=path.join(root,'src');
-const manifest=fs.readFileSync(path.join(src,'build.sh'),'utf8').match(/PARTS="([^"]+)"/)[1].split(/\s+/);
-const read=name=>fs.readFileSync(path.join(src,name),'utf8');
-const body=manifest.map(read).join('\n');
-const app=read('17_app.js');
-const result=spawnSync(process.execPath,['--input-type=module','--check'],{input:body+'\n'+app.split('</script>')[0],encoding:'utf8'});
-if(result.status!==0){process.stderr.write(result.stderr);process.exit(result.status||1);}
-fs.writeFileSync(path.join(root,'index.html'),read('00_head.html')+'\n'+body+'\n'+app);
-console.log('BUILD_OK');
+import { fileURLToPath } from 'node:url';
+import * as esbuild from 'esbuild';
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..'), src = path.join(root, 'src');
+const out = path.resolve(root, process.argv[2] || 'index.html');
+let res;
+try {
+  res = await esbuild.build({
+    entryPoints: [path.join(src, 'main.js')], bundle: true, write: false, format: 'esm', target: 'es2022', charset: 'utf8',
+    external: ['three', 'three/addons/*', 'cannon-es'], keepNames: true, legalComments: 'none', logLevel: 'silent',
+  });
+} catch (e) { for (const m of e.errors || [e]) console.error(m.location ? `${m.location.file}:${m.location.line}: ${m.text}` : m.text || m); process.exit(1); }
+const js = res.outputFiles[0].text.replace(/<\/script/gi, '<\\/script'); // (never end the inline script early)
+const read = (f) => fs.readFileSync(path.join(src, f), 'utf8');
+fs.writeFileSync(out, read('00_head.html').replace(/\n*$/, '\n') + js + read('99_tail.html'));
+console.log('BUILD_OK', path.relative(root, out), (fs.statSync(out).size / 1024).toFixed(0) + ' KB');

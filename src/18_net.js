@@ -1,3 +1,7 @@
+import { APEX, CFG, RULES, Settings, THREE, WEAPON_DEFS, clamp, lerp, wrapAngle } from './01_core.js';
+import { UserCmd } from './12b_cmd.js';
+import { NET_WEAPONS, NET_WI, safeName, v3arr } from './12c_netutil.js';
+import { Ghost, NetPlayer } from './13b_netplayers.js';
 /* =====================================================================
    v25 NETWORK — host-authoritative multiplayer.
    · The HOST runs the real match (bots, hits, kills, score). Each friend is a NetPlayer in it, steered by his UserCmds.
@@ -8,7 +12,6 @@
      match talks through its room's RoomLink (18c_room.js), so the connection outlives the match.
    ===================================================================== */
 const NET_VERSION = 30;
-const NET_WEAPONS = Object.keys(WEAPON_DEFS), NET_WI = Object.fromEntries(NET_WEAPONS.map((k, i) => [k, i]));
 const NET_PHASES = ['loading', 'freeze', 'live', 'roundEnd', 'over'];
 const NET_SNAP_HZ = 30, NET_CMD_EVERY = 2, NET_INTERP = 0.1; // snapshots / s · send a cmd packet every 2nd tick (60 Hz) · ghosts drawn 100 ms behind
 const NET_REWIND_MAX = 0.4; // v29 lag compensation: at most 400 ms back (≈ 150 ms ping each way + 100 ms interpolation; slower links are not trusted)
@@ -98,12 +101,6 @@ function netEntity(m, c) {
   return { id: c.netId, flags: (c.alive ? 1 : 0) | (c.motor.crouching ? 2 : 0) | (reload ? 4 : 0) | (c.spawnProtect > 0 ? 8 : 0) | (c.helmet === false ? 16 : 0), w: NET_WI[def.id] ?? 0, life: c.life || 0,
     x: c.motor.pos.x, y: c.motor.pos.y, z: c.motor.pos.z, yaw: c.yaw, pitch: p ? c.pitch : c.isNet ? c.pitch : c.aimPitch || 0, hp: c.alive ? c.hp : 0 };
 }
-const v3arr = (v) => [+v.x.toFixed(3), +v.y.toFixed(3), +v.z.toFixed(3)];
-const netV3 = (a) => (Array.isArray(a) && a.length === 3 && a.every((x) => Number.isFinite(+x) && Math.abs(+x) < 1e4) ? new THREE.Vector3(+a[0], +a[1], +a[2]) : null);
-// names and room fields come from other people's browsers: never let them carry markup into the page
-const safeName = (s, d = 'Player') => String(s ?? '').replace(/[<>&"'`\\]/g, '').trim().slice(0, 14) || d;
-const esc = (s) => String(s ?? '').replace(/[&<>"'`]/g, (c) => `&#${c.charCodeAt(0)};`);
-
 class NetHost {
   constructor(app, match, transport) {
     this.role = 'host'; this.app = app; this.m = match; this.t = transport; this.peers = new Map(); this.snapT = 0; this.tick = 0; this.shots = [];
@@ -381,3 +378,5 @@ class NetClient {
     if (this._unload) removeEventListener('beforeunload', this._unload); this._welcomed({ reject: '已離開' });
   }
 }
+
+export { LoopbackTransport, NET_VERSION, NetClient, NetCodec, NetHost };

@@ -1,3 +1,7 @@
+import { Settings, THREE, TMP_V1, TMP_V2, WEAPON_DEFS, clamp, damp, lerp, rand } from './01_core.js';
+import { CollisionWorld } from './04_collision.js';
+import { THROW, makePlayerWeapon } from './10_weapons.js';
+import { BTN } from './12b_cmd.js';
 /* =====================================================================
    v25 ARSENAL — the gameplay half of a soldier's weapons: inventory, Quick-Change, ADS state, trigger / cooldown /
    reload, knife, grenades, left-hand grab. Stepped once per fixed tick from a UserCmd, so the local player and a remote
@@ -397,3 +401,5 @@ class WeaponSystem extends Arsenal {
 
   onResize() { this.camera.aspect = innerWidth / innerHeight; this.camera.updateProjectionMatrix(); }
 }
+
+export { Arsenal, WeaponSystem };

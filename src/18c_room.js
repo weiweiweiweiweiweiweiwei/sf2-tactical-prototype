@@ -1,3 +1,8 @@
+import { DIFFICULTY, MODES, RULES, Settings, clamp } from './01_core.js';
+import { MAPS } from './07_maps.js';
+import { safeName } from './12c_netutil.js';
+import { NET_VERSION } from './18_net.js';
+import { ONLINE, RtcClientTransport, RtcHostTransport, parseCode, roomCode } from './18b_online.js';
 /* =====================================================================
    v27 ROOMS — like SF2: a room exists before, between and after matches.
    · 建立房間 opens a room at once: a 6-digit code and the host's WebRTC transport listening for friends. Friends join the
@@ -197,3 +202,5 @@ class RoomGuest extends RoomSession {
   // who takes over when the host leaves: the member who joined first (every member decides the same from the same list)
   successor() { return this.members.filter((m) => !m.host).sort((a, b) => a.order - b.order)[0] || null; }
 }
+
+export { ROOM_ST, RoomGuest, RoomHost, RoomLink, roomCfgOut, roomCfgSafe };

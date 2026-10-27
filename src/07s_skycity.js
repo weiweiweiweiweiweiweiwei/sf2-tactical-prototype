@@ -14,6 +14,9 @@
      On the Alpha roof the south car stops behind the "straw" crate tunnel. While a car runs, the corner pulley gears turn.
    Metres: roofs x ∈ ±[11, 26.5], z ∈ [−12.75, 12.85], floor y = 0; chasm 22 m; bridge z ∈ [−0.9, 1.8].
    ===================================================================== */
+import { CFG, DRACOLoader, GLTFLoader, THREE, clamp, lerp, mulberry32, pick } from './01_core.js';
+import { MAT_PRESETS } from './03_textures.js';
+import { MAPS } from './07_maps.js';
 const SKY = {
   X0: 11, X1: 26.5, Z0: -12.75, Z1: 12.85, KILL_Y: -14,
   BR: { z0: -0.9, z1: 1.8, len: 11, up: 1.08, time: 4.0 },          // leaf width (z), length (x, hinge → middle), raised angle, travel time

@@ -1,3 +1,17 @@
+import { APEX, BOT_POOLS, CANNON, CFG, FREEZE_TIME, FrameProfiler, LOADOUT_KEYS, MODES, PART_MULT, POINTS, RULES, RoomEnvironment, Settings, Sky, THREE, TMP_V1, TMP_V2, TMP_V3, WEAPON_DATABASE, WEAPON_DEFS, activeQuality, apexShield, calcDamage, clamp, lerp, loadoutDefs, nextFrame, pick, rand, wrapAngle } from './01_core.js';
+import { CAO } from './03_textures.js';
+import { CharacterMotor, CollisionWorld } from './04_collision.js';
+import { Effects, PhysicsWorld } from './05_physics_fx.js';
+import { MapBuilder } from './06_mapbuilder.js';
+import { MAPS } from './07_maps.js';
+import { NavGraph } from './08_nav_input.js';
+import { TEAM_PALETTE, loadGunModels } from './09_models.js';
+import { BTN } from './12b_cmd.js';
+import { NET_WEAPONS, netV3 } from './12c_netutil.js';
+import { WeaponSystem } from './11_weaponsystem.js';
+import { Player } from './12_player.js';
+import { Bot, TeamIntel } from './13_bots.js';
+import { createRule } from './15b_rules.js';
 /* =====================================================================
    MATCH — one game session: world, lighting/IBL, teams, combat,
    scoring, grenades, freeze time. All mode-specific logic lives in
@@ -940,3 +954,5 @@ class Match {
     this.app.post.dispose(); CAO.uCAOOn.value = 0;
   }
 }
+
+export { Match };

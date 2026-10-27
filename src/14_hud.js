@@ -1,3 +1,7 @@
+import { DIFFICULTY, MODES, RULES, Settings, THREE, WEAPON_ICONS, clamp } from './01_core.js';
+import { terrainShade } from './07_maps.js';
+import { esc } from './12c_netutil.js';
+import { EMBLEMS, EMB_HOLD, TEAM_CSS, emblemSVG } from './14b_emblems.js';
 /* =====================================================================
    HUD — cached DOM writes (unchanged values never touch the DOM).
    ===================================================================== */
@@ -445,3 +449,5 @@ class HUD {
   setFps(v, show) { this._set('fpsD', this.el.fps, 'display', show ? 'block' : 'none'); if (show) this._set('fpsV', this.el.fps, 'text', v); }
 }
 
+
+export { HUD };

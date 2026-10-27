@@ -5,6 +5,8 @@
    Gun space: forward = -Z, up = +Y, bore axis on y = 0.
    Profile coordinates (u, v): u = distance forward, v = up.
    ===================================================================== */
+import { DRACOLoader, GLTFLoader, RoundedBoxGeometry, THREE, WEAPON_DATABASE, mergeGeometries } from './01_core.js';
+import { SF2Flash, SF2Rig } from './09c_sf2rig.js';
 class GunMats {
   constructor(tf) {
     const wear = tf.surface('gunWear'), fab = tf.surface('fabric');
@@ -875,3 +877,4 @@ class SoldierFactory {
   }
 }
 
+export { GunBuilder, SoldierFactory, TEAM_PALETTE, WeaponModels, camoMat, loadGunModels };

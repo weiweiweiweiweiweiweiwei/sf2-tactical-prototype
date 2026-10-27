@@ -1,3 +1,4 @@
+import { DRACOLoader, GLTFLoader } from './01_core.js';
 // Both Apex maps ship as script chunks (tools/pack-apex-js.mjs): a double-clicked index.html (file://) blocks fetch, not
 // <script>. pack/index.js gives the bundle layout, each chunk decodes straight into one buffer, the parts come back as ArrayBuffers.
 const APEX_PACK = window.APEX_PACK = {
@@ -30,3 +31,5 @@ async function apexGLTF(buf) {
   D.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/libs/draco/gltf/'); L.setDRACOLoader(D);
   try { return await L.parseAsync(buf, ''); } finally { D.dispose(); }
 }
+
+export { apexGLTF, apexPack };

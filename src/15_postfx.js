@@ -1,3 +1,4 @@
+import { EffectComposer, FullScreenQuad, GTAOPass, OutputPass, Pass, QUALITY, RenderPass, SMAAPass, THREE, UnrealBloomPass, clamp, damp } from './01_core.js';
 /* =====================================================================
    POST-PROCESSING — EffectComposer stack per quality preset:
    World → GTAO (SSAO) → ViewModel pass →
@@ -133,20 +134,6 @@ class LevelsPass extends Pass {
 // mapLights = the map's lamp point lights, fxLights = muzzle / explosion lights (flash sprites always remain).
 // v24: mapLights stay on in every preset (≤ 3 per map, +1.7 ms on Intel UHD at 50 % res) — without them the warehouse's lamp
 // pools vanished and low / medium rendered it at ~1/3 of high's brightness (user report).
-// low also drops world image-based reflections (−3.7 ms; hemisphere fill compensates, the gun keeps its own) and redraws the
-// sun shadow map every 2nd frame (−3 ms): Intel UHD 1080p ≈ 19.6 ms at 70 % res, ≈ 15 ms after dynamic resolution.
-// v24 (frozen 12v12 frame, Intel UHD, 50 % res): 1-tap hard shadows on low −1.8 ms (PCF = 9 taps in every pixel); soldier LOD 587k → 81k triangles.
-const QUALITY = {
-  low:    { post: false, pr: 0.7, shadow: 1024, soft: false, hard: true, mapLights: true, fxLights: false, worldEnv: false, shadowEvery: 2, ao: 0, bloom: false, minScale: 0.5 },
-  medium: { post: true, pr: 0.85, shadow: 1024, soft: false, mapLights: true, fxLights: false, ao: 0, bloom: true, smaa: false, minScale: 0.55 },
-  high:   { post: true, pr: 1, shadow: 2048, soft: true, mapLights: true, fxLights: true, ao: 0, bloom: true, smaa: true, minScale: 0.55 },
-  ultra:  { post: true, pr: 1.25, shadow: 4096, soft: true, mapLights: true, fxLights: true, ao: 1, bloom: true, smaa: true, minScale: 0.6 },
-};
-const Q_ORDER = ['low', 'medium', 'high', 'ultra'];
-const Q_LABEL = { low: '低', medium: '中', high: '高', ultra: '極致' };
-// Settings 'auto' (v24 default): the governor's current preset — starts at high on a discrete GPU, low on an integrated one.
-let AUTO_Q = null;
-function activeQuality() { const q = Settings.data.quality; return q === 'auto' ? (AUTO_Q || 'high') : (QUALITY[q] ? q : 'high'); }
 
 class PostFX {
   constructor(renderer) { this.r = renderer; this.composer = null; this.flashAmt = 0; this.afterAmt = 0; this.flashDur = 1; this.hurt = 0; this.scale = 1; }
@@ -257,3 +244,5 @@ class PostFX {
   }
 }
 
+
+export { LOOK_DEFAULT, PostFX, resolveLook };

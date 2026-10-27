@@ -9,6 +9,7 @@
    then played with HRTF panning, distance low-pass, speed-of-sound
    delay, per-map convolution reverb and outdoor slap-back echo.
    ===================================================================== */
+import { Settings, THREE, clamp, mulberry32, pick, rand } from './01_core.js';
 // v34 per-gun weight of the live sub kick (0 = none: suppressed guns)
 // v38 hit-sound audition list (ESC → 設定 → 命中音效): s = [sample group, gain] layers, synth = procedural layer
 const HIT_SOUNDS = {
@@ -809,3 +810,4 @@ class AudioEngine {
   }
 }
 
+export { ACOUSTICS, AudioEngine, GUN_PROFILES, HIT_SOUNDS };

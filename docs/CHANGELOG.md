@@ -1023,3 +1023,10 @@
 - 原本：玩家、Bot、連線已是固定 120 Hz（v25）；cannon 物理用自己的 90 Hz 累加器、手榴彈的引信和防穿牆掃描跟著畫面跑。
 - 現在：`PhysicsWorld.fixedStep(h)`（每個固定步長前記下位置／旋轉、屍體推倒的衝量）和 `Match.stepGrenades(h)` 都在 120 Hz 迴圈裡；`sync(dt, alpha)` 每畫面在最後兩步之間內插畫出來（任何更新率都順）。
 - 驗證：手榴彈引信 2.6 s → 2.608 s（一步之內）、停在地面；擊倒的 Bot 躺平；`_gear` 連線手榴彈／煙霧／掉槍全過；`check.mjs` 過。
+
+### v62s（2026-10-27）：原始碼改成 ES 模組，打包回單一 index.html（架構第 1 項，使用者選 A；架構大方向完成）
+- 原本：33 個分檔用 `cat` 串成一個 `<script type="module">`，所有頂層名稱共用一個範圍。
+- 現在：每個檔是模組，`import { … } from './01_core.js'` 取用前面檔的名稱、檔尾 `export { … }`；`src/main.js` 依原本順序 import 全部；`tools/build.mjs` 用 esbuild（新增開發依賴 esbuild 0.24.0、acorn 8.14.0、acorn-walk 8.3.4）打包成單一內嵌腳本 → `00_head.html`＋打包結果＋`99_tail.html`（原 `17_app.js` 結尾的 HTML）。three／cannon-es 仍由 importmap 從 CDN 載入。
+- 保持原本的執行順序：轉換前把 18 個「前面的檔用到後面的檔」的名稱搬到前面——`QUALITY`／`AUTO_Q`／`activeQuality` 移到 `01_core`（`17_app` 改用 `setAutoQ()`：模組不能改別的模組的變數）、`TEAM_CSS` 移到 `14b_emblems`、網路小工具（`NET_WEAPONS`、`v3arr`、`netV3`、`safeName`、`esc`）移到新檔 `12c_netutil.js`，`07t`／`09c`／`12b`／`14b` 往前排。現在每個檔只 import 比它早的檔，沒有循環。
+- `tools/esm/convert.mjs`（一次性轉換）、`tools/esm/analyze.mjs`（檢查漏掉的 import、往後的 import：`MODULES_OK 34 parts`）。
+- 驗證：雙擊開啟（file://）進大廳、開戰、SF2 槍和火光正常、0 錯誤；5 張地圖畫面和轉換前一致（0.4–3.6）；`check.mjs`、`_nettest`、`_gear`、`check-apex-full` 全過。

@@ -1,3 +1,6 @@
+import { DRACOLoader, GLTFLoader, THREE, activeQuality, mulberry32 } from './01_core.js';
+import { MAT_PRESETS } from './03_textures.js';
+import { MAPS } from './07_maps.js';
 
 /* =====================================================================
    v44 SAKURA INN (櫻花客棧 · SF2 "Ryokan", seizure map, 2012) — traced from the in-game Tab map of a 2016 KR clan

@@ -1,3 +1,4 @@
+import { SkeletonUtils, THREE, clamp, lerp, rand } from './01_core.js';
 /* =====================================================================
    v62 SF2's OWN FIRST-PERSON ANIMATION — tools/sf2_rig_build.mjs joins the gun parts, sleeves and gloves on one Bip01
    skeleton with the animset's clips (<id>_sf2_rig.glb, window.GUN_GLB). Every clip is a full pose of arms + gun, so the
@@ -135,3 +136,5 @@ class SF2Flash {
   update(dt) { if (this.ok) for (const m of ['hip', 'ads']) for (const L of this.layers[m]) if (L.s.visible) this.step(L, dt); }
   hide() { if (this.ok) for (const m of ['hip', 'ads']) for (const L of this.layers[m]) L.s.visible = false; }
 }
+
+export { SF2Flash, SF2Rig };

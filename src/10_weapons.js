@@ -1,3 +1,4 @@
+import { Settings, THREE, TMP_V1, TMP_V2, clamp, damp, lerp, rand, shotRng } from './01_core.js';
 /* =====================================================================
    PLAYER WEAPONS — per-class behaviour, all numbers come from the
    compiled WEAPON_DATABASE entry. Spread values are cone radii in
@@ -424,3 +425,5 @@ function makePlayerWeapon(game, def, vm, owner) {
   if (def.kind === 'grenade') return new GrenadeWeapon(game, def, vm, owner);
   return new AutoGun(game, def, vm, owner);
 }
+
+export { THROW, makePlayerWeapon };

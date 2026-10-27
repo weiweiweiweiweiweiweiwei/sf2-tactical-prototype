@@ -1,3 +1,9 @@
+import { CFG, THREE, TMP_V3, TMP_V4, WEAPON_DATABASE, WEAPON_DEFS, damp, lerp, loadoutDefs, rand, wrapAngle } from './01_core.js';
+import { BTN } from './12b_cmd.js';
+import { NET_WEAPONS, safeName } from './12c_netutil.js';
+import { Arsenal } from './11_weaponsystem.js';
+import { Combatant, Human } from './12_player.js';
+import { Bot, animateSoldier } from './13_bots.js';
 /* =====================================================================
    v25 NETWORK SOLDIERS
    NetPlayer — a friend's soldier inside the HOST's match. Steered by the UserCmds his client sends: the same Human
@@ -138,3 +144,5 @@ class Ghost extends Combatant {
   onDamaged() {}
   respawn() {}
 }
+
+export { Ghost, NetPlayer };

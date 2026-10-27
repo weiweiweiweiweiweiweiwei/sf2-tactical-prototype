@@ -8,6 +8,9 @@
    · An invite / friend request also "pokes" the friend's inbox channel (Realtime broadcast), so his game asks the
      server right away instead of within 5 s. A poke carries nothing — the server decides what is real.
    ===================================================================== */
+import { Settings } from './01_core.js';
+import { safeName } from './12c_netutil.js';
+import { ONLINE, parseCode, subscribed, supa } from './18b_online.js';
 const FRIEND_ST = { hub: '在大廳', room: '在房間', playing: '對戰中' };
 const fmtFriend = (c) => (c ? c.slice(0, 4) + ' ' + c.slice(4) : '');
 const FRIEND_KEY = 'sf2.friendId';
@@ -90,3 +93,5 @@ class Friends {
   get incoming() { return this.list.filter((f) => f.state === 'incoming'); }
   get outgoing() { return this.list.filter((f) => f.state === 'outgoing'); }
 }
+
+export { Friends, fmtFriend };

@@ -1,3 +1,4 @@
+import { THREE, clamp, mulberry32, rand, randInt } from './01_core.js';
 /* =====================================================================
    PBR TEXTURE FACTORY — every surface is generated procedurally as an
    albedo + normal (Sobel from a height field) + roughness set.
@@ -790,3 +791,5 @@ function worldBox(w, h, d, tile = 2) {
   return g;
 }
 
+
+export { CAO, CONTAINER_COLORS, MAT_PRESETS, MaterialLib, TextureFactory, applyContactAO, worldBox };

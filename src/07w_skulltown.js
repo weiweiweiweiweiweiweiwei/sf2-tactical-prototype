@@ -1,3 +1,7 @@
+import { CANNON, THREE, clamp } from './01_core.js';
+import { MAPS } from './07_maps.js';
+import { apexGLTF, apexPack } from './07u_apex.js';
+import { ApexDoors, apexBakedSpawns, apexNav } from './07v_apex_full.js';
 // v60 Skull Town (Apex Arenas / TDM, mp_rr_freedm_skulltown) rebuilt from the user's own install: the BSP world and 24k static
 // props at their original transforms (tools/blender/skulltown_build.py), lighting baked in Cycles into two lightmaps — the play
 // area and the scenery around it — and collision from the real triangles (TriSoup: slopes are slopes, thin props are walkable).

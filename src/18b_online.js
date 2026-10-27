@@ -1,3 +1,4 @@
+import { NET_VERSION } from './18_net.js';
 /* =====================================================================
    v26 ONLINE — play with friends on other computers, free. (v27: rooms on top of this — see 18c_room.js)
    · Supabase Realtime (project sf2-tactical, free plan) only helps two browsers FIND each other: the lobby channel lists
@@ -229,3 +230,5 @@ class BackgroundTicker {
   }
   set(active) { this.active = active; this.sync(active); }
 }
+
+export { BackgroundTicker, ONLINE, RoomDirectory, RtcClientTransport, RtcHostTransport, fmtCode, inviteLink, parseCode, roomCode, subscribed, supa };

@@ -1,3 +1,6 @@
+import { RoundedBoxGeometry, THREE, activeQuality, clamp, lerp, mergeGeometries, mulberry32, rand } from './01_core.js';
+import { CAO, CONTAINER_COLORS, applyContactAO, worldBox } from './03_textures.js';
+import { Terrain } from './04_collision.js';
 /* =====================================================================
    MAP BUILDER — declarative level construction. Every primitive
    produces batched visuals (merged per material), collision AABBs,
@@ -691,3 +694,5 @@ class MapBuilder {
   }
 }
 
+
+export { MapBuilder };

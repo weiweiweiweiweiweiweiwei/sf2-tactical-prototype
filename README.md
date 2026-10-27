@@ -80,7 +80,8 @@
 
 ## 給開發者
 
-- 原始碼在 `src/`，執行 `sh src/build.sh` 會合併成根目錄的單檔 `index.html`。
+- 原始碼在 `src/`，是 ES 模組（`import`／`export`，`src/main.js` 依序載入各檔）；執行 `sh src/build.sh`（需要 `npm install`，用 esbuild）會打包成根目錄的單檔 `index.html`，雙擊就能玩。
+- 新增或搬動程式時：一個檔只能 import 比它早載入的檔（`src/main.js` 的順序），`node tools/esm/analyze.mjs` 會檢查漏掉的 import 和順序。
 - `node tools/check.mjs` 做自動檢查（需要 `npm install`，會使用本機的 Chrome）。
 - 開發紀錄：現況在 `PROGRESS.md`，待辦在 `docs/TODO.md`，每版細節在 `docs/CHANGELOG.md`（文件索引：`docs/README.md`）；重大版本的單檔保存在 `versions/`。
 

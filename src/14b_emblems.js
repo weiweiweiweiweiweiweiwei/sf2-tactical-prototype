@@ -3,6 +3,7 @@
    collects along the bottom for the current life. Art is drawn here as SVG (no game assets); conditions follow the
    SF2 emblem list in docs/research/sf2/SF2_RESEARCH.md.
    ===================================================================== */
+const TEAM_CSS = { alpha: '#63b3ff', bravo: '#ff5d52', none: '#d8d8d8' }; // (v62s moved from 15b_rules.js: the HUD reads it)
 const EMB_HOLD = 1800; // ms each emblem stays (measured from SF2 gameplay video)
 const EMBLEMS = {
   kill:        { name: 'Kill',          zh: '擊殺',     ray: '#9fb4c8', icon: 'cross' },
@@ -59,3 +60,5 @@ function emblemSVG(id) {
     `<polygon points="${star}" fill="url(#${g})" stroke="#2a2f36" stroke-width="1.2"/>${rays}<circle cx="50" cy="50" r="27" fill="url(#${g})" stroke="#2a2f36" stroke-width="1.5"/>` +
     `<circle cx="50" cy="50" r="23" fill="#1c232c"/>${icon}</svg>`;
 }
+
+export { EMBLEMS, EMB_HOLD, TEAM_CSS, emblemSVG };

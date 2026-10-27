@@ -4,6 +4,7 @@
    mesh and cannon's Heightfield, so feet, bullets and grenades agree.
    Slopes steeper than MAX_SLOPE (45°) cannot be walked up: you slide.
    ===================================================================== */
+import { CFG, THREE, clamp, damp } from './01_core.js';
 const MAX_SLOPE = 1.08; // ≈47°
 class Terrain {
   constructor(o) {
@@ -730,3 +731,4 @@ class CharacterMotor {
   }
 }
 
+export { CharacterMotor, CollisionWorld, MAX_SLOPE, Terrain, triBox, triHeight };

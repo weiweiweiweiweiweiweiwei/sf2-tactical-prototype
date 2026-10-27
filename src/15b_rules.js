@@ -1,3 +1,6 @@
+import { POINTS, THREE, TMP_V1, clamp, rand } from './01_core.js';
+import { v3arr } from './12c_netutil.js';
+import { TEAM_CSS } from './14b_emblems.js';
 /* =====================================================================
    GAME RULES — state machine per mode. The Match drives the phases
    (freeze → live → roundEnd → over) and delegates every mode-specific
@@ -10,7 +13,6 @@
      DomRule        Tactical Domination A/B/C, hold E for 6 s
    ===================================================================== */
 const TEAM_HEX = { alpha: 0x3f8cff, bravo: 0xff4a3d, none: 0xdedede };
-const TEAM_CSS = { alpha: '#63b3ff', bravo: '#ff5d52', none: '#d8d8d8' };
 const CAPTURE_TIME = 6;
 
 class Rule {
@@ -388,3 +390,5 @@ function createRule(kind, m) {
   if (kind === 'dom') return new DomRule(m);
   return new TDMRule(m);
 }
+
+export { createRule };

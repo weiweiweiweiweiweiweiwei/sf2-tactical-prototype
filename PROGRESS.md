@@ -11,7 +11,7 @@
 | Three.js | r160（importmap 鎖定版本） | 鎖定 r170 |
 | 碰撞 | 自製 AABB 格網、坡道、地形高度場、梯子、攀爬、滑鏟、台階輔助 | Octree + Capsule |
 | 物理 | cannon-es（手榴彈、彈殼、屍體） | cannon-es 只用於手榴彈 / 彈殼 / 掉落物 ✅ |
-| 模組 | `src/` 21 個分檔，由 `sh src/build.sh` 串成單一 `index.html`（可雙擊遊玩，方便 `versions/` 保存） | 原生 ES Modules、`src/main.js` 加分資料夾、免建置 |
+| 模組 | `src/` 34 個 ES 模組（`src/main.js` 依序載入），`sh src/build.sh`（esbuild）打包成單一 `index.html`，可雙擊遊玩（v62s） | 分資料夾 |
 | 檔案長度 | 5 個檔超過 600 行：07_maps 762、09_models 705、06_mapbuilder 691、16_match 685、13_bots 655 | 每檔 < 600 行 |
 | 自動檢查 | ✅ `node tools/check.mjs`（Playwright 1.63.0，驅動系統已安裝的 Chrome / Edge） | ✅ |
 | 版本控制 | ✅ git（v17 起） | ✅ |

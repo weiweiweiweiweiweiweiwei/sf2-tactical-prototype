@@ -8,6 +8,10 @@
            SEARCH · MELEE · OBJECTIVE. Getting hit triggers a dodge
            (side-slide or crouch) — v5.
    ===================================================================== */
+import { CFG, DIFFICULTY, SkeletonUtils, THREE, TMP_V1, TMP_V2, TMP_V3, TMP_V4, WEAPON_DEFS, clamp, damp, lerp, pick, rand, randInt, wrapAngle } from './01_core.js';
+import { MAX_SLOPE } from './04_collision.js';
+import { camoMat } from './09_models.js';
+import { Combatant } from './12_player.js';
 const BOT_NAMES = {
   alpha: ['Falcon', 'Eagle', 'Tiger', 'Bear', 'Shadow', 'Ranger', 'Hunter', 'Blaze', 'Storm', 'Frost', 'Ace'],
   bravo: ['Viper', 'Ghost', 'Raven', 'Cobra', 'Wolf', 'Hawk', 'Jackal', 'Scorpion', 'Reaper', 'Mamba', 'Vulture', 'Kraken'],
@@ -692,3 +696,5 @@ class TeamIntel {
   mark(p, t) { this.seen.set(this._k(p), t); }
   stale(p, now) { const t = this.seen.get(this._k(p)); return t === undefined ? 1 : clamp((now - t) / 60, 0, 1); }
 }
+
+export { BOT_NAMES, Bot, TeamIntel, animateSoldier };
