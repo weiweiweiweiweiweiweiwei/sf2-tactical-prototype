@@ -6,6 +6,7 @@
    tick() once per fixed step; animate() only moves the local viewmodel. The spread cone is drawn from a seeded stream
    (owner network id + shot number) so the host and the shooter's own client fire the very same bullet.
    ===================================================================== */
+const SF2_HIP_CLIMB = 0.41; // v62n hip-fire climb per shot × nextCrossVert, from the user's SF2 hip spray (Weapon.sf2Kick)
 class Weapon {
   constructor(game, def, vm, owner) {
     this.game = game; this.def = def; this.vm = vm; this.owner = owner || game.player; Object.assign(this, def);
@@ -77,7 +78,9 @@ class Weapon {
      · climb: each shot +nextCrossVert, the whole magazine long. v62j: maxCrossVert is not a cap on the view (it is the
        crosshair's, 'cross'): the user's SF2 spray climbs ≈ 14.5° and SF2 footage keeps rising to the last round, where
        v62e-i stopped at maxCrossVert (8.4° aimed, the 11th shot)
-       v62l: hip fire is capped at maxCrossVert again (the user's pick, 10-27: uncapped hip ran to 33° in 25 shots), aimed is not
+       v62l capped hip fire at maxCrossVert; v62n (user 10-27: no cap, but slower — uncapped at nextCrossVert it ran to 38° a
+       magazine): the user's SF2 hip spray (M4A1, one magazine, the video at 55–59 s) climbs ≈ 15° with the holes evenly spaced
+       to the top (no cap), ≈ 0.52° a shot ≈ 5°/s — SF2_HIP_CLIMB = 0.52 / 1.26 of nextCrossVert
      · sideways: a small step of incline × the climb × latScale (0.2) toward forceDir, which turns around on forceCorrection %
        of the shots — a slight wobble. v62g fitted to the user's SF2 spray (aimed, uncompensated, 10-27): 270 px straight
        up (≈ 8.1° at SF2's 55° aimed FOV = the 8.4° cap, the last shots piled at the top) with only ±10 px (±0.3°) sideways;
@@ -91,7 +94,7 @@ class Weapon {
   sf2Mod(ws) { const r = this.def.sf2Recoil, m = this.owner.motor; return (ws.ads ? r.zoomMod : 1) * (m.crouching && m.grounded ? r.crouchMod : 1); }
   sf2Kick(ws) {
     const r = this.def.sf2Recoil, k = this.sf2Mod(ws), up = r.nextCrossVert * k;
-    const climb = ws.ads ? up : Math.min(up, Math.max(0, r.maxCrossVert - this.sfV)); this.sfV += climb; // v62l hip: capped at maxCrossVert (user 10-27, A); aimed: no cap
+    const climb = ws.ads ? up : up * SF2_HIP_CLIMB; this.sfV += climb; // v62n hip: no cap, SF2's measured rate (below); aimed: no cap
     if (Math.random() * 100 < r.forceCorrection) this.sfDir = -this.sfDir; // each shot may turn the sideways step around
     const side = this.sfDir * up * r.incline * (r.latScale ?? 0.2) * rand(0.6, 1); this.sfH += side;
     return [climb * THREE.MathUtils.DEG2RAD, side * THREE.MathUtils.DEG2RAD];
