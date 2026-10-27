@@ -10515,6 +10515,8 @@ class Weapon {
        v62l capped hip fire at maxCrossVert; v62n (user 10-27: no cap, but slower — uncapped at nextCrossVert it ran to 38° a
        magazine): the user's SF2 hip spray (M4A1, one magazine, the video at 55–59 s) climbs ≈ 15° with the holes evenly spaced
        to the top (no cap), ≈ 0.52° a shot ≈ 5°/s — SF2_HIP_CLIMB = 0.52 / 1.26 of nextCrossVert
+       v62p (user's pick A): aimed is the same × zoomMod (SF2's RecoilZoomModifier, M4A1 0.6): 0.31° a shot, ≈ 9.6° a magazine —
+       v62j's uncapped 0.76° (22.7°) leaned on the same screenshot, read as aimed though it is hip fire
      · sideways: a small step of incline × the climb × latScale (0.2) toward forceDir, which turns around on forceCorrection %
        of the shots — a slight wobble. v62g fitted to the user's SF2 spray (aimed, uncompensated, 10-27): 270 px straight
        up (≈ 8.1° at SF2's 55° aimed FOV = the 8.4° cap, the last shots piled at the top) with only ±10 px (±0.3°) sideways;
@@ -10528,7 +10530,7 @@ class Weapon {
   sf2Mod(ws) { const r = this.def.sf2Recoil, m = this.owner.motor; return (ws.ads ? r.zoomMod : 1) * (m.crouching && m.grounded ? r.crouchMod : 1); }
   sf2Kick(ws) {
     const r = this.def.sf2Recoil, k = this.sf2Mod(ws), up = r.nextCrossVert * k;
-    const climb = ws.ads ? up : up * SF2_HIP_CLIMB; this.sfV += climb; // v62n hip: no cap, SF2's measured rate (below); aimed: no cap
+    const climb = up * SF2_HIP_CLIMB; this.sfV += climb; // v62n no cap, SF2's measured rate (below); v62p aimed too: SF2's RecoilZoomModifier (in up) on that
     if (Math.random() * 100 < r.forceCorrection) this.sfDir = -this.sfDir; // each shot may turn the sideways step around
     const side = this.sfDir * up * r.incline * (r.latScale ?? 0.2) * rand(0.6, 1); this.sfH += side;
     return [climb * THREE.MathUtils.DEG2RAD, side * THREE.MathUtils.DEG2RAD];

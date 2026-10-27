@@ -57,7 +57,7 @@ const PNG = {}; // every exported texture of this gun by file name
 (function walk(d) { for (const f of fs.readdirSync(d, { withFileTypes: true })) { const q = `${d}/${f.name}`; if (f.isDirectory()) walk(q); else if (f.name.endsWith('.png')) PNG[f.name.toLowerCase()] ??= q.slice(SRC.length, -4).replace(/_[dns]$/, ''); } })(SRC + GID);
 const texDirs = (stem) => TEX[stem] || [PNG[`${stem}_d.png`.toLowerCase()] || `${GID}/missing/${stem}`];
 const ROUGH = { barrel: 0.78, stock: 0.8, magazine: 0.72, sight: 0.66, body: 0.68, sleeve: 0.9, glove: 0.82 }; // matte, dielectric (as sf2_gun_build.py)
-const PEEP_DROP = +(process.env.PEEP_DROP ?? 0.0048), PEEP_DX = +(process.env.PEEP_DX ?? 0.0007); // the rear sight's aperture under its top / off its top's mean x (tuned on ADS shots, v61b)
+const PEEP_DROP = +(process.env.PEEP_DROP ?? 0.0048), PEEP_DX = +(process.env.PEEP_DX ?? 0.00136); // v62p 0.0007 → 0.00136 on the carry handle: its hole was 26 px left of the dot at 1920×1080 (user 10-27); measured by tools/out/_ringcenter.mjs + _ringmeasure.py, now 0.2 px // the rear sight's aperture under its top / off its top's mean x (tuned on ADS shots, v61b)
 // v62f the flip-up front sight sits this far behind the rail's front end (its socket is not exported): measured on the user's SF2 ADS
 // screenshot (10-27) — with the peep ring matched (267 px at 1080p), the front sight's ears were 73 px there and 59 px here, i.e.
 // SF2's post is 21.6 cm ahead of the peep, not 28.2
