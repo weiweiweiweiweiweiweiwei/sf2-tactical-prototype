@@ -23,3 +23,6 @@ tools/blender/mcp_*.log
 assets/maps/apex-test/region.glb
 assets/maps/apex-full/*
 !assets/maps/apex-full/pack/
+
+# second Claude Code account works in its own git worktree (COLLAB.md)
+.worktrees/

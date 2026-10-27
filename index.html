@@ -3891,7 +3891,17 @@ class CharacterMotor {
       const ox = axis === 'x' ? before : p.x, oz = axis === 'z' ? before : p.z, wedged = w.tris.blocks(ox, beforeY, oz, r, h);
       if (wedged ? w.tris.depth(p.x, p.y, p.z, r, h) > w.tris.depth(ox, beforeY, oz, r, h) + 0.005 : w.tris.blocks(p.x, p.y, p.z, r, h)) { // (wedged: sliding along is fine, deeper is not)
         const g = w.tris.groundAt(p.x, p.y + allow, p.z, r + 0.03, allow + 0.02, 0.02, true); // the whole footprint: a plank at the toe counts
-        if (g !== null && g >= p.y - 0.02 && w.fits(p.x, g + 1e-3, p.z, r, h)) { const old = p.y; p.y = g + 1e-3; if (this.grounded && p.y - old > 0.08) this.stepOffset -= p.y - old; }
+        let up = g !== null && g >= p.y - 0.02 && w.fits(p.x, g + 1e-3, p.z, r, h) ? g + 1e-3 - p.y : -1;
+        // v60c no floor face to step on (a seam between scaffold boards, a door's threshold bar, a step the collision LOD
+        // slanted): rise by clearance — the lowest lift, up to the step height, at which the body is free — like Source does
+        if (up < 0 && this.grounded) for (let s = 0.04; s <= allow + 1e-6; s += 0.04) if (w.fits(p.x, p.y + s, p.z, r, h)) { up = s; break; }
+        // …but only a step: 0.6 m on, a lift within the step height must still clear (steeper than MAX_SLOPE goes past it — a wall)
+        if (up > 0 && (g === null || g + 1e-3 - p.y !== up)) {
+          const ax = axis === 'x' ? Math.sign(amount) * 0.6 : 0, az = axis === 'z' ? Math.sign(amount) * 0.6 : 0;
+          let clear = false; for (let s = up; s <= allow + 1e-6 && !clear; s += 0.08) clear = w.fits(p.x + ax, p.y + s, p.z + az, r, h);
+          if (!clear) up = -1;
+        }
+        if (up >= 0) { const old = p.y; p.y += up; if (this.grounded && p.y - old > 0.08) this.stepOffset -= p.y - old; }
         else { p[axis] = before; p.y = beforeY; this.vel[axis] = 0; }
       } else if (this.grounded) { // walking up a slope: stay on it
         const g = w.tris.groundAt(p.x, p.y + allow, p.z, r, 0.02);

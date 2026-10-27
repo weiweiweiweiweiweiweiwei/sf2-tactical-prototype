@@ -38,7 +38,7 @@ const out = await page.evaluate(() => {
   };
   let r = run(0, 420); ok('30° slope walked up without a jump', r.mo.pos.y > 5.5 && r.mo.pos.z < -15, `y ${r.mo.pos.y.toFixed(2)} z ${r.mo.pos.z.toFixed(1)}`);
   ok('…as a slope (never airborne, no step jolts)', r.airborne < 3 && r.maxDrop < 0.05, `airborne steps ${r.airborne}`);
-  r = run(8, 360); ok('55° slope blocks', r.mo.pos.y < 1 && r.mo.pos.z > -6.5, `y ${r.mo.pos.y.toFixed(2)} z ${r.mo.pos.z.toFixed(2)}`);
+  r = run(8, 360); ok('55° slope blocks', r.mo.pos.y < 0.3 && r.mo.pos.z > -6.5, `y ${r.mo.pos.y.toFixed(2)} z ${r.mo.pos.z.toFixed(2)}`);
   r = run(16, 600); ok('5 cm plank and 0.6 m step walked over, wall stops', Math.abs(r.mo.pos.y - 0.6) < 0.02 && r.mo.pos.z > -14.1 && r.mo.pos.z < -13.4, `y ${r.mo.pos.y.toFixed(2)} z ${r.mo.pos.z.toFixed(2)}`);
   r = run(24, 240, 30, -4); ok('a jump under a 2.2 m ceiling stops at it', r.maxY < 2.2 - 1.8 + 0.05, `max feet y ${r.maxY.toFixed(2)}`);
   const h = w.raycast(new V(16, 1.5, -10), new V(0, 0, -1), 50); ok('a shot hits the wall at 4 m', h && Math.abs(h.t - 4) < 0.01 && h.normal.z > 0.9, h ? `t ${h.t.toFixed(3)}` : 'no hit');
