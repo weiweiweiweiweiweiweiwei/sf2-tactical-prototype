@@ -23,7 +23,8 @@ class SF2Rig {
     const s = m.getObjectByName('SIGHT').getWorldPosition(new THREE.Vector3()), eye = new THREE.Vector3(s.x, s.y, s.z - (o.eyeRelief ?? 0.03));
     m.rotation.y = Math.PI; m.position.set(eye.x, -eye.y, eye.z);
     this.reloadSounds = o.reloadSounds || null;
-    this.equipRate = o.equipRate || 1.6; // SF2's Equip is ~1 s; here a drawn gun can fire at once, so it plays faster
+    // v62d play the Equip clip over the gun's draw time (def.equipTime, SF2's own 0.8 s for the M4A1); with none, the old 1.6×
+    this.equipRate = o.equipTime ? this.dur('Equip') / o.equipTime : (o.equipRate || 1.6);
     this.zoomFireWeight = o.zoomFireWeight ?? 0.3;
     this.idleT = 0; this.zoomT = 0; this.dashT = 0; this.fireT = -1; this.fireClip = 'Fire'; this.equipT = -1; this.lastDraw = 0;
   }

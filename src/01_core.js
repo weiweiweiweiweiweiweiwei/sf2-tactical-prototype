@@ -72,9 +72,11 @@ const PART_LABEL = { head: '頭部', chest: '胸部', stomach: '腹部', thigh: 
    ------------------------------------------------------------------- */
 const WEAPON_DATABASE = {
   m4a1: {
-    name: 'M4A1', type: 'assault', slot: 'primary', damageNear: 26, damageFar: 20, falloffStart: 25, falloffEnd: 60, fireRate: 0.09,
+    // v62d timing from SF2's own class default (docs/research/sf2/client-data): FireInterval 0.096, ReloadTimes[0] 2.3,
+    // EquipTime 0.8, ZoomingInTime 0.25 (adsSpeed 12 ≈ 0.25 s); adsFov 55 = fZoomedFOV. Damage stays on the balance rules.
+    name: 'M4A1', type: 'assault', slot: 'primary', damageNear: 26, damageFar: 20, falloffStart: 25, falloffEnd: 60, fireRate: 0.096,
     recoilPitch: 0.012, recoilYaw: 0.009, recoilRecovery: 9,
-    hipSpread: 0.075, adsSpread: 0.0022, adsFov: 55, adsType: '3d_sight', mobility: 0.95, maxAmmo: 30, reloadTime: 2.2, modelUrl: null,
+    hipSpread: 0.075, adsSpread: 0.0022, adsFov: 55, adsType: '3d_sight', mobility: 0.95, maxAmmo: 30, reloadTime: 2.3, equipTime: 0.8, adsSpeed: 12, modelUrl: null,
     model: 'm4', sound: 'm4', sf2: 'm4a1', tracerEvery: 2, penetration: 1, desc: '均衡的全自動步槍，全息瞄具。',
   },
   g36c: {
@@ -402,7 +404,7 @@ function compileWeapon(id, s) {
     hipBase: s.hipSpread, adsBase: s.adsSpread, spreadBase: s.hipSpread, spreadCrouch: 0.8,
     recoil: { first: s.recoilPitch * 0.75, climb: s.recoilPitch, climbShots: 10, late: s.recoilPitch * 0.75, h: s.recoilYaw, hStart: 6, jitter: s.recoilYaw * 0.35 },
     recoilRecovery: s.recoilRecovery, adsFov: s.adsFov, vmAdsFov: s.vmAdsFov, adsVertical: s.adsVertical || 0, adsType: s.adsType, adsRecoilMult: 1, adsSpeed: s.adsSpeed || (s.type === 'smg' ? 24 : 20),
-    moveSpeed: CFG.player.baseSpeed * s.mobility, mobility: s.mobility, reloadTime: s.reloadTime, sound: s.sound || id,
+    moveSpeed: CFG.player.baseSpeed * s.mobility, mobility: s.mobility, reloadTime: s.reloadTime, equipTime: s.equipTime || 0, sound: s.sound || id,
     suppressed: !!s.suppressed, tracerEvery: s.tracerEvery ?? 2, shellReload: s.shellReload || 0, zoomFovs: s.zoomFovs || [s.adsFov],
     noise: s.suppressed ? 14 : t.noise, pump, bolt, soundRate: s.rate || 1, tpSpec: s.tp || null,
     fireMode: auto ? 'AUTO' : pump ? 'PUMP' : bolt ? 'BOLT' : 'SEMI',

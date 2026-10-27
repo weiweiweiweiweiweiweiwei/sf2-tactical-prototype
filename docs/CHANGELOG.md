@@ -924,3 +924,8 @@
 - 使用者要查後座力的原版數字。武器設定檔 `SFGame/Config/SFWeapon.ini` 等 46 個 .ini 是加密的（8 位元組區塊＋CFB），金鑰在有商業加殼的 `sf2.exe` 裡，沒有追下去。
 - 改從資料包讀：`SFGameContent.upk` 有每把槍的類別預設物件（`Default__SFCWeaponM4A1`…），`SFGame.upk`（LZO 壓縮）有基底類別。新工具：`tools/sf2_props.py`（UE3 屬性標籤解析）、`tools/sf2_unlzo.py`（純 Python LZO1X 解壓）、`tools/sf2_weapon_dump.py`（805 把槍、合併繼承）→ `docs/research/sf2/client-data/weapons.json`、`README.md`。
 - 後座力運算函式（`StartRecoil` 等）是原生函式，公式在加殼的 exe 裡，只讀得到參數；欄位意義是推測（見 README）。
+
+## v62d（2026-10-27）：M4A1 原版時間、後座力腳本反編譯
+- **M4A1 原版時間**（使用者選 3A）：射速 `FireInterval` 0.096 s（原 0.09）、換彈 2.3 s（原 2.2）、開鏡 0.25 s（`adsSpeed` 12）、拔槍 0.8 s。拔槍是新機制：`def.equipTime` 在拔槍時把開火冷卻設成 0.8 s（`Weapon.equip`，比較長的拉栓／泵動冷卻照舊保留），原版動畫的 `Equip` 也剛好播 0.8 s。傷害維持平衡規則。只有 M4A1 有 `equipTime`，其他槍不變。
+- **開鏡設定比對圖**（使用者選 4A）：A 目前（眼在覘孔後 3 cm、槍模視角 48°）vs B 原版（眼在頭部骨頭 6.4 cm、`fZoomedMeshFOV` 35°）。兩者照門大小接近（較遠的眼睛和較窄的視角互相抵消），B 腰射時槍小一圈。
+- **後座力公式**（使用者選 1C 要破解加殼；沒有做，改走腳本）：`tools/sf2_decompile.py` 是 UE3 UnrealScript 反編譯器（原生函式編號表從 `Core.upk`／`Engine.upk` 讀）。還原出散射公式 `AddSpreadEx`、每發累加 `UpdateLastFiredTime`、子彈方向來自原生 `StartRecoil`（`FireEndTrace`）、配件和懲罰怎麼改後座參數（確認 `nextCrossVert` = 每發上跳、`domInc` = 每發散布增加）、執行時狀態 `S_RECOIL_RESULT` 的欄位。後座本體是原生函式，在有商業加殼的 `sf2.exe` 裡，沒有去破解；重建的模型寫在 `docs/research/sf2/client-data/README.md`。

@@ -26,7 +26,7 @@ class Weapon {
   // carry is dropped so the draw never fires a catch-up burst.
   // v48: likewise the spray state (bloom, cur, spray index) is kept and keeps recovering while holstered (recover()).
   equip() {
-    this.cooldown = Math.max(this.cooldown, 0); this.reloading = false; this.reloadT = 0; this.queued = 0; this.autoReloadT = 0; this.flashT = 0;
+    this.cooldown = Math.max(this.cooldown, this.def.equipTime || 0); this.reloading = false; this.reloadT = 0; this.queued = 0; this.autoReloadT = 0; this.flashT = 0; // v62d def.equipTime blocks firing until the draw finishes (still kept: a longer pending bolt / pump interval)
     if (this.vm.mag) { this.vm.mag.position.copy(this.magBase); this.vm.mag.rotation.set(0, 0, 0); }
     if (this.vm.lhand && this.lhandBase) this.vm.lhand.position.copy(this.lhandBase);
     if (this.vm.cover) this.vm.cover.rotation.x = 0;
