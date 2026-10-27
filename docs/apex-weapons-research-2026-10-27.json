@@ -1,0 +1,2648 @@
+{
+  "researched_on": "2026-10-27",
+  "scope": "29种基础武器（含Bocek弓），不含投掷物、传奇技能武器或所有活动变体",
+  "source_snapshot": {
+    "site": "https://apex.source.gs/",
+    "claimed_season": "30.1",
+    "claimed_build": "11630615",
+    "claimed_extracted_on": "2026-10-07",
+    "verification": "版本为站点自述；发现基础配置与官方现役变体不一致，不能视作2026-10-27实测全量参数。"
+  },
+  "units": {
+    "configuration_rpm": "配置值/分钟，不保证为有效射速",
+    "reload": "秒；逐发装填/过热武器需另行解释",
+    "damage_rows_source_values": "距离 | 单弹丸躯干 | 头部 | 腿部 | 整发躯干（若有）；未计头盔、技能及游戏取整"
+  },
+  "limitations": [
+    "未逐枪下载模型和音效；未验证完整资源包。",
+    "配件列表为配置页面兼容项，不等于当前模式可拾取项；缺失腐化配件不能解释为不兼容。",
+    "未收录完整后坐力曲线、满蓄力/加速/双持/活动变体。"
+  ],
+  "weapons": [
+    {
+      "name": "HAVOC Rifle",
+      "category": "突击步枪",
+      "source": "https://apex.source.gs/weapons/havoc-rifle/",
+      "damage_rows_source_values": [
+        "Any range  | 20  | 26  | 15"
+      ],
+      "configuration_rpm": "672",
+      "rounds_per_burst": null,
+      "burst_delay": null,
+      "rechamber_time": null,
+      "charge_time": "0.42 s",
+      "magazine": {
+        "base": "18",
+        "common": "21",
+        "rare": "25",
+        "epic": "29",
+        "legendary": "29"
+      },
+      "reload": {
+        "tactical": "3.2 s",
+        "empty": "3.2 s",
+        "per_round": null,
+        "finish": null
+      },
+      "muzzle_velocity": "775 m/s",
+      "ads_time": "0.27 s",
+      "attachments": [
+        {
+          "name": "1x HCOG 'CLASSIC'",
+          "tiers": [
+            "Common"
+          ]
+        },
+        {
+          "name": "2x HCOG 'BRUISER'",
+          "tiers": [
+            "Rare"
+          ]
+        },
+        {
+          "name": "1x-2x VARIABLE HOLO",
+          "tiers": [
+            "Rare"
+          ]
+        },
+        {
+          "name": "3x HCOG 'RANGER'",
+          "tiers": [
+            "Epic"
+          ]
+        },
+        {
+          "name": "2x-4x VARIABLE AOG",
+          "tiers": [
+            "Epic"
+          ]
+        },
+        {
+          "name": "Extended Energy Mag",
+          "tiers": [
+            "Common",
+            "Rare",
+            "Epic"
+          ]
+        },
+        {
+          "name": "Standard Stock",
+          "tiers": [
+            "Common",
+            "Rare",
+            "Epic"
+          ]
+        },
+        {
+          "name": "Turbocharger",
+          "tiers": [
+            "Legendary"
+          ]
+        },
+        {
+          "name": "Accelerator",
+          "tiers": [
+            "Legendary"
+          ]
+        }
+      ],
+      "verification": "公开配置页摘录；并非全部经实测或官方逐项核验。",
+      "source_ammo_and_modes": "Energy Ammo Auto Spin Up Time",
+      "projectiles_per_shot": 1,
+      "model_status": "未逐枪核验可下载文件",
+      "audio_status": "未逐枪核验可下载文件",
+      "cautions": []
+    },
+    {
+      "name": "Hemlok Burst AR",
+      "category": "突击步枪",
+      "source": "https://apex.source.gs/weapons/hemlok-burst-ar/",
+      "damage_rows_source_values": [
+        "Any range  | 20  | 28  | 15"
+      ],
+      "configuration_rpm": "930",
+      "rounds_per_burst": "3",
+      "burst_delay": "0.25 s",
+      "rechamber_time": null,
+      "charge_time": null,
+      "magazine": {
+        "base": "21",
+        "common": "24",
+        "rare": "27",
+        "epic": "30",
+        "legendary": "30"
+      },
+      "reload": {
+        "tactical": "2.4 s",
+        "empty": "2.85 s",
+        "per_round": null,
+        "finish": null
+      },
+      "muzzle_velocity": "698 m/s",
+      "ads_time": "0.27 s",
+      "attachments": [
+        {
+          "name": "1x HCOG 'CLASSIC'",
+          "tiers": [
+            "Common"
+          ]
+        },
+        {
+          "name": "2x HCOG 'BRUISER'",
+          "tiers": [
+            "Rare"
+          ]
+        },
+        {
+          "name": "1x-2x VARIABLE HOLO",
+          "tiers": [
+            "Rare"
+          ]
+        },
+        {
+          "name": "3x HCOG 'RANGER'",
+          "tiers": [
+            "Epic"
+          ]
+        },
+        {
+          "name": "2x-4x VARIABLE AOG",
+          "tiers": [
+            "Epic"
+          ]
+        },
+        {
+          "name": "Extended Heavy Mag",
+          "tiers": [
+            "Common",
+            "Rare",
+            "Epic"
+          ]
+        },
+        {
+          "name": "Barrel Stabilizer",
+          "tiers": [
+            "Common",
+            "Rare",
+            "Epic"
+          ]
+        },
+        {
+          "name": "Standard Stock",
+          "tiers": [
+            "Common",
+            "Rare",
+            "Epic"
+          ]
+        },
+        {
+          "name": "Accelerator",
+          "tiers": [
+            "Legendary"
+          ]
+        }
+      ],
+      "verification": "公开配置页摘录；并非全部经实测或官方逐项核验。",
+      "source_ammo_and_modes": "Heavy Ammo 3R Burst Single",
+      "projectiles_per_shot": 1,
+      "model_status": "未逐枪核验可下载文件",
+      "audio_status": "未逐枪核验可下载文件",
+      "cautions": [
+        "射速为配置内连发射速；需计入连发间隔。",
+        "官方现役 Breach 版为21伤害；本页 Burst 版20及配件可能属于基础/旧变体，不可直接用作现役版。"
+      ],
+      "official_override": {
+        "body_damage": 21,
+        "weapon_variant": "Hemlok Breach AR",
+        "source": "https://www.ea.com/games/apex-legends/apex-legends/news/marked-patch-notes"
+      }
+    },
+    {
+      "name": "Nemesis Burst AR",
+      "category": "突击步枪",
+      "source": "https://apex.source.gs/weapons/nemesis-burst-ar/",
+      "damage_rows_source_values": [
+        "Any range  | 17  | 22.1  | 12.8"
+      ],
+      "configuration_rpm": "1,080",
+      "rounds_per_burst": "4",
+      "burst_delay": "0.21 s",
+      "rechamber_time": null,
+      "charge_time": null,
+      "magazine": {
+        "base": "20",
+        "common": "24",
+        "rare": "28",
+        "epic": "32",
+        "legendary": "32"
+      },
+      "reload": {
+        "tactical": "2.7 s",
+        "empty": "3 s",
+        "per_round": null,
+        "finish": null
+      },
+      "muzzle_velocity": "787 m/s",
+      "ads_time": "0.27 s",
+      "attachments": [
+        {
+          "name": "1x HCOG 'CLASSIC'",
+          "tiers": [
+            "Common"
+          ]
+        },
+        {
+          "name": "2x HCOG 'BRUISER'",
+          "tiers": [
+            "Rare"
+          ]
+        },
+        {
+          "name": "1x-2x VARIABLE HOLO",
+          "tiers": [
+            "Rare"
+          ]
+        },
+        {
+          "name": "3x HCOG 'RANGER'",
+          "tiers": [
+            "Epic"
+          ]
+        },
+        {
+          "name": "2x-4x VARIABLE AOG",
+          "tiers": [
+            "Epic"
+          ]
+        },
+        {
+          "name": "Extended Energy Mag",
+          "tiers": [
+            "Common",
+            "Rare",
+            "Epic"
+          ]
+        },
+        {
+          "name": "Barrel Stabilizer",
+          "tiers": [
+            "Common",
+            "Rare",
+            "Epic"
+          ]
+        },
+        {
+          "name": "Standard Stock",
+          "tiers": [
+            "Common",
+            "Rare",
+            "Epic"
+          ]
+        },
+        {
+          "name": "Turbocharger",
+          "tiers": [
+            "Legendary"
+          ]
+        },
+        {
+          "name": "Accelerator",
+          "tiers": [
+            "Legendary"
+          ]
+        }
+      ],
+      "verification": "公开配置页摘录；并非全部经实测或官方逐项核验。",
+      "source_ammo_and_modes": "Energy Ammo 4R Burst Charge Meter",
+      "projectiles_per_shot": 1,
+      "model_status": "未逐枪核验可下载文件",
+      "audio_status": "未逐枪核验可下载文件",
+      "cautions": [
+        "射速为配置内连发射速；需计入连发间隔。"
+      ]
+    },
+    {
+      "name": "R-301 Carbine",
+      "category": "突击步枪",
+      "source": "https://apex.source.gs/weapons/r-301-carbine/",
+      "damage_rows_source_values": [
+        "Any range  | 15  | 19.5  | 11.3"
+      ],
+      "configuration_rpm": "810",
+      "rounds_per_burst": null,
+      "burst_delay": null,
+      "rechamber_time": null,
+      "charge_time": null,
+      "magazine": {
+        "base": "21",
+        "common": "23",
+        "rare": "28",
+        "epic": "31",
+        "legendary": "31"
+      },
+      "reload": {
+        "tactical": "2.4 s",
+        "empty": "3.2 s",
+        "per_round": null,
+        "finish": null
+      },
+      "muzzle_velocity": "737 m/s",
+      "ads_time": "0.27 s",
+      "attachments": [
+        {
+          "name": "1x HCOG 'CLASSIC'",
+          "tiers": [
+            "Common"
+          ]
+        },
+        {
+          "name": "2x HCOG 'BRUISER'",
+          "tiers": [
+            "Rare"
+          ]
+        },
+        {
+          "name": "1x-2x VARIABLE HOLO",
+          "tiers": [
+            "Rare"
+          ]
+        },
+        {
+          "name": "3x HCOG 'RANGER'",
+          "tiers": [
+            "Epic"
+          ]
+        },
+        {
+          "name": "2x-4x VARIABLE AOG",
+          "tiers": [
+            "Epic"
+          ]
+        },
+        {
+          "name": "Extended Light Mag",
+          "tiers": [
+            "Common",
+            "Rare",
+            "Epic"
+          ]
+        },
+        {
+          "name": "Barrel Stabilizer",
+          "tiers": [
+            "Common",
+            "Rare",
+            "Epic"
+          ]
+        },
+        {
+          "name": "Standard Stock",
+          "tiers": [
+            "Common",
+            "Rare",
+            "Epic"
+          ]
+        },
+        {
+          "name": "Accelerator",
+          "tiers": [
+            "Legendary"
+          ]
+        }
+      ],
+      "verification": "公开配置页摘录；并非全部经实测或官方逐项核验。",
+      "source_ammo_and_modes": "Light Ammo Auto Single Beginner Friendly",
+      "projectiles_per_shot": 1,
+      "model_status": "未逐枪核验可下载文件",
+      "audio_status": "未逐枪核验可下载文件",
+      "cautions": []
+    },
+    {
+      "name": "VK-47 Flatline",
+      "category": "突击步枪",
+      "source": "https://apex.source.gs/weapons/vk-47-flatline/",
+      "damage_rows_source_values": [
+        "Any range  | 20  | 26  | 15"
+      ],
+      "configuration_rpm": "600",
+      "rounds_per_burst": null,
+      "burst_delay": null,
+      "rechamber_time": null,
+      "charge_time": null,
+      "magazine": {
+        "base": "19",
+        "common": "23",
+        "rare": "27",
+        "epic": "29",
+        "legendary": "29"
+      },
+      "reload": {
+        "tactical": "2.4 s",
+        "empty": "3.1 s",
+        "per_round": null,
+        "finish": null
+      },
+      "muzzle_velocity": "610 m/s",
+      "ads_time": "0.27 s",
+      "attachments": [
+        {
+          "name": "1x HCOG 'CLASSIC'",
+          "tiers": [
+            "Common"
+          ]
+        },
+        {
+          "name": "2x HCOG 'BRUISER'",
+          "tiers": [
+            "Rare"
+          ]
+        },
+        {
+          "name": "1x-2x VARIABLE HOLO",
+          "tiers": [
+            "Rare"
+          ]
+        },
+        {
+          "name": "3x HCOG 'RANGER'",
+          "tiers": [
+            "Epic"
+          ]
+        },
+        {
+          "name": "2x-4x VARIABLE AOG",
+          "tiers": [
+            "Epic"
+          ]
+        },
+        {
+          "name": "Extended Heavy Mag",
+          "tiers": [
+            "Common",
+            "Rare",
+            "Epic"
+          ]
+        },
+        {
+          "name": "Standard Stock",
+          "tiers": [
+            "Common",
+            "Rare",
+            "Epic"
+          ]
+        },
+        {
+          "name": "Accelerator",
+          "tiers": [
+            "Legendary"
+          ]
+        },
+        {
+          "name": "Graffiti Mod",
+          "tiers": [
+            "Legendary"
+          ]
+        }
+      ],
+      "verification": "公开配置页摘录；并非全部经实测或官方逐项核验。",
+      "source_ammo_and_modes": "Heavy Ammo Auto Single",
+      "projectiles_per_shot": 1,
+      "model_status": "未逐枪核验可下载文件",
+      "audio_status": "未逐枪核验可下载文件",
+      "cautions": []
+    },
+    {
+      "name": "Alternator SMG",
+      "category": "冲锋枪",
+      "source": "https://apex.source.gs/weapons/alternator-smg/",
+      "damage_rows_source_values": [
+        "Any range  | 18  | 22.5  | 14.4"
+      ],
+      "configuration_rpm": "600",
+      "rounds_per_burst": null,
+      "burst_delay": null,
+      "rechamber_time": null,
+      "charge_time": null,
+      "magazine": {
+        "base": "18",
+        "common": "20",
+        "rare": "22",
+        "epic": "26",
+        "legendary": "26"
+      },
+      "reload": {
+        "tactical": "1.9 s",
+        "empty": "2.23 s",
+        "per_round": null,
+        "finish": null
+      },
+      "muzzle_velocity": "483 m/s",
+      "ads_time": "0.22 s",
+      "attachments": [
+        {
+          "name": "1x HCOG 'CLASSIC'",
+          "tiers": [
+            "Common"
+          ]
+        },
+        {
+          "name": "2x HCOG 'BRUISER'",
+          "tiers": [
+            "Rare"
+          ]
+        },
+        {
+          "name": "1x-2x VARIABLE HOLO",
+          "tiers": [
+            "Rare"
+          ]
+        },
+        {
+          "name": "Extended Light Mag",
+          "tiers": [
+            "Common",
+            "Rare",
+            "Epic"
+          ]
+        },
+        {
+          "name": "Laser Sight",
+          "tiers": [
+            "Common",
+            "Rare",
+            "Epic"
+          ]
+        },
+        {
+          "name": "Standard Stock",
+          "tiers": [
+            "Common",
+            "Rare",
+            "Epic"
+          ]
+        },
+        {
+          "name": "Double Tap Trigger",
+          "tiers": [
+            "Legendary"
+          ]
+        },
+        {
+          "name": "Accelerator",
+          "tiers": [
+            "Legendary"
+          ]
+        }
+      ],
+      "verification": "公开配置页摘录；并非全部经实测或官方逐项核验。",
+      "source_ammo_and_modes": "Light Ammo Auto Beginner Friendly",
+      "projectiles_per_shot": 1,
+      "model_status": "未逐枪核验可下载文件",
+      "audio_status": "未逐枪核验可下载文件",
+      "cautions": []
+    },
+    {
+      "name": "C.A.R. SMG",
+      "category": "冲锋枪",
+      "source": "https://apex.source.gs/weapons/c-a-r-smg/",
+      "damage_rows_source_values": [
+        "Any range  | 14  | 17.5  | 11.2"
+      ],
+      "configuration_rpm": "930",
+      "rounds_per_burst": null,
+      "burst_delay": null,
+      "rechamber_time": null,
+      "charge_time": null,
+      "magazine": {
+        "base": "20",
+        "common": "23",
+        "rare": "26",
+        "epic": "30",
+        "legendary": "30"
+      },
+      "reload": {
+        "tactical": "1.7 s",
+        "empty": "2.13 s",
+        "per_round": null,
+        "finish": null
+      },
+      "muzzle_velocity": "457 m/s",
+      "ads_time": "0.2 s",
+      "attachments": [
+        {
+          "name": "1x HCOG 'CLASSIC'",
+          "tiers": [
+            "Common"
+          ]
+        },
+        {
+          "name": "2x HCOG 'BRUISER'",
+          "tiers": [
+            "Rare"
+          ]
+        },
+        {
+          "name": "1x-2x VARIABLE HOLO",
+          "tiers": [
+            "Rare"
+          ]
+        },
+        {
+          "name": "Extended Light Mag",
+          "tiers": [
+            "Common",
+            "Rare",
+            "Epic"
+          ]
+        },
+        {
+          "name": "Extended Heavy Mag",
+          "tiers": [
+            "Common",
+            "Rare",
+            "Epic"
+          ]
+        },
+        {
+          "name": "Laser Sight",
+          "tiers": [
+            "Common",
+            "Rare",
+            "Epic"
+          ]
+        },
+        {
+          "name": "Standard Stock",
+          "tiers": [
+            "Common",
+            "Rare",
+            "Epic"
+          ]
+        },
+        {
+          "name": "Accelerator",
+          "tiers": [
+            "Legendary"
+          ]
+        }
+      ],
+      "verification": "公开配置页摘录；并非全部经实测或官方逐项核验。",
+      "source_ammo_and_modes": "Heavy Ammo Auto Multi-Ammo",
+      "projectiles_per_shot": 1,
+      "model_status": "未逐枪核验可下载文件",
+      "audio_status": "未逐枪核验可下载文件",
+      "cautions": []
+    },
+    {
+      "name": "Prowler Burst PDW",
+      "category": "冲锋枪",
+      "source": "https://apex.source.gs/weapons/prowler-burst-pdw/",
+      "damage_rows_source_values": [
+        "Any range  | 16  | 20  | 12.8"
+      ],
+      "configuration_rpm": "1,260",
+      "rounds_per_burst": "5",
+      "burst_delay": "0.23 s",
+      "rechamber_time": null,
+      "charge_time": null,
+      "magazine": {
+        "base": "20",
+        "common": "25",
+        "rare": "30",
+        "epic": "35",
+        "legendary": "35"
+      },
+      "reload": {
+        "tactical": "2 s",
+        "empty": "2.6 s",
+        "per_round": null,
+        "finish": null
+      },
+      "muzzle_velocity": "457 m/s",
+      "ads_time": "0.22 s",
+      "attachments": [
+        {
+          "name": "1x HCOG 'CLASSIC'",
+          "tiers": [
+            "Common"
+          ]
+        },
+        {
+          "name": "2x HCOG 'BRUISER'",
+          "tiers": [
+            "Rare"
+          ]
+        },
+        {
+          "name": "1x-2x VARIABLE HOLO",
+          "tiers": [
+            "Rare"
+          ]
+        },
+        {
+          "name": "Extended Heavy Mag",
+          "tiers": [
+            "Common",
+            "Rare",
+            "Epic"
+          ]
+        },
+        {
+          "name": "Laser Sight",
+          "tiers": [
+            "Common",
+            "Rare",
+            "Epic"
+          ]
+        },
+        {
+          "name": "Standard Stock",
+          "tiers": [
+            "Common",
+            "Rare",
+            "Epic"
+          ]
+        },
+        {
+          "name": "Selectfire Receiver",
+          "tiers": [
+            "Legendary"
+          ]
+        },
+        {
+          "name": "Accelerator",
+          "tiers": [
+            "Legendary"
+          ]
+        }
+      ],
+      "verification": "公开配置页摘录；并非全部经实测或官方逐项核验。",
+      "source_ammo_and_modes": "Heavy Ammo 5R Burst",
+      "projectiles_per_shot": 1,
+      "model_status": "未逐枪核验可下载文件",
+      "audio_status": "未逐枪核验可下载文件",
+      "cautions": [
+        "射速为配置内连发射速；需计入连发间隔。"
+      ]
+    },
+    {
+      "name": "R-99 SMG",
+      "category": "冲锋枪",
+      "source": "https://apex.source.gs/weapons/r-99-smg/",
+      "damage_rows_source_values": [
+        "Any range  | 12  | 15  | 9.6"
+      ],
+      "configuration_rpm": "1,080",
+      "rounds_per_burst": null,
+      "burst_delay": null,
+      "rechamber_time": null,
+      "charge_time": null,
+      "magazine": {
+        "base": "18",
+        "common": "21",
+        "rare": "24",
+        "epic": "27",
+        "legendary": "27"
+      },
+      "reload": {
+        "tactical": "1.8 s",
+        "empty": "2.45 s",
+        "per_round": null,
+        "finish": null
+      },
+      "muzzle_velocity": "483 m/s",
+      "ads_time": "0.22 s",
+      "attachments": [
+        {
+          "name": "1x HCOG 'CLASSIC'",
+          "tiers": [
+            "Common"
+          ]
+        },
+        {
+          "name": "2x HCOG 'BRUISER'",
+          "tiers": [
+            "Rare"
+          ]
+        },
+        {
+          "name": "1x-2x VARIABLE HOLO",
+          "tiers": [
+            "Rare"
+          ]
+        },
+        {
+          "name": "Extended Light Mag",
+          "tiers": [
+            "Common",
+            "Rare",
+            "Epic"
+          ]
+        },
+        {
+          "name": "Laser Sight",
+          "tiers": [
+            "Common",
+            "Rare",
+            "Epic"
+          ]
+        },
+        {
+          "name": "Standard Stock",
+          "tiers": [
+            "Common",
+            "Rare",
+            "Epic"
+          ]
+        },
+        {
+          "name": "Accelerator",
+          "tiers": [
+            "Legendary"
+          ]
+        }
+      ],
+      "verification": "公开配置页摘录；并非全部经实测或官方逐项核验。",
+      "source_ammo_and_modes": "Light Ammo Auto",
+      "projectiles_per_shot": 1,
+      "model_status": "未逐枪核验可下载文件",
+      "audio_status": "未逐枪核验可下载文件",
+      "cautions": []
+    },
+    {
+      "name": "Volt SMG",
+      "category": "冲锋枪",
+      "source": "https://apex.source.gs/weapons/volt-smg/",
+      "damage_rows_source_values": [
+        "Any range  | 16  | 20  | 12.8"
+      ],
+      "configuration_rpm": "720",
+      "rounds_per_burst": null,
+      "burst_delay": null,
+      "rechamber_time": null,
+      "charge_time": null,
+      "magazine": {
+        "base": "20",
+        "common": "22",
+        "rare": "24",
+        "epic": "27",
+        "legendary": "27"
+      },
+      "reload": {
+        "tactical": "2 s",
+        "empty": "2.5 s",
+        "per_round": null,
+        "finish": null
+      },
+      "muzzle_velocity": "508 m/s",
+      "ads_time": "0.2 s",
+      "attachments": [
+        {
+          "name": "1x HCOG 'CLASSIC'",
+          "tiers": [
+            "Common"
+          ]
+        },
+        {
+          "name": "2x HCOG 'BRUISER'",
+          "tiers": [
+            "Rare"
+          ]
+        },
+        {
+          "name": "1x-2x VARIABLE HOLO",
+          "tiers": [
+            "Rare"
+          ]
+        },
+        {
+          "name": "Extended Energy Mag",
+          "tiers": [
+            "Common",
+            "Rare",
+            "Epic"
+          ]
+        },
+        {
+          "name": "Laser Sight",
+          "tiers": [
+            "Common",
+            "Rare",
+            "Epic"
+          ]
+        },
+        {
+          "name": "Standard Stock",
+          "tiers": [
+            "Common",
+            "Rare",
+            "Epic"
+          ]
+        },
+        {
+          "name": "Accelerator",
+          "tiers": [
+            "Legendary"
+          ]
+        },
+        {
+          "name": "Graffiti Mod",
+          "tiers": [
+            "Legendary"
+          ]
+        }
+      ],
+      "verification": "公开配置页摘录；并非全部经实测或官方逐项核验。",
+      "source_ammo_and_modes": "Energy Ammo Auto",
+      "projectiles_per_shot": 1,
+      "model_status": "未逐枪核验可下载文件",
+      "audio_status": "未逐枪核验可下载文件",
+      "cautions": []
+    },
+    {
+      "name": "Devotion LMG",
+      "category": "轻机枪",
+      "source": "https://apex.source.gs/weapons/devotion-lmg/",
+      "damage_rows_source_values": [
+        "Any range  | 16  | 20  | 13.6"
+      ],
+      "configuration_rpm": "300",
+      "rounds_per_burst": null,
+      "burst_delay": null,
+      "rechamber_time": null,
+      "charge_time": null,
+      "magazine": {
+        "base": "36",
+        "common": "40",
+        "rare": "44",
+        "epic": "48",
+        "legendary": "48"
+      },
+      "reload": {
+        "tactical": "3.2 s",
+        "empty": "4.1 s",
+        "per_round": null,
+        "finish": null
+      },
+      "muzzle_velocity": "851 m/s",
+      "ads_time": "0.34 s",
+      "attachments": [
+        {
+          "name": "1x HCOG 'CLASSIC'",
+          "tiers": [
+            "Common"
+          ]
+        },
+        {
+          "name": "2x HCOG 'BRUISER'",
+          "tiers": [
+            "Rare"
+          ]
+        },
+        {
+          "name": "1x-2x VARIABLE HOLO",
+          "tiers": [
+            "Rare"
+          ]
+        },
+        {
+          "name": "3x HCOG 'RANGER'",
+          "tiers": [
+            "Epic"
+          ]
+        },
+        {
+          "name": "2x-4x VARIABLE AOG",
+          "tiers": [
+            "Epic"
+          ]
+        },
+        {
+          "name": "Extended Energy Mag",
+          "tiers": [
+            "Common",
+            "Rare",
+            "Epic"
+          ]
+        },
+        {
+          "name": "Barrel Stabilizer",
+          "tiers": [
+            "Common",
+            "Rare",
+            "Epic"
+          ]
+        },
+        {
+          "name": "Standard Stock",
+          "tiers": [
+            "Common",
+            "Rare",
+            "Epic"
+          ]
+        },
+        {
+          "name": "Turbocharger",
+          "tiers": [
+            "Legendary"
+          ]
+        },
+        {
+          "name": "Accelerator",
+          "tiers": [
+            "Legendary"
+          ]
+        }
+      ],
+      "verification": "公开配置页摘录；并非全部经实测或官方逐项核验。",
+      "source_ammo_and_modes": "Energy Ammo Auto Spin Up Time",
+      "projectiles_per_shot": 1,
+      "model_status": "未逐枪核验可下载文件",
+      "audio_status": "未逐枪核验可下载文件",
+      "cautions": [
+        "起始配置射速；未包含持续射击加速曲线。"
+      ]
+    },
+    {
+      "name": "L-STAR EMG",
+      "category": "轻机枪",
+      "source": "https://apex.source.gs/weapons/l-star-emg/",
+      "damage_rows_source_values": [
+        "Any range  | 19  | 23.8  | 16.2"
+      ],
+      "configuration_rpm": "600",
+      "rounds_per_burst": null,
+      "burst_delay": null,
+      "rechamber_time": null,
+      "charge_time": "2.2 s",
+      "magazine": {
+        "base": null,
+        "common": null,
+        "rare": null,
+        "epic": null,
+        "legendary": null
+      },
+      "reload": {
+        "tactical": "3.26 s",
+        "empty": "3.26 s",
+        "per_round": null,
+        "finish": null
+      },
+      "muzzle_velocity": "610 m/s",
+      "ads_time": "0.34 s",
+      "attachments": [
+        {
+          "name": "1x HCOG 'CLASSIC'",
+          "tiers": [
+            "Common"
+          ]
+        },
+        {
+          "name": "2x HCOG 'BRUISER'",
+          "tiers": [
+            "Rare"
+          ]
+        },
+        {
+          "name": "1x-2x VARIABLE HOLO",
+          "tiers": [
+            "Rare"
+          ]
+        },
+        {
+          "name": "3x HCOG 'RANGER'",
+          "tiers": [
+            "Epic"
+          ]
+        },
+        {
+          "name": "2x-4x VARIABLE AOG",
+          "tiers": [
+            "Epic"
+          ]
+        },
+        {
+          "name": "Extended Energy Mag",
+          "tiers": [
+            "Common",
+            "Rare",
+            "Epic"
+          ]
+        },
+        {
+          "name": "Standard Stock",
+          "tiers": [
+            "Common",
+            "Rare",
+            "Epic"
+          ]
+        },
+        {
+          "name": "Accelerator",
+          "tiers": [
+            "Legendary"
+          ]
+        }
+      ],
+      "verification": "公开配置页摘录；并非全部经实测或官方逐项核验。",
+      "source_ammo_and_modes": "Energy Ammo Auto Can Overheat",
+      "projectiles_per_shot": 1,
+      "model_status": "未逐枪核验可下载文件",
+      "audio_status": "未逐枪核验可下载文件",
+      "cautions": [
+        "过热武器；基础弹匣字段缺失，不表示零容量；换弹字段也需按过热机制解释。"
+      ]
+    },
+    {
+      "name": "M600 Spitfire",
+      "category": "轻机枪",
+      "source": "https://apex.source.gs/weapons/m600-spitfire/",
+      "damage_rows_source_values": [
+        "Any range  | 21  | 26.3  | 17.8"
+      ],
+      "configuration_rpm": "540",
+      "rounds_per_burst": null,
+      "burst_delay": null,
+      "rechamber_time": null,
+      "charge_time": null,
+      "magazine": {
+        "base": "35",
+        "common": "40",
+        "rare": "45",
+        "epic": "50",
+        "legendary": "50"
+      },
+      "reload": {
+        "tactical": "3.4 s",
+        "empty": "4.2 s",
+        "per_round": null,
+        "finish": null
+      },
+      "muzzle_velocity": "698 m/s",
+      "ads_time": "0.34 s",
+      "attachments": [
+        {
+          "name": "1x HCOG 'CLASSIC'",
+          "tiers": [
+            "Common"
+          ]
+        },
+        {
+          "name": "2x HCOG 'BRUISER'",
+          "tiers": [
+            "Rare"
+          ]
+        },
+        {
+          "name": "1x-2x VARIABLE HOLO",
+          "tiers": [
+            "Rare"
+          ]
+        },
+        {
+          "name": "3x HCOG 'RANGER'",
+          "tiers": [
+            "Epic"
+          ]
+        },
+        {
+          "name": "2x-4x VARIABLE AOG",
+          "tiers": [
+            "Epic"
+          ]
+        },
+        {
+          "name": "Extended Light Mag",
+          "tiers": [
+            "Common",
+            "Rare",
+            "Epic"
+          ]
+        },
+        {
+          "name": "Barrel Stabilizer",
+          "tiers": [
+            "Common",
+            "Rare",
+            "Epic"
+          ]
+        },
+        {
+          "name": "Standard Stock",
+          "tiers": [
+            "Common",
+            "Rare",
+            "Epic"
+          ]
+        },
+        {
+          "name": "Accelerator",
+          "tiers": [
+            "Legendary"
+          ]
+        }
+      ],
+      "verification": "公开配置页摘录；并非全部经实测或官方逐项核验。",
+      "source_ammo_and_modes": "Light Ammo Auto Beginner Friendly",
+      "projectiles_per_shot": 1,
+      "model_status": "未逐枪核验可下载文件",
+      "audio_status": "未逐枪核验可下载文件",
+      "cautions": []
+    },
+    {
+      "name": "Rampage LMG",
+      "category": "轻机枪",
+      "source": "https://apex.source.gs/weapons/rampage-lmg/",
+      "damage_rows_source_values": [
+        "Any range  | 29  | 36.3  | 24.7"
+      ],
+      "configuration_rpm": "300",
+      "rounds_per_burst": null,
+      "burst_delay": null,
+      "rechamber_time": null,
+      "charge_time": null,
+      "magazine": {
+        "base": "28",
+        "common": "32",
+        "rare": "34",
+        "epic": "40",
+        "legendary": "40"
+      },
+      "reload": {
+        "tactical": "3.1 s",
+        "empty": "4 s",
+        "per_round": null,
+        "finish": null
+      },
+      "muzzle_velocity": "673 m/s",
+      "ads_time": "0.34 s",
+      "attachments": [
+        {
+          "name": "1x HCOG 'CLASSIC'",
+          "tiers": [
+            "Common"
+          ]
+        },
+        {
+          "name": "2x HCOG 'BRUISER'",
+          "tiers": [
+            "Rare"
+          ]
+        },
+        {
+          "name": "1x-2x VARIABLE HOLO",
+          "tiers": [
+            "Rare"
+          ]
+        },
+        {
+          "name": "3x HCOG 'RANGER'",
+          "tiers": [
+            "Epic"
+          ]
+        },
+        {
+          "name": "2x-4x VARIABLE AOG",
+          "tiers": [
+            "Epic"
+          ]
+        },
+        {
+          "name": "Extended Heavy Mag",
+          "tiers": [
+            "Common",
+            "Rare",
+            "Epic"
+          ]
+        },
+        {
+          "name": "Barrel Stabilizer",
+          "tiers": [
+            "Common",
+            "Rare",
+            "Epic"
+          ]
+        },
+        {
+          "name": "Standard Stock",
+          "tiers": [
+            "Common",
+            "Rare",
+            "Epic"
+          ]
+        },
+        {
+          "name": "Accelerator",
+          "tiers": [
+            "Legendary"
+          ]
+        }
+      ],
+      "verification": "公开配置页摘录；并非全部经实测或官方逐项核验。",
+      "source_ammo_and_modes": "Heavy Ammo Auto Can Be Energized",
+      "projectiles_per_shot": 1,
+      "model_status": "未逐枪核验可下载文件",
+      "audio_status": "未逐枪核验可下载文件",
+      "cautions": []
+    },
+    {
+      "name": "30-30 Repeater",
+      "category": "精确射手武器",
+      "source": "https://apex.source.gs/weapons/30-30-repeater/",
+      "damage_rows_source_values": [
+        "Any range  | 43  | 60.2  | 36.6"
+      ],
+      "configuration_rpm": "231",
+      "rounds_per_burst": null,
+      "burst_delay": null,
+      "rechamber_time": "0.685 s",
+      "charge_time": "0.4 s",
+      "magazine": {
+        "base": "6",
+        "common": "7",
+        "rare": "8",
+        "epic": "10",
+        "legendary": "10"
+      },
+      "reload": {
+        "tactical": "0.33 s",
+        "empty": "0.75 s",
+        "per_round": "0.4 s",
+        "finish": "0.45 s"
+      },
+      "muzzle_velocity": "711 m/s",
+      "ads_time": "0.31 s",
+      "attachments": [
+        {
+          "name": "1x HCOG 'CLASSIC'",
+          "tiers": [
+            "Common"
+          ]
+        },
+        {
+          "name": "2x HCOG 'BRUISER'",
+          "tiers": [
+            "Rare"
+          ]
+        },
+        {
+          "name": "1x-2x VARIABLE HOLO",
+          "tiers": [
+            "Rare"
+          ]
+        },
+        {
+          "name": "3x HCOG 'RANGER'",
+          "tiers": [
+            "Epic"
+          ]
+        },
+        {
+          "name": "2x-4x VARIABLE AOG",
+          "tiers": [
+            "Epic"
+          ]
+        },
+        {
+          "name": "Extended Heavy Mag",
+          "tiers": [
+            "Common",
+            "Rare",
+            "Epic"
+          ]
+        },
+        {
+          "name": "Sniper Stock",
+          "tiers": [
+            "Common",
+            "Rare",
+            "Epic"
+          ]
+        },
+        {
+          "name": "Accelerator",
+          "tiers": [
+            "Legendary"
+          ]
+        }
+      ],
+      "verification": "公开配置页摘录；并非全部经实测或官方逐项核验。",
+      "source_ammo_and_modes": "Heavy Ammo Single Charge Meter",
+      "projectiles_per_shot": 1,
+      "model_status": "未逐枪核验可下载文件",
+      "audio_status": "未逐枪核验可下载文件",
+      "cautions": [
+        "配置 RPM 不能直接代表含拉栓/上膛动作的实际射速。",
+        "蓄力、充能或射击模式会改变表现；该基础表不是所有状态。",
+        "逐发装填武器；reload/empty 为来源配置字段，不代表填满整仓耗时。",
+        "官方空投版51伤害并带Shattercaps；基础页43及可装弹匣不代表空投配置。"
+      ],
+      "official_override": {
+        "body_damage": 51,
+        "weapon_variant": "Care Package",
+        "hop_up": "Shattercaps",
+        "source": "https://www.ea.com/games/apex-legends/apex-legends/news/marked-patch-notes"
+      }
+    },
+    {
+      "name": "Bocek Compound Bow",
+      "category": "精确射手武器",
+      "source": "https://apex.source.gs/weapons/bocek-compound-bow/",
+      "damage_rows_source_values": [
+        "Any range  | 35  | 52.5  | 28"
+      ],
+      "configuration_rpm": "150",
+      "rounds_per_burst": null,
+      "burst_delay": null,
+      "rechamber_time": null,
+      "charge_time": "0.45 s",
+      "magazine": {
+        "base": null,
+        "common": null,
+        "rare": null,
+        "epic": null,
+        "legendary": null
+      },
+      "reload": {
+        "tactical": "2.15 s",
+        "empty": "3 s",
+        "per_round": null,
+        "finish": null
+      },
+      "muzzle_velocity": "254 m/s",
+      "ads_time": "0.5 s",
+      "attachments": [
+        {
+          "name": "1x HCOG 'CLASSIC'",
+          "tiers": [
+            "Common"
+          ]
+        },
+        {
+          "name": "2x HCOG 'BRUISER'",
+          "tiers": [
+            "Rare"
+          ]
+        },
+        {
+          "name": "1x-2x VARIABLE HOLO",
+          "tiers": [
+            "Rare"
+          ]
+        },
+        {
+          "name": "3x HCOG 'RANGER'",
+          "tiers": [
+            "Epic"
+          ]
+        },
+        {
+          "name": "2x-4x VARIABLE AOG",
+          "tiers": [
+            "Epic"
+          ]
+        },
+        {
+          "name": "Sniper Stock",
+          "tiers": [
+            "Common",
+            "Rare",
+            "Epic"
+          ]
+        },
+        {
+          "name": "Accelerator",
+          "tiers": [
+            "Legendary"
+          ]
+        }
+      ],
+      "verification": "公开配置页摘录；并非全部经实测或官方逐项核验。",
+      "source_ammo_and_modes": "Arrows Single Can Be Energized Variable DMG",
+      "projectiles_per_shot": 1,
+      "model_status": "未逐枪核验可下载文件",
+      "audio_status": "未逐枪核验可下载文件",
+      "cautions": [
+        "蓄力、充能或射击模式会改变表现；该基础表不是所有状态。",
+        "弓没有常规弹匣；换弹字段属于配置值，不能按枪械换弹解释。"
+      ]
+    },
+    {
+      "name": "G7 Scout",
+      "category": "精确射手武器",
+      "source": "https://apex.source.gs/weapons/g7-scout/",
+      "damage_rows_source_values": [
+        "Any range  | 33  | 47.9  | 24.8"
+      ],
+      "configuration_rpm": "246",
+      "rounds_per_burst": null,
+      "burst_delay": null,
+      "rechamber_time": null,
+      "charge_time": null,
+      "magazine": {
+        "base": "10",
+        "common": "12",
+        "rare": "14",
+        "epic": "16",
+        "legendary": "16"
+      },
+      "reload": {
+        "tactical": "2.4 s",
+        "empty": "3 s",
+        "per_round": null,
+        "finish": null
+      },
+      "muzzle_velocity": "737 m/s",
+      "ads_time": "0.32 s",
+      "attachments": [
+        {
+          "name": "1x HCOG 'CLASSIC'",
+          "tiers": [
+            "Common"
+          ]
+        },
+        {
+          "name": "2x HCOG 'BRUISER'",
+          "tiers": [
+            "Rare"
+          ]
+        },
+        {
+          "name": "1x-2x VARIABLE HOLO",
+          "tiers": [
+            "Rare"
+          ]
+        },
+        {
+          "name": "3x HCOG 'RANGER'",
+          "tiers": [
+            "Epic"
+          ]
+        },
+        {
+          "name": "2x-4x VARIABLE AOG",
+          "tiers": [
+            "Epic"
+          ]
+        },
+        {
+          "name": "Extended Light Mag",
+          "tiers": [
+            "Common",
+            "Rare",
+            "Epic"
+          ]
+        },
+        {
+          "name": "Barrel Stabilizer",
+          "tiers": [
+            "Common",
+            "Rare",
+            "Epic"
+          ]
+        },
+        {
+          "name": "Sniper Stock",
+          "tiers": [
+            "Common",
+            "Rare",
+            "Epic"
+          ]
+        },
+        {
+          "name": "Accelerator",
+          "tiers": [
+            "Legendary"
+          ]
+        }
+      ],
+      "verification": "公开配置页摘录；并非全部经实测或官方逐项核验。",
+      "source_ammo_and_modes": "Light Ammo Single",
+      "projectiles_per_shot": 1,
+      "model_status": "未逐枪核验可下载文件",
+      "audio_status": "未逐枪核验可下载文件",
+      "cautions": []
+    },
+    {
+      "name": "Triple Take",
+      "category": "精确射手武器",
+      "source": "https://apex.source.gs/weapons/triple-take/",
+      "damage_rows_source_values": [
+        "Any range  | 22  | 33  | 19.8  | 66"
+      ],
+      "configuration_rpm": "90",
+      "rounds_per_burst": null,
+      "burst_delay": null,
+      "rechamber_time": null,
+      "charge_time": null,
+      "magazine": {
+        "base": "6",
+        "common": "7",
+        "rare": "9",
+        "epic": "10",
+        "legendary": "10"
+      },
+      "reload": {
+        "tactical": "2.6 s",
+        "empty": "3.4 s",
+        "per_round": null,
+        "finish": null
+      },
+      "muzzle_velocity": "787 m/s",
+      "ads_time": "0.3 s",
+      "attachments": [
+        {
+          "name": "1x HCOG 'CLASSIC'",
+          "tiers": [
+            "Common"
+          ]
+        },
+        {
+          "name": "2x HCOG 'BRUISER'",
+          "tiers": [
+            "Rare"
+          ]
+        },
+        {
+          "name": "1x-2x VARIABLE HOLO",
+          "tiers": [
+            "Rare"
+          ]
+        },
+        {
+          "name": "3x HCOG 'RANGER'",
+          "tiers": [
+            "Epic"
+          ]
+        },
+        {
+          "name": "2x-4x VARIABLE AOG",
+          "tiers": [
+            "Epic"
+          ]
+        },
+        {
+          "name": "Extended Energy Mag",
+          "tiers": [
+            "Common",
+            "Rare",
+            "Epic"
+          ]
+        },
+        {
+          "name": "Sniper Stock",
+          "tiers": [
+            "Common",
+            "Rare",
+            "Epic"
+          ]
+        },
+        {
+          "name": "Accelerator",
+          "tiers": [
+            "Legendary"
+          ]
+        }
+      ],
+      "verification": "公开配置页摘录；并非全部经实测或官方逐项核验。",
+      "source_ammo_and_modes": "Energy Ammo Single Choke Integrated Choke",
+      "projectiles_per_shot": 3,
+      "model_status": "未逐枪核验可下载文件",
+      "audio_status": "未逐枪核验可下载文件",
+      "cautions": [
+        "蓄力、充能或射击模式会改变表现；该基础表不是所有状态。"
+      ]
+    },
+    {
+      "name": "Charge Rifle",
+      "category": "狙击步枪",
+      "source": "https://apex.source.gs/weapons/charge-rifle/",
+      "damage_rows_source_values": [
+        "Close to 75 m  | 75  | 135  | 67.5",
+        "Mid by 200 m  | 110  | 198  | 99",
+        "Far from 200 m  | 110  | 198  | 99"
+      ],
+      "configuration_rpm": "78",
+      "rounds_per_burst": null,
+      "burst_delay": null,
+      "rechamber_time": null,
+      "charge_time": "0.85 s",
+      "magazine": {
+        "base": "6",
+        "common": "7",
+        "rare": "8",
+        "epic": "9",
+        "legendary": "9"
+      },
+      "reload": {
+        "tactical": "3.5 s",
+        "empty": "4.6 s",
+        "per_round": null,
+        "finish": null
+      },
+      "muzzle_velocity": "864 m/s",
+      "ads_time": "0.2 s",
+      "attachments": [
+        {
+          "name": "1x HCOG 'CLASSIC'",
+          "tiers": [
+            "Common"
+          ]
+        },
+        {
+          "name": "2x HCOG 'BRUISER'",
+          "tiers": [
+            "Rare"
+          ]
+        },
+        {
+          "name": "1x-2x VARIABLE HOLO",
+          "tiers": [
+            "Rare"
+          ]
+        },
+        {
+          "name": "3x HCOG 'RANGER'",
+          "tiers": [
+            "Epic"
+          ]
+        },
+        {
+          "name": "2x-4x VARIABLE AOG",
+          "tiers": [
+            "Epic"
+          ]
+        },
+        {
+          "name": "6x SNIPER",
+          "tiers": [
+            "Rare"
+          ]
+        },
+        {
+          "name": "4x-8x VARIABLE SNIPER",
+          "tiers": [
+            "Epic"
+          ]
+        },
+        {
+          "name": "4x-10x DIGITAL SNIPER THREAT",
+          "tiers": [
+            "Legendary"
+          ]
+        },
+        {
+          "name": "Extended Sniper Mag",
+          "tiers": [
+            "Common",
+            "Rare",
+            "Epic"
+          ]
+        },
+        {
+          "name": "Sniper Stock",
+          "tiers": [
+            "Common",
+            "Rare",
+            "Epic"
+          ]
+        },
+        {
+          "name": "Selectfire Receiver",
+          "tiers": [
+            "Legendary"
+          ]
+        },
+        {
+          "name": "Accelerator",
+          "tiers": [
+            "Legendary"
+          ]
+        }
+      ],
+      "verification": "公开配置页摘录；并非全部经实测或官方逐项核验。",
+      "source_ammo_and_modes": "Sniper Ammo Single Charge Meter Variable DMG",
+      "projectiles_per_shot": 1,
+      "model_status": "未逐枪核验可下载文件",
+      "audio_status": "未逐枪核验可下载文件",
+      "cautions": [
+        "蓄力、充能或射击模式会改变表现；该基础表不是所有状态。"
+      ]
+    },
+    {
+      "name": "Kraber .50-Cal Sniper",
+      "category": "狙击步枪",
+      "source": "https://apex.source.gs/weapons/kraber-50-cal-sniper/",
+      "damage_rows_source_values": [
+        "Any range  | 150  | 210  | 120"
+      ],
+      "configuration_rpm": "72",
+      "rounds_per_burst": null,
+      "burst_delay": null,
+      "rechamber_time": "1.6 s",
+      "charge_time": null,
+      "magazine": {
+        "base": "4",
+        "common": null,
+        "rare": null,
+        "epic": null,
+        "legendary": null
+      },
+      "reload": {
+        "tactical": "3.2 s",
+        "empty": "4.3 s",
+        "per_round": null,
+        "finish": null
+      },
+      "muzzle_velocity": "749 m/s",
+      "ads_time": "0.58 s",
+      "attachments": [],
+      "verification": "公开配置页摘录；并非全部经实测或官方逐项核验。",
+      "source_ammo_and_modes": "Sniper Ammo Single",
+      "projectiles_per_shot": 1,
+      "model_status": "未逐枪核验可下载文件",
+      "audio_status": "未逐枪核验可下载文件",
+      "cautions": [
+        "配置 RPM 不能直接代表含拉栓/上膛动作的实际射速。"
+      ]
+    },
+    {
+      "name": "Longbow DMR",
+      "category": "狙击步枪",
+      "source": "https://apex.source.gs/weapons/longbow-dmr/",
+      "damage_rows_source_values": [
+        "Any range  | 60  | 108  | 48"
+      ],
+      "configuration_rpm": "78",
+      "rounds_per_burst": null,
+      "burst_delay": null,
+      "rechamber_time": null,
+      "charge_time": null,
+      "magazine": {
+        "base": "6",
+        "common": "8",
+        "rare": "10",
+        "epic": "12",
+        "legendary": "12"
+      },
+      "reload": {
+        "tactical": "2.66 s",
+        "empty": "3.66 s",
+        "per_round": null,
+        "finish": null
+      },
+      "muzzle_velocity": "787 m/s",
+      "ads_time": "0.31 s",
+      "attachments": [
+        {
+          "name": "1x HCOG 'CLASSIC'",
+          "tiers": [
+            "Common"
+          ]
+        },
+        {
+          "name": "2x HCOG 'BRUISER'",
+          "tiers": [
+            "Rare"
+          ]
+        },
+        {
+          "name": "1x-2x VARIABLE HOLO",
+          "tiers": [
+            "Rare"
+          ]
+        },
+        {
+          "name": "3x HCOG 'RANGER'",
+          "tiers": [
+            "Epic"
+          ]
+        },
+        {
+          "name": "2x-4x VARIABLE AOG",
+          "tiers": [
+            "Epic"
+          ]
+        },
+        {
+          "name": "6x SNIPER",
+          "tiers": [
+            "Rare"
+          ]
+        },
+        {
+          "name": "4x-8x VARIABLE SNIPER",
+          "tiers": [
+            "Epic"
+          ]
+        },
+        {
+          "name": "4x-10x DIGITAL SNIPER THREAT",
+          "tiers": [
+            "Legendary"
+          ]
+        },
+        {
+          "name": "Extended Sniper Mag",
+          "tiers": [
+            "Common",
+            "Rare",
+            "Epic"
+          ]
+        },
+        {
+          "name": "Sniper Stock",
+          "tiers": [
+            "Common",
+            "Rare",
+            "Epic"
+          ]
+        },
+        {
+          "name": "Accelerator",
+          "tiers": [
+            "Legendary"
+          ]
+        }
+      ],
+      "verification": "公开配置页摘录；并非全部经实测或官方逐项核验。",
+      "source_ammo_and_modes": "Sniper Ammo Single Beginner Friendly",
+      "projectiles_per_shot": 1,
+      "model_status": "未逐枪核验可下载文件",
+      "audio_status": "未逐枪核验可下载文件",
+      "cautions": []
+    },
+    {
+      "name": "Sentinel",
+      "category": "狙击步枪",
+      "source": "https://apex.source.gs/weapons/sentinel/",
+      "damage_rows_source_values": [
+        "Any range  | 70  | 126  | 63"
+      ],
+      "configuration_rpm": "186",
+      "rounds_per_burst": null,
+      "burst_delay": null,
+      "rechamber_time": "1.6 s",
+      "charge_time": null,
+      "magazine": {
+        "base": "4",
+        "common": "5",
+        "rare": "6",
+        "epic": "7",
+        "legendary": "7"
+      },
+      "reload": {
+        "tactical": "3 s",
+        "empty": "4 s",
+        "per_round": null,
+        "finish": null
+      },
+      "muzzle_velocity": "787 m/s",
+      "ads_time": "0.31 s",
+      "attachments": [
+        {
+          "name": "1x HCOG 'CLASSIC'",
+          "tiers": [
+            "Common"
+          ]
+        },
+        {
+          "name": "2x HCOG 'BRUISER'",
+          "tiers": [
+            "Rare"
+          ]
+        },
+        {
+          "name": "1x-2x VARIABLE HOLO",
+          "tiers": [
+            "Rare"
+          ]
+        },
+        {
+          "name": "3x HCOG 'RANGER'",
+          "tiers": [
+            "Epic"
+          ]
+        },
+        {
+          "name": "2x-4x VARIABLE AOG",
+          "tiers": [
+            "Epic"
+          ]
+        },
+        {
+          "name": "6x SNIPER",
+          "tiers": [
+            "Rare"
+          ]
+        },
+        {
+          "name": "4x-8x VARIABLE SNIPER",
+          "tiers": [
+            "Epic"
+          ]
+        },
+        {
+          "name": "4x-10x DIGITAL SNIPER THREAT",
+          "tiers": [
+            "Legendary"
+          ]
+        },
+        {
+          "name": "Extended Sniper Mag",
+          "tiers": [
+            "Common",
+            "Rare",
+            "Epic"
+          ]
+        },
+        {
+          "name": "Sniper Stock",
+          "tiers": [
+            "Common",
+            "Rare",
+            "Epic"
+          ]
+        },
+        {
+          "name": "Accelerator",
+          "tiers": [
+            "Legendary"
+          ]
+        }
+      ],
+      "verification": "公开配置页摘录；并非全部经实测或官方逐项核验。",
+      "source_ammo_and_modes": "Sniper Ammo Single Can Be Energized",
+      "projectiles_per_shot": 1,
+      "model_status": "未逐枪核验可下载文件",
+      "audio_status": "未逐枪核验可下载文件",
+      "cautions": [
+        "配置 RPM 不能直接代表含拉栓/上膛动作的实际射速。",
+        "蓄力、充能或射击模式会改变表现；该基础表不是所有状态。"
+      ]
+    },
+    {
+      "name": "EVA-8 Auto",
+      "category": "霰弹枪",
+      "source": "https://apex.source.gs/weapons/eva-8-auto/",
+      "damage_rows_source_values": [
+        "Any range  | 7  | 7  | 7  | 56"
+      ],
+      "configuration_rpm": "168",
+      "rounds_per_burst": null,
+      "burst_delay": null,
+      "rechamber_time": null,
+      "charge_time": null,
+      "magazine": {
+        "base": "8",
+        "common": null,
+        "rare": null,
+        "epic": null,
+        "legendary": null
+      },
+      "reload": {
+        "tactical": "2.3 s",
+        "empty": "2.5 s",
+        "per_round": null,
+        "finish": null
+      },
+      "muzzle_velocity": "406 m/s",
+      "ads_time": "0.22 s",
+      "attachments": [
+        {
+          "name": "1x HCOG 'CLASSIC'",
+          "tiers": [
+            "Common"
+          ]
+        },
+        {
+          "name": "2x HCOG 'BRUISER'",
+          "tiers": [
+            "Rare"
+          ]
+        },
+        {
+          "name": "1x-2x VARIABLE HOLO",
+          "tiers": [
+            "Rare"
+          ]
+        },
+        {
+          "name": "Shotgun Bolt",
+          "tiers": [
+            "Common",
+            "Rare",
+            "Epic"
+          ]
+        },
+        {
+          "name": "Standard Stock",
+          "tiers": [
+            "Common",
+            "Rare",
+            "Epic"
+          ]
+        },
+        {
+          "name": "Double Tap Trigger",
+          "tiers": [
+            "Legendary"
+          ]
+        },
+        {
+          "name": "Accelerator",
+          "tiers": [
+            "Legendary"
+          ]
+        }
+      ],
+      "verification": "公开配置页摘录；并非全部经实测或官方逐项核验。",
+      "source_ammo_and_modes": "Shotgun Ammo Auto Beginner Friendly",
+      "projectiles_per_shot": 8,
+      "model_status": "未逐枪核验可下载文件",
+      "audio_status": "未逐枪核验可下载文件",
+      "cautions": []
+    },
+    {
+      "name": "Mastiff Shotgun",
+      "category": "霰弹枪",
+      "source": "https://apex.source.gs/weapons/mastiff-shotgun/",
+      "damage_rows_source_values": [
+        "Any range  | 19  | 19  | 19  | 95"
+      ],
+      "configuration_rpm": "66",
+      "rounds_per_burst": null,
+      "burst_delay": null,
+      "rechamber_time": null,
+      "charge_time": null,
+      "magazine": {
+        "base": "5",
+        "common": null,
+        "rare": null,
+        "epic": null,
+        "legendary": null
+      },
+      "reload": {
+        "tactical": "0.9 s",
+        "empty": "1.6 s",
+        "per_round": "0.51 s",
+        "finish": "0.55 s"
+      },
+      "muzzle_velocity": "406 m/s",
+      "ads_time": "0.22 s",
+      "attachments": [
+        {
+          "name": "1x HCOG 'CLASSIC'",
+          "tiers": [
+            "Common"
+          ]
+        },
+        {
+          "name": "2x HCOG 'BRUISER'",
+          "tiers": [
+            "Rare"
+          ]
+        },
+        {
+          "name": "1x-2x VARIABLE HOLO",
+          "tiers": [
+            "Rare"
+          ]
+        },
+        {
+          "name": "Shotgun Bolt",
+          "tiers": [
+            "Common",
+            "Rare",
+            "Epic"
+          ]
+        },
+        {
+          "name": "Standard Stock",
+          "tiers": [
+            "Common",
+            "Rare",
+            "Epic"
+          ]
+        },
+        {
+          "name": "Accelerator",
+          "tiers": [
+            "Legendary"
+          ]
+        },
+        {
+          "name": "Executioner",
+          "tiers": [
+            "Legendary"
+          ]
+        }
+      ],
+      "verification": "公开配置页摘录；并非全部经实测或官方逐项核验。",
+      "source_ammo_and_modes": "Shotgun Ammo Single",
+      "projectiles_per_shot": 5,
+      "model_status": "未逐枪核验可下载文件",
+      "audio_status": "未逐枪核验可下载文件",
+      "cautions": [
+        "逐发装填武器；reload/empty 为来源配置字段，不代表填满整仓耗时。"
+      ]
+    },
+    {
+      "name": "Mozambique Shotgun",
+      "category": "霰弹枪",
+      "source": "https://apex.source.gs/weapons/mozambique-shotgun/",
+      "damage_rows_source_values": [
+        "Any range  | 17  | 21.3  | 17  | 51"
+      ],
+      "configuration_rpm": "168",
+      "rounds_per_burst": null,
+      "burst_delay": null,
+      "rechamber_time": null,
+      "charge_time": null,
+      "magazine": {
+        "base": "5",
+        "common": null,
+        "rare": null,
+        "epic": null,
+        "legendary": null
+      },
+      "reload": {
+        "tactical": "1.9 s",
+        "empty": "2.3 s",
+        "per_round": null,
+        "finish": null
+      },
+      "muzzle_velocity": "254 m/s",
+      "ads_time": "0.2 s",
+      "attachments": [
+        {
+          "name": "1x HCOG 'CLASSIC'",
+          "tiers": [
+            "Common"
+          ]
+        },
+        {
+          "name": "2x HCOG 'BRUISER'",
+          "tiers": [
+            "Rare"
+          ]
+        },
+        {
+          "name": "1x-2x VARIABLE HOLO",
+          "tiers": [
+            "Rare"
+          ]
+        },
+        {
+          "name": "Shotgun Bolt",
+          "tiers": [
+            "Common",
+            "Rare",
+            "Epic"
+          ]
+        },
+        {
+          "name": "Accelerator",
+          "tiers": [
+            "Legendary"
+          ]
+        }
+      ],
+      "verification": "公开配置页摘录；并非全部经实测或官方逐项核验。",
+      "source_ammo_and_modes": "Shotgun Ammo Single Akimbo",
+      "projectiles_per_shot": 3,
+      "model_status": "未逐枪核验可下载文件",
+      "audio_status": "未逐枪核验可下载文件",
+      "cautions": [
+        "基础单持数据；双持需另表。"
+      ]
+    },
+    {
+      "name": "Peacekeeper",
+      "category": "霰弹枪",
+      "source": "https://apex.source.gs/weapons/peacekeeper/",
+      "damage_rows_source_values": [
+        "Any range  | 11  | 11  | 11  | 99"
+      ],
+      "configuration_rpm": "240",
+      "rounds_per_burst": null,
+      "burst_delay": null,
+      "rechamber_time": "1.1 s",
+      "charge_time": null,
+      "magazine": {
+        "base": "5",
+        "common": null,
+        "rare": null,
+        "epic": null,
+        "legendary": null
+      },
+      "reload": {
+        "tactical": "2.5 s",
+        "empty": "3.5 s",
+        "per_round": null,
+        "finish": null
+      },
+      "muzzle_velocity": "508 m/s",
+      "ads_time": "0.22 s",
+      "attachments": [
+        {
+          "name": "1x HCOG 'CLASSIC'",
+          "tiers": [
+            "Common"
+          ]
+        },
+        {
+          "name": "2x HCOG 'BRUISER'",
+          "tiers": [
+            "Rare"
+          ]
+        },
+        {
+          "name": "1x-2x VARIABLE HOLO",
+          "tiers": [
+            "Rare"
+          ]
+        },
+        {
+          "name": "Shotgun Bolt",
+          "tiers": [
+            "Common",
+            "Rare",
+            "Epic"
+          ]
+        },
+        {
+          "name": "Standard Stock",
+          "tiers": [
+            "Common",
+            "Rare",
+            "Epic"
+          ]
+        },
+        {
+          "name": "Accelerator",
+          "tiers": [
+            "Legendary"
+          ]
+        },
+        {
+          "name": "Executioner",
+          "tiers": [
+            "Legendary"
+          ]
+        }
+      ],
+      "verification": "公开配置页摘录；并非全部经实测或官方逐项核验。",
+      "source_ammo_and_modes": "Shotgun Ammo Single Choke Integrated Choke",
+      "projectiles_per_shot": 9,
+      "model_status": "未逐枪核验可下载文件",
+      "audio_status": "未逐枪核验可下载文件",
+      "cautions": [
+        "配置 RPM 不能直接代表含拉栓/上膛动作的实际射速。"
+      ]
+    },
+    {
+      "name": "P2020",
+      "category": "手枪",
+      "source": "https://apex.source.gs/weapons/p2020/",
+      "damage_rows_source_values": [
+        "Any range  | 24  | 30  | 21.6"
+      ],
+      "configuration_rpm": "420",
+      "rounds_per_burst": null,
+      "burst_delay": null,
+      "rechamber_time": null,
+      "charge_time": null,
+      "magazine": {
+        "base": "9",
+        "common": "10",
+        "rare": "11",
+        "epic": "12",
+        "legendary": "12"
+      },
+      "reload": {
+        "tactical": "1.25 s",
+        "empty": "1.25 s",
+        "per_round": null,
+        "finish": null
+      },
+      "muzzle_velocity": "470 m/s",
+      "ads_time": "0.18 s",
+      "attachments": [
+        {
+          "name": "1x HCOG 'CLASSIC'",
+          "tiers": [
+            "Common"
+          ]
+        },
+        {
+          "name": "2x HCOG 'BRUISER'",
+          "tiers": [
+            "Rare"
+          ]
+        },
+        {
+          "name": "1x-2x VARIABLE HOLO",
+          "tiers": [
+            "Rare"
+          ]
+        },
+        {
+          "name": "Extended Light Mag",
+          "tiers": [
+            "Common",
+            "Rare",
+            "Epic"
+          ]
+        },
+        {
+          "name": "Laser Sight",
+          "tiers": [
+            "Common",
+            "Rare",
+            "Epic"
+          ]
+        },
+        {
+          "name": "Hammerpoint Rounds",
+          "tiers": [
+            "Legendary"
+          ]
+        },
+        {
+          "name": "Accelerator",
+          "tiers": [
+            "Legendary"
+          ]
+        }
+      ],
+      "verification": "公开配置页摘录；并非全部经实测或官方逐项核验。",
+      "source_ammo_and_modes": "Light Ammo Single Akimbo",
+      "projectiles_per_shot": 1,
+      "model_status": "未逐枪核验可下载文件",
+      "audio_status": "未逐枪核验可下载文件",
+      "cautions": [
+        "基础单持数据；双持需另表。"
+      ]
+    },
+    {
+      "name": "RE-45 Auto",
+      "category": "手枪",
+      "source": "https://apex.source.gs/weapons/re-45-auto/",
+      "damage_rows_source_values": [
+        "Any range  | 14  | 17.5  | 12.6"
+      ],
+      "configuration_rpm": "780",
+      "rounds_per_burst": null,
+      "burst_delay": null,
+      "rechamber_time": null,
+      "charge_time": null,
+      "magazine": {
+        "base": "20",
+        "common": "21",
+        "rare": "23",
+        "epic": "26",
+        "legendary": "26"
+      },
+      "reload": {
+        "tactical": "1.5 s",
+        "empty": "1.95 s",
+        "per_round": null,
+        "finish": null
+      },
+      "muzzle_velocity": "495 m/s",
+      "ads_time": "0.18 s",
+      "attachments": [
+        {
+          "name": "1x HCOG 'CLASSIC'",
+          "tiers": [
+            "Common"
+          ]
+        },
+        {
+          "name": "2x HCOG 'BRUISER'",
+          "tiers": [
+            "Rare"
+          ]
+        },
+        {
+          "name": "1x-2x VARIABLE HOLO",
+          "tiers": [
+            "Rare"
+          ]
+        },
+        {
+          "name": "Extended Light Mag",
+          "tiers": [
+            "Common",
+            "Rare",
+            "Epic"
+          ]
+        },
+        {
+          "name": "Laser Sight",
+          "tiers": [
+            "Common",
+            "Rare",
+            "Epic"
+          ]
+        },
+        {
+          "name": "Accelerator",
+          "tiers": [
+            "Legendary"
+          ]
+        }
+      ],
+      "verification": "公开配置页摘录；并非全部经实测或官方逐项核验。",
+      "source_ammo_and_modes": "Light Ammo",
+      "projectiles_per_shot": 1,
+      "model_status": "未逐枪核验可下载文件",
+      "audio_status": "未逐枪核验可下载文件",
+      "cautions": [
+        "官方补丁为16伤害、紫弹匣24；基础页14、26且标轻弹，与现役能量机制有冲突。整行需复核变体，不能拼接成已验证武器配置。"
+      ],
+      "official_override": {
+        "body_damage": 16,
+        "epic_magazine": 24,
+        "source": "https://www.ea.com/games/apex-legends/apex-legends/news/marked-patch-notes"
+      }
+    },
+    {
+      "name": "Wingman",
+      "category": "手枪",
+      "source": "https://apex.source.gs/weapons/wingman/",
+      "damage_rows_source_values": [
+        "Any range  | 50  | 75  | 45"
+      ],
+      "configuration_rpm": "168",
+      "rounds_per_burst": null,
+      "burst_delay": null,
+      "rechamber_time": null,
+      "charge_time": null,
+      "magazine": {
+        "base": "5",
+        "common": "6",
+        "rare": "7",
+        "epic": "8",
+        "legendary": "8"
+      },
+      "reload": {
+        "tactical": "2.1 s",
+        "empty": "2.1 s",
+        "per_round": null,
+        "finish": null
+      },
+      "muzzle_velocity": "457 m/s",
+      "ads_time": "0.18 s",
+      "attachments": [
+        {
+          "name": "1x HCOG 'CLASSIC'",
+          "tiers": [
+            "Common"
+          ]
+        },
+        {
+          "name": "2x HCOG 'BRUISER'",
+          "tiers": [
+            "Rare"
+          ]
+        },
+        {
+          "name": "1x-2x VARIABLE HOLO",
+          "tiers": [
+            "Rare"
+          ]
+        },
+        {
+          "name": "Extended Sniper Mag",
+          "tiers": [
+            "Common",
+            "Rare",
+            "Epic"
+          ]
+        },
+        {
+          "name": "Laser Sight",
+          "tiers": [
+            "Common",
+            "Rare",
+            "Epic"
+          ]
+        },
+        {
+          "name": "Accelerator",
+          "tiers": [
+            "Legendary"
+          ]
+        }
+      ],
+      "verification": "公开配置页摘录；并非全部经实测或官方逐项核验。",
+      "source_ammo_and_modes": "Sniper Ammo Single",
+      "projectiles_per_shot": 1,
+      "model_status": "未逐枪核验可下载文件",
+      "audio_status": "未逐枪核验可下载文件",
+      "cautions": []
+    }
+  ]
+}
