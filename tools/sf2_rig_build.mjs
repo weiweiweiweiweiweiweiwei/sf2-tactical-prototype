@@ -31,7 +31,9 @@ const gun = (id, o = {}) => {
 // SightOnMesh on the class's SightBaseSocketName ('Sight'): [name, gltf, texture stem, socket]
 const sight = (file, tex) => [['sight', file, tex, 'Sight']];
 const G = {
-  m4a1: gun('m4a1', { railSights: { sight: ['m4a1/rif_m4a1_sight/SkeletalMesh3/rif_m4a1_sight_up.gltf', 'm4a1_sight'], rear: ['m4a1/weapon_common_part01/SkeletalMesh3/rif_m4a1_rearsight.gltf', 'm4a1_rearsight'] } }),
+  // v62o the rear sight is the A2 carry handle (rif_m4a1_handle_a, its own sheet handle_d / _n in weapon_common_part): SF2's ADS picture (user 10-27) has the aperture ring standing above the handle's ears; the detachable
+  // rif_m4a1_rearsight (weapon_common_part01) used since v61b is an attachment, its ring sat level with its guards
+  m4a1: gun('m4a1', { extraParts: [['handle', 'm4a1/rif_m4a1/SkeletalMesh3/rif_m4a1_handle_a.gltf', 'm4a1_handle']], railSights: { sight: ['m4a1/rif_m4a1_sight/SkeletalMesh3/rif_m4a1_sight_up.gltf', 'm4a1_sight'], rear: 'handle' } }),
   ak103: gun('ak103'), // iron sights on the body
   g36c: gun('g36c', { hoodedPost: true, socketSights: sight('g36c/rif_g36c/SkeletalMesh3/rif_g36c_sight_up.gltf', 'g36c_frontsight') }),
   // v62i the rifle batch
@@ -47,7 +49,7 @@ const G = {
 }[GID];
 if (!G) throw new Error(`unknown gun ${GID}`);
 const TEX = {
-  m4a1_sight: ['m4a1/rif_m4a1_sight/Texture2D/m4a1_sight'], m4a1_rearsight: ['m4a1/weapon_common_part01/Texture2D/m4a1_rearsight'],
+  m4a1_sight: ['m4a1/rif_m4a1_sight/Texture2D/m4a1_sight'], m4a1_rearsight: ['m4a1/weapon_common_part01/Texture2D/m4a1_rearsight'], m4a1_handle: ['m4a1/weapon_common_part/Texture2D/handle'],
   sleeve: ['arms/c_delta_1st_texture/Texture2D/delm_1st_b01', 'arms/c_comm_1st_texture/Texture2D/com_1st_b01'], // the Delta Force sleeve colour, the common sleeve's normals
   glove: ['arms/c_comm_1sthand_texture/Texture2D/com_1st_glove_b01'],
 };
@@ -55,11 +57,14 @@ const PNG = {}; // every exported texture of this gun by file name
 (function walk(d) { for (const f of fs.readdirSync(d, { withFileTypes: true })) { const q = `${d}/${f.name}`; if (f.isDirectory()) walk(q); else if (f.name.endsWith('.png')) PNG[f.name.toLowerCase()] ??= q.slice(SRC.length, -4).replace(/_[dns]$/, ''); } })(SRC + GID);
 const texDirs = (stem) => TEX[stem] || [PNG[`${stem}_d.png`.toLowerCase()] || `${GID}/missing/${stem}`];
 const ROUGH = { barrel: 0.78, stock: 0.8, magazine: 0.72, sight: 0.66, body: 0.68, sleeve: 0.9, glove: 0.82 }; // matte, dielectric (as sf2_gun_build.py)
-const PEEP_DROP = 0.0048, PEEP_DX = 0.0007; // the rear sight's aperture under its top / off its top's mean x (tuned on ADS shots, v61b)
+const PEEP_DROP = +(process.env.PEEP_DROP ?? 0.0048), PEEP_DX = +(process.env.PEEP_DX ?? 0.0007); // the rear sight's aperture under its top / off its top's mean x (tuned on ADS shots, v61b)
 // v62f the flip-up front sight sits this far behind the rail's front end (its socket is not exported): measured on the user's SF2 ADS
 // screenshot (10-27) — with the peep ring matched (267 px at 1080p), the front sight's ears were 73 px there and 59 px here, i.e.
 // SF2's post is 21.6 cm ahead of the peep, not 28.2
-const SIGHT_BACK = 0.086;
+// v62o with the carry handle's leaf (the eye 5.5 cm behind it, src/09_models.js m4: the ring 255 px against SF2's 250 at 1280)
+// SF2's front-sight ears are 73 px at 1080p and ours were 105: the post 38 cm from the eye, 2.8 cm AHEAD of the rail's front end
+// (on the gas block, as on a real M4), not 8.6 cm behind it
+const SIGHT_BACK = +(process.env.SIGHT_BACK ?? -0.028);
 // and its green dot where SF2's is (958.8, 544.4 at 1080p: 4.4 px under the screen centre): 1.4 mm lower, 0.3 mm to the left (+X)
 const POST_DROP = 0.0014, POST_DX = 0.0003;
 
@@ -87,7 +92,11 @@ async function material(stem) {
 // one bone after a transform (positions in the base's bind space)
 async function addPart(name, file, stem, bake = null) {
   const pd = await io.read(SRC + file), pr = pd.getRoot(), pskin = pr.listSkins()[0], pj = pskin.listJoints(), remap = pj.map((j) => jix[j.getName()]);
-  if (remap.some((i) => i === undefined) && !bake) throw new Error(`${name}: bone missing in the base skeleton`);
+  if (remap.some((i) => i === undefined) && !bake) { // (v62o a bone the base lacks is fine if nothing is weighted to it: the carry handle's M203 bones)
+    const used = new Set(), e = [], w = [];
+    for (const p of pr.listMeshes()[0].listPrimitives()) { const J = p.getAttribute('JOINTS_0'), W = p.getAttribute('WEIGHTS_0'); for (let i = 0; i < J.getCount(); i++) { J.getElement(i, e); W.getElement(i, w); e.forEach((j, k) => { if (w[k] > 0) used.add(j); }); } }
+    if ([...used].some((j) => remap[j] === undefined)) throw new Error(`${name}: bone missing in the base skeleton`);
+  }
   const mesh = doc.createMesh(name), mat = await material(stem), out = [];
   // v62i each part keeps its OWN bind pose (as UE3 does: the bones are shared, each mesh its own reference pose): its own skin over
   // the body's joints with its inverse-bind matrices (the body's for bones it lacks). AK-103 / SCAR stocks have weapon_stock
@@ -130,7 +139,7 @@ async function bakedPoints(file) {
 }
 
 const V = {};
-for (const [name, file, stem] of G.parts) V[name] = await addPart(name, file, stem);
+for (const [name, file, stem] of [...G.parts, ...(G.extraParts || [])]) V[name] = await addPart(name, file, stem);
 for (const c of meshNode0.listChildren()) { meshNode0.removeChild(c); scene.addChild(c); } // the skeleton (Bip01) to the scene root
 meshNode0.dispose(); // the body was re-added as 'body' with its own material
 const min = (a, k) => Math.min(...a.map((p) => p[k])), max = (a, k) => Math.max(...a.map((p) => p[k])), mean = (a, k) => a.reduce((s, p) => s + p[k], 0) / a.length;
@@ -158,15 +167,19 @@ if (!G.railSights) { // POST: the front sight's tip — the highest point on the
 }
 if (G.railSights) {
   const { sight: SG, rear: RG } = G.railSights;
-  // rear sight: peep end to the rear (−Z), standing on the receiver's top rail at its rear end
-  const R = await bakedPoints(RG[0]); let rp = R.pts, flip = 1;
-  if (rp.reduce((a, p) => (p[1] > a[1] ? p : a))[2] > mean(rp, 2)) flip = -1; // turned 180° about Y
-  rp = rp.map((p) => [p[0] * flip, p[1], p[2] * flip]);
-  const rtop = max(V.body, 1), rz = min(V.body.filter((p) => p[1] > rtop - 0.004), 2);
-  const rc = [(min(rp, 0) + max(rp, 0)) / 2, min(rp, 1), min(rp, 2)], rOff = [bore[0] - rc[0], rtop - rc[1], rz - rc[2]];
-  rp = rp.map((p) => [p[0] + rOff[0], p[1] + rOff[1], p[2] + rOff[2]]);
+  let rp;
+  if (RG === 'handle') { // the carry handle is skinned like the body: its rear end (−Z, the last 2.5 cm) is the sight leaf
+    const zr = min(V.handle, 2); rp = V.handle.filter((p) => p[2] < zr + 0.025);
+  } else { // rear sight: peep end to the rear (−Z), standing on the receiver's top rail at its rear end
+    const R = await bakedPoints(RG[0]); rp = R.pts; let flip = 1;
+    if (rp.reduce((a, p) => (p[1] > a[1] ? p : a))[2] > mean(rp, 2)) flip = -1; // turned 180° about Y
+    rp = rp.map((p) => [p[0] * flip, p[1], p[2] * flip]);
+    const rtop = max(V.body, 1), rz = min(V.body.filter((p) => p[1] > rtop - 0.004), 2);
+    const rc = [(min(rp, 0) + max(rp, 0)) / 2, min(rp, 1), min(rp, 2)], rOff = [bore[0] - rc[0], rtop - rc[1], rz - rc[2]];
+    rp = rp.map((p) => [p[0] + rOff[0], p[1] + rOff[1], p[2] + rOff[2]]);
+    await addPart('rearsight', RG[0], RG[1], { p: (v) => { const w = xf(R.M, v); return [w[0] * flip + rOff[0], w[1] + rOff[1], w[2] * flip + rOff[2]]; }, n: rot3(R.M, flip) });
+  }
   const top = max(rp, 1), tp = rp.filter((p) => p[1] > top - 0.002), peepx = mean(tp, 0) + PEEP_DX, aperture = top - PEEP_DROP, peepZ = min(rp, 2);
-  await addPart('rearsight', RG[0], RG[1], { p: (v) => { const w = xf(R.M, v); return [w[0] * flip + rOff[0], w[1] + rOff[1], w[2] * flip + rOff[2]]; }, n: rot3(R.M, flip) });
   // front sight: on the handguard's top rail, its post tip on the sight line through the peep
   const S = await bakedPoints(SG[0]); let sp = S.pts;
   const railp = V.barrel.filter((p) => p[1] > bore[1] + 0.012), rzmax = max(railp, 2), ry = max(railp.filter((p) => p[2] > rzmax - 0.03), 1);
