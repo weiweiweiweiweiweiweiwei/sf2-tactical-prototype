@@ -105,6 +105,18 @@ node tools/check.mjs --map 0 --gpu intel
 - `check.mjs`：效能和錯誤檢查。
 - 最後在 `PROGRESS.md` 記一段。
 
+## SF2 原版槍＋原版動畫（v62 起，M4A1）
+不用 Blender，`node tools/sf2_rig_build.mjs <id>` 直接合成 `tools/guns/<id>_sf2_rig.glb`（再跑 `tools/guns/pack.mjs`）。
+1. UModel 匯出（`-game=sf2 -path=D:/SpecialForce2/SFGame/CookedPCConsole`，輸出到 `tools/out/sf2/`）：
+   - 槍：`-export -gltf -png rif_<id>`、`rif_<id>_texture`、`rif_<id>_sight`、`weapon_common_part01`（照門）→ `tools/out/sf2/<id>/`
+   - 動畫集：`-export -psk rif_<id>` → `tools/out/sf2/<id>_anim/rif_<id>/AnimSet/1st_anim_<id>.psa`
+   - 手臂：`-export -gltf -png c_comm_skelet com_1starm_b01`、`com_1stglove_b01`，貼圖 `c_comm_1st_texture`、`c_comm_1sthand_texture`、`c_delta_1st_texture` → `tools/out/sf2/arms/`
+2. 槍零件、袖子、手套的 glTF 用同一副骨架、同一個綁定姿勢（UModel：公尺、Y 朝上），所以直接按骨頭名稱合併蒙皮；照門和前準星的插槽沒匯出，照 `sf2_gun_build.py` 的規則放到導軌上，固定在 `weapon_root`。標記 `SIGHT`（覘孔後緣）、`POST`、`MUZZLE` 掛在 `weapon_root` 底下。
+3. PSA 動畫寫在同樣的節點上：位置 (x, z, −y) ÷ 100；旋轉同樣換軸，根骨頭以外先取共軛（ActorX 的子骨頭旋轉是反的）。用骨盆、彈匣、Bip01 的靜止姿勢驗證過完全吻合。
+4. 遊戲端 `src/09c_sf2rig.js`（`SF2Rig`）：鏡頭放在開鏡姿勢（`Zoom` 最後一格）的瞄準線上、覘孔後 3 cm（和原版開鏡截圖一樣大），整個 viewmodel 不再用程式移動，每幀依狀態混合動畫：`Idle`↔`Zoom`（開鏡程度）、`dash`（衝刺程度），上層 `Reload`（拉長到遊戲的換彈時間）、`Equip`（拔槍，1.6 倍速）、`Fire`／`ZoomFire`（每發）。權重加總永遠是 1。
+5. 換彈音效的時間點要照動畫：M4A1 是第 5 格退彈匣、第 27 格插回、第 55 格拉槍機（共 75 格）→ `fromRig` 的 `reloadSounds`。
+6. 檢查：`tools/out/rig/` 的渲染（腰射、開鏡、換彈、衝刺、拔槍、開槍），開鏡畫面要和舊版（照原版截圖調的）一樣大。
+
 ## 下一批
 - **CheyTac M200**：`m200()`。開鏡用 2D 狙擊鏡畫面，所以 `SIGHT` 可以放在鏡管中心。要另外加 `bolt` 部件，供拉栓動畫使用（目前 `fromGLB` 只處理 `mag` 和 `charge`，這部分需要擴充）。
 - **P90**：`p90()`。頂置透明彈匣放在 `mag` 部件，換彈的移動方向要另外設定 `magMove`。

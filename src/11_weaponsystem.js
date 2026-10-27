@@ -236,6 +236,7 @@ class WeaponSystem extends Arsenal {
   // Viewmodel kick is cosmetic only: a backward z kickback + a tiny rotational shake (almost none in ADS, so the
   // sight stays on the screen centre). The real recoil is the camera rotation in Player.addRecoil.
   kick(k) {
+    if (this.current.vm.rig) { this.current.vm.rig.fire(this.ads); return; } // v62 SF2's own Fire / ZoomFire clip is the kick
     // ADS: the eye is 2–3 cm behind an iron sight's peep, so a hip-sized kickback (≈3.6 cm) slammed the rear sight into the
     // camera (user 10-27: "the stock shakes fore and aft, the sight hardly moves"). SF2's own ZoomFire (rif_m4a1 animset)
     // is a straight 2 cm push back with no rotation at all, ≈ ¼ of its 8.5 cm eye relief — the same quarter here (≈6 mm);
@@ -334,7 +335,7 @@ class WeaponSystem extends Arsenal {
   }
 
   _animate(dt, w, m, mouse) {
-    const vm = w.vm, grp = vm.group, p = this.game.player;
+    const vm = w.vm, grp = vm.group, p = this.game.player, rig = vm.rig; // v62 rig: the clips pose it (sprint, draw, reload, ADS, kick)
     const sub = Math.max(1, Math.ceil(dt / (1 / 240))), h = dt / sub;
     for (let i = 0; i < sub; i++) {
       this.kickVel.addScaledVector(this.kickPos, -260 * h).multiplyScalar(Math.exp(-20 * h)); this.kickPos.addScaledVector(this.kickVel, h);
@@ -359,9 +360,10 @@ class WeaponSystem extends Arsenal {
     if (m.crouching) { pos.y += 0.008 * (1 - this.adsT); ez += 0.03 * (1 - this.adsT); } // v45: no offset once aimed (it slid the holo window off the axis)
     const mk = this.game.player.mantleK || 0; if (mk > 0.01) { pos.y -= 0.09 * mk; pos.z += 0.04 * mk; ex -= 0.45 * mk; ez += 0.2 * mk; } // v15 mantle: gun dips while the hands grab the ledge
     const sk = this.game.player.slideK || 0; if (sk > 0.01) { pos.x -= 0.025 * sk * (1 - this.adsT); pos.y -= 0.015 * sk; ez += 0.32 * sk * (1 - this.adsT * 0.7); } // v14 slide tilt
-    if (this.sprintT > 0.01 && w.kind !== 'knife') { const s = this.sprintT; pos.x -= 0.03 * s; pos.y -= 0.045 * s; pos.z += 0.02 * s; ex -= 0.32 * s; ey += 0.62 * s; ez += 0.28 * s; }
-    if (this.drawT > 0) { this.drawT = Math.max(0, this.drawT - dt / 0.22); const e = this.drawT * this.drawT; pos.y -= 0.13 * e; ex -= 0.7 * e; ez += 0.2 * e; }
-    if (w.reloading && !(w.kind === 'shotgun' && w.shellReload)) { const s = Math.sin(Math.PI * w.reloadPhase), rp = vm.reloadPose || RELOAD_POSE; ez += rp.roll * s; ex += rp.pitch * s; pos.y -= rp.drop * s; pos.x -= rp.shift * s; } // v51: per viewmodel (vm.reloadPose)
+    if (!rig && this.sprintT > 0.01 && w.kind !== 'knife') { const s = this.sprintT; pos.x -= 0.03 * s; pos.y -= 0.045 * s; pos.z += 0.02 * s; ex -= 0.32 * s; ey += 0.62 * s; ez += 0.28 * s; }
+    if (rig) rig.update(dt, { ads: this.adsT, sprint: this.sprintT, reload: w.reloading ? w.reloadPhase : -1, draw: this.drawT });
+    if (this.drawT > 0) { this.drawT = Math.max(0, this.drawT - dt / 0.22); const e = rig ? 0 : this.drawT * this.drawT; pos.y -= 0.13 * e; ex -= 0.7 * e; ez += 0.2 * e; }
+    if (!rig && w.reloading && !(w.kind === 'shotgun' && w.shellReload)) { const s = Math.sin(Math.PI * w.reloadPhase), rp = vm.reloadPose || RELOAD_POSE; ez += rp.roll * s; ex += rp.pitch * s; pos.y -= rp.drop * s; pos.x -= rp.shift * s; } // v51: per viewmodel (vm.reloadPose)
     if (w.kind === 'sniper' && w.boltPhase > 0) { // bolt cycle pose; v50: per viewmodel (vm.boltPose) — the M200 swings in so its bolt shows
       const b = w.boltPhase, bp = vm.boltPose || BOLT_POSE; ez += bp.roll * b; ex += 0.06 * b; pos.y -= bp.drop * b; pos.x -= bp.shift * b;
     }

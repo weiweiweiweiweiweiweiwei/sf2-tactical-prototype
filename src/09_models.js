@@ -51,7 +51,7 @@ class GunMats {
 
 /* v45 Blender gun models: assets/guns/guns.js sets window.GUN_GLB[id] = base64 GLB (file:// friendly). Meshes are named
    '<node>__<material>' in gun space; empties SIGHT / MUZZLE / MUZZLE_S mark the sight axis and the two muzzle ends. */
-const GUN_MODELS = {};
+const GUN_MODELS = {}, GUN_RIGS = {}; // v62 GUN_RIGS: animated first-person rigs (<id>_sf2_rig.glb, see SF2Rig)
 // v53 reload pose of the Blender guns: cant the other way (bottom toward the middle of the screen), swing in and lift, so the
 // magazine well and the left hand working it stay in view (the procedural guns keep RELOAD_POSE, which rolls them away)
 const GLB_RELOAD_POSE = { roll: -0.5, pitch: 0.32, drop: -0.09, shift: 0.08 };
@@ -64,6 +64,7 @@ function loadGunModels() {
       D.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/libs/draco/gltf/'); L.setDRACOLoader(D);
       for (const [id, b64] of Object.entries(window.GUN_GLB || {})) {
         const bin = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0)).buffer, gltf = await L.parseAsync(bin, ''), parts = [], marks = {};
+        if (gltf.animations.length) { GUN_RIGS[id] = gltf; continue; }
         gltf.scene.updateMatrixWorld(true);
         gltf.scene.traverse((o) => {
           if (o.isMesh) { const g = o.geometry.clone(); g.applyMatrix4(o.matrixWorld); const nm = o.name.split('__'); parts.push({ node: nm[0], mat: ((o.material && o.material.name) || '').replace('gun:', '') || (nm[1] || '').replace(/_\d+$/, ''), geo: g, material: o.material }); }
@@ -167,7 +168,7 @@ class WeaponModels {
   build(def) {
     const key = def.model || def.id;
     const vm = (key === 'he' || key === 'flash' || key === 'smoke') ? this.grenade(key) : this[key](def);
-    if (def.kind !== 'grenade' && def.kind !== 'knife') this._fitAds(vm, def);
+    if (def.kind !== 'grenade' && def.kind !== 'knife' && !vm.rig) this._fitAds(vm, def); // (a rig's camera is SF2's own)
     if (def.modelUrl) this.attachGLTF(vm, def.modelUrl);
     return vm;
   }
@@ -194,7 +195,7 @@ class WeaponModels {
     g.position.copy(vm.hipPos); g.rotation.copy(vm.hipRot); g.updateMatrixWorld(true);
     this.adsFit.set(def.id, vm.adsPos.z - z0);
   }
-  isArm(o) { return o.material === this.M.glove || o.material === this.M.sleeve; }
+  isArm(o) { return o.material === this.M.glove || o.material === this.M.sleeve || !!o.userData.arm; }
   // GLTF support: the loaded mesh is fitted to the procedural gun's bounds; hands/arms stay procedural. Any failure keeps the fallback mesh.
   async attachGLTF(vm, url) {
     try {
@@ -299,9 +300,24 @@ class WeaponModels {
     return vm;
   }
 
+  // v62 SF2's own first-person rig (SF2Rig): arms and gun animated by the original clips. The group sits at the eye like any
+  // viewmodel but never moves to an ADS pose — Zoom does that — and has no mag / charge / left-hand nodes for Weapon.animate.
+  // The muzzle flash rides the MUZZLE mark on weapon_root; the green tritium dot sits on the sight line (x = y = 0).
+  // reloadSounds: when SF2's Reload clip pulls the mag (frame 5 of 75), seats it (27) and works the charging handle (55).
+  fromRig(id, o = {}) {
+    const G = GUN_RIGS[id]; if (!G) return null;
+    const rig = new SF2Rig(G, Object.assign({ reloadSounds: [[0.07, 'magout'], [0.36, 'magin'], [0.73, 'charge']] }, o)), g = new THREE.Group(); g.add(rig.model);
+    const V = THREE.Vector3, out = { group: g, nodes: {}, rig, mag: null, bolt: null, slide: null, charge: null, pin: null, nade: null, pump: null, cover: null, lhand: null };
+    out.hipPos = new V(); out.adsPos = new V(); out.hipRot = new THREE.Euler(); out.adsRot = new THREE.Euler(); out.magMove = new V(); out.magRot = 0;
+    out.muzzle = rig.model.getObjectByName('MUZZLE'); out.flash = this._flash(out.muzzle, 0, 0, 0, o.flash ?? 0.2);
+    if (o.reticle) out.reticle = this._reticle(g, 0, true, o.reticleScale || 1, [0.25, 1, 0.3]);
+    out.reloadSounds = rig.reloadSounds;
+    return out;
+  }
+
   /* ------------------------------------------------------------------ */
   // v49 M4A1 from Blender (tools/blender/m4a1_build.py); the procedural one below stays as the fallback
-  m4() { return this.fromGLB('m4a1_sf2', { eye: 0.03, eyeRelief: 0.025, reticle: 'tritium', reticleScale: 0.22 }) || this.fromGLB('m4a1', { eye: 0.2, eyeRelief: 0.03 }) || this.m4Proc(); } // v61 SF2's own M4A1 first (tools/blender/sf2_gun_build.py): like SF2's ADS, the eye right at the carry handle's peep and a green dot on the front post // eye 20 cm behind the hood: the holo frame fills about a quarter of the view
+  m4() { return this.fromRig('m4a1_sf2_rig', { reticle: true, reticleScale: 0.22 }) || this.fromGLB('m4a1_sf2', { eye: 0.03, eyeRelief: 0.025, reticle: 'tritium', reticleScale: 0.22 }) || this.fromGLB('m4a1', { eye: 0.2, eyeRelief: 0.03 }) || this.m4Proc(); } // v61 SF2's own M4A1 first (tools/blender/sf2_gun_build.py): like SF2's ADS, the eye right at the carry handle's peep and a green dot on the front post // eye 20 cm behind the hood: the holo frame fills about a quarter of the view
   m4Proc() {
     const M = this.M, gb = new GunBuilder(M);
     gb.node('mag', new THREE.Vector3(0, -0.035, -0.03)).node('charge', new THREE.Vector3(0, 0.024, 0.13));

@@ -9,6 +9,7 @@
 class Weapon {
   constructor(game, def, vm, owner) {
     this.game = game; this.def = def; this.vm = vm; this.owner = owner || game.player; Object.assign(this, def);
+    if (vm.reloadSounds) this.reloadSounds = vm.reloadSounds; // v62 an SF2 rig times them to its own Reload clip
     this.ammo = def.mag || 0; this.reserveAmmo = def.reserve || 0; this.shotN = 0;
     this.cooldown = 0; this.bloom = 0; this.shots = 0; this.lastShot = -10; this.sprayPhase = 0;
     this.reloading = false; this.reloadT = 0; this.reloadFired = new Set();

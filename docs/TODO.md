@@ -12,11 +12,10 @@
 - ✅ 載入畫面一開始就顯示地圖圖片
 - ✅ Skull Town 選圖縮圖和載入畫面：用使用者 Blender 截圖的視角（v61c）
 - ❓ 訓練場的選圖縮圖和載入畫面：等使用者的 Blender 截圖
-- 🔄 M4A1 原版動畫（使用者選 A）
-  - ✅ 匯出動畫集：`umodel -export -psk rif_m4a1` → `tools/out/sf2/m4a1_anim/`（15 段：Equip、Idle、Fire、Zoom、ZoomFire、Reload、dash…，30 fps）；PSA 格式已能直接用 Python 讀（不一定要裝外掛）
-  - ⬜ 第一人稱手臂模型：`c_comm_1st_glove_b05`（手套 `com_1st_glove_b06`）等套件，找出袖子／手臂
-  - ⬜ Blender：手臂＋槍零件綁同一副 Bip01 骨架，套上 PSA 動畫，匯出 glTF（含動畫片段）
-  - ⬜ 遊戲端：槍模改用原版動畫播放（換彈、拔槍、射擊、衝刺），取代程式做的動作
+- ✅ M4A1 原版動畫（使用者選 A，v62）：原版手臂（`c_comm_skelet` 的 `com_1starm_b01`＋`com_1stglove_b01`，Delta Force 迷彩袖）和槍綁同一副骨架，拔槍、待機、開鏡、射擊、換彈、衝刺都播原版動畫（`tools/sf2_rig_build.mjs`、`src/09c_sf2rig.js`）
+  - ⬜ 等使用者實際玩過的意見：腰射位置（鏡頭照開鏡截圖定在覘孔後 3 cm）、拔槍速度（1.6 倍）、開槍時槍口火光照亮槍模的程度
+  - ⬜ 還沒用到的片段：`PutDown`（收槍）、`Steady`、`CloseCombt_equip`（近戰）、`IdleToDash`／`DashToIdle`／`Idletozoom`／`zoomtoIdle`（目前用權重混合代替）
+  - ⬜ 倉庫槍卡縮圖有時在槍模載入前就先畫好，會變成程式做的備用槍（舊問題）
 - ⬜ M4A1 照門在側面看略浮在導軌上（底座前端夾具最低，後端離導軌約 5 mm）：等使用者看實際畫面再決定要不要修
 
 ## 1. SF2 原版槍枝素材（UModel，`D:\SpecialForce2`）
