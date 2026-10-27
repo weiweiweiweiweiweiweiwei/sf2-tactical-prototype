@@ -221,7 +221,7 @@ class App {
       if (this.state !== 'lobby') return;
       $('warehouse').classList.remove('on'); $('settings').classList.remove('on'); $('lobby').classList.add('on'); this.invite(false);
       const L = this.roomCfg(); this.state = 'countdown'; this.countGuest = true; this.countT = 3;
-      $('lbCountMap').textContent = `${MAPS[L.map].name} · ${MODES[L.mode].name} · ${RULES[L.rule].name}`; $('lbCount').classList.add('on'); this._showCount(3); this.renderRoomBar();
+      $('lbCountMap').textContent = `${(MAPS[L.map] || MAPS[0]).name} · ${MODES[L.mode].name} · ${RULES[L.rule].name}`; $('lbCount').classList.add('on'); this._showCount(3); this.renderRoomBar();
     } else if (this.state === 'countdown' && this.countGuest) { this.state = 'lobby'; this.countGuest = false; $('lbCount').classList.remove('on'); this.refreshLobby(); }
   }
   // a guest goes into the room's match: builds the map while the host does, then the host's match takes him in
@@ -425,6 +425,8 @@ class App {
   /* ------------------------------ lobby ------------------------------ */
   // (STAR_BADGE: the host's five-point star medal, inline SVG)
   buildLobby() {
+    // v62k a saved map index can outlive its map (10-27: the Apex test area was removed — the Pages build died on MAPS[L.map].id)
+    if (!MAPS[Settings.data.lobby.map]) { Settings.data.lobby.map = 0; Settings.save(); }
     const L = Settings.data.lobby, $ = this.$;
     this.dry = MAPS.map((def) => { const b = new MapBuilder(null, def, true); def.build(b); return b; });
     const maps = $('lbMaps');
@@ -638,6 +640,7 @@ class App {
   /* ------------------------------ loading ------------------------------ */
   async startMatch(net = null) {
     const $ = this.$, L = net ? Object.assign({}, Settings.data.lobby, net.cfg) : Settings.data.lobby, def = MAPS[L.map];
+    if (!def) { this.showHub('無法載入：房主的地圖在這個版本不存在，請雙方都重新整理'); return; }
     if (!net && this.room && this.room.role === 'host') this.room.go(roomCfgOut()); // v27: everyone in the room starts loading this match now
     this.state = 'loading'; this.countGuest = false;
     this.cmds.reset();

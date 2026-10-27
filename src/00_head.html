@@ -963,8 +963,9 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
 
 <script>
   window.__bootErr = function (msg) { var el = document.getElementById('bootMsg'); if (el) { el.style.color = '#ff6a5f'; el.textContent = msg; } document.getElementById('boot').classList.remove('done'); };
-  window.addEventListener('error', function (e) { if (!window.__gameReady) window.__bootErr('載入失敗: ' + (e.message || e)); });
-  setTimeout(function () { if (!window.__gameReady) window.__bootErr('無法載入 Three.js / cannon-es（CDN），請確認網路連線後重新整理'); }, 25000);
+  window.addEventListener('error', function (e) { if (!window.__gameReady) { window.__bootFailed = true; window.__bootErr('載入失敗: ' + (e.message || e)); } });
+  // (the CDN message only when nothing else went wrong: it used to overwrite the real error 25 s later)
+  setTimeout(function () { if (!window.__gameReady && !window.__bootFailed) window.__bootErr('無法載入 Three.js / cannon-es（CDN），請確認網路連線後重新整理'); }, 25000);
 </script>
 <script type="importmap">
 { "imports": {
