@@ -78,6 +78,10 @@ const WEAPON_DATABASE = {
     recoilPitch: 0.012, recoilYaw: 0.009, recoilRecovery: 9,
     hipSpread: 0.075, adsSpread: 0.0022, adsFov: 55, adsType: '3d_sight', mobility: 0.95, maxAmmo: 30, reloadTime: 2.3, equipTime: 0.8, adsSpeed: 12, modelUrl: null,
     model: 'm4', sound: 'm4', sf2: 'm4a1', tracerEvery: 2, penetration: 1, desc: '均衡的全自動步槍，全息瞄具。',
+    // v62e SF2's own recoil block (Default__SFCWeaponM4A1.RecoilDefault over SFCWeaponARBase, RecoilZoomModifier, RecoilCrouchModifier)
+    sf2Recoil: { nextCrossVert: 1.26, maxCrossVert: 14, vertInc: 9000, vertDec: 12, crossDecreasInc: 9, incline: 0.5, forceCorrection: 50,
+      domDefault: 0.25, domZoomDefault: 0, domInc: 0.13, domMax: 2, domMin: 0.1, domDec: 6, maxMovingValue: 0.7, mulValueRun: 0.8, mulValueJump: 6,
+      zoomMod: 0.6, crouchMod: 0.9 },
   },
   g36c: {
     name: 'G36C 黃金 消音', type: 'assault', slot: 'primary', damageNear: 25, damageFar: 19, falloffStart: 25, falloffEnd: 60, fireRate: 0.08,
@@ -404,7 +408,7 @@ function compileWeapon(id, s) {
     hipBase: s.hipSpread, adsBase: s.adsSpread, spreadBase: s.hipSpread, spreadCrouch: 0.8,
     recoil: { first: s.recoilPitch * 0.75, climb: s.recoilPitch, climbShots: 10, late: s.recoilPitch * 0.75, h: s.recoilYaw, hStart: 6, jitter: s.recoilYaw * 0.35 },
     recoilRecovery: s.recoilRecovery, adsFov: s.adsFov, vmAdsFov: s.vmAdsFov, adsVertical: s.adsVertical || 0, adsType: s.adsType, adsRecoilMult: 1, adsSpeed: s.adsSpeed || (s.type === 'smg' ? 24 : 20),
-    moveSpeed: CFG.player.baseSpeed * s.mobility, mobility: s.mobility, reloadTime: s.reloadTime, equipTime: s.equipTime || 0, sound: s.sound || id,
+    moveSpeed: CFG.player.baseSpeed * s.mobility, mobility: s.mobility, reloadTime: s.reloadTime, equipTime: s.equipTime || 0, sf2Recoil: s.sf2Recoil || null, sound: s.sound || id,
     suppressed: !!s.suppressed, tracerEvery: s.tracerEvery ?? 2, shellReload: s.shellReload || 0, zoomFovs: s.zoomFovs || [s.adsFov],
     noise: s.suppressed ? 14 : t.noise, pump, bolt, soundRate: s.rate || 1, tpSpec: s.tp || null,
     fireMode: auto ? 'AUTO' : pump ? 'PUMP' : bolt ? 'BOLT' : 'SEMI',

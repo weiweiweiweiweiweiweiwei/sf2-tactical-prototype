@@ -14,13 +14,14 @@ class Weapon {
     this.cooldown = 0; this.bloom = 0; this.shots = 0; this.lastShot = -10; this.sprayPhase = 0;
     this.reloading = false; this.reloadT = 0; this.reloadFired = new Set();
     this.queued = 0; this.autoReloadT = 0; this.flashT = 0; this.slideKick = 0; this.cur = 0;
+    this.sfV = 0; this.sfH = 0; this.sfDir = 1; this.sfDom = 0; // v62e SF2 recoil state (def.sf2Recoil): climb / sideways so far (deg), drift side, spread added (deg)
     this.magBase = vm.mag ? vm.mag.position.clone() : null;
     this.chargeBase = vm.charge ? vm.charge.position.clone() : null;
     this.lhandBase = vm.lhand ? vm.lhand.position.clone() : null;
   }
   get local() { return this.owner === this.game.player; }
   get scoped() { return this.adsType === '2d_scope_overlay'; }
-  resetAmmo() { this.ammo = this.def.mag || 0; this.reserveAmmo = this.def.reserve || 0; this.shotN = 0; this.cooldown = 0; this.bloom = 0; this.cur = 0; this.shots = 0; }
+  resetAmmo() { this.ammo = this.def.mag || 0; this.reserveAmmo = this.def.reserve || 0; this.shotN = 0; this.cooldown = 0; this.bloom = 0; this.cur = 0; this.shots = 0; this.sfV = 0; this.sfH = 0; this.sfDom = 0; }
   // v47: drawing keeps a pending fire cooldown (it runs down while holstered too, see Arsenal.tick), so swapping out and
   // back can no longer skip a bolt / pump / semi-auto interval. Only respawn (resetAmmo) clears it. A negative auto-fire
   // carry is dropped so the draw never fires a catch-up burst.
@@ -50,6 +51,7 @@ class Weapon {
   // back to 0 as soon as you stop. ADS keeps 45 % of the bloom; jumping / sprinting still throw the shot.
   spread(ws) {
     if ((this.owner.hipMode || Settings.data.hipMode) === 'shotgun') return this.spreadLegacy(ws);
+    if (this.def.sf2Recoil) return this.sf2Spread(ws);
     const p = this.owner, m = p.motor;
     let s = this.cur * (ws.ads ? (this.def.adsVertical ? 0 : 0.45) : 1); // v45 adsVertical: aimed shots go where the dot is
     if (!m.grounded) s += this.spreadAir;
@@ -66,6 +68,34 @@ class Weapon {
     if (!m.grounded) s += this.spreadAir;
     if (m.crouching && m.grounded) s *= this.spreadCrouch;
     return s;
+  }
+
+  /* v62e SF2's OWN RECOIL (def.sf2Recoil: the gun's S_RECOIL block, docs/research/sf2/client-data). SF2's scripts pin what the
+     fields mean (weapon parts lower nextCrossVert = per-shot climb and domInc = per-shot spread; degrees, PunchAngleRatio
+     65536/360); how they move the view per frame is native in sf2.exe, so the motion is rebuilt from its runtime state
+     (S_RECOIL_RESULT: currentCrossVert, forceDir, currentDomValue …):
+     · climb: each shot +nextCrossVert up to maxCrossVert, then only the sideways sway goes on
+     · sideways: each shot incline × the climb step toward forceDir; once the drift is more than forceCorrection % of the
+       climb, forceDir turns back toward the middle (a zig-zag inside a cone)
+     · aimed × zoomMod (RecoilZoomModifier), crouched × crouchMod; the camera recovers at vertDec °/s, speeding up by
+       crossDecreasInc °/s² (Player.update)
+     · spread cone (half angle): domDefault (aimed domZoomDefault) + domInc per shot, domMin..domMax, back at domDec °/s;
+       sprinting / airborne add maxMovingValue × mulValueRun / mulValueJump (walking's 0.035° is left out: only states both
+       ends of an online match agree on feed the spread) */
+  sf2Mod(ws) { const r = this.def.sf2Recoil, m = this.owner.motor; return (ws.ads ? r.zoomMod : 1) * (m.crouching && m.grounded ? r.crouchMod : 1); }
+  sf2Kick(ws) {
+    const r = this.def.sf2Recoil, k = this.sf2Mod(ws), up = r.nextCrossVert * k, cap = r.maxCrossVert * k;
+    if (this.sfV < 0.01 && Math.abs(this.sfH) < 0.01) this.sfDir = Math.random() < 0.5 ? -1 : 1; // a fresh spray picks its side
+    const climb = Math.max(0, Math.min(up, cap - this.sfV)); this.sfV += climb;
+    if (Math.abs(this.sfH) > r.forceCorrection / 100 * Math.max(this.sfV, up)) this.sfDir = -Math.sign(this.sfH);
+    const side = this.sfDir * up * r.incline * rand(0.6, 1); this.sfH += side;
+    return [climb * THREE.MathUtils.DEG2RAD, side * THREE.MathUtils.DEG2RAD];
+  }
+  sf2Spread(ws) {
+    const r = this.def.sf2Recoil, p = this.owner, m = p.motor;
+    let d = clamp((ws.ads ? r.domZoomDefault : r.domDefault) + this.sfDom, ws.ads ? 0 : r.domMin, r.domMax) * this.sf2Mod(ws);
+    if (p.sprinting) d += r.maxMovingValue * r.mulValueRun; else if (!m.grounded) d += r.maxMovingValue * r.mulValueJump;
+    return d * THREE.MathUtils.DEG2RAD;
   }
 
   // Spray pattern from the database: first shot, climb, late spray, then a sinusoidal horizontal drift.
@@ -113,10 +143,11 @@ class Weapon {
     this.lastShot = now;
     this.bloom = Math.min(this.bloom + (this.spreadPerShot || 0), this.spreadMax || 0);
     this.cur = Math.min(this.cur + (this.bloomPerShot || 0), this.bloomMax || 0); // applies from the NEXT shot
+    const sf = this.def.sf2Recoil; if (sf) this.sfDom = Math.min(this.sfDom + sf.domInc, sf.domMax); // (also the next shot's)
     const mz = this.muzzleWorld(ray, ws);
     if (this.local) {
-      let [rp, ry] = this.recoilKick(); const am = ws.ads ? (this.def.adsRecoilMult ?? 0.8) : 1;
-      if (ws.ads && this.def.adsVertical) { ry = clamp(ry * 0.6, -0.0105 - p.recoilTY, 0.0105 - p.recoilTY); rp = Math.min(rp, Math.max(0, this.def.adsVertical - p.recoilTP)); } // v45 SF2 aimed spray: climbs up to a cap, sways at most ±0.6° (≈1.2° side to side)
+      let [rp, ry] = sf ? this.sf2Kick(ws) : this.recoilKick(); const am = sf ? 1 : ws.ads ? (this.def.adsRecoilMult ?? 0.8) : 1; // (SF2: the aimed factor is in sf2Kick)
+      if (!sf && ws.ads && this.def.adsVertical) { ry = clamp(ry * 0.6, -0.0105 - p.recoilTY, 0.0105 - p.recoilTY); rp = Math.min(rp, Math.max(0, this.def.adsVertical - p.recoilTP)); } // v45 SF2 aimed spray: climbs up to a cap, sways at most ±0.6° (≈1.2° side to side)
       p.addRecoil(rp * am, ry * am);
       p.punchV += (this.kick ? this.kick.rx : 0.05) * (ws.ads ? 0.9 : 0.7); // small per-shot camera shudder on top of the recoil
       ws.kick(this.kick);
@@ -156,6 +187,12 @@ class Weapon {
     const spraying = ws.clock - this.lastShot < (this.interval || 0.1) * 1.6; // bloom only recovers once you stop spraying
     this.bloom = damp(this.bloom, 0, spraying ? 1 : (this.spreadRecover || 5), h);
     if (!spraying) { this.cur = damp(this.cur, 0, 11, h); if (this.cur < 2e-4) this.cur = 0; } // quick recenter to a perfect first shot
+    const sf = this.def.sf2Recoil;
+    if (sf && !spraying) { // SF2: spread back at domDec °/s; the climb budget back like the camera (vertDec, speeding up by crossDecreasInc)
+      this.sfDom = Math.max(0, this.sfDom - sf.domDec * h);
+      const t = ws.clock - this.lastShot, l = Math.hypot(this.sfV, this.sfH);
+      if (l > 0) { const k = Math.max(0, l - (sf.vertDec + sf.crossDecreasInc * t) * h) / l; this.sfV *= k; this.sfH *= k; }
+    }
   }
   // local viewmodel, once per rendered frame
   animate(dt, ws) {

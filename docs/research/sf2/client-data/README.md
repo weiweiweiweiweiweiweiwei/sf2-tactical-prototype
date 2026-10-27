@@ -44,6 +44,8 @@ UE3 的 UnrealScript 位元組碼在 `SFGame.upk` 裡，沒有加密。`python t
 
 對照：我們目前 M4A1 每發上跳 0.69°（`recoilPitch` 0.012 rad），原版腰射 1.26°、開鏡 0.76°，數量級一致。
 
+**已套用到 M4A1（v62e）**：`src/01_core.js` 的 `sf2Recoil`、`Weapon.sf2Kick`／`sf2Spread`、`Player.update` 的回正。走路的 0.035° 散布沒有放（連線時房主和客戶端只對得上衝刺／跳躍這類狀態）。
+
 ## `S_RECOIL` 欄位（M4A1，括號是推測，未驗證）
 | 欄位 | M4A1 | 推測 |
 |---|---|---|

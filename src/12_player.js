@@ -150,7 +150,7 @@ class Human extends Combatant {
 class Player extends Human {
   constructor(game) {
     super(game, 'alpha', 'YOU', true);
-    this.recoilPitch = 0; this.recoilYaw = 0; this.recoilHold = 0; this.recoilTP = 0; this.recoilTY = 0; this.shake = 0;
+    this.recoilPitch = 0; this.recoilYaw = 0; this.recoilHold = 0; this.recoilTP = 0; this.recoilTY = 0; this.recoilDecT = 0; this.shake = 0;
     this.eyeH = CFG.player.eye;
     this.streak = 0; this.multi = 0; this.lastKillT = -10; this.killer = null; this.spectating = null; this.deathT = 0;
     this.renderPos = new THREE.Vector3();
@@ -182,14 +182,19 @@ class Player extends Human {
   // centre, the whole world kicks up. The camera snaps to the kick in ~25 ms; while the trigger is held nothing
   // recovers (you must pull down = spray control); after you stop, the un-compensated rest settles back smoothly.
   addRecoil(p, y) { this.recoilTP += p; this.recoilTY += y; this.recoilHold = 0.12; }
-  resetRecoil() { this.recoilPitch = 0; this.recoilYaw = 0; this.recoilTP = 0; this.recoilTY = 0; this.recoilHold = 0; }
+  resetRecoil() { this.recoilPitch = 0; this.recoilYaw = 0; this.recoilTP = 0; this.recoilTY = 0; this.recoilHold = 0; this.recoilDecT = 0; }
 
   update(dt) {
-    const w = this.game.weapons.current, rec = (w && w.def.recoilRecovery) || 8;
+    const w = this.game.weapons.current, rec = (w && w.def.recoilRecovery) || 8, sf = w && w.def.sf2Recoil, D2R = THREE.MathUtils.DEG2RAD;
     const firing = this.recoilHold > 0 || (this.game.weapons.trigger && this.game.weapons.current.auto && this.game.weapons.current.ammo > 0);
     this.recoilHold = Math.max(0, this.recoilHold - dt);
-    if (!firing) { const lam = rec * 0.8; this.recoilTP = damp(this.recoilTP, 0, lam, dt); this.recoilTY = damp(this.recoilTY, 0, lam, dt); }
-    this.recoilPitch = damp(this.recoilPitch, this.recoilTP, 42, dt); this.recoilYaw = damp(this.recoilYaw, this.recoilTY, 42, dt);
+    if (firing) this.recoilDecT = 0;
+    else if (sf) { // v62e SF2 (Weapon.sf2Kick): back at vertDec °/s, speeding up by crossDecreasInc °/s²
+      this.recoilDecT += dt; const l = Math.hypot(this.recoilTP, this.recoilTY);
+      if (l > 0) { const k = Math.max(0, l - (sf.vertDec + sf.crossDecreasInc * this.recoilDecT) * D2R * dt) / l; this.recoilTP *= k; this.recoilTY *= k; }
+    } else { const lam = rec * 0.8; this.recoilTP = damp(this.recoilTP, 0, lam, dt); this.recoilTY = damp(this.recoilTY, 0, lam, dt); }
+    if (sf) { const st = sf.vertInc / 182.04 * D2R * dt; this.recoilPitch += clamp(this.recoilTP - this.recoilPitch, -st, st); this.recoilYaw += clamp(this.recoilTY - this.recoilYaw, -st, st); } // the view swings to the kick at vertInc (rotator units/s)
+    else { this.recoilPitch = damp(this.recoilPitch, this.recoilTP, 42, dt); this.recoilYaw = damp(this.recoilYaw, this.recoilTY, 42, dt); }
     this.punchV += (-this.punch * 160 - this.punchV * 16) * dt; this.punch += this.punchV * dt;
     this.fovPunch = damp(this.fovPunch, 0, 10, dt); this.shake = Math.max(0, this.shake - dt * 2.5);
     if (this.spawnProtect > 0) this.spawnProtect = Math.max(0, this.spawnProtect - dt);

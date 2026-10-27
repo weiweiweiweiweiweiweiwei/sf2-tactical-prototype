@@ -929,3 +929,13 @@
 - **M4A1 原版時間**（使用者選 3A）：射速 `FireInterval` 0.096 s（原 0.09）、換彈 2.3 s（原 2.2）、開鏡 0.25 s（`adsSpeed` 12）、拔槍 0.8 s。拔槍是新機制：`def.equipTime` 在拔槍時把開火冷卻設成 0.8 s（`Weapon.equip`，比較長的拉栓／泵動冷卻照舊保留），原版動畫的 `Equip` 也剛好播 0.8 s。傷害維持平衡規則。只有 M4A1 有 `equipTime`，其他槍不變。
 - **開鏡設定比對圖**（使用者選 4A）：A 目前（眼在覘孔後 3 cm、槍模視角 48°）vs B 原版（眼在頭部骨頭 6.4 cm、`fZoomedMeshFOV` 35°）。兩者照門大小接近（較遠的眼睛和較窄的視角互相抵消），B 腰射時槍小一圈。
 - **後座力公式**（使用者選 1C 要破解加殼；沒有做，改走腳本）：`tools/sf2_decompile.py` 是 UE3 UnrealScript 反編譯器（原生函式編號表從 `Core.upk`／`Engine.upk` 讀）。還原出散射公式 `AddSpreadEx`、每發累加 `UpdateLastFiredTime`、子彈方向來自原生 `StartRecoil`（`FireEndTrace`）、配件和懲罰怎麼改後座參數（確認 `nextCrossVert` = 每發上跳、`domInc` = 每發散布增加）、執行時狀態 `S_RECOIL_RESULT` 的欄位。後座本體是原生函式，在有商業加殼的 `sf2.exe` 裡，沒有去破解；重建的模型寫在 `docs/research/sf2/client-data/README.md`。
+
+## v62e（2026-10-27）：M4A1 改用 SF2 正版後座力模型
+- 使用者選 1A（套到 M4A1 試手感）、2A（開鏡維持我們遊戲目前的設定）。
+- `def.sf2Recoil`：M4A1 的 SF2 正版 `S_RECOIL` 參數（`SFCWeaponM4A1` 蓋過 `SFCWeaponARBase`）、開鏡 ×0.6、蹲下 ×0.9。只有有這組參數的槍走新模型，其他槍不變。
+  - 上跳：每發 +1.26°（開鏡 0.76°），上限 14°（開鏡 8.4°）；鏡頭以 `vertInc` 9000（≈49°/s）追上。
+  - 左右：每發往一邊 `incline` 0.5 × 上跳 × 0.6～1，側飄超過上跳的 `forceCorrection` 50% 就折返（之字形）。這部分是依欄位名稱推的，最沒把握。
+  - 回正：停火後 12°/s，每秒再加速 9°/s²（`vertDec`、`crossDecreasInc`）。
+  - 散布（半角）：腰射 0.25° 起、開鏡 0°，每發 +0.13°，上限 2°（開鏡 ×0.6 → 1.2°），停火後 6°/s 回復；衝刺 +0.56°、跳躍 +4.2°。
+- 量測（站著不動、不壓槍，`tools/out/_recoilmeasure.mjs`）：開鏡 30 發總上跳 17°（舊，沒有上限）→ 8.4°（第 11 發到頂）；腰射每發 0.73° → 1.26°、上限 14°；回正 0.75～0.83 s → 腰射 1.0 s、開鏡 0.7 s。
+- 驗證：`_nettest` 客戶端預測和房主的散布值、子彈方向完全一致（0.25° 起、+0.13°/發），命中、擊殺、重生正常；`check.mjs` 59 FPS、0 錯誤；`_fileplay` 通過。
