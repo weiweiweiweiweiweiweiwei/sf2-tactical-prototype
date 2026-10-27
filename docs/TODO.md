@@ -11,7 +11,11 @@
 - ✅ 槍枝材質：改成霧面、非金屬（陽極處理／磷化／聚合物）
 - ✅ 載入畫面一開始就顯示地圖圖片
 - ❓ Skull Town、訓練場的選圖縮圖和載入畫面：5 個視角已給使用者（`tools/out/views/*_choices.jpg`，座標在 `choices.json`），等回覆
-- 🔄 M4A1 原版動畫：使用者選 A（Blender 的 PSA 匯入外掛）
+- 🔄 M4A1 原版動畫（使用者選 A）
+  - ✅ 匯出動畫集：`umodel -export -psk rif_m4a1` → `tools/out/sf2/m4a1_anim/`（15 段：Equip、Idle、Fire、Zoom、ZoomFire、Reload、dash…，30 fps）；PSA 格式已能直接用 Python 讀（不一定要裝外掛）
+  - ⬜ 第一人稱手臂模型：`c_comm_1st_glove_b05`（手套 `com_1st_glove_b06`）等套件，找出袖子／手臂
+  - ⬜ Blender：手臂＋槍零件綁同一副 Bip01 骨架，套上 PSA 動畫，匯出 glTF（含動畫片段）
+  - ⬜ 遊戲端：槍模改用原版動畫播放（換彈、拔槍、射擊、衝刺），取代程式做的動作
 - ⬜ M4A1 照門在側面看略浮在導軌上（底座前端夾具最低，後端離導軌約 5 mm）：等使用者看實際畫面再決定要不要修
 
 ## 1. SF2 原版槍枝素材（UModel，`D:\SpecialForce2`）
