@@ -8075,7 +8075,7 @@ function skullWorldMaterial(src, lm, scale) {
       #ifdef USE_LIGHTMAP
         vec4 lightMapTexel = texture2D( lightMap, vLightMapUv );
         float sunK = smoothstep( 0.35, 0.7, max( lightMapTexel.r, max( lightMapTexel.g, lightMapTexel.b ) ) );
-        irradiance = ( lightMapTexel.rgb + vec3( 0.035, 0.04, 0.05 ) ) * lightMapIntensity * mix( 1.0, 0.4 + 0.6 * sunVis, sunK ); // + a little sky: rooms the bake left black
+        irradiance = ( lightMapTexel.rgb + vec3( 0.07, 0.078, 0.09 ) ) * lightMapIntensity * mix( 1.0, 0.4 + 0.6 * sunVis, sunK ); // + a little sky: shade and rooms never go black
       #endif`).replace('#include <lights_fragment_end>', '#include <lights_fragment_end>\n      reflectedLight.directDiffuse = vec3( 0.0 );');
   };
   m.customProgramCacheKey = () => 'skullWorld';
@@ -8183,7 +8183,7 @@ function apexTriMap(def) {
       }
       // visuals: the two world halves with their lightmaps; props instanced per geometry / material / 64 m cell
       gltf.scene.updateMatrixWorld(true);
-      const batches = new Map(), worldMats = new Map(), scale = Math.PI * 0.85, sunLm = manifest.lightmaps.inner.max * 0.8; // sunlit ground ≈ 80 % of the bake's top
+      const batches = new Map(), worldMats = new Map(), scale = Math.PI * 1.0, sunLm = manifest.lightmaps.inner.max * 0.8; // sunlit ground ≈ 80 % of the bake's top
       const meshes = []; let objects = 0;
       gltf.scene.traverse((o) => {
         if (!o.isMesh) return; objects++;
@@ -8208,10 +8208,10 @@ function apexTriMap(def) {
         const mesh = new THREE.InstancedMesh(batch.geo, batch.mat, batch.matrices.length);
         batch.matrices.forEach((m, i) => mesh.setMatrixAt(i, m)); mesh.computeBoundingSphere();
         // the bake under each prop (tools/blender/skulltown_export.py 'lm'): live sun and sky light it, so one indoors or in deep
-        // shade is dimmed toward what the room around it got (full brightness from 60 % of the sunlit ground up)
+        // shade is dimmed toward what the room around it got (full brightness from half the sunlit ground up, never below half)
         if (batch.light.some((v) => v >= 0)) {
           const c = new THREE.Color();
-          batch.light.forEach((v, i) => { const k = v < 0 ? 1 : clamp(v / (sunLm * 0.6), 0.35, 1); mesh.setColorAt(i, c.setScalar(k)); }); // (≥ 0.35: the ground under a big rock is in its own shadow)
+          batch.light.forEach((v, i) => { const k = v < 0 ? 1 : clamp(v / (sunLm * 0.5), 0.5, 1); mesh.setColorAt(i, c.setScalar(k)); }); // (≥ 0.5: the ground under a big rock is in its own shadow)
         }
         mesh.castShadow = false; mesh.receiveShadow = true; // their shadows are in the bake
         b.scene.add(mesh); meshes.push(mesh);
@@ -8229,8 +8229,8 @@ MAPS.push(apexTriMap({
   bounds: { minX: -150, maxX: 150, minZ: -150, maxZ: 150 }, indoor: false, navLevels: [], killY: -60, killOutside: true, traversal: true,
   // the sky is the Poly Haven HDRI the bake was lit by (tools/blender/skulltown_export.py SKY): background, IBL and the live sun's
   // direction (props, soldiers) all match the lightmaps
-  hdri: 'kloofendal_48d_partly_cloudy_puresky', hdriBackground: true, background: 0xb8c8d8, envIntensity: 0.55, exposure: 0.85,
-  sun: { pos: [1.5, 68, -73], color: 0xfff1de, intensity: 2.6, auto: true }, hemi: [0xbcd6ee, 0x8a7356, 0.6],
+  hdri: 'kloofendal_48d_partly_cloudy_puresky', hdriBackground: true, background: 0xb8c8d8, envIntensity: 0.7, exposure: 1.0,
+  sun: { pos: [1.5, 68, -73], color: 0xfff1de, intensity: 2.6, auto: true }, hemi: [0xbcd6ee, 0x8a7356, 0.8],
   fog: { color: 0xc4ced8, near: 180, far: 1100 }, acoustics: 'outdoor', ambience: 'desert', shadowFollow: 60,
   shot: { pos: [0, 260, 120], target: [0, 0, 0] },
   thumb: { pos: [-60, 30, 70], target: [0, 6, 0] },
@@ -8242,8 +8242,8 @@ MAPS.push(apexTriMap({
   id: 'apex_full', packDir: 'assets/maps/apex-range/', name: 'Apex 訓練場・全場景', en: 'APEX FIRING RANGE',
   desc: '原版場景與擺設 · 烘焙光照 · 真實三角形碰撞 · E 開門', slogan: '峽谷裡的訓練場 · 靶場、村落、高台',
   bounds: { minX: -165, maxX: 165, minZ: -140, maxZ: 140 }, indoor: false, navLevels: [], killY: -80, killOutside: true, traversal: true,
-  hdri: 'kloofendal_48d_partly_cloudy_puresky', hdriBackground: true, background: 0xb8c8d8, envIntensity: 0.55, exposure: 0.85,
-  sun: { pos: [-20, 70, 25], color: 0xfff1de, intensity: 2.6, auto: true }, hemi: [0xbcd6ee, 0x6f6450, 0.6],
+  hdri: 'kloofendal_48d_partly_cloudy_puresky', hdriBackground: true, background: 0xb8c8d8, envIntensity: 0.7, exposure: 1.0,
+  sun: { pos: [-20, 70, 25], color: 0xfff1de, intensity: 2.6, auto: true }, hemi: [0xbcd6ee, 0x6f6450, 0.8],
   fog: { color: 0xc4ced8, near: 180, far: 1100 }, acoustics: 'outdoor', ambience: 'wind', shadowFollow: 60,
   shot: { pos: [0, 300, 140], target: [0, 0, 0] },
   thumb: { pos: [85, 45, 1], target: [10, 5, 86] }, // the village
