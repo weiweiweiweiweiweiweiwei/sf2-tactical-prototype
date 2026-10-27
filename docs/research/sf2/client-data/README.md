@@ -35,7 +35,7 @@ UE3 的 UnrealScript 位元組碼在 `SFGame.upk` 裡，沒有加密。`python t
 - 執行時的後座狀態 `S_RECOIL_RESULT`（`SFPawn_Player.RecoilResult`）：`recoilState`、`currentCrossVert`、`expectCrossVert`、`crossDecreasValue`、`oldrCrossVert`、`crossIncline`、`decline`、`forceDir`、`currentDomValue`、`movingValue`、`movingValueForCrossHair`、`spiny`、`spinz`、`impactIncreaseEye`／`impactDecline`／`impactSpinY`／`impactSpinZ`（中彈晃動）。
 
 ## 重建的後座力模型（欄位意義有腳本佐證，動態是依狀態欄位名稱推的）
-1. **上跳**：每發 `expectCrossVert += nextCrossVert`，上限 `maxCrossVert`；`currentCrossVert` 以 `vertInc`（旋轉單位/秒，65536 = 360°，M4A1 ≈ 49°/s）追上 `expectCrossVert`。單位是度（`PunchAngleRatio` = 182.04 = 65536/360）。
+1. **上跳**：每發 `expectCrossVert += nextCrossVert`，**整個彈匣持續上升**（v62j：`maxCrossVert` 不是鏡頭上限，使用者的 SF2 掃射約 14.5°、影片裡打到最後一發都還在上升；它應該是準星張開的上限）；`currentCrossVert` 以 `vertInc`（旋轉單位/秒，65536 = 360°，M4A1 ≈ 49°/s）追上 `expectCrossVert`。單位是度（`PunchAngleRatio` = 182.04 = 65536/360）。
 2. **偏移**：上跳時往 `forceDir`（左或右）偏 `incline` 的比例（`crossIncline`），`forceCorrection`（50）是換邊的機率（%）。
 3. **回正**：停火後以 `vertDec`（度/秒）回落，回落速度每秒再加 `crossDecreasInc`。
 4. **散布**（`currentDomValue`，度）：起始 `domDefault`（開鏡 `domZoomDefault`），每發 `+domInc`，上限 `domMax`、下限 `domMin`，停火後每秒 `−domDec`。
