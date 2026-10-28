@@ -1471,3 +1471,10 @@
   - `tools/sf2_reticle_svg.py`：SF2 的十字貼圖轉成 SVG，暗色像素合併成矩形，比例照鏡片遮罩換算。
   - `tools/sfx_sf2.mjs` 接受 `<id>@<檔名字首>`。
 - 驗證：Barrett 腰射和開鏡截圖、`_reloadtime.mjs`、`check.mjs`。
+
+
+### v64z（本機，2026-10-28）：SF2 原版 Kar98k
+- 鏡子 `scope_kar98k` 在槍自己的包裡；不轉（左右位移 0 cm，轉 90° 時是 3.1 cm）；十字 `mil`。
+- 數值照 `SFCWeaponKar98k`：換彈 3.3 s（動畫 3.45 s）、重量 5.6。
+- 聲音：`Sound_Kar98k_new`，四種槍聲和拉栓聲。
+- 驗證：腰射截圖、`_reloadtime.mjs`、`check.mjs`。

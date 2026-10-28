@@ -88,6 +88,7 @@ const G = {
   // v64y SF2's other scoped guns (docs/loop/GUNS.md C)
   svd: gun('svd', { pkg: 'sni_dragunov', stem: 'sni_dragunov', tex: 'dragunov', anim: '1st_anim_dragunov', optic: SCOPE('scope_dragunov', 'dragunov_scope') }),
   barrett: gun('barrett', { pkg: 'sni_barret', stem: 'sni_barret', tex: 'barret', anim: '1st_anim_barret', optic: SCOPE('scope_cz700', 'scope_cz700') }), // (SFCItem_Barret_Def_Scope: the CZ700's scope, reticle mic_ScopeView_03)
+  kar98k: gun('kar98k', { pkg: 'sni_kar98k', stem: 'sni_kar98k', tex: 'kar98k', optic: { file: 'kar98k/sni_kar98k/SkeletalMesh3/scope_kar98k.gltf', props: 'kar98k_anim/sni_kar98k/SkeletalMesh3/scope_kar98k.props.txt', tex: 'kar98k_scope', noAim: true, roll: +(process.env.ROLL ?? 0) } }), // (its scope ships in its own package; upright as read: 0 cm sideways against 3.1 turned)
   trg: gun('trg', { pkg: 'sni_trg', stem: 'sni_trg', tex: 'sni_trg', anim: '1st_ani_trg', optic: ZEISS_SCOPE }),
 }[GID];
 if (!G) throw new Error(`unknown gun ${GID}`);
