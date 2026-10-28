@@ -77,6 +77,12 @@
 - ✅ 狙擊屏息 3 秒：不做（自選，見 DECISIONS D11：開鏡沒有晃動，SF2 也沒有屏息）
 - ✅ AI 除錯顯示（v63a）：F4（自選，見 DECISIONS D10）
 
+## 4b. 效能（本機 H4 真實顯卡結果：`docs/testing/gpu-2026-10-28.md`）
+- ✅ hangar 出生點偶爾互看（v63c）：機庫中線兩端 10 對相距約 90 m 看得到；出生點產生後刪掉看得到敵方出生點的點，檢查改成全部組合
+- ⬜ Intel 內顯：warehouse、desert、harbor、office、ridge、satellite、ryokan 的 p95 ≈ 33 ms（常掉到 30 fps），ryokan p99 49.8 ms
+- ⬜ GTX 不鎖幀：snow、dam 有週期性尖峰（p95 27.8／23.3 ms）
+- ⬜ `check.mjs --map all` 不含天空城和兩張 Apex 地圖
+
 ## 5. 連線
 - ⬜ 客戶端完整回溯重播修正
 - ⬜ 房主驗證速度與射速（防作弊）
