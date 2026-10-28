@@ -17,7 +17,7 @@ GUNS = {  # id: (SF2 class, rig, sound, [magout, magin, charge])
     'galil': ('GALIL', 'galil', 'galil', [0.23, 0.72, 0.76]),  # (the mag is swung away and swapped in at frame 58)
     'hk417': ('HK417', 'hk417', 'hk417', [0.16, 0.37, 0.77]),
     'mp5k': ('MP5K', 'mp5k', 'mp5k', [0.17, 0.48, 0.77]),  # (v62z loop H3: the first SMG; reload times from its Reload clip, 65 frames)
-    # 'qbz97': ('QBZ97', 'qbz97', 'qbz97', [0.19, 0.4, 0.73]),  # (left out: its carry-handle sight line is not found yet — the eye lands on the rear sight's body)
+    'qbz97': ('QBZ97', 'qbz97', 'qbz97', [0.19, 0.4, 0.73]),  # (v62z loop H3: its carry-handle sights measured by hand, tools/sf2_rig_build.mjs sightMarks)
 }
 REC = ['nextCrossVert', 'maxCrossVert', 'vertInc', 'vertDec', 'crossDecreasInc', 'incline', 'forceCorrection', 'domDefault', 'domZoomDefault',
        'domInc', 'domMax', 'domMin', 'domDec', 'maxMovingValue', 'mulValueRun', 'mulValueJump']

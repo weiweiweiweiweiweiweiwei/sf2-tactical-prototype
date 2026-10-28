@@ -49,7 +49,10 @@ const G = {
   xm8: gun('xm8', { socketSights: sight('xm8/rif_xm8/SkeletalMesh3/rif_xm8_sight_up.gltf', 'xm8_sight') }),
   galil: gun('galil', { hoodedPost: true, socketSights: sight('galil/rif_galil_sight/SkeletalMesh3/rif_galil_sight_up.gltf', 'galil_barrel_frontsight') }),
   hk417: gun('hk417', { socketSights: sight('hk417/rif_hk417_sight/SkeletalMesh3/rif_hk417_sight_up.gltf', 'hk417_sight') }),
-  qbz97: gun('qbz97', { hoodedPost: true }), // carry-handle sights on the body
+  // v62z (loop H3) the QBZ-97's sights are on its carry handle (part of the body): the rear aperture's hole (an 8 mm gap on the centre
+  // line at z 0.205 at first; set on white-background ADS shots: 1.1883 — across, −0.1055…−0.0974 → −0.1015) and the post tip (z 0.36, 1.1483) measured on the body's bind-space mesh
+  // (tools/out/_qbzrear.mjs) — the POST search had stopped on the barrel and put the eye under the ring
+  qbz97: gun('qbz97', { hoodedPost: true, sightMarks: { SIGHT: [-0.1015, 1.1883, 0.205], POST: [-0.1015, 1.1483, 0.36] } }),
   // v62z (loop H3) the first SMG: the MP5K (smg_mp5k), its hooded front sight on the Sight socket (on the barrel's texture sheet), the drum rear sight on the body
   mp5k: gun('mp5k', { pkg: 'smg_mp5k', stem: 'smg_mp5k', hoodedPost: true, socketSights: sight('mp5k/smg_mp5k/SkeletalMesh3/smg_mp5k_sight_up.gltf', 'mp5k_barrel') }),
 }[GID];
@@ -195,6 +198,7 @@ if (!G.railSights) { // POST: the front sight's tip — the highest point on the
     i++;
   }
   marks.POST = pts[i];
+  if (G.sightMarks) Object.assign(marks, G.sightMarks); // (measured by hand where the search cannot find them)
 }
 if (G.railSights) {
   const { sight: SG, rear: RG } = G.railSights;

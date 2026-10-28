@@ -6,12 +6,6 @@
 
 ## 待本機（雲端寫，本機做）
 
-### H3 🔄 SF2 原版素材（`D:\SpecialForce2`，UModel；流程見 `docs/pipelines/guns.md`「SF2 原版槍＋原版動畫」）
-- ✅ M16A3（本機 2026-10-28，見「本機已完成」L7）。
-- ✅ MP5K（本機 2026-10-28，見「本機已完成」L3）。
-- ✅ M4A1 第三人稱槍模（本機 2026-10-28，見「本機已完成」L4；接到 Bot 手上留給雲端）。
-- 驗證：`node tools/check.mjs`、`node tools/_gunshot.mjs`（開鏡截圖存進 `docs/testing/shots/`）。
-
 ### H6 ⏸ 需要使用者本人
 - AK-103、G36C 的 SF2 開鏡截圖（要進 SF2 遊戲裡截）。
 - 實際試玩的手感意見（M4A1 腰射位置、拔槍 0.8 s、後座力）。
@@ -86,3 +80,9 @@
 - 修了一個通用問題：有自己綁定姿勢的零件（OWNBIND），`addPart` 回傳的點原本是**零件自己的**綁定座標；現在用每根骨頭的 inv(機匣 IBM) × 零件 IBM 換到機匣的綁定空間（`toBody`，新的 `inv4`）。M4A1 的提把也是 OWNBIND（差 1.3 mm），`PEEP_DX` 0.00136 → 0.00006 抵銷，M4A1 的 SIGHT 不變（rig 沒重打包）。
 - 改到的檔：`tools/sf2_rig_build.mjs`（m16a3 設定、`toBody`／`inv4`、`PEEP_DX`）、`tools/sf2_weapon_table.py`（m16a3 打開）、**`src/01_core.js`**（`SF2_WEAPONS` 重新產生，多 m16a3）、**`src/09_models.js`**（`_rigOpts`：m16a3 的 `eyeRelief` 0.055）、`tools/guns/pack.mjs`（`SKIP`：拿掉 m16a3，加上還沒接進遊戲的 `m4a1_3rd.glb`、`apex_r301.glb`；qbz97 仍跳過）、`tools/guns/m16a3_sf2_rig.glb`、`assets/guns/guns.js`。
 - 驗證：白底量測覘孔中心差 1.4／−0.5 px（1080p），孔寬 268 px（和 M4A1 一樣）；`check.mjs`、`analyze.mjs` 過；開鏡連射鏡頭上飄 3.35°；截圖 `docs/testing/shots/m16a3_ads.jpg`、`m16a3_hip.jpg`。
+
+### L8 ✅ H3 的 QBZ-97：SF2 原版槍＋提把瞄準線（2026-10-28）；H3 全部完成
+- 原因：①和 M16A3 一樣，`tools/guns/pack.mjs` 的 `SKIP` 一直排除 `qbz97_sf2_rig.glb`（之前看到的是舊槍模）；②它的照門、前準星都在提把上，自動找的 POST 停在槍管上，眼睛在照門下方；③犢牛式，頭部骨頭在照門塊裡面。
+- 做法：`tools/sf2_rig_build.mjs` 新增 `sightMarks`（手動指定 SIGHT／POST）：qbz97 的 SIGHT (−0.1015, **1.1883**, 0.205)、POST (−0.1015, 1.1483, 0.36)——x 取照門孔左右壁中點（`tools/out/_qbzhole.mjs`），高度用白底開鏡截圖逐步校正（1.1604 → 1.1692 → 1.181 → 1.1883，約 44 px／mm）。眼睛在 SIGHT 後 6 cm（`src/09_models.js` 的 `RIG_EYE`，和 M16A3 的 5.5 cm 一起）。
+- 改到的檔：`tools/sf2_rig_build.mjs`、`tools/sf2_weapon_table.py`（qbz97 打開）、**`src/01_core.js`**（`SF2_WEAPONS` 重新產生，10 把）、**`src/09_models.js`**（`RIG_EYE` 表取代 L7 的單一判斷）、`tools/guns/pack.mjs`（`SKIP` 只剩 m4a1_sf2、m4a1_3rd、apex_r301）、`tools/guns/qbz97_sf2_rig.glb`、`assets/guns/guns.js`。
+- 驗證：白底量測前準星護圈孔中心差 −0.3／−1.0 px（1080p），後照門環也在正中；`check.mjs`、`analyze.mjs` 過；開鏡連射上飄 2.50°；截圖 `docs/testing/shots/qbz97_ads.jpg`、`qbz97_hip.jpg`。
