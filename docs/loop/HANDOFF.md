@@ -6,11 +6,6 @@
 
 ## 待本機（雲端寫，本機做）
 
-### H1 🔄 抓 Apex S30.1 每把槍的完整頁面（雲端被網路政策擋住）
-- 來源：`https://apex.source.gs/weapons/<slug>/`，29 把槍。slug 照 `docs/research/apex/weapons-2026-10-27.json` 每把槍的 `source`。
-- 輸出：`docs/research/apex/source-gs-s30/<slug>.html`（原始 HTML）和 `<slug>.md`（把頁面上所有欄位逐條轉成文字）。要包含散布、後座、拔槍時間、彈道、各級配件的數值，頁面有多少就抓多少。
-- 驗證：29 個檔都有；`r-301-carbine.md` 裡找得到 15、810、737 這幾個數字。
-
 ### H2 ⬜ 抓公開的 TTK 表和 wiki 數值，給雲端比對
 - 來源：`https://apexlegends.wiki.gg/wiki/<槍名>`（每把槍頁面的 Stats、TTK、Advanced stats 表），以及任何列出 TTK 的數據站。
 - 輸出：`docs/research/apex/web/wiki-<slug>.md`（表格原樣轉成 Markdown，附抓取日期和網址）。
@@ -48,3 +43,10 @@
 - 素材：兩張 Apex 地圖的 `pack/` 重新打包（碰撞 STRZ：Skull Town 10.4 → 2.3 MB、訓練場 8.9 → 2.2 MB）；`tools/pack-apex-js.mjs` 的 `strz()`。
 - 工具：`tools/_loadprof.mjs`（各載入階段計時，`LOBBY=` `PROFILE=` `RUNS=`）。
 - 驗證（合併後）：`analyze.mjs` MODULES_OK、`build.sh`、`check.mjs`、`check-apex-full` 都過。
+
+### L1 ✅ H1：apex.source.gs 29 把槍的完整頁面（2026-10-28）
+- 輸出：`docs/research/apex/source-gs-s30/<slug>.html`（原始頁面，29 個）＋ `<slug>.md`（`<main>` 逐行轉文字：標題、每個欄位和值，照網頁順序；29 個），共 6.4 MB。
+- 工具：`tools/fetch-source-gs.py`（每頁間隔 3 秒；`--md-only` 只重轉）。
+- 驗證：29／29；`r-301-carbine.md` 有 15（傷害）、810（RPM）、737（m/s 初速）。
+- 頁面內容：傷害（身／頭／腿＋倍率、爆頭距離上限）、射速、彈匣與各級擴容、換彈（一般／空彈匣）、拔槍／收槍／舉槍／放下、開鏡／離鏡時間、開鏡 FOV、開鏡移速、彈道（初速、阻力、重力倍率、歸零距離、壽命）、腰射散布（站／蹲／空中）、開鏡散布、後座倍率（垂直／水平）、每個配件各級數值。
+- 注意：頁尾寫 `build 11630615 · updated 2026-10-07`，頁面上沒寫賽季編號；是不是 S30.1 要雲端對照。後座只有「倍率」，沒有逐發後座圖案。
