@@ -1,21 +1,15 @@
 # 雲端 ↔ 本機 工作交接
 
 > 雲端 session 做不到的事寫在「待本機」；本機 Claude Code 做完後移到「本機已完成」，並寫明輸出路徑。
-> 本機只 push 到 `local/assets` 分支，雲端每輪會把它合進 `claude/intelligent-einstein-vgvrqy`。
+> 10-28 起只剩本機一個視窗（見下）；以下 H 項目由它做。
 > 狀態：⬜ 未開始 · 🔄 進行中 · ✅ 完成 · ⏸ 需要使用者本人
 
-## 誰在做什麼（每個 Claude Code 開工前先看、開工時更新自己那一行）
+## 目前只有一個 Claude Code（使用者 10-28 決定）
 
-| 視窗 | 在哪裡跑 | 分支／資料夾 | 負責 | 目前在做 |
-|---|---|---|---|---|
-| 雲端 | claude.ai 雲端（每小時整點 20 分醒來） | `claude/intelligent-einstein-vgvrqy` | 遊戲程式 `src/`、工具、文件、合併 | （每輪更新） |
-| 本機 A（loop） | 使用者電腦，原本的專案資料夾 | `local/assets` | 「待本機」的 H 項目：D 槽 SF2／Apex 匯出、真實顯卡、網頁抓取 | |
-| 本機 B（使用者直接下指令） | 使用者電腦，**另一個資料夾**（`git worktree add ../sf2-user local/user`） | `local/user` | 使用者當下要求的事 || ✅ SF2 新槍（`local/user`）：G36C EOTech 消音（魔術迴路＝`G36C_EOTech_Silencer_ButterflyFX`，先不做烤漆）、HK417 mod2A Reflex 消音、SCAR-L MK2 EOTech 消音、K14（衝擊波）。改：`src/01_core.js`（武器資料、SF2_WEAPONS、BOT_POOLS、BLURBS）、`src/09_models.js`（fromRig 準心、備用槍模）、`src/09c_sf2rig.js`（DOT 標記）、`tools/sf2_rig_build.mjs`、`tools/sf2_weapon_table.py`、`tools/sfx_sf2.mjs`、`assets/guns/guns.js`、`assets/sfx_sf2.js`、`tools/guns/{g36c_eo,hk417_rs,scarl_eo,k14}_sf2_rig.glb` |
-
-- **兩個本機視窗不能共用同一個資料夾**：同時改同一個工作目錄會互相蓋掉檔案、`git` 也會衝突。本機 B 用 `git worktree` 開自己的資料夾和分支。
-- 同一個檔案（尤其 `src/` 的同一個模組）同時只能一個視窗改；要改之前在上表「目前在做」寫下檔名。
-- 本機 B 做完一件事就推 `local/user`；雲端每輪會把 `local/assets` 和 `local/user` 都合進雲端分支。合進 `master` 只在使用者明確說要的時候。
-- 版本號：雲端用 `v63k` 之後的編號；本機 A／B 在 CHANGELOG 用「（本機）」標題、不佔編號，雲端合併時補上。
+- **只用本機一個 Claude Code**：原本的專案資料夾（`Desktop/Online Game`），分支 `local/assets`；要更新朋友玩的版本時合併進 `master` 再推。雲端 session 和第二個本機視窗（`local/user`、`../sf2-user`）停用。
+- 2026-10-28 合併：雲端分支（到 `57d02d6`）和 `local/user`（到 `e4adbfe`）都已合進 `local/assets`，19 張地圖 `check.mjs` 全 PASS、`_nettest`、`_fileplay` 通過。
+- 下面「待本機」的 H 項目照舊是待辦，由這一個視窗依使用者指定的順序做。
+- 之後若要再開雲端：一次交代一批不需要 D 槽和顯卡的純程式工作，做完就關；開之前先把這段改回分工表。
 
 ## 待本機（雲端寫，本機做）
 
