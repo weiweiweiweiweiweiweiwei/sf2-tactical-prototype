@@ -650,11 +650,12 @@ class Match {
 
   /* ------------------------------ weapon drops / pickups ------------------------------ */
   static isGun(def) { return !!def && !!def.mag && def.kind !== 'knife' && def.kind !== 'grenade'; }
-  // A dropped gun: physics body (it tumbles and settles), low-poly mesh, pulsing ground glow; remembers its ammo.
+  // A dropped gun: physics body (it tumbles and settles), the detailed model (v64d), pulsing ground glow; remembers its ammo.
   dropWeapon(def, ammo, reserve, pos, vel, netId = 0) {
     if (!Match.isGun(def) || !this.opts.pickup) return null; // room option: no weapon drops / pickups
-    const holder = new THREE.Group(), gun = new THREE.Mesh(this.app.models.tp(def.model), this.app.soldiers.gunMat);
-    gun.scale.setScalar(1.25); gun.castShadow = true; holder.add(gun);
+    const holder = new THREE.Group(); let gun; // v64d the detailed first-person model (no arms), real size; the low-poly one if it cannot be built
+    try { gun = this.app.models.dropModel(def); } catch (e) { gun = new THREE.Mesh(this.app.models.tp(def.model), this.app.soldiers.gunMat); gun.scale.setScalar(1.25); gun.castShadow = true; }
+    holder.add(gun);
     const len = ((WEAPON_DATABASE[def.id] && WEAPON_DATABASE[def.id].tp && WEAPON_DATABASE[def.id].tp.len) || (def.kind === 'pistol' ? 0.22 : 0.9)) * 0.62;
     const dyn = this.physics.addDynamic({ mesh: holder, mass: 3, shape: new CANNON.Box(new CANNON.Vec3(0.035, 0.06, Math.max(0.08, len / 2))), position: pos, velocity: vel,
       angularVelocity: { x: rand(-2, 2), y: rand(-6, 6), z: rand(-4, 4) }, linearDamping: 0.08, angularDamping: 0.45, life: 999, manual: true });

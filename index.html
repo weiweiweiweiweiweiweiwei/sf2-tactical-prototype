@@ -15799,7 +15799,6 @@ var GunMats = class {
 };
 var GUN_MODELS = {};
 var GUN_RIGS = {};
-var GUN_3RD = {};
 var RIG_EYE = { m16a3: 0.055, qbz97: 0.06, g36c_eo: 0.15, hk417_rs: 0.15, scarl_eo: 0.15 };
 var RIG_RETICLE = { g36c_eo: [0.093, 82], hk417_rs: [0.06, 32], scarl_eo: [0.093, 82] };
 var GLB_RELOAD_POSE = { roll: -0.5, pitch: 0.32, drop: -0.09, shift: 0.08 };
@@ -15823,11 +15822,6 @@ function loadGunModels() {
         const bin = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0)).buffer, gltf = await L.parseAsync(bin, ""), parts = [], marks = {};
         if (gltf.animations.length) {
           GUN_RIGS[id] = gltf;
-          continue;
-        }
-        if (id.endsWith("_3rd")) {
-          const wid = id.slice(0, -4), d = WEAPON_DATABASE[wid];
-          GUN_3RD[d && d.model || wid] = gltf.scene;
           continue;
         }
         gltf.scene.updateMatrixWorld(true);
@@ -16005,6 +15999,41 @@ var WeaponModels = class {
     if (def.kind !== "grenade" && def.kind !== "knife" && !vm.rig) this._fitAds(vm, def);
     if (def.modelUrl) this.attachGLTF(vm, def.modelUrl);
     return vm;
+  }
+  // v64d a dropped gun (user 10-28: what lies on the floor must be recognisable — it is picked up by sight): the first-person model
+  // without arms, frozen into plain meshes once per gun (a skinned rig is baked at its pose; geometry shared by every drop),
+  // centred, muzzle toward −Z, real size. Cheap to clone: a drop is a few static meshes, no skeleton.
+  dropModel(def) {
+    const key = def.sf2Rig || def.model || def.id, c = (this.dropCache || (this.dropCache = /* @__PURE__ */ new Map())).get(key);
+    if (c) return c.clone();
+    const vm = this.build(def), g = vm.group, out = new THREE.Group(), v = new THREE.Vector3(), inv = new THREE.Matrix4();
+    g.position.set(0, 0, 0);
+    g.rotation.set(0, 0, 0);
+    g.updateMatrixWorld(true);
+    inv.copy(g.matrixWorld).invert();
+    g.traverse((o) => {
+      if (!o.isMesh || !o.visible || this.isArm(o) || !o.geometry.attributes.position) return;
+      const src = o.geometry, geo = new THREE.BufferGeometry(), P = src.attributes.position, pos = new Float32Array(P.count * 3), M = new THREE.Matrix4().multiplyMatrices(inv, o.matrixWorld);
+      for (let i = 0; i < P.count; i++) {
+        v.fromBufferAttribute(P, i);
+        if (o.isSkinnedMesh) o.applyBoneTransform(i, v);
+        v.applyMatrix4(M);
+        pos.set([v.x, v.y, v.z], i * 3);
+      }
+      geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+      if (src.index) geo.setIndex(src.index);
+      for (const k of ["uv", "tangent"]) if (src.attributes[k]) geo.setAttribute(k, src.attributes[k]);
+      for (const gr of src.groups) geo.addGroup(gr.start, gr.count, gr.materialIndex);
+      geo.computeVertexNormals();
+      const m = new THREE.Mesh(geo, o.material);
+      m.castShadow = true;
+      out.add(m);
+    });
+    const box = new THREE.Box3().setFromObject(out), ctr = box.getCenter(new THREE.Vector3());
+    for (const m of out.children) m.geometry.translate(-ctr.x, -ctr.y, -ctr.z);
+    this.dropCache.set(key, out);
+    if (vm.rig && vm.rig.mixer) vm.rig.mixer.stopAllAction();
+    return out.clone();
   }
   // v16 ADS eye relief: push the ADS pose forward until nothing that lands in the middle of the view is closer than
   // 13 cm (iron sights), 9 cm (red dot / holo) or 30 cm (pistols, held at arm's length). Otherwise the receiver or
@@ -17021,20 +17050,6 @@ var SoldierFactory = class {
   }
   setWeapon(s, id) {
     if (s.gun) s.gunHolder.remove(s.gun);
-    const g3 = GUN_3RD[id];
-    if (g3) {
-      s.gun = g3.clone(true);
-      s.gun.rotation.y = Math.PI / 2;
-      const bore = g3.getObjectByName("MUZZLE").position, rear = g3.getObjectByName("SCOPE").position.x;
-      s.gun.position.set(0, 0.01 - bore.y, 0.02 - rear);
-      s.gun.traverse((o) => {
-        if (o.isMesh) o.castShadow = true;
-      });
-      s.gunHolder.add(s.gun);
-      s.muzzle.position.set(0, 0.01, -(bore.x - rear) + 0.02);
-      s.gunHolder.position.set(0.06, -0.1, -0.32);
-      return;
-    }
     s.gun = new THREE.Mesh(this.wm.tp(id), this.gunMat);
     s.gun.castShadow = true;
     s.gunHolder.add(s.gun);
@@ -24654,12 +24669,18 @@ var Match = class _Match {
   static isGun(def) {
     return !!def && !!def.mag && def.kind !== "knife" && def.kind !== "grenade";
   }
-  // A dropped gun: physics body (it tumbles and settles), low-poly mesh, pulsing ground glow; remembers its ammo.
+  // A dropped gun: physics body (it tumbles and settles), the detailed model (v64d), pulsing ground glow; remembers its ammo.
   dropWeapon(def, ammo, reserve, pos, vel, netId = 0) {
     if (!_Match.isGun(def) || !this.opts.pickup) return null;
-    const holder = new THREE.Group(), gun = new THREE.Mesh(this.app.models.tp(def.model), this.app.soldiers.gunMat);
-    gun.scale.setScalar(1.25);
-    gun.castShadow = true;
+    const holder = new THREE.Group();
+    let gun;
+    try {
+      gun = this.app.models.dropModel(def);
+    } catch (e) {
+      gun = new THREE.Mesh(this.app.models.tp(def.model), this.app.soldiers.gunMat);
+      gun.scale.setScalar(1.25);
+      gun.castShadow = true;
+    }
     holder.add(gun);
     const len = (WEAPON_DATABASE[def.id] && WEAPON_DATABASE[def.id].tp && WEAPON_DATABASE[def.id].tp.len || (def.kind === "pistol" ? 0.22 : 0.9)) * 0.62;
     const dyn = this.physics.addDynamic({
