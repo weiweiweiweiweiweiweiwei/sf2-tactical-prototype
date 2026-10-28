@@ -2935,6 +2935,8 @@ function compileWeapon(id, s) {
 }
 __name(compileWeapon, "compileWeapon");
 var SF2_WEAPONS = {
+  m16a3: { "fireRate": 0.098, "reloadTime": 2.3, "equipTime": 0.8, "adsSpeed": 12, "adsFov": 55, "adsType": "3d_sight", "vmHFov": 60, "vmAdsHFov": 35, "sf2Rig": "m16a3", "sf2": "m16a3", "sf2ZoomIn": [2, 0, -0.89], "sf2ZoomOut": [0, 0, 0], "sf2ReloadSounds": [[0.07, "magout"], [0.35, "magin"], [0.72, "charge"]], "sf2Recoil": { "nextCrossVert": 1.7, "maxCrossVert": 15, "vertInc": 7e3, "vertDec": 11, "crossDecreasInc": 9, "incline": 0.15, "forceCorrection": 50, "domDefault": 0.08, "domZoomDefault": 0, "domInc": 0.1, "domMax": 1.3, "domMin": 0.1, "domDec": 6, "maxMovingValue": 0.7, "mulValueRun": 0.8, "mulValueJump": 6, "zoomMod": 0.6, "crouchMod": 0.9 } },
+  // SFCWeaponM16A3
   k2: { "fireRate": 0.1, "reloadTime": 2.2, "equipTime": 0.75, "adsSpeed": 12, "adsFov": 55, "adsType": "3d_sight", "vmHFov": 60, "vmAdsHFov": 35, "sf2Rig": "k2", "sf2": "k2", "sf2ZoomIn": [0, -0.01, -0.17], "sf2ZoomOut": [0, 0, 0], "sf2ReloadSounds": [[0.12, "magout"], [0.35, "magin"], [0.75, "charge"]], "sf2Recoil": { "nextCrossVert": 0.6, "maxCrossVert": 7, "vertInc": 15e3, "vertDec": 13, "crossDecreasInc": 15, "incline": 0.05, "forceCorrection": 50, "domDefault": 0.28, "domZoomDefault": 0, "domInc": 0.3, "domMax": 1, "domMin": 0, "domDec": 1.25, "maxMovingValue": 0.8, "mulValueRun": 0.4, "mulValueJump": 6, "zoomMod": 0.8, "crouchMod": 0.9 } },
   // SFCWeaponK2
   scarl: { "fireRate": 0.107, "reloadTime": 2.35, "equipTime": 0.9, "adsSpeed": 12, "adsFov": 55, "adsType": "3d_sight", "vmHFov": 60, "vmAdsHFov": 35, "sf2Rig": "scarl", "sf2": "scarh", "sf2ZoomIn": [0, -0.01, -0.2], "sf2ZoomOut": [-1, 0, 0], "sf2ReloadSounds": [[0.12, "magout"], [0.44, "magin"], [0.72, "charge"]], "sf2Recoil": { "nextCrossVert": 2.1, "maxCrossVert": 15, "vertInc": 15e3, "vertDec": 12, "crossDecreasInc": 9, "incline": 0.35, "forceCorrection": 50, "domDefault": 0.15, "domZoomDefault": 0, "domInc": 0.22, "domMax": 2.4, "domMin": 0.1, "domDec": 2, "maxMovingValue": 0.7, "mulValueRun": 0.7, "mulValueJump": 6, "zoomMod": 0.99, "crouchMod": 0.85 } },
@@ -16095,8 +16097,9 @@ var WeaponModels = class {
     return this.fromRig("g36c_sf2_rig", this._rigOpts(def)) || this.g36c(def);
   }
   _rigOpts(def) {
-    return def ? { equipTime: def.equipTime, zoomIn: def.sf2ZoomIn, zoomOut: def.sf2ZoomOut, reloadSounds: def.sf2ReloadSounds || void 0 } : {};
+    return def ? { equipTime: def.equipTime, zoomIn: def.sf2ZoomIn, zoomOut: def.sf2ZoomOut, reloadSounds: def.sf2ReloadSounds || void 0, eyeRelief: def.sf2Rig === "m16a3" ? 0.055 : void 0 } : {};
   }
+  // (v62z the M16A3 carries the M4A1's handle: the same 5.5 cm behind it, see m4())
   m4(def) {
     return this.fromRig("m4a1_sf2_rig", Object.assign(this._rigOpts(def), { reloadSounds: void 0, eyeRelief: 0.055 })) || this.fromGLB("m4a1_sf2", { eye: 0.03, eyeRelief: 0.025, reticle: "tritium", reticleScale: 0.22 }) || this.fromGLB("m4a1", { eye: 0.2, eyeRelief: 0.03 }) || this.m4Proc();
   }

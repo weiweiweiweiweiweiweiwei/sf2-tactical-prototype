@@ -2,7 +2,7 @@
 // node tools/guns/pack.mjs
 import fs from 'node:fs'; import path from 'node:path';
 // v62h m4a1_sf2.glb (the static v61 M4A1) stays out: the animated m4a1_sf2_rig.glb replaced it and both need the same loader
-const SKIP = new Set(['m4a1_sf2.glb', 'm16a3_sf2_rig.glb', 'qbz97_sf2_rig.glb']); // (v62i M16A3 / QBZ-97 rigs built but not in use yet: their sight lines are not found)
+const SKIP = new Set(['m4a1_sf2.glb', 'qbz97_sf2_rig.glb', 'm4a1_3rd.glb', 'apex_r301.glb']); // (v62i the QBZ-97 rig: its sight line is not found yet; v62z (loop) the M16A3's is in, the 3rd-person M4A1 and the Apex R-301 are built but not wired into the game yet)
 const dir = 'tools/guns', out = 'assets/guns/guns.js', files = fs.readdirSync(dir).filter((f) => f.endsWith('.glb') && !SKIP.has(f));
 let js = '/* Blender gun models — built by tools/blender/<gun>_build.py. <id>.glb: original work, CC0; <id>_sf2.glb: Special Force 2 originals from the user install (tools/blender/sf2_gun_build.py). */\nwindow.GUN_GLB = window.GUN_GLB || {};\n';
 for (const f of files) js += `window.GUN_GLB['${path.basename(f, '.glb')}'] = '${fs.readFileSync(path.join(dir, f)).toString('base64')}';\n`;

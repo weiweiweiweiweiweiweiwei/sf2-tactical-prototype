@@ -7,16 +7,7 @@
 ## 待本機（雲端寫，本機做）
 
 ### H3 🔄 SF2 原版素材（`D:\SpecialForce2`，UModel；流程見 `docs/pipelines/guns.md`「SF2 原版槍＋原版動畫」）
-- M16A3：找平頂機匣的照門或瞄具零件（不在類別預設裡，搜尋 `weapon_common_part*`、`rif_m16a3*` 的全部零件）。找到後照第 7 步加進 `tools/sf2_rig_build.mjs`，再取消 `tools/sf2_weapon_table.py` 裡 m16a3 那行的註解。
-  - 🔄 本機 2026-10-28 調查（還沒做完，下一輪接著）：
-    - SF2 預設 M16A3（`wp_ar_m16a3`）只有槍管／機匣／彈匣／槍托四個零件；類別預設 `SightOnMesh = rif_m16a3_sight_up`（`SightBaseSocketName = Sight`），**沒有照門**。這個前準星是矮的折疊式（高 1.9 cm，頂端 1.183 m；機匣導軌頂 1.168 m、膛線 1.144 m）。
-    - 可用的照門零件（`wp_common_part` 的配件）：`Common_M4_Handle`（零件 `Handle` → `weapon_common_part` 的 `dot_handle`，單骨頭 `weapon_scope`）、`common_m4a1_rearsight`（`rearsight_a` → `rif_m4a1_rearsight`）。兩者掛在機匣 `Scope` 插槽時覘孔高 1.2004 m，**比 SF2 自己的前準星頂端高 33 mm**——搭不起來。
-    - `dot_handle` 用 `handle_d` 貼圖會變成灰白色（UV 不是這張），而且後端最高點是提把橫桿、不是覘孔片，不能照 M4A1 的 PEEP_DROP 算。
-    - 改用 M4A1 自己的提把 `rif_m4a1_handle_a`＋A2 前準星（`railSights`，和 M4A1 一樣）：零件放得上，但 `V.handle` 的點是 **M4A1 綁定姿勢**的座標（OWNBIND），算出的 SIGHT 和 M4A1 完全一樣，開鏡錯位；要先把提把的點用 M16A3 的 `weapon_root` 綁定矩陣換算過去才行。
-    - 這輪已全部還原（M16A3 仍是舊槍模），`sf2_weapon_table.py` 的 m16a3 仍註解。
-- QBZ-97：提把上的瞄準線（現在眼睛落在照門本體上），對照 `.props.txt` 的插槽。
-  - 🔄 本機 2026-10-28：暫時打開 qbz97 量開鏡（白底、世界隱藏，`tools/out/_ringcenter.mjs`＋`_ringmeasure.py`）：眼睛在一個大圓孔正中（偏 0／−9.5 px，孔寬 473 px @1080p），**但孔裡看不到前準星**。QBZ-97 的照門和前準星都在提把上，`POST` 現在是找「槍管中線前 25 cm 的最高點」（`hoodedPost`），可能抓到槍管上的點而不是提把前端的準星，眼睛高度就錯了。下一步：從側面分析提把前後兩端（前準星尖、覘孔中心）的高度，給 qbz97 自己的 SIGHT／POST。已還原（仍是舊槍模）。
-  - 本機機匣高度剖面（`tools/out/_qbzprofile.mjs`，綁定空間、公尺，+Z 往槍口）：照門在 z 0.20–0.24（頂 1.194，中線頂 1.1937）；前準星在 z 0.32–0.38，兩側護耳 1.177、中線（準星尖）約 **1.148 @ z 0.355**——剛好在「槍管前 25 cm」搜尋範圍的邊緣，加上 `hoodedPost` 往下跳，POST 可能落在更低的點。下一步：qbz97 改成手動指定 POST（z 0.355 的中線最高點）並由 POST 往後量照門孔中心，再用白底量測驗證。
+- ✅ M16A3（本機 2026-10-28，見「本機已完成」L7）。
 - ✅ MP5K（本機 2026-10-28，見「本機已完成」L3）。
 - ✅ M4A1 第三人稱槍模（本機 2026-10-28，見「本機已完成」L4；接到 Bot 手上留給雲端）。
 - 驗證：`node tools/check.mjs`、`node tools/_gunshot.mjs`（開鏡截圖存進 `docs/testing/shots/`）。
@@ -88,3 +79,10 @@
 - Intel UHD：全過，平均 52–58 fps，但 warehouse、desert、harbor、office、ridge、satellite、ryokan 的 p95 ≈ 33 ms（常掉 30 fps），ryokan p99 49.8 ms 最差。
 - GTX 不鎖幀：平均 206–429 fps；snow、dam 有週期性尖峰（p95 27.8／23.3 ms）。
 - 注意：`--map all` 不含天空城、兩張 Apex 地圖。
+
+### L7 ✅ H3 的 M16A3：SF2 原版槍＋照門（2026-10-28）
+- 原因（兩個）：①SF2 的 M16A3 類別只裝矮的折疊前準星（`rif_m16a3_sight_up`，高 1.9 cm），**沒有照門**；任何照門的覘孔都比它高 33 mm。②**`tools/guns/pack.mjs` 的 `SKIP` 一直把 `m16a3_sf2_rig.glb` 排除**，所以先前所有 M16A3 開鏡測試看的其實是舊槍模。
+- 做法：M16A3 用 M4A1 那組——M4A1 的提把 `rif_m4a1_handle_a`（同一款 AR-15 上機匣，`handle_d` 貼圖）＋ A2 前準星放在瞄準線上（`railSights`，真的 M16A3 也是這組）。眼睛在提把後 5.5 cm（和 M4A1 一樣）。
+- 修了一個通用問題：有自己綁定姿勢的零件（OWNBIND），`addPart` 回傳的點原本是**零件自己的**綁定座標；現在用每根骨頭的 inv(機匣 IBM) × 零件 IBM 換到機匣的綁定空間（`toBody`，新的 `inv4`）。M4A1 的提把也是 OWNBIND（差 1.3 mm），`PEEP_DX` 0.00136 → 0.00006 抵銷，M4A1 的 SIGHT 不變（rig 沒重打包）。
+- 改到的檔：`tools/sf2_rig_build.mjs`（m16a3 設定、`toBody`／`inv4`、`PEEP_DX`）、`tools/sf2_weapon_table.py`（m16a3 打開）、**`src/01_core.js`**（`SF2_WEAPONS` 重新產生，多 m16a3）、**`src/09_models.js`**（`_rigOpts`：m16a3 的 `eyeRelief` 0.055）、`tools/guns/pack.mjs`（`SKIP`：拿掉 m16a3，加上還沒接進遊戲的 `m4a1_3rd.glb`、`apex_r301.glb`；qbz97 仍跳過）、`tools/guns/m16a3_sf2_rig.glb`、`assets/guns/guns.js`。
+- 驗證：白底量測覘孔中心差 1.4／−0.5 px（1080p），孔寬 268 px（和 M4A1 一樣）；`check.mjs`、`analyze.mjs` 過；開鏡連射鏡頭上飄 3.35°；截圖 `docs/testing/shots/m16a3_ads.jpg`、`m16a3_hip.jpg`。

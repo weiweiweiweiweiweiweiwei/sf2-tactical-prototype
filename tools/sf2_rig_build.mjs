@@ -37,7 +37,11 @@ const G = {
   ak103: gun('ak103'), // iron sights on the body
   g36c: gun('g36c', { hoodedPost: true, socketSights: sight('g36c/rif_g36c/SkeletalMesh3/rif_g36c_sight_up.gltf', 'g36c_frontsight') }),
   // v62i the rifle batch
-  m16a3: gun('m16a3', { socketSights: sight('m16a3/rif_m16a3/SkeletalMesh3/rif_m16a3_sight_up.gltf', 'm16a3_sight') }),
+  // v62z (loop H3) SF2's M16A3 class mounts only a low flip-up front sight (rif_m16a3_sight_up, 1.9 cm tall) and no rear sight;
+  // every rear sight's peep stands 33 mm over that post. It takes the M4A1's set: its carry handle (the same AR-15 upper, the handle_d
+  // sheet; its own bind pose, brought into the M16A3's by toBody) and the A2 front sight on the line — a real M16A3's
+  m16a3: gun('m16a3', { extraParts: [['handle', 'm4a1/rif_m4a1/SkeletalMesh3/rif_m4a1_handle_a.gltf', 'm4a1_handle']],
+    railSights: { sight: ['m4a1/rif_m4a1_sight/SkeletalMesh3/rif_m4a1_sight_up.gltf', 'm4a1_sight'], rear: 'handle' } }),
   k2: gun('k2', { hoodedPost: true, pkg: 'rif_K2', stem: 'rif_k2', anim: '1st_anim_K2' }), // (no SightOnMesh: its sights are on the body)
   scarl: gun('scarl', { hoodedPost: true, pkg: 'rif_scar_L', tex: 'scar_L', anim: '1st_anim_scar_L', socketSights: sight('scarl/rif_scar-h_sight/SkeletalMesh3/rif_scar-h_sight_up.gltf', 'scar-h_sight') }),
   scarh: gun('scarh', { hoodedPost: true, pkg: 'rif_scar-h', tex: 'scar-h', anim: '1st_anim_scar-h', socketSights: sight('scarh/rif_scar-h_sight/SkeletalMesh3/rif_scar-h_sight_up.gltf', 'scar-h_sight') }),
@@ -59,7 +63,7 @@ const PNG = {}; // every exported texture of this gun by file name
 (function walk(d) { for (const f of fs.readdirSync(d, { withFileTypes: true })) { const q = `${d}/${f.name}`; if (f.isDirectory()) walk(q); else if (f.name.endsWith('.png')) PNG[f.name.toLowerCase()] ??= q.slice(SRC.length, -4).replace(/_[dns]$/, ''); } })(SRC + GID);
 const texDirs = (stem) => TEX[stem] || [PNG[`${stem}_d.png`.toLowerCase()] || `${GID}/missing/${stem}`];
 const ROUGH = { barrel: 0.78, stock: 0.8, magazine: 0.72, sight: 0.66, body: 0.68, sleeve: 0.9, glove: 0.82 }; // matte, dielectric (as sf2_gun_build.py)
-const PEEP_DROP = +(process.env.PEEP_DROP ?? 0.0048), PEEP_DX = +(process.env.PEEP_DX ?? 0.00136); // v62p 0.0007 → 0.00136 on the carry handle: its hole was 26 px left of the dot at 1920×1080 (user 10-27); measured by tools/out/_ringcenter.mjs + _ringmeasure.py, now 0.2 px // the rear sight's aperture under its top / off its top's mean x (tuned on ADS shots, v61b)
+const PEEP_DROP = +(process.env.PEEP_DROP ?? 0.0048), PEEP_DX = +(process.env.PEEP_DX ?? 0.00006); // v62p 0.0007 → 0.00136 on the carry handle: its hole was 26 px left of the dot at 1920×1080 (user 10-27); measured by tools/out/_ringcenter.mjs + _ringmeasure.py, now 0.2 px. v62z 0.00136 → 0.00006: the handle's points now come in the body's bind space (toBody), 1.3 mm over — the same SIGHT as before // the rear sight's aperture under its top / off its top's mean x (tuned on ADS shots, v61b)
 // v62f the flip-up front sight sits this far behind the rail's front end (its socket is not exported): measured on the user's SF2 ADS
 // screenshot (10-27) — with the peep ring matched (267 px at 1080p), the front sight's ears were 73 px there and 59 px here, i.e.
 // SF2's post is 21.6 cm ahead of the peep, not 28.2
@@ -77,6 +81,26 @@ const meshNode0 = root.listNodes().find((n) => n.getMesh()), scene = root.listSc
 
 // ---- small maths (column-major 4×4 like glTF)
 const mul = (a, b) => { const o = new Array(16); for (let c = 0; c < 4; c++) for (let r = 0; r < 4; r++) o[c * 4 + r] = a[r] * b[c * 4] + a[4 + r] * b[c * 4 + 1] + a[8 + r] * b[c * 4 + 2] + a[12 + r] * b[c * 4 + 3]; return o; };
+const inv4 = (m) => { // a general 4×4 inverse (column-major)
+  const a = m, o = new Array(16);
+  o[0] = a[5]*a[10]*a[15]-a[5]*a[11]*a[14]-a[9]*a[6]*a[15]+a[9]*a[7]*a[14]+a[13]*a[6]*a[11]-a[13]*a[7]*a[10];
+  o[4] = -a[4]*a[10]*a[15]+a[4]*a[11]*a[14]+a[8]*a[6]*a[15]-a[8]*a[7]*a[14]-a[12]*a[6]*a[11]+a[12]*a[7]*a[10];
+  o[8] = a[4]*a[9]*a[15]-a[4]*a[11]*a[13]-a[8]*a[5]*a[15]+a[8]*a[7]*a[13]+a[12]*a[5]*a[11]-a[12]*a[7]*a[9];
+  o[12] = -a[4]*a[9]*a[14]+a[4]*a[10]*a[13]+a[8]*a[5]*a[14]-a[8]*a[6]*a[13]-a[12]*a[5]*a[10]+a[12]*a[6]*a[9];
+  o[1] = -a[1]*a[10]*a[15]+a[1]*a[11]*a[14]+a[9]*a[2]*a[15]-a[9]*a[3]*a[14]-a[13]*a[2]*a[11]+a[13]*a[3]*a[10];
+  o[5] = a[0]*a[10]*a[15]-a[0]*a[11]*a[14]-a[8]*a[2]*a[15]+a[8]*a[3]*a[14]+a[12]*a[2]*a[11]-a[12]*a[3]*a[10];
+  o[9] = -a[0]*a[9]*a[15]+a[0]*a[11]*a[13]+a[8]*a[1]*a[15]-a[8]*a[3]*a[13]-a[12]*a[1]*a[11]+a[12]*a[3]*a[9];
+  o[13] = a[0]*a[9]*a[14]-a[0]*a[10]*a[13]-a[8]*a[1]*a[14]+a[8]*a[2]*a[13]+a[12]*a[1]*a[10]-a[12]*a[2]*a[9];
+  o[2] = a[1]*a[6]*a[15]-a[1]*a[7]*a[14]-a[5]*a[2]*a[15]+a[5]*a[3]*a[14]+a[13]*a[2]*a[7]-a[13]*a[3]*a[6];
+  o[6] = -a[0]*a[6]*a[15]+a[0]*a[7]*a[14]+a[4]*a[2]*a[15]-a[4]*a[3]*a[14]-a[12]*a[2]*a[7]+a[12]*a[3]*a[6];
+  o[10] = a[0]*a[5]*a[15]-a[0]*a[7]*a[13]-a[4]*a[1]*a[15]+a[4]*a[3]*a[13]+a[12]*a[1]*a[7]-a[12]*a[3]*a[5];
+  o[14] = -a[0]*a[5]*a[14]+a[0]*a[6]*a[13]+a[4]*a[1]*a[14]-a[4]*a[2]*a[13]-a[12]*a[1]*a[6]+a[12]*a[2]*a[5];
+  o[3] = -a[1]*a[6]*a[11]+a[1]*a[7]*a[10]+a[5]*a[2]*a[11]-a[5]*a[3]*a[10]-a[9]*a[2]*a[7]+a[9]*a[3]*a[6];
+  o[7] = a[0]*a[6]*a[11]-a[0]*a[7]*a[10]-a[4]*a[2]*a[11]+a[4]*a[3]*a[10]+a[8]*a[2]*a[7]-a[8]*a[3]*a[6];
+  o[11] = -a[0]*a[5]*a[11]+a[0]*a[7]*a[9]+a[4]*a[1]*a[11]-a[4]*a[3]*a[9]-a[8]*a[1]*a[7]+a[8]*a[3]*a[5];
+  o[15] = a[0]*a[5]*a[10]-a[0]*a[6]*a[9]-a[4]*a[1]*a[10]+a[4]*a[2]*a[9]+a[8]*a[1]*a[6]-a[8]*a[2]*a[5];
+  const det = a[0]*o[0]+a[1]*o[4]+a[2]*o[8]+a[3]*o[12]; return o.map((x) => x / det);
+};
 const xf = (m, v, w = 1) => [0, 1, 2].map((r) => m[r] * v[0] + m[4 + r] * v[1] + m[8 + r] * v[2] + m[12 + r] * w);
 const norm = (v) => { const l = Math.hypot(...v) || 1; return v.map((x) => x / l); };
 
@@ -103,21 +127,26 @@ async function addPart(name, file, stem, bake = null) {
   // v62i each part keeps its OWN bind pose (as UE3 does: the bones are shared, each mesh its own reference pose): its own skin over
   // the body's joints with its inverse-bind matrices (the body's for bones it lacks). AK-103 / SCAR stocks have weapon_stock
   // turned 90° against the body's, the G36C's arms a whole other bind — read through the body's, the stock swung a metre off.
-  let partSkin = skin;
+  let partSkin = skin, toBody = null; // toBody[j]: this part's bind space → the body's, per joint (only when the binds differ)
   if (!bake) {
     const pibm = pskin.getInverseBindMatrices().getArray(), bibm = skin.getInverseBindMatrices().getArray(), byName = Object.fromEntries(pj.map((j, k) => [j.getName(), k]));
     const ib = new Float32Array(joints.length * 16); let differs = false;
     joints.forEach((j, i) => { const k = byName[j.getName()], m = k === undefined ? bibm.slice(i * 16, i * 16 + 16) : pibm.slice(k * 16, k * 16 + 16); ib.set(m, i * 16); if (k !== undefined && m.some((x, c) => Math.abs(x - bibm[i * 16 + c]) > 1e-4)) differs = true; });
-    if (differs) { partSkin = doc.createSkin(name + '_skin').setInverseBindMatrices(doc.createAccessor().setType('MAT4').setArray(ib).setBuffer(buf)); joints.forEach((j) => partSkin.addJoint(j)); console.log('OWNBIND', GID, name); }
+    if (differs) {
+      partSkin = doc.createSkin(name + '_skin').setInverseBindMatrices(doc.createAccessor().setType('MAT4').setArray(ib).setBuffer(buf)); joints.forEach((j) => partSkin.addJoint(j)); console.log('OWNBIND', GID, name);
+      // v62z the points this returns (sights, peep, rail fits) must be in the BODY's bind space: inv(body IBM) × part IBM per joint
+      toBody = joints.map((j, i) => mul(inv4(Array.from(bibm.slice(i * 16, i * 16 + 16))), Array.from(ib.slice(i * 16, i * 16 + 16))));
+    }
   }
   for (const p of pr.listMeshes()[0].listPrimitives()) {
     const P = p.getAttribute('POSITION'), N = p.getAttribute('NORMAL'), T = p.getAttribute('TANGENT'), UV = p.getAttribute('TEXCOORD_0'), J = p.getAttribute('JOINTS_0'), W = p.getAttribute('WEIGHTS_0'), n = P.getCount();
-    const pos = new Float32Array(n * 3), nor = new Float32Array(n * 3), tan = T ? new Float32Array(n * 4) : null, jo = new Uint16Array(n * 4), we = new Float32Array(n * 4), e = [], f = [];
+    const bp = toBody ? new Float32Array(n * 3) : null, pos = new Float32Array(n * 3), nor = new Float32Array(n * 3), tan = T ? new Float32Array(n * 4) : null, jo = new Uint16Array(n * 4), we = new Float32Array(n * 4), e = [], f = [];
     for (let i = 0; i < n; i++) {
       P.getElement(i, e); let v = e.slice(0, 3); N.getElement(i, f); let nn = f.slice(0, 3); let tt = null; if (T) { T.getElement(i, f); tt = f.slice(0, 4); }
       if (bake) { v = bake.p(v, i); nn = bake.n(nn); if (tt) tt = [...bake.n(tt.slice(0, 3)), tt[3]]; jo.set([jix.weapon_root, 0, 0, 0], i * 4); we.set([1, 0, 0, 0], i * 4); }
       else {
         J.getElement(i, e); jo.set(e.map((j) => remap[j] ?? 0), i * 4); W.getElement(i, e); we.set(e, i * 4);
+        if (bp) { const q = [0, 0, 0]; for (let k = 0; k < 4; k++) { const w = we[i * 4 + k]; if (w > 0) { const t = xf(toBody[jo[i * 4 + k]], v); q[0] += w * t[0]; q[1] += w * t[1]; q[2] += w * t[2]; } } bp.set(q, i * 3); }
       }
       pos.set(v, i * 3); nor.set(norm(nn), i * 3); if (tan) tan.set(tt, i * 4);
     }
@@ -126,7 +155,7 @@ async function addPart(name, file, stem, bake = null) {
       .setAttribute('POSITION', acc('VEC3', pos)).setAttribute('NORMAL', acc('VEC3', nor)).setAttribute('TEXCOORD_0', acc('VEC2', new Float32Array(UV.getArray())))
       .setAttribute('JOINTS_0', acc('VEC4', jo)).setAttribute('WEIGHTS_0', acc('VEC4', we));
     if (tan) prim.setAttribute('TANGENT', acc('VEC4', tan));
-    mesh.addPrimitive(prim); out.push(pos);
+    mesh.addPrimitive(prim); out.push(bp || pos);
   }
   scene.addChild(doc.createNode(name).setMesh(mesh).setSkin(partSkin));
   return out.flatMap((a) => Array.from({ length: a.length / 3 }, (_, i) => [a[i * 3], a[i * 3 + 1], a[i * 3 + 2]]));
