@@ -6,7 +6,7 @@
 ## 分支規則（最優先）
 - 只在 `claude/intelligent-einstein-vgvrqy` 開發和 push。
 - 不 push、merge、rebase 到 `master`（這個 repo 的 main），不開 PR，不開 auto-merge。
-- 每輪開始時，用 merge（不要 rebase）把 `origin/master` 和本機分支 `origin/local/assets` 合進來（遠端有這兩個分支、而且有新 commit 時才合）。解完衝突、驗證過再繼續。
+- 每輪開始時，用 merge（不要 rebase）把 `origin/master` 和本機分支 `origin/local/assets`、`origin/local/user` 合進來（遠端有這兩個分支、而且有新 commit 時才合）。解完衝突、驗證過再繼續。
 
 ## 每輪
 1. `git pull`，讀 `PROGRESS.md`、`docs/TODO.md`、`docs/DECISIONS.md`、`docs/loop/HANDOFF.md`、最近 10 筆 git log。
