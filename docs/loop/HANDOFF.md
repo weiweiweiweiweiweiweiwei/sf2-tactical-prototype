@@ -9,6 +9,12 @@
 ### H9 ✅ `master` 的推送是使用者同意的（2026-10-28）
 - 使用者請本機檢查雲端分支、問要不要合併進 master，選了「合併並推送」。不是推錯分支。以後一樣：本機 loop 自己不推 master；使用者明確要求時才推。
 
+### H10 ⬜ 最優先（使用者 10-28 指定）：SF2 狙擊槍和魔術迴路 G36C
+- 四把狙擊槍：AWP（`SFCWeaponAWP`）、CheyTac M200（`SFCWeaponCheyTac`）、M40A1（`SFCWeaponM40A1`）、CZ 700（`SFCWeaponCZ700`）。照 `docs/pipelines/guns.md`「加一把新槍」的流程，匯出槍模、動畫集（**特別確認有沒有拉栓片段**，列出全部片段名稱和格數）、槍聲（含拉栓聲）。成品照之前的命名：`tools/guns/<id>_sf2_rig.glb`，id 用遊戲裡已有的 `awp`、`cheytac_m200`、`m40a1`、`cz700`。
+- **狙擊鏡畫面**：找 SF2 開鏡時蓋滿螢幕的鏡圈和十字線貼圖（在 `weapon_common`、`UI`、`sniper` 相關的包裡；類別的 `ScopeMaterial`／`ZoomOverlay` 一類屬性會指向它），匯出成 PNG 放 `assets/sf2_scope/`，並記下每把槍用的是哪一張、放大倍率（`fZoomedFOV` 和第二段倍率）。
+- **魔術迴路 G36C**：在 `docs/research/sf2/client-data/weapons.json` 的 `SFCWeaponG36C_*` 和遊戲的中文／英文名稱表裡找出是哪一個（候選：`G36C_Phoenix`、`G36C_MK2`～`MK4`、`G36C_EOTech_Silencer_ButterflyFX`），寫在這裡；找到後匯出它的造型貼圖（槍模應該和 G36C 共用）。
+- 遊戲端（`src/`）留給雲端；做完一把就推一把，寫進「本機已完成」。
+
 ### H8 ⬜ 其他 SF2 原版槍的第三人稱槍模
 - v63f 遊戲端已經通用：`tools/guns/<weapon id>_3rd.glb`（UModel 座標＋`MUZZLE`／`SCOPE` 標記，和 `m4a1_3rd.glb` 一樣）打包進 `guns.js` 後，Bot 和其他玩家手上就會用它（`src/09_models.js` 的 `GUN_3RD`）。
 - 依序做：ak103、g36c、k2、scarl、scarh、famas、xm8、galil、hk417、mp5k、m16a3、qbz97（`node tools/sf2_3rd_build.mjs <id>`，再 `node tools/guns/pack.mjs`）。沒有 `_3rd` 零件的槍標 ⏸ 並寫原因。
