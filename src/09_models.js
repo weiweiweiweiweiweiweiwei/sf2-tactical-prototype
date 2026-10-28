@@ -54,6 +54,9 @@ class GunMats {
 /* v45 Blender gun models: assets/guns/guns.js sets window.GUN_GLB[id] = base64 GLB (file:// friendly). Meshes are named
    '<node>__<material>' in gun space; empties SIGHT / MUZZLE / MUZZLE_S mark the sight axis and the two muzzle ends. */
 const GUN_MODELS = {}, GUN_RIGS = {}; // v62 GUN_RIGS: animated first-person rigs (<id>_sf2_rig.glb, see SF2Rig)
+// v63f GUN_3RD: SF2's own third-person guns (<weapon id>_3rd.glb, tools/sf2_3rd_build.mjs), keyed by the weapon's model id; UModel
+// space (metres, Y up, muzzle +X) with MUZZLE / SCOPE / GRIP / STOCK marks
+const GUN_3RD = {};
 const RIG_EYE = { m16a3: 0.055, qbz97: 0.06 }; // v62z rigs whose eye sits this far behind their SIGHT mark (WeaponModels._rigOpts; others: as deep as the head bone)
 // v53 reload pose of the Blender guns: cant the other way (bottom toward the middle of the screen), swing in and lift, so the
 // magazine well and the left hand working it stay in view (the procedural guns keep RELOAD_POSE, which rolls them away)
@@ -69,6 +72,7 @@ function loadGunModels() {
       for (const [id, b64] of Object.entries(window.GUN_GLB || {})) {
         const bin = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0)).buffer, gltf = await L.parseAsync(bin, ''), parts = [], marks = {};
         if (gltf.animations.length) { GUN_RIGS[id] = gltf; continue; }
+        if (id.endsWith('_3rd')) { const wid = id.slice(0, -4), d = WEAPON_DATABASE[wid]; GUN_3RD[(d && d.model) || wid] = gltf.scene; continue; }
         gltf.scene.updateMatrixWorld(true);
         gltf.scene.traverse((o) => {
           if (o.isMesh) { const g = o.geometry.clone(); g.applyMatrix4(o.matrixWorld); const nm = o.name.split('__'); parts.push({ node: nm[0], mat: ((o.material && o.material.name) || '').replace('gun:', '') || (nm[1] || '').replace(/_\d+$/, ''), geo: g, material: o.material }); }
@@ -871,6 +875,14 @@ class SoldierFactory {
 
   setWeapon(s, id) {
     if (s.gun) s.gunHolder.remove(s.gun);
+    const g3 = GUN_3RD[id];
+    if (g3) { // v63f SF2's own model: muzzle +X → −Z, the bore 1 cm up and the receiver over the hand like the procedural guns
+      s.gun = g3.clone(true); s.gun.rotation.y = Math.PI / 2;
+      const bore = g3.getObjectByName('MUZZLE').position, rear = g3.getObjectByName('SCOPE').position.x;
+      s.gun.position.set(0, 0.01 - bore.y, 0.02 - rear); s.gun.traverse((o) => { if (o.isMesh) o.castShadow = true; });
+      s.gunHolder.add(s.gun); s.muzzle.position.set(0, 0.01, -(bore.x - rear) + 0.02);
+      s.gunHolder.position.set(0.06, -0.1, -0.32); return;
+    }
     s.gun = new THREE.Mesh(this.wm.tp(id), this.gunMat); s.gun.castShadow = true; s.gunHolder.add(s.gun);
     const spec = WEAPON_DATABASE[id] && WEAPON_DATABASE[id].tp;
     const len = spec ? spec.len * 0.72 : ({ m4: 0.42, g36c: 0.55, mp5: 0.34, m200: 0.85, p226: 0.12, deagle: 0.15, knife: 0.2, p90: 0.3, m870: 0.62, m249: 0.76 }[id] ?? 0.3);

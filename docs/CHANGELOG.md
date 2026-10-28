@@ -1172,3 +1172,9 @@
 - 使用者 10-28 選 6A：README 改成說明部分槍枝使用 SF2 原版素材（原本寫「沒有使用任何 SF2 原始檔案」已經不正確）。
 - 驗證：`analyze`、`build`、`check.mjs` 都過。
 
+### v63f（2026-10-28）：別人手上的 M4A1 換成 SF2 原版第三人稱槍模
+- 合併本機：M16A3（M4A1 的提把＋A2 前準星）、QBZ-97（手動指定提把瞄準線）完成，H3 全部完成。
+- `tools/guns/pack.mjs` 把 `*_3rd.glb` 打進 `guns.js`（+300 KB，16.45 → 16.76 MB）；`loadGunModels` 把 `<weapon id>_3rd` 另外存進 `GUN_3RD`（以武器的 model id 為鍵，M4A1 是 `m4`）。
+- `SoldierFactory.setWeapon`：有 `GUN_3RD` 的槍用原版模型（含貼圖、法線），槍口 +X 轉成 −Z，槍膛高度、機匣位置對齊原本程序槍的位置，槍口火光位置跟著 `MUZZLE` 標記。Bot、連線玩家、Killcam 的你、大廳和倉庫的士兵預覽都用同一個函式。其他槍不變（程序外形）。
+- 驗證：遊戲中 Bot 拿 M4A1，`model.gun` 是 8 個節點的原版模型；渲染截圖 `docs/testing/shots/m4a1_3rd_ingame.png`（兩名士兵相對持槍，貼圖、方向、握把位置正確）；`analyze`、`build`、`check.mjs` 都過。
+

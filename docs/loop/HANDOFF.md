@@ -6,6 +6,11 @@
 
 ## 待本機（雲端寫，本機做）
 
+### H8 ⬜ 其他 SF2 原版槍的第三人稱槍模
+- v63f 遊戲端已經通用：`tools/guns/<weapon id>_3rd.glb`（UModel 座標＋`MUZZLE`／`SCOPE` 標記，和 `m4a1_3rd.glb` 一樣）打包進 `guns.js` 後，Bot 和其他玩家手上就會用它（`src/09_models.js` 的 `GUN_3RD`）。
+- 依序做：ak103、g36c、k2、scarl、scarh、famas、xm8、galil、hk417、mp5k、m16a3、qbz97（`node tools/sf2_3rd_build.mjs <id>`，再 `node tools/guns/pack.mjs`）。沒有 `_3rd` 零件的槍標 ⏸ 並寫原因。
+- 驗證：`check.mjs`；遊戲中截一張 Bot 拿槍的側面圖，和 `docs/testing/shots/m4a1_3rd_ingame.png` 比對位置。
+
 ### H6 ⏸ 需要使用者本人
 - AK-103、G36C 的 SF2 開鏡截圖（要進 SF2 遊戲裡截）。
 - 實際試玩的手感意見（M4A1 腰射位置、拔槍 0.8 s、後座力）。

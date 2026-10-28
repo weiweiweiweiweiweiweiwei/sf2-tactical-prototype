@@ -21,7 +21,8 @@
 ## 1. SF2 原版槍枝素材（UModel，`D:\SpecialForce2`）
 - ✅ M4A1 原版槍模、貼圖、槍聲（v61）
 - ⬜ 材質照原版著色方式：SF2 是 Phong（`weapon_shader_base` 的 `gun_base`：高光貼圖 `_s`、SPPowerLow 100／High 30、SpecularIntensity 10、RimLight Power 3、cubemap 反射）。把 `_s` 高光貼圖換算成霧面／反光分布（roughness），再看要不要加邊緣光
-- 🔄 M4A1 第三人稱槍模：本機已匯出 `tools/guns/m4a1_3rd.glb`（v63c）；⬜ 接到 Bot 和其他玩家手上（雲端）
+- ✅ M4A1 第三人稱槍模（本機匯出 `tools/guns/m4a1_3rd.glb`；v63f 接到 Bot、連線玩家、Killcam 的你、倉庫預覽）
+- ⏸ 本機：其他 SF2 原版槍的第三人稱槍模（`tools/sf2_3rd_build.mjs <id>`；遊戲端已經通用，`<weapon id>_3rd.glb` 打包後自動使用）
 - 🔄 流程推廣到其他槍（每把對零件、貼圖、瞄具，檢查開鏡畫面）
   - ✅ AK-103、G36C（v62h）：原版模型、手臂動畫、槍聲、射速／換彈／拔槍時間、後座力參數；瞄具照 SF2 插槽放、開鏡鏡頭和前準星尖端等高
   - ✅ 步槍第二批（v62i）：K2、SCAR-L、SCAR-H、FAMAS、XM8、GALIL、HK417 換成 SF2 原版（模型、動畫、槍聲、時間、後座力；`src/01_core.js` 的 SF2_WEAPONS 表由 `tools/sf2_weapon_table.py` 產生）
