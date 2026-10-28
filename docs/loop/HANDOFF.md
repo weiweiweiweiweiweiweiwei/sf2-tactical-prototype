@@ -24,10 +24,6 @@
 - `node tools/check.mjs --map all` 跑 GTX 和 `--gpu intel` 各一次，加 `--novsync` 再跑一次 GTX。
 - 輸出：`docs/testing/gpu-<日期>.md`（三張表原樣貼上；有掉幀或錯誤的地圖標出來）。
 
-### H5 ⬜ Apex 原版槍模和音效（RSX；先確認電腦上有沒有裝 Apex）
-- 沒裝的話，在這裡標 ⏸，寫「未安裝」。
-- 有裝的話：先匯出 R-301 一把試做（模型、貼圖、槍聲）。原始匯出放在 `tools/out/apex/r301/`（不會 commit），成品 commit 成 `tools/guns/apex_r301.glb` 和音效檔，流程寫進 `docs/pipelines/apex-guns.md`。
-
 ### H6 ⏸ 需要使用者本人
 - AK-103、G36C 的 SF2 開鏡截圖（要進 SF2 遊戲裡截）。
 - 實際試玩的手感意見（M4A1 腰射位置、拔槍 0.8 s、後座力）。
@@ -79,3 +75,12 @@
 - 注意：`tools/guns/pack.mjs` 會自動把 `tools/guns/` 裡所有 .glb 打進 `assets/guns/guns.js`（多約 300 KB，遊戲會把它當成一把槍模解析）；本機沒有打包它，接 Bot 時再打包。
 - 注意：`tools/guns/pack.mjs` 會自動把 `tools/guns/` 裡所有 .glb 打進 `assets/guns/guns.js`（多約 300 KB，遊戲會把它當成一把槍模解析）；本機沒有打包它，接 Bot 時再打包。
 - 驗證：Blender 預覽 `docs/testing/shots/m4a1_3rd_side.png`（gun_preview.py 是照 gunlib 座標取景，所以畫面偏）。
+
+### L5 ✅ H5：Apex 原版 R-301 槍模和槍聲（2026-10-28）
+- Apex 有裝（Steam：`C:/Program Files (x86)/Steam/steamapps/common/Apex Legends`），RSX 2.4.0 匯出。流程：**`docs/pipelines/apex-guns.md`**（新）。
+- 原始匯出（不 commit）：`tools/out/apex/r301/`（`mdl/r301_base_v`、`r301_base_w` 的 CAST、資產清單 CSV、`audio/audio/*.wav` 14 個音源）。
+- 成品：
+  - **`tools/guns/apex_r301.glb`**（335 KB）：第一人稱模型的機匣、預設彈匣、機械瞄具，材質 `gun:tex_apex_r301`（顏色、法線、粗糙度，1024 WebP）。工具 `tools/blender/apex_gun_build.py`（先系統 Python 做貼圖，再 Blender 組模型）。
+  - **`tools/guns/apex_r301_sfx/*.wav`**（11 個、2.4 MB，16-bit 立體聲）：fire_first／fire_loop／fire_tail／fire_single／magout／maggrab／magin／boltback／boltfwd／draw／adsin。工具 `tools/apex-sfx.mjs`。
+- 注意：模型還在 Apex 的模型空間（英寸 → 公尺），**沒有轉成 gunlib 槍座標、沒有 MUZZLE／SIGHT 標記**，也還沒接進遊戲和音效包（留給雲端）。`tools/guns/pack.mjs` 會自動把 `apex_r301.glb` 打進 `guns.js`，本機沒有打包。
+- 驗證：GLB 有 1 個材質、3 張貼圖（顏色、金屬粗糙、法線）、3 個網格；尺寸 0.88 m 長 × 0.26 m 高（和實槍相近）；Blender 預覽 `docs/testing/shots/apex_r301.jpg`。
