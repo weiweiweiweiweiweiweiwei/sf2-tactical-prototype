@@ -1136,3 +1136,11 @@
 - 碰撞格式 `STRZ`（`tools/pack-apex-js.mjs` 的 `strz()`，遊戲端 `skullTris()` 兩種格式都讀）：相同位置的頂點合併（Skull Town 160 萬 → 81 萬）、依第一次使用排序；座標存成各軸差值的兩個位元組平面，索引存成「相對目前最大索引」的變長碼；再 gzip。
 - Skull Town 碰撞 10.4 → 2.3 MB、訓練場 8.9 → 2.2 MB；整包（base64）50 → 39 MB、39 → 30 MB。解碼 49 ms。
 - 驗證：和舊格式逐個三角形比對，114 萬個三角形的頂點、表面材質 0 差異；`check-apex-full`、`check-apex-traversal` 過。
+
+### v62z（2026-10-28）：Apex 數值接上本機抓回的 S30.1 完整頁面，和 wiki 比對
+- 合併本機分支 `local/assets`（v62x 載入時間、v62y 碰撞縮小、H1 apex.source.gs 29 頁、H2 wiki 29 頁、H3 M16A3 調查）。
+- `tools/apex_weapon_data.py` 新增 `s30.1-full` 層（`source-gs-s30/<slug>.md`）：頭／腿倍率（精確值，例 R-301 ×1.3／×0.75）、爆頭距離、拔槍／收槍／衝刺後開火、開鏡進出時間和 FOV、開鏡移速、彈道、散布、後座倍率。`current` 的來源：S30.1-full 602 欄、S30.1 381、S14 127（原本 S14 是大宗）。
+- wiki 比對（`wiki_check`，README 有總表）：wiki 的「Shots to kill」身體列對 100–225 HP，29 把中 21 把和我們完全一樣；8 把差在每發傷害本身，採用較新的 S30.1（D9）。
+- 遊戲裡的影響：只有 30-30（M200 以外的半自動狙擊沒用到它；栓動槍不會對應到它）腿部 43.4 → 43.35，以及沒有對應槍的 Nemesis／Charge Rifle 爆頭距離；`_ttk.mjs` 的數字不變。
+- 驗證：`analyze`、`build`、`_dmgmodel.mjs`、`check.mjs` 都過。
+

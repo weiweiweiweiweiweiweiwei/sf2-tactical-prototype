@@ -50,9 +50,10 @@
   - ✅ 清掉 `APEX.head`／`legs`／`leg`／`scale`（v62v）
   - ⬜ 新增 Apex 原版槍當成獨立武器（需要模型：HANDOFF H5 的 RSX 匯出），讓連發、蓄力、加速類（Hemlok、Nemesis、Prowler、Charge Rifle、Triple Take、Bocek、Devotion、L-STAR、Kraber）也能用
   - ✅ 每發傷害、頭／腿倍率、爆頭距離和對應的 Apex 槍一致：`tools/_dmgmodel.mjs`（v62u）
-  - ⏸ 本機：和公開 TTK 表比對差距 > 5% 的列出來（等 HANDOFF H2 抓回 wiki 的表）
+  - ✅ 和 wiki 的擊殺發數／TTK 比對（v62z，本機 H2 抓回的表）：21／28 一致，8 把差在每發傷害，採用較新的 S30.1（自選，見 DECISIONS D9；清單在 `docs/research/apex/README.md`）
+  - ✅ S30.1 完整頁面（本機 H1）接進數值資料當 `s30.1-full` 層（v62z）
   - ✅ 散布、後座不套 Apex 的（自選，見 DECISIONS D7）：留給「新增 Apex 原版槍」用
-  - ⬜ Nemesis 的 S14 欄位（S16 才加入）：散布、後座、拔槍找其他來源
+  - ✅ Nemesis 的散布、拔槍、彈道（v62z，`s30.1-full`）；只缺每發後座表
 - ⬜ 配件系統（瞄具、彈匣、槍托、槍管、Hop-up）
 - ⏸ 本機（HANDOFF H5）：用 RSX 從 Apex 安裝檔匯出原版槍模和音效
 

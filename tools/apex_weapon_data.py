@@ -5,14 +5,18 @@ Two layers per gun, every value tagged with where it came from:
            every field (spread, recoil pattern, ballistics, timing, attachment mods) but old balance
   's30.1'  docs/research/apex/weapons-2026-10-27.json (apex.source.gs, S30.1 build 11630615): damage, RPM,
            magazines, reloads, muzzle velocity, ADS time, burst / rechamber / charge — current balance
+  's30.1-full' the same site's whole page per gun, docs/research/apex/source-gs-s30/<slug>.md (fetched by the local session, H1):
+           head / leg multipliers, headshot range, handling, ballistics, spread, recoil scales — fills what s30.1 lacks
   'official' an EA patch-note override listed in that file (wins over s30.1)
-'current' = official > s30.1 > s14. Units: metres, seconds, degrees (Source hammer unit = 1 inch = 0.0254 m).
+'current' = official > s30.1 > s30.1-full > s14. The wiki's shots-to-kill tables (docs/research/apex/web/, H2) are only compared. Units: metres, seconds, degrees (Source hammer unit = 1 inch = 0.0254 m).
   python tools/apex_weapon_data.py
 """
 import json, math, os, re
 
 SRC = 'docs/research/apex/gamefiles-s14'
 S30 = 'docs/research/apex/weapons-2026-10-27.json'
+GS = 'docs/research/apex/source-gs-s30'
+WIKI = 'docs/research/apex/web'
 OUT = 'docs/research/apex/weapons-full.json'
 HU = 0.0254
 SHIELDS = [0, 50, 75, 100, 125]  # none / white / blue / purple / red (Evo); gold = purple's 100 (the project's APEX.shields)
@@ -155,7 +159,52 @@ def s30_block(w):
     return o
 
 
-def current(s14, s30, off):
+GS_FIELDS = {  # source.gs label → current key (value parsed as the first number on the next line)
+    'Rounds per minute': 'rpm', 'Rounds per burst': 'burst_count', 'Delay between bursts': 'burst_delay_s', 'Rechamber time': 'rechamber_s',
+    'Charge time': 'charge_s', 'Projectiles per shot': 'pellets', 'Ammo per shot': 'ammo_per_shot', 'Magazine': 'mag', 'Reserve carried': 'reserve',
+    'Reload': 'reload_tactical_s', 'Reload from empty': 'reload_empty_s', 'Magazine, common mag': 'mag_l1', 'Magazine, rare mag': 'mag_l2',
+    'Magazine, epic mag': 'mag_l3', 'Magazine, legendary mag': 'mag_l4', 'Draw': 'deploy_s', 'Holster': 'holster_s', 'Raise': 'raise_s', 'Lower': 'lower_s',
+    'Aim down sights': 'ads_s', 'Leave sights': 'ads_out_s', 'Field of view in sights': 'zoom_fov', 'Move speed in sights': 'ads_move_speed_scale',
+    'Muzzle velocity': 'speed_mps', 'Drag coefficient': 'drag', 'Gravity scale': 'gravity_scale', 'Zeroed at': 'zero_m', 'Projectile lifetime': 'lifetime_s',
+    'Hipfire spread, standing': 'spread_stand_hip', 'Hipfire spread, crouched': 'spread_crouch_hip', 'Hipfire spread, in the air': 'spread_air_hip',
+    'Spread in sights': 'spread_stand_ads', 'Recoil scale, vertical': 'recoil_scale_v', 'Recoil scale, horizontal': 'recoil_scale_h',
+}
+NUM = re.compile(r'-?\d+(?:\.\d+)?')
+
+
+def gs_block(slug):
+    path = f'{GS}/{slug}.md'
+    if not os.path.exists(path): return None
+    lines = [l.strip() for l in open(path, encoding='utf-8').read().split('\n')]
+    a = next((i for i, l in enumerate(lines) if l == '## Damage'), None); b = next((i for i, l in enumerate(lines) if l == '## Attachments'), len(lines))
+    if a is None: return None
+    sec, o = lines[a:b], {}
+    for i, l in enumerate(sec[:-1]):
+        k = GS_FIELDS.get(l)
+        if k and k not in o:
+            m = NUM.search(sec[i + 1].replace(',', ''))
+            if m: o[k] = float(m.group())
+    if 'ads_move_speed_scale' in o: o['ads_move_speed_scale'] /= 100
+    txt = ' '.join(sec)
+    for k, rx in (('head_scale', r'×([\d.]+) head'), ('leg_scale', r'×([\d.]+) legs'), ('headshot_max_m', r'headshots stop counting past ([\d.]+) m')):
+        m = re.search(rx, txt)
+        if m: o[k] = float(m.group(1))
+    return o
+
+
+def wiki_shots(slug):
+    """Body shots to kill at 100 / 150 / 175 / 200 / 225 HP: the first 'Body' row of the wiki page's first Shots-to-kill table."""
+    path = f'{WIKI}/wiki-{slug}.md'
+    if not os.path.exists(path): return None
+    for l in open(path, encoding='utf-8'):
+        c = [x.strip() for x in l.strip().strip('|').split('|')]
+        if c and c[0] == 'Body' and len(c) >= 8:
+            try: return {'damage': float(c[2]), 'shots': [int(x) for x in c[3:8]]}
+            except ValueError: continue
+    return None
+
+
+def current(s14, s30, off, gs=None):
     c, src = {}, {}
     def put(k, v, s):
         if v is not None and k not in c: c[k] = v; src[k] = s
@@ -166,6 +215,7 @@ def current(s14, s30, off):
         put(k, s30.get(sk), 's30.1')
     m = s30['magazine']
     for i, t in enumerate(('base', 'common', 'rare', 'epic', 'legendary')): put('mag' if i == 0 else f'mag_l{i}', m.get(t), 's30.1')
+    for k, v in (gs or {}).items(): put(k, v, 's30.1-full')  # exact multipliers, handling, ballistics, spread
     b = s30.get('body')  # head / leg scales from S30's own body (an official body override keeps S30's scales); S14's scales are older
     if b and s30.get('head'): put('head_scale', r(s30['head'] / b, 3), 'derived')
     if b and s30.get('leg'): put('leg_scale', r(s30['leg'] / b, 3), 'derived')
@@ -227,13 +277,23 @@ def main():
         name = w['name']; f = FILES[name]
         s14 = s14_block(f, vk, blast) if f else None
         b30 = s30_block(w)
-        cur, src = current(s14, b30, w.get('official_override'))
+        slug = w['source'].rstrip('/').rsplit('/', 1)[-1]
+        cur, src = current(s14, b30, w.get('official_override'), gs_block(slug))
+        wk = wiki_shots(slug)
         miss = [k for k in ('head_scale', 'leg_scale', 'headshot_max_m', 'speed_mps', 'gravity_scale', 'deploy_s', 'holster_s', 'raise_s', 'ads_s',
                             'spread_stand_hip', 'ads_move_speed_scale') if cur.get(k) is None]
         if s14 and not (s14['recoil'].get('pattern') or {}).get('bullets'): miss.append('recoil_pattern')
         if not s14: miss.append('recoil_pattern')
         if miss: gaps.append({'weapon': name, 'missing': miss})
-        guns.append({'name': name, 'category': w['category'], 'current': cur, 'current_src': src, 'ttk': ttk(cur),
+        t = ttk(cur)
+        chk = None
+        if wk and t:  # the wiki's body shots at 100 / 150 / 175 / 200 / 225 HP = our shield levels 0 / 50 / 75 / 100 / 125
+            ours = [t[str(x)]['shots'] for x in SHIELDS]
+            plain = not (cur.get('burst_count') or cur.get('rechamber_s') or cur.get('rate_max_hz') or (cur.get('pellets') or 1) > 1)
+            wt = [r((n - 1) * 60 / cur['rpm'], 3) for n in wk['shots']] if plain else None  # wiki TTK: (shots - 1) / fire rate, single-shot cycle only
+            off = [i for i in range(5) if ours[i] != wk['shots'][i] or (wt and abs(t[str(SHIELDS[i])]['ttk_s'] - wt[i]) > 0.05 * max(wt[i], 1e-9))]
+            chk = {'wiki_damage': wk['damage'], 'wiki_shots': wk['shots'], 'our_shots': ours, 'wiki_ttk_s': wt, 'mismatch_levels': [SHIELDS[i] for i in off]}
+        guns.append({'name': name, 'category': w['category'], 'current': cur, 'current_src': src, 'ttk': t, 'wiki_check': chk,
                      'official_override': w.get('official_override'), 's30_1': b30, 's14': s14})
     out = {
         'generated_by': 'tools/apex_weapon_data.py',
@@ -253,6 +313,14 @@ def main():
     txt = open(readme, encoding='utf-8').read()
     a, b = '<!-- ttk:begin -->', '<!-- ttk:end -->'
     txt = txt[:txt.index(a) + len(a)] + '\n' + '\n'.join(rows) + '\n' + txt[txt.index(b):]
+    rows = ['| 武器 | 我們的每發身體 | wiki 每發身體 | 我們的發數（0／50／75／100／125 盾） | wiki 發數 | 不一致的盾量 |', '|---|---:|---:|---|---|---|']
+    for g in guns:
+        k = g['wiki_check']
+        if not k: rows.append(f"| {g['name']} | {g['current'].get('body'):g} | — | — | （wiki 沒有身體發數表） | — |"); continue
+        bad = '、'.join(str(x) for x in k['mismatch_levels']) or '—'
+        rows.append(f"| {g['name']} | {g['current']['body'] * (g['current'].get('pellets') or 1):g} | {k['wiki_damage']:g} | {'／'.join(map(str, k['our_shots']))} | {'／'.join(map(str, k['wiki_shots']))} | {bad} |")
+    a, b = '<!-- wiki:begin -->', '<!-- wiki:end -->'
+    if a in txt: txt = txt[:txt.index(a) + len(a)] + '\n' + '\n'.join(rows) + '\n' + txt[txt.index(b):]
     open(readme, 'w', encoding='utf-8').write(txt)
     for g in guns:
         t = g['ttk'] or {}
