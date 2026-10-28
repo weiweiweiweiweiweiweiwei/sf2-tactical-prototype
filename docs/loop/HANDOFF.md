@@ -4,11 +4,18 @@
 > 本機只 push 到 `local/assets` 分支，雲端每輪會把它合進 `claude/intelligent-einstein-vgvrqy`。
 > 狀態：⬜ 未開始 · 🔄 進行中 · ✅ 完成 · ⏸ 需要使用者本人
 
+## ⚠️ 2026-10-28 起只剩一個本機 Claude Code（使用者決定）
+- 雲端 loop 已停止，**雲端的工作（遊戲程式 `src/`、合併、文件、TODO）全部交給本機**。
+- 開工時先把雲端分支合進來：`git fetch origin && git merge origin/claude/intelligent-einstein-vgvrqy`（最後是 v63l，含 check-apex-full 修正、Apex 碰撞補丁合併）。
+- 之後由本機自己維護 `docs/TODO.md`、`docs/CHANGELOG.md`（版號從 v63m 起）、`PROGRESS.md`、`docs/DECISIONS.md`、`docs/REVIEW.md`；工作清單：本頁的 H10（狙擊槍、魔術迴路 G36C）→ H8 → `docs/TODO.md`。
+- 還在等使用者回答：魔術迴路 G36C 是哪一把、要哪幾把有瞄準鏡的步槍（見 TODO 第 1 節）。
+- 合進 `master` 一樣只在使用者明確要求時。
+
 ## 誰在做什麼（每個 Claude Code 開工前先看、開工時更新自己那一行）
 
 | 視窗 | 在哪裡跑 | 分支／資料夾 | 負責 | 目前在做 |
 |---|---|---|---|---|
-| 雲端 | claude.ai 雲端（每小時整點 20 分醒來） | `claude/intelligent-einstein-vgvrqy` | 遊戲程式 `src/`、工具、文件、合併 | （每輪更新） |
+| 雲端 | **已停止（使用者 10-28）**：排程任務停用，不再合併 | `claude/intelligent-einstein-vgvrqy`（最後 `v63l`） | — | 交給本機 |
 | 本機 A（loop） | 使用者電腦，原本的專案資料夾 | `local/assets` | 「待本機」的 H 項目：D 槽 SF2／Apex 匯出、真實顯卡、網頁抓取 | |
 | 本機 B（使用者直接下指令） | 使用者電腦，**另一個資料夾**（`git worktree add ../sf2-user local/user`） | `local/user` | 使用者當下要求的事 | |
 
