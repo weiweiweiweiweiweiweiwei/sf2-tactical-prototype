@@ -36,6 +36,9 @@ const sight = (file, tex) => [['sight', file, tex, 'Sight']];
 const PART = (pkg, name) => ({ file: `parts/${pkg}/SkeletalMesh3/${name}.gltf`, props: `parts_props/${pkg}/SkeletalMesh3/${name}.props.txt` });
 const EOTECH = { ...PART('weapon_common_part', 'DOT_EOTECH'), tex: 'eotech', reticle: 'parts/dot_point/Texture2D/eotech_reticleDot.png' };
 const REFLEX = { ...PART('weapon_common_part01', 'DOT_REFLEX'), tex: 'reflex', reticle: 'parts/dot_point/Texture2D/reflex_reticleDot.png' };
+// v64b the K14's scope (user 10-28: the K14 had none): scope_k14_bender — its UVs fit the K14 skins' scope sheets, sni_k14 redirects
+// to its bender_scope_* textures; no ZoomCrosshair socket (a sniper aims through the full-screen scope, so no DOT mark)
+const K14_SCOPE = { ...PART('weapon_common_part01', 'scope_k14_bender'), tex: 'bender_scope', noAim: true };
 const SIL = (k) => ({ ...PART('weapon_common_part', `silencer_ar_type_${k}`), tex: `silencer_type_${k}` });
 const G = {
   // v62o the rear sight is the A2 carry handle (rif_m4a1_handle_a, its own sheet handle_d / _n in weapon_common_part): SF2's ADS picture (user 10-27) has the aperture ring standing above the handle's ears; the detachable
@@ -67,8 +70,8 @@ const G = {
   g36c_eo: gun('g36c', { optic: EOTECH, silencer: SIL('a') }),
   hk417_rs: gun('hk417', { optic: REFLEX, silencer: SIL('b') }),
   scarl_eo: gun('scarl', { pkg: 'rif_scar_L', tex: 'scar_L', anim: '1st_anim_scar_L', optic: EOTECH, silencer: SIL('c') }),
-  // v64 the K14 bolt-action sniper (sni_k14): its scope is part of the body
-  k14: gun('k14', { pkg: 'sni_k14', stem: 'sni_k14' }),
+  // v64 the K14 bolt-action sniper (sni_k14); v64b its scope on the body's Scope socket (K14_SCOPE)
+  k14: gun('k14', { pkg: 'sni_k14', stem: 'sni_k14', optic: K14_SCOPE }),
 }[GID];
 if (!G) throw new Error(`unknown gun ${GID}`);
 const TEX = {
@@ -157,6 +160,21 @@ async function addPart(name, file, stem, bake = null) {
       toBody = joints.map((j, i) => mul(inv4(Array.from(bibm.slice(i * 16, i * 16 + 16))), Array.from(ib.slice(i * 16, i * 16 + 16))));
     }
   }
+  // v64b the SCAR stocks (H, L, L MK2): read through their own bind under SF2's animation the stock stands 6 cm behind the
+  // receiver (the armory card, user 10-28) — UE3 draws it the same, but its first-person view never shows the stock. Close the
+  // gap along the body's long axis: shift the stock in its own bind space by the body-space gap turned back through toBody.
+  let shift = null;
+  if (name === 'stock' && toBody && V.body) {
+    const sp = [], e = [], w = [];
+    for (const p of pr.listMeshes()[0].listPrimitives()) { const P = p.getAttribute('POSITION'), J = p.getAttribute('JOINTS_0'), W = p.getAttribute('WEIGHTS_0');
+      for (let i = 0; i < P.getCount(); i++) { P.getElement(i, e); const v = e.slice(0, 3); J.getElement(i, e); const jj = e.map((j) => remap[j] ?? 0); W.getElement(i, w); const q = [0, 0, 0]; for (let k = 0; k < 4; k++) if (w[k] > 0) { const t = xf(toBody[jj[k]], v); q[0] += w[k] * t[0]; q[1] += w[k] * t[1]; q[2] += w[k] * t[2]; } sp.push(q); } }
+    const ext = [0, 1, 2].map((k) => max(V.body, k) - min(V.body, k)), ax = ext.indexOf(Math.max(...ext));
+    const back = mean(sp, ax) < mean(V.body, ax), gap = back ? min(V.body, ax) - max(sp, ax) : min(sp, ax) - max(V.body, ax);
+    if (gap > 0.01) {
+      const d = [0, 0, 0]; d[ax] = back ? gap : -gap; shift = toBody.map((m) => xf(inv4(m), d, 0));
+      console.log('STOCKGAP', GID, (gap * 100).toFixed(1) + ' cm closed');
+    }
+  }
   for (const p of pr.listMeshes()[0].listPrimitives()) {
     const P = p.getAttribute('POSITION'), N = p.getAttribute('NORMAL'), T = p.getAttribute('TANGENT'), UV = p.getAttribute('TEXCOORD_0'), J = p.getAttribute('JOINTS_0'), W = p.getAttribute('WEIGHTS_0'), n = P.getCount();
     const bp = toBody ? new Float32Array(n * 3) : null, pos = new Float32Array(n * 3), nor = new Float32Array(n * 3), tan = T ? new Float32Array(n * 4) : null, jo = new Uint16Array(n * 4), we = new Float32Array(n * 4), e = [], f = [];
@@ -165,6 +183,7 @@ async function addPart(name, file, stem, bake = null) {
       if (bake) { v = bake.p(v, i); nn = bake.n(nn); if (tt) tt = [...bake.n(tt.slice(0, 3)), tt[3]]; jo.set([jix.weapon_root, 0, 0, 0], i * 4); we.set([1, 0, 0, 0], i * 4); }
       else {
         J.getElement(i, e); jo.set(e.map((j) => remap[j] ?? 0), i * 4); W.getElement(i, e); we.set(e, i * 4);
+        if (shift) { const q = [0, 0, 0]; for (let k = 0; k < 4; k++) { const w = we[i * 4 + k]; if (w > 0) { const t = shift[jo[i * 4 + k]]; q[0] += w * t[0]; q[1] += w * t[1]; q[2] += w * t[2]; } } v = [v[0] + q[0], v[1] + q[1], v[2] + q[2]]; }
         if (bp) { const q = [0, 0, 0]; for (let k = 0; k < 4; k++) { const w = we[i * 4 + k]; if (w > 0) { const t = xf(toBody[jo[i * 4 + k]], v); q[0] += w * t[0]; q[1] += w * t[1]; q[2] += w * t[2]; } } bp.set(q, i * 3); }
       }
       pos.set(v, i * 3); nor.set(norm(nn), i * 3); if (tan) tan.set(tt, i * 4);
@@ -189,11 +208,11 @@ async function bakedPoints(file) {
   return { M, pts };
 }
 
+const min = (a, k) => Math.min(...a.map((p) => p[k])), max = (a, k) => Math.max(...a.map((p) => p[k])), mean = (a, k) => a.reduce((s, p) => s + p[k], 0) / a.length;
 const V = {};
 for (const [name, file, stem] of [...G.parts, ...(G.extraParts || [])]) V[name] = await addPart(name, file, stem);
 for (const c of meshNode0.listChildren()) { meshNode0.removeChild(c); scene.addChild(c); } // the skeleton (Bip01) to the scene root
 meshNode0.dispose(); // the body was re-added as 'body' with its own material
-const min = (a, k) => Math.min(...a.map((p) => p[k])), max = (a, k) => Math.max(...a.map((p) => p[k])), mean = (a, k) => a.reduce((s, p) => s + p[k], 0) / a.length;
 // SF2's sockets on the body (SocketName, BoneName, RelativeLocation in cm); a bone-local UE vector maps to these nodes like a
 // PSA key, (x, z, −y) / 100
 const SOCK = {};
@@ -218,7 +237,7 @@ for (const [key, socket, own, mark] of [['optic', 'Scope', 'ZoomCrosshair', 'DOT
   const A = G[key]; if (!A) continue;
   const pd = await io.read(SRC + A.file), sk = pd.getRoot().listSkins()[0], ibm = Array.from(sk.getInverseBindMatrices().getArray()).slice(0, 16), S = sockAt(socket), M = mul(S, ibm);
   V[key] = await addPart(key, A.file, A.tex, { p: (v) => xf(M, v), n: rot3(M, 1) });
-  marks[mark] = xf(S, partSock(A.props, own));
+  if (!A.noAim) marks[mark] = xf(S, partSock(A.props, own));
 }
 if (G.optic && G.optic.reticle) { // SF2's reticle (dot_point's DotTexture) on a 2 cm quad at the DOT, riveted to weapon_root: the game takes its texture for the sight's sprite
   const d = marks.DOT, h = 0.01, acc = (type, arr) => doc.createAccessor().setType(type).setArray(arr).setBuffer(buf);
