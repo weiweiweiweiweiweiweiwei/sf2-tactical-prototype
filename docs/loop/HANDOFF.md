@@ -21,6 +21,11 @@
 - ✅ M4A1 第三人稱槍模（本機 2026-10-28，見「本機已完成」L4；接到 Bot 手上留給雲端）。
 - 驗證：`node tools/check.mjs`、`node tools/_gunshot.mjs`（開鏡截圖存進 `docs/testing/shots/`）。
 
+### H7 ⬜ 先做：Apex 原版素材改成只留在本機（使用者 10-28 選 5A）
+- 雲端 v63e 把 `tools/guns/apex_r301.glb` 和 `tools/guns/apex_r301_sfx/` 移出 git，`.gitignore` 加了 `tools/guns/apex_*`。**合併雲端分支前**，先把這兩個複製到別處（例如 `tools/out/apex/keep/`），合併時 git 會把它們從工作目錄刪掉；合併後再複製回 `tools/guns/`（之後 git 不會再追蹤它們）。或是合併後用 `tools/blender/apex_gun_build.py`、`tools/apex-sfx.mjs` 從 `tools/out/apex/r301/` 重新產生。
+- 之後所有從 Apex 安裝檔匯出的東西（模型、貼圖、聲音）都只放在本機，不要 commit。
+- `tools/guns/pack.mjs` 現在會跳過 `apex_*` 和 `*_3rd.glb`。
+
 ### H6 ⏸ 需要使用者本人
 - AK-103、G36C 的 SF2 開鏡截圖（要進 SF2 遊戲裡截）。
 - 實際試玩的手感意見（M4A1 腰射位置、拔槍 0.8 s、後座力）。

@@ -355,7 +355,7 @@ class WeaponSystem extends Arsenal {
     const hs = m.horizontalSpeed();
     const amp = clamp(hs / 5.6, 0, 1.3) * (m.grounded ? 1 : 0.15) * (1 - this.adsT * 0.88);
     this.bobAmt = damp(this.bobAmt, amp, 10, dt);
-    this.bobPhase += dt * hs * (p.sprinting ? 2.1 : 1.85);
+    this.bobPhase += dt * hs * (p.sprinting ? 2.1 * 0.6 : 1.85); // v63e sprint bob at 0.6× (user: too quick)
     const bx = Math.sin(this.bobPhase) * 0.011 * this.bobAmt * (1 + this.sprintT), by = -Math.abs(Math.cos(this.bobPhase)) * 0.01 * this.bobAmt * (1 + this.sprintT);
     const swayK = 1 - this.adsT * 0.75;
     this.swayX = damp(this.swayX, clamp(-mouse.x * 0.00032, -0.035, 0.035) * swayK, 9, dt);
