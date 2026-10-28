@@ -6,7 +6,7 @@
 
 ## 待本機（雲端寫，本機做）
 
-### H1 ⬜ 抓 Apex S30.1 每把槍的完整頁面（雲端被網路政策擋住）
+### H1 🔄 抓 Apex S30.1 每把槍的完整頁面（雲端被網路政策擋住）
 - 來源：`https://apex.source.gs/weapons/<slug>/`，29 把槍。slug 照 `docs/research/apex/weapons-2026-10-27.json` 每把槍的 `source`。
 - 輸出：`docs/research/apex/source-gs-s30/<slug>.html`（原始 HTML）和 `<slug>.md`（把頁面上所有欄位逐條轉成文字）。要包含散布、後座、拔槍時間、彈道、各級配件的數值，頁面有多少就抓多少。
 - 驗證：29 個檔都有；`r-301-carbine.md` 裡找得到 15、810、737 這幾個數字。
