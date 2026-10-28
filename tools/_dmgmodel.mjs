@@ -1,10 +1,11 @@
 // Damage-model probe (v58): the SF2 helmet and the Apex shield, rule by rule, through Match.applyDamage / calcDamage.
 // node tools/_dmgmodel.mjs   → prints every check, exits 1 on a failure
-import { chromium } from 'playwright'; import http from 'node:http'; import fs from 'node:fs'; import path from 'node:path';
+import { launchBrowser, routeCdn } from './pw.mjs'; import http from 'node:http'; import fs from 'node:fs'; import path from 'node:path';
 const ROOT = process.cwd(), T = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript' };
 const srv = http.createServer((q, s) => { const p = path.join(ROOT, decodeURIComponent(new URL(q.url, 'http://x').pathname)); if (!fs.existsSync(p) || fs.statSync(p).isDirectory()) { s.writeHead(404); s.end(); return; } s.writeHead(200, { 'Content-Type': T[path.extname(p)] || 'application/octet-stream' }); fs.createReadStream(p).pipe(s); });
 await new Promise((r) => srv.listen(0, '127.0.0.1', r));
-const b = await chromium.launch({ channel: 'chrome' }), page = await b.newPage(), errs = [];
+const b = await launchBrowser(), page = await b.newPage(), errs = [];
+await routeCdn(page, ROOT);
 page.on('pageerror', (e) => errs.push(e.message)); page.on('console', (m) => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) errs.push(m.text()); });
 await page.goto(`http://127.0.0.1:${srv.address().port}/index.html`); await page.waitForFunction(() => window.app && window.SF2);
 const out = [];
@@ -39,17 +40,20 @@ for (const dmg of ['sf2', 'apex']) {
       hit(rifle, 'chest', 10); ok('shield takes the damage first', bot.hp === 100 && Math.abs(bot.shield - (50 - d)) < 0.01, `shield ${bot.shield.toFixed(1)} hp ${bot.hp}`);
       while (bot.shield > 0) hit(rifle, 'chest', 10);
       ok('the rest of the breaking bullet goes into health', bot.hp < 100 && bot.hp > 100 - d, `hp ${bot.hp.toFixed(1)}`);
-      ok('headshot ×1.75 (assault), ×1.25 (smg), ×1 (shotgun), legs ×0.8, no sniper one-shot rule',
-        Math.abs(SF2.calcDamage(rifle, 'head', 10, 1, true) / d - 1.75) < 1e-6 && Math.abs(SF2.calcDamage(smg, 'head', 10, 1, true) / SF2.calcDamage(smg, 'chest', 10, 1, true) - 1.25) < 1e-6
-        && Math.abs(SF2.calcDamage(shotgun, 'head', 3, 1, true) / SF2.calcDamage(shotgun, 'chest', 3, 1, true) - 1) < 1e-6 && Math.abs(SF2.calcDamage(rifle, 'shin', 10, 1, true) / d - 0.8) < 1e-6
-        && SF2.calcDamage(sniper, 'head', 50, 1, true) < 999);
+      // v62u each gun takes its Apex counterpart's (def.apex) per-shot damage, head / leg ratios and headshot range
+      const ratio = (g, part, dist) => SF2.calcDamage(g, part, dist, 1, true) / SF2.calcDamage(g, 'chest', dist, 1, true), A = rifle.apex;
+      ok('per-shot damage, head and leg ratios are the Apex counterpart\'s, no sniper one-shot rule',
+        Math.abs(d - A.body * A.pellets / rifle.pellets) < 1e-6 && Math.abs(ratio(rifle, 'head', 10) - A.head / A.body) < 1e-6 && Math.abs(ratio(smg, 'head', 10) - smg.apex.head / smg.apex.body) < 1e-6
+        && Math.abs(ratio(shotgun, 'head', 3) - shotgun.apex.head / shotgun.apex.body) < 1e-6 && Math.abs(ratio(rifle, 'shin', 10) - A.leg / A.body) < 1e-6
+        && SF2.calcDamage(sniper, 'head', 50, 1, true) < 999, `${rifle.name} → ${A.name} ${d} / head ×${ratio(rifle, 'head', 10).toFixed(3)}`);
+      ok('past the headshot range a head hit counts as a body hit', Math.abs(ratio(smg, 'head', smg.apex.headMax + 1) - 1) < 1e-6, `${smg.name} → ${smg.apex.name} ${smg.apex.headMax} m`);
       ok('no range falloff (shotguns still fall off)', SF2.calcDamage(rifle, 'chest', 200, 1, true) === SF2.calcDamage(rifle, 'chest', 5, 1, true) && SF2.calcDamage(shotgun, 'chest', 30, 1, true) < SF2.calcDamage(shotgun, 'chest', 3, 1, true));
       ok('damage dealt is Evo', p.evo > 50, `evo ${p.evo.toFixed(0)}`);
       p.evo = 0; p.maxShield = 50; m._evo(p, 160); ok('150 Evo → blue 75, filled', p.maxShield === 75 && p.shield === 75);
       m._evo(p, 400); ok('500 Evo → purple 100', p.maxShield === 100);
       reset(); bot.hp = 40; bot.shield = 0; bot.hurtT = m.time; m._regen(1); ok('no regen within 4 s of damage', bot.hp === 40);
-      bot.hurtT = m.time - 5; m._regen(1); ok('after 4 s health comes back first', bot.hp === 60 && bot.shield === 0, `hp ${bot.hp}`);
-      bot.hp = 100; m._regen(1); ok('…then the shield', bot.shield === 25, `shield ${bot.shield}`);
+      bot.hurtT = m.time - 5; m._regen(1); ok('after 4 s health comes back first (v60: 5 a second)', bot.hp === 45 && bot.shield === 0, `hp ${bot.hp}`);
+      bot.hp = 100; m._regen(1); ok('…then the shield', bot.shield === 5, `shield ${bot.shield}`);
       reset(); m.applyDamage(bot, 999, 'legs', bot, W.fall, null, null, { fall: true }); ok('falling off the map ignores the shield', !bot.alive);
       reset(); hit(rifle, 'head', 10); ok('no helmet rule in Apex', bot.helmet);
     }

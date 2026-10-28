@@ -2933,8 +2933,44 @@ for (const [id, o] of Object.entries(SF2_WEAPONS)) {
   delete s.vmAdsFov;
   delete s.adsVertical;
 }
+var APEX_WEAPONS = {
+  havoc: { "name": "HAVOC Rifle", "body": 20, "head": 26, "leg": 15, "pellets": 1, "rpm": 672, "headMax": 300.4 },
+  hemlok: { "name": "Hemlok Burst AR", "body": 21, "head": 29.4, "leg": 15.75, "pellets": 1, "rpm": 930, "headMax": 300.4 },
+  nemesis: { "name": "Nemesis Burst AR", "body": 17, "head": 22.1, "leg": 12.8, "pellets": 1, "rpm": 1080, "headMax": 1e6 },
+  r301: { "name": "R-301 Carbine", "body": 15, "head": 19.5, "leg": 11.3, "pellets": 1, "rpm": 810, "headMax": 300.4 },
+  flatline: { "name": "VK-47 Flatline", "body": 20, "head": 26, "leg": 15, "pellets": 1, "rpm": 600, "headMax": 300.4 },
+  alternator: { "name": "Alternator SMG", "body": 18, "head": 22.5, "leg": 14.4, "pellets": 1, "rpm": 600, "headMax": 38.1 },
+  car: { "name": "C.A.R. SMG", "body": 14, "head": 17.5, "leg": 11.2, "pellets": 1, "rpm": 930, "headMax": 38.1 },
+  prowler: { "name": "Prowler Burst PDW", "body": 16, "head": 20, "leg": 12.8, "pellets": 1, "rpm": 1260, "headMax": 38.1 },
+  r99: { "name": "R-99 SMG", "body": 12, "head": 15, "leg": 9.6, "pellets": 1, "rpm": 1080, "headMax": 38.1 },
+  volt: { "name": "Volt SMG", "body": 16, "head": 20, "leg": 12.8, "pellets": 1, "rpm": 720, "headMax": 38.1 },
+  devotion: { "name": "Devotion LMG", "body": 16, "head": 20, "leg": 13.6, "pellets": 1, "rpm": 300, "headMax": 57.1 },
+  lstar: { "name": "L-STAR EMG", "body": 19, "head": 23.8, "leg": 16.2, "pellets": 1, "rpm": 600, "headMax": 57.1 },
+  spitfire: { "name": "M600 Spitfire", "body": 21, "head": 26.3, "leg": 17.8, "pellets": 1, "rpm": 540, "headMax": 57.1 },
+  rampage: { "name": "Rampage LMG", "body": 29, "head": 36.3, "leg": 24.7, "pellets": 1, "rpm": 300, "headMax": 63.5 },
+  r3030: { "name": "30-30 Repeater", "body": 51, "head": 71.4, "leg": 43.4, "pellets": 1, "rpm": 63.5, "headMax": 450 },
+  bocek: { "name": "Bocek Compound Bow", "body": 35, "head": 52.5, "leg": 28, "pellets": 1, "rpm": 150, "headMax": 300.4 },
+  g7: { "name": "G7 Scout", "body": 33, "head": 47.9, "leg": 24.8, "pellets": 1, "rpm": 246, "headMax": 450 },
+  tripletake: { "name": "Triple Take", "body": 22, "head": 33, "leg": 19.8, "pellets": 3, "rpm": 90, "headMax": 450 },
+  chargerifle: { "name": "Charge Rifle", "body": 75, "head": 135, "leg": 67.5, "pellets": 1, "rpm": 78, "headMax": 300 },
+  kraber: { "name": "Kraber .50-Cal Sniper", "body": 150, "head": 210, "leg": 120, "pellets": 1, "rpm": 24.7, "headMax": 750 },
+  longbow: { "name": "Longbow DMR", "body": 60, "head": 108, "leg": 48, "pellets": 1, "rpm": 78, "headMax": 750 },
+  sentinel: { "name": "Sentinel", "body": 70, "head": 126, "leg": 63, "pellets": 1, "rpm": 31.2, "headMax": 750 },
+  eva8: { "name": "EVA-8 Auto", "body": 7, "head": 7, "leg": 7, "pellets": 8, "rpm": 168, "headMax": 38.1 },
+  mastiff: { "name": "Mastiff Shotgun", "body": 19, "head": 19, "leg": 19, "pellets": 5, "rpm": 66, "headMax": 38.1 },
+  mozambique: { "name": "Mozambique Shotgun", "body": 17, "head": 21.3, "leg": 17, "pellets": 3, "rpm": 168, "headMax": 38.1 },
+  peacekeeper: { "name": "Peacekeeper", "body": 11, "head": 11, "leg": 11, "pellets": 9, "rpm": 44.4, "headMax": 100.1 },
+  p2020: { "name": "P2020", "body": 24, "head": 30, "leg": 21.6, "pellets": 1, "rpm": 420, "headMax": 38.1 },
+  re45: { "name": "RE-45 Auto", "body": 16, "head": 20, "leg": 14.4, "pellets": 1, "rpm": 780, "headMax": 38.1 },
+  wingman: { "name": "Wingman", "body": 50, "head": 75, "leg": 45, "pellets": 1, "rpm": 168, "headMax": 254 }
+};
+var APEX_POOL = { "assault": ["r301", "flatline", "havoc"], "smg": ["alternator", "car", "r99", "volt"], "lmg": ["spitfire", "rampage"], "pistol": ["p2020", "re45", "wingman"], "shotgun": ["eva8", "mastiff", "peacekeeper", "mozambique"], "sniper": ["longbow", "g7", "r3030"], "sniper_bolt": ["kraber", "sentinel"] };
+var apexFor = /* @__PURE__ */ __name((def) => (APEX_POOL[def.bolt ? "sniper_bolt" : def.type] || []).map((k) => APEX_WEAPONS[k]).reduce((best, a) => !best || Math.abs(Math.log(a.rpm * def.interval / 60)) < Math.abs(Math.log(best.rpm * def.interval / 60)) ? a : best, null), "apexFor");
 var WEAPON_DEFS = {};
-for (const [id, s] of Object.entries(WEAPON_DATABASE)) WEAPON_DEFS[id] = compileWeapon(id, s);
+for (const [id, s] of Object.entries(WEAPON_DATABASE)) {
+  WEAPON_DEFS[id] = compileWeapon(id, s);
+  WEAPON_DEFS[id].apex = apexFor(WEAPON_DEFS[id]);
+}
 Object.assign(WEAPON_DEFS, {
   knife: {
     id: "knife",
@@ -3141,6 +3177,11 @@ __name(mulberry32, "mulberry32");
 function calcDamage(def, part, dist, mult = 1, apex = false) {
   if (part === "head" && def.headKill && !apex) return 999;
   const legs = part === "thigh" || part === "shin" || part === "foot";
+  if (apex && def.apex && def.damageNear !== void 0) {
+    const a = def.apex, m2 = part === "head" ? dist <= a.headMax ? a.head / a.body : 1 : legs ? a.leg / a.body : 1;
+    const t = def.type === "shotgun" ? clamp((dist - def.falloffStart) / Math.max(1e-3, def.falloffEnd - def.falloffStart), 0, 1) : 0;
+    return a.body * a.pellets / def.pellets * (1 + (def.damageFar / def.damageNear - 1) * t) * m2 * mult;
+  }
   const m = apex ? part === "head" ? APEX.head[def.type] ?? 1.75 : legs ? APEX.legs[def.type] ?? APEX.leg : 1 : part === "head" ? def.headMult ?? PART_MULT.head : PART_MULT[part] ?? 1;
   let base;
   if (def.damageNear !== void 0) {

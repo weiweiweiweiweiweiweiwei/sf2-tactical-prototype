@@ -13,6 +13,7 @@ import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { launchBrowser, routeCdn } from './pw.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const arg = (k, d) => { const i = process.argv.indexOf('--' + k); if (i < 0) return d; const v = process.argv[i + 1]; return !v || v.startsWith('--') ? true : v; };
@@ -45,11 +46,7 @@ if (probe) {
   else if (GPU_ARG) { console.error('GPU not found:', GPU); process.exit(2); }
 }
 let browser = null;
-// last: a Chromium at PW_CHROMIUM or the cloud box's preinstalled /opt/pw-browsers/chromium (Playwright's own download times out here)
-const CHROMIUM = process.env.PW_CHROMIUM || (fs.existsSync('/opt/pw-browsers/chromium') ? '/opt/pw-browsers/chromium' : undefined);
-for (const o of [{ channel: 'chrome' }, { channel: 'msedge' }, {}, ...(CHROMIUM ? [{ executablePath: CHROMIUM }] : [])]) {
-  try { browser = await chromium.launch({ ...o, headless: !HEADED, args: launchArgs }); break; } catch (e) { /* try next */ }
-}
+browser = await launchBrowser({ headless: !HEADED, args: launchArgs });
 if (!browser) { console.error('No Chrome / Edge / Playwright Chromium found'); process.exit(2); }
 
 let failed = false;
@@ -60,11 +57,7 @@ for (const map of MAPS) {
   page.on('console', (m) => { if (m.type() === 'error' && !/^Failed to load resource/.test(m.text())) errors.push(m.text()); });
   page.on('pageerror', (e) => errors.push('uncaught: ' + e.message));
   page.on('response', (res) => { if (res.status() >= 400) errors.push(`HTTP ${res.status()} ${res.url()}`); });
-  await page.route('https://cdn.jsdelivr.net/npm/**', (route) => { // CDN blocked (the cloud box): serve a matching node_modules copy if there is one
-    const m = /\/npm\/((?:@[^/]+\/)?[^@/]+)@([^/]+)\/(.*)$/.exec(new URL(route.request().url()).pathname), dir = m && path.join(ROOT, 'node_modules', m[1]);
-    const ok = dir && fs.existsSync(dir + '/package.json') && JSON.parse(fs.readFileSync(dir + '/package.json', 'utf8')).version === m[2] && fs.existsSync(path.join(dir, m[3]));
-    return ok ? route.fulfill({ path: path.join(dir, m[3]), contentType: TYPES[path.extname(m[3])] || 'application/octet-stream' }) : route.continue();
-  });
+  await routeCdn(page, ROOT);
   let r = null;
   try {
     await page.goto(base + encodeURI(FILE) + '?check=' + Date.now(), { waitUntil: 'load', timeout: 60000 });
