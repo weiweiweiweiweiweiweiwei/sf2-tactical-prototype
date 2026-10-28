@@ -24,7 +24,7 @@
 7. **驗證**：`GUNID=<id> ONLY=hip,ads,ads2,fire TAG=<id> node tools/out/_rigshot.mjs`（看截圖：鏡子在槍正上方、手握得住、開鏡十字對）、`GUNID=<id> node tools/out/_reloadtime.mjs`、`node tools/check.mjs`。（`_rigshot` 的 reload 步驟把彈藥設 5，狙擊槍彈匣 5 會卡住，狙擊槍不要用 reload。）
 
 聲音清單（`tools/sfx_sf2.mjs` 參數，每加一把就更新）：
-`m4a1 ak103 g36c m16a3 k2 scarh famas xm8 galil hk417 qbz97 mp5k k14 trg m40a1 cz700 cheytac awp barrett@Barret kar98k@Kar98k_new g36c_eo=g36c+silence hk417_rs=hk417+silence scarl_eo=scarh+silence`
+`m4a1 ak103 g36c m16a3 k2 scarh famas xm8 galil hk417 qbz97 mp5k k14 trg m40a1 cz700 cheytac awp barrett@Barret kar98k@Kar98k_new sr25 g36c_eo=g36c+silence hk417_rs=hk417+silence scarl_eo=scarh+silence`
 
 ## 佇列（由上往下做）
 狀態：⬜ 未做 · 🔄 進行中 · ✅ 完成 · ⏸ 做不到（寫原因）
@@ -44,7 +44,7 @@
 - ⏸ SVD（`sni_dragunov`，`scope_dragunov`）：PSO 鏡是側掛的，接在槍身 `Scope` 插槽上時跑到右上方、而且大小不對（放正位移 13.7 cm），一般的接法不適用，要手動對位或找它真正的掛點。遊戲裡維持原本的 SVD。建模設定留在 `tools/sf2_rig_build.mjs svd`
 - ✅ Barrett（v64y；`sni_barret`，十字 `mic_ScopeView_03`）
 - ✅ Kar98k（v64z；`sni_kar98k`，`Common_Scope_Kar98k`）
-- ⬜ SR-25（`sni_sr-25`，`scope_sr25`）
+- ✅ SR-25（v65a；腰射時鏡子離鏡頭偏近，待校腰射位置；`sni_sr-25`，`scope_sr25`）
 - ⬜ PSG1（`sni_psg-1`，`scope_psg-1`）
 - ⬜ FR-F2（`sni_frf2`，`Common_Scope_PM2` → `mic_ScopeView_01`）
 - ⬜ M14 EBR（`rif_m14ebr`）
@@ -59,3 +59,6 @@
 
 ## ⏸ 需要使用者
 （迴圈遇到需要使用者的事情記在這裡）
+- SVD 側掛 PSO 鏡要手動對位（見 C）。
+- 腰射位置只有 K14 對過 SF2 截圖；SR-25 的鏡子離鏡頭偏近，其他把也可能需要校——要使用者的 SF2 腰射截圖。
+- SR-25 照 SF2 的 `FireInterval` 1.15 s，變成近似栓動的節奏（原本 0.3 s 半自動）。

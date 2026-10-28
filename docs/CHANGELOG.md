@@ -1478,3 +1478,15 @@
 - 數值照 `SFCWeaponKar98k`：換彈 3.3 s（動畫 3.45 s）、重量 5.6。
 - 聲音：`Sound_Kar98k_new`，四種槍聲和拉栓聲。
 - 驗證：腰射截圖、`_reloadtime.mjs`、`check.mjs`。
+
+
+### v65a（本機，2026-10-28）：SF2 原版 SR-25
+- `sni_sr-25` 裝 `scope_sr25`：轉 90°，放正位移 0.41 cm；十字 `mil`。
+- 數值照 `SFCWeaponSR25`：
+  - 射擊間隔 1.15 s。原本是 0.3 s 半自動，現在依 SF2 原始資料。
+  - 換彈 3.2 s。
+  - 開鏡 `fZoomedFOV` 12°，作為第二段；第一段 20°。
+  - 重量 7.0。
+- 聲音：`Sound_SR25`。
+- 還沒做好：腰射時鏡子離鏡頭偏近，需要 SF2 截圖校正。
+- 驗證：腰射和開鏡截圖、`_reloadtime.mjs`、`check.mjs`。
