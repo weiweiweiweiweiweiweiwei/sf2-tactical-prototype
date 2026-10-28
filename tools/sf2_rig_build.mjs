@@ -23,13 +23,20 @@ const ARMS = [['sleeve', 'arms/c_comm_skelet/SkeletalMesh3/com_1starm_b01.gltf',
 const gun = (id, o = {}) => {
   const pkg = o.pkg || `rif_${id}`, stem = o.stem || pkg, tex = o.tex || id, mesh = `${id}/${pkg}/SkeletalMesh3/${stem}_`;
   return Object.assign({
-    base: `${mesh}body.gltf`, props: `${id}_anim/${pkg}/SkeletalMesh3/${stem}_body.props.txt`,
+    dir: id, base: `${mesh}body.gltf`, props: `${id}_anim/${pkg}/SkeletalMesh3/${stem}_body.props.txt`,
     parts: [...['body', 'barrel', 'stock', 'magazine'].map((k) => [k, `${mesh}${k}.gltf`, `${tex}_${k}`]), ...ARMS],
     psa: `${id}_anim/${pkg}/AnimSet/${o.anim || '1st_anim_' + id}.psa`, socketSights: [],
   }, o);
 };
 // SightOnMesh on the class's SightBaseSocketName ('Sight'): [name, gltf, texture stem, socket]
 const sight = (file, tex) => [['sight', file, tex, 'Sight']];
+// v64 attachments (weapon_common_part / weapon_common_part01, UModel -export -gltf -png and -export -psk for the .props.txt with
+// their sockets → tools/out/sf2/parts/, parts_props/): an optic on the body's 'Scope' socket, its 'ZoomCrosshair' socket is the aim
+// point (the DOT mark, SF2's reticle quad from dot_point there); a silencer on 'Silencer', its own 'flame' socket the new muzzle
+const PART = (pkg, name) => ({ file: `parts/${pkg}/SkeletalMesh3/${name}.gltf`, props: `parts_props/${pkg}/SkeletalMesh3/${name}.props.txt` });
+const EOTECH = { ...PART('weapon_common_part', 'DOT_EOTECH'), tex: 'eotech', reticle: 'parts/dot_point/Texture2D/eotech_reticleDot.png' };
+const REFLEX = { ...PART('weapon_common_part01', 'DOT_REFLEX'), tex: 'reflex', reticle: 'parts/dot_point/Texture2D/reflex_reticleDot.png' };
+const SIL = (k) => ({ ...PART('weapon_common_part', `silencer_ar_type_${k}`), tex: `silencer_type_${k}` });
 const G = {
   // v62o the rear sight is the A2 carry handle (rif_m4a1_handle_a, its own sheet handle_d / _n in weapon_common_part): SF2's ADS picture (user 10-27) has the aperture ring standing above the handle's ears; the detachable
   // rif_m4a1_rearsight (weapon_common_part01) used since v61b is an attachment, its ring sat level with its guards
@@ -55,6 +62,13 @@ const G = {
   qbz97: gun('qbz97', { hoodedPost: true, sightMarks: { SIGHT: [-0.1015, 1.1883, 0.205], POST: [-0.1015, 1.1483, 0.36] } }),
   // v62z (loop H3) the first SMG: the MP5K (smg_mp5k), its hooded front sight on the Sight socket (on the barrel's texture sheet), the drum rear sight on the body
   mp5k: gun('mp5k', { pkg: 'smg_mp5k', stem: 'smg_mp5k', hoodedPost: true, socketSights: sight('mp5k/smg_mp5k/SkeletalMesh3/smg_mp5k_sight_up.gltf', 'mp5k_barrel') }),
+  // v64 the attachment builds (user 10-28: SF2's G36C EOTech Silencer, HK417 mod2A Reflex Silencer, SCAR-L MK2 EOTech Silencer):
+  // the same rigs, the iron sights left off for the optic
+  g36c_eo: gun('g36c', { optic: EOTECH, silencer: SIL('a') }),
+  hk417_rs: gun('hk417', { optic: REFLEX, silencer: SIL('b') }),
+  scarl_eo: gun('scarl', { pkg: 'rif_scar_L', tex: 'scar_L', anim: '1st_anim_scar_L', optic: EOTECH, silencer: SIL('c') }),
+  // v64 the K14 bolt-action sniper (sni_k14): its scope is part of the body
+  k14: gun('k14', { pkg: 'sni_k14', stem: 'sni_k14' }),
 }[GID];
 if (!G) throw new Error(`unknown gun ${GID}`);
 const TEX = {
@@ -63,7 +77,8 @@ const TEX = {
   glove: ['arms/c_comm_1sthand_texture/Texture2D/com_1st_glove_b01'],
 };
 const PNG = {}; // every exported texture of this gun by file name
-(function walk(d) { for (const f of fs.readdirSync(d, { withFileTypes: true })) { const q = `${d}/${f.name}`; if (f.isDirectory()) walk(q); else if (f.name.endsWith('.png')) PNG[f.name.toLowerCase()] ??= q.slice(SRC.length, -4).replace(/_[dns]$/, ''); } })(SRC + GID);
+function walk(d) { for (const f of fs.readdirSync(d, { withFileTypes: true })) { const q = `${d}/${f.name}`; if (f.isDirectory()) walk(q); else if (f.name.endsWith('.png')) PNG[f.name.toLowerCase()] ??= q.slice(SRC.length, -4).replace(/_[dns]$/, ''); } }
+walk(SRC + G.dir); if (G.optic || G.silencer) walk(SRC + 'parts'); // (v64 a variant reads its gun's folder and the attachments')
 const texDirs = (stem) => TEX[stem] || [PNG[`${stem}_d.png`.toLowerCase()] || `${GID}/missing/${stem}`];
 const ROUGH = { barrel: 0.78, stock: 0.8, magazine: 0.72, sight: 0.66, body: 0.68, sleeve: 0.9, glove: 0.82 }; // matte, dielectric (as sf2_gun_build.py)
 const PEEP_DROP = +(process.env.PEEP_DROP ?? 0.0048), PEEP_DX = +(process.env.PEEP_DX ?? 0.00006); // v62p 0.0007 → 0.00136 on the carry handle: its hole was 26 px left of the dot at 1920×1080 (user 10-27); measured by tools/out/_ringcenter.mjs + _ringmeasure.py, now 0.2 px. v62z 0.00136 → 0.00006: the handle's points now come in the body's bind space (toBody), 1.3 mm over — the same SIGHT as before // the rear sight's aperture under its top / off its top's mean x (tuned on ADS shots, v61b)
@@ -127,6 +142,7 @@ async function addPart(name, file, stem, bake = null) {
     if ([...used].some((j) => remap[j] === undefined)) throw new Error(`${name}: bone missing in the base skeleton`);
   }
   const mesh = doc.createMesh(name), mat = await material(stem), out = [];
+  const glass = () => doc.createMaterial('gun:glass').setBaseColorFactor([0.22, 0.12, 0.08, 0.12]).setAlphaMode('BLEND').setMetallicFactor(0).setRoughnessFactor(0.35); // v64 an optic's lens (lens_* / *_glass_mic): a dark warm tint, as in the user's SF2 G36C EOTech shot
   // v62i each part keeps its OWN bind pose (as UE3 does: the bones are shared, each mesh its own reference pose): its own skin over
   // the body's joints with its inverse-bind matrices (the body's for bones it lacks). AK-103 / SCAR stocks have weapon_stock
   // turned 90° against the body's, the G36C's arms a whole other bind — read through the body's, the stock swung a metre off.
@@ -154,7 +170,8 @@ async function addPart(name, file, stem, bake = null) {
       pos.set(v, i * 3); nor.set(norm(nn), i * 3); if (tan) tan.set(tt, i * 4);
     }
     const acc = (type, arr) => doc.createAccessor().setType(type).setArray(arr).setBuffer(buf);
-    const prim = doc.createPrimitive().setMaterial(mat).setIndices(acc('SCALAR', new Uint32Array(p.getIndices().getArray())))
+    const lens = /lens|glass/i.test((p.getMaterial() && p.getMaterial().getName()) || '');
+    const prim = doc.createPrimitive().setMaterial(lens ? glass() : mat).setIndices(acc('SCALAR', new Uint32Array(p.getIndices().getArray())))
       .setAttribute('POSITION', acc('VEC3', pos)).setAttribute('NORMAL', acc('VEC3', nor)).setAttribute('TEXCOORD_0', acc('VEC2', new Float32Array(UV.getArray())))
       .setAttribute('JOINTS_0', acc('VEC4', jo)).setAttribute('WEIGHTS_0', acc('VEC4', we));
     if (tan) prim.setAttribute('TANGENT', acc('VEC4', tan));
@@ -189,6 +206,31 @@ const marks = { MUZZLE: bore };
 for (const [name, file, stem, socket] of G.socketSights) { // the part's own root bone onto the socket
   const pd = await io.read(SRC + file), sk = pd.getRoot().listSkins()[0], ibm = Array.from(sk.getInverseBindMatrices().getArray()).slice(0, 16), M = mul(sockAt(socket), ibm);
   V[name] = await addPart(name, file, stem, { p: (v) => xf(M, v), n: rot3(M, 1) });
+}
+// v64 attachments: the part's root bone (weapon_scope / weapon_root) onto the body's socket, as the sights above; a point on one of
+// the part's own sockets is then that socket's frame on the body: body socket × the part socket's offset
+const partSock = (props, name) => {
+  const m = fs.readFileSync(SRC + props, 'utf8').match(new RegExp(`SocketName = ${name}\\s+BoneName = \\S+\\s+RelativeLocation = \\{ X=([-\\d.e]+), Y=([-\\d.e]+), Z=([-\\d.e]+) \\}`));
+  if (!m) throw new Error(`${props}: no socket ${name}`);
+  return [+m[1] / 100, +m[3] / 100, -m[2] / 100];
+};
+for (const [key, socket, own, mark] of [['optic', 'Scope', 'ZoomCrosshair', 'DOT'], ['silencer', 'Silencer', 'flame', 'MUZZLE']]) {
+  const A = G[key]; if (!A) continue;
+  const pd = await io.read(SRC + A.file), sk = pd.getRoot().listSkins()[0], ibm = Array.from(sk.getInverseBindMatrices().getArray()).slice(0, 16), S = sockAt(socket), M = mul(S, ibm);
+  V[key] = await addPart(key, A.file, A.tex, { p: (v) => xf(M, v), n: rot3(M, 1) });
+  marks[mark] = xf(S, partSock(A.props, own));
+}
+if (G.optic && G.optic.reticle) { // SF2's reticle (dot_point's DotTexture) on a 2 cm quad at the DOT, riveted to weapon_root: the game takes its texture for the sight's sprite
+  const d = marks.DOT, h = 0.01, acc = (type, arr) => doc.createAccessor().setType(type).setArray(arr).setBuffer(buf);
+  const img = await sharp(SRC + G.optic.reticle).png().toBuffer();
+  const mat = doc.createMaterial('gun:reticle').setBaseColorTexture(doc.createTexture('reticle').setImage(img).setMimeType('image/png')).setAlphaMode('BLEND').setMetallicFactor(0).setRoughnessFactor(1);
+  const pos = new Float32Array([d[0] - h, d[1] - h, d[2], d[0] + h, d[1] - h, d[2], d[0] + h, d[1] + h, d[2], d[0] - h, d[1] + h, d[2]]);
+  const prim = doc.createPrimitive().setMaterial(mat).setIndices(acc('SCALAR', new Uint32Array([0, 1, 2, 0, 2, 3])))
+    .setAttribute('POSITION', acc('VEC3', pos)).setAttribute('NORMAL', acc('VEC3', new Float32Array([0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1])))
+    .setAttribute('TEXCOORD_0', acc('VEC2', new Float32Array([1, 1, 0, 1, 0, 0, 1, 0])))
+    .setAttribute('JOINTS_0', acc('VEC4', new Uint16Array([jix.weapon_root, 0, 0, 0, jix.weapon_root, 0, 0, 0, jix.weapon_root, 0, 0, 0, jix.weapon_root, 0, 0, 0])))
+    .setAttribute('WEIGHTS_0', acc('VEC4', new Float32Array([1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0])));
+  scene.addChild(doc.createNode('reticle').setMesh(doc.createMesh('reticle').addPrimitive(prim)).setSkin(skin));
 }
 if (!G.railSights) { // POST: the front sight's tip — the highest point on the bore's centre line (±1.2 mm: not the ears) in the front 25 cm
   const pts = [V.barrel, V.body, ...G.socketSights.map(([n]) => V[n])].flat().filter((p) => Math.abs(p[0] - bore[0]) < 0.0012 && p[2] > bore[2] - 0.25).sort((a, b) => b[1] - a[1]);
