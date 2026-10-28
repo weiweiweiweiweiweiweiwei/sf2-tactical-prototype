@@ -16,7 +16,7 @@
     - 這輪已全部還原（M16A3 仍是舊槍模），`sf2_weapon_table.py` 的 m16a3 仍註解。
 - QBZ-97：提把上的瞄準線（現在眼睛落在照門本體上），對照 `.props.txt` 的插槽。
 - ✅ MP5K（本機 2026-10-28，見「本機已完成」L3）。
-- M4A1 第三人稱槍模：`_3rd` 零件，原始匯出放在 `tools/out/sf2/m4a1_3rd/`，成品 commit 成 `tools/guns/m4a1_3rd.glb`；接到 Bot 手上的部分留給雲端（寫進「本機已完成」）。
+- ✅ M4A1 第三人稱槍模（本機 2026-10-28，見「本機已完成」L4；接到 Bot 手上留給雲端）。
 - 驗證：`node tools/check.mjs`、`node tools/_gunshot.mjs`（開鏡截圖存進 `docs/testing/shots/`）。
 
 ### H4 ⬜ 真實顯卡的效能檢查
@@ -68,3 +68,11 @@
 - 換彈音效時間（量 Reload 片段 65 格的 `weapon_magazine`／`weapon_cartridge`）：0.17／0.48／0.77（`tools/out/_reloadtimes.py`，同方法量 AK-103 得 0.14／0.46／0.82）。
 - 驗證：`analyze.mjs` MODULES_OK、`build.sh`、`check.mjs` 過；`_gunshot.mjs mp5k`（FIRE=1）開鏡時照門鼓（刻字 HK NO.5 99051-A）和前準星護圈對齊、準星在中央，開火有 SF2 火光；截圖 `docs/testing/shots/mp5k_hip.jpg`、`mp5k_ads.jpg`。
 - 留給雲端：Bot 配槍清單、倉庫卡片排序、第三人稱 `tp` 外形（目前用預設）。
+
+### L4 ✅ H3 的 M4A1 第三人稱槍模（2026-10-28）
+- 原始匯出：`tools/out/sf2/m4a1_3rd/`（`rif_m4a1_{body,barrel,stock,magazine}_3rd`，不 commit）。
+- 成品：**`tools/guns/m4a1_3rd.glb`**（222 KB，Draco、WebP 512 貼圖）；工具 `tools/sf2_3rd_build.mjs [m4a1]`。
+- 座標：UModel 原樣（公尺、Y 朝上、**槍口朝 +X**），沒轉成 gunlib 的槍座標。四個零件共用 4 根骨頭的綁定姿勢，頂點直接用。材質 `gun:tex_m4a1_<part>`，貼圖和第一人稱同一套（SF2 沒有另外的第三人稱貼圖）。
+- 標記（空物件，公尺）：`MUZZLE` (0.497, 0.087, 0)、`SCOPE` (0.073, 0.109, 0)、`GRIP` (0.205, 0.064, 0)、`STOCK` (−0.016, 0.087, 0)——來自 `rif_m4a1_body_3rd.props.txt` 的插槽 `flame`／`Scope`／`Grip`／`stock`。
+- 注意：平頂機匣，**沒有照門和前準星**（第一人稱的提把 `rif_m4a1_handle_a` 沒有 `_3rd`；`weapon_common_part` 有 `dot_handle_3rd` 可以掛在 `SCOPE`，但它的貼圖還沒對上，見 H3 M16A3 的調查）。
+- 驗證：Blender 預覽 `docs/testing/shots/m4a1_3rd_side.png`（gun_preview.py 是照 gunlib 座標取景，所以畫面偏）。
