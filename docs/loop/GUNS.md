@@ -16,7 +16,7 @@
    - `-export -psk -out=../sf2/<id>_anim <pkg>`（動畫 `.psa`、槍身 `.props.txt` 的插槽）；
    - `-export -sounds -out=../sf2/<id> Sound_<槍>`。
    - 一次只能給一個包名（第二個參數會被當成物件名）。
-2. **鏡子／瞄具**：看 `SFCItem_<槍>` 的 `DefaultItemClassNames`（`tools/sf2_props.py`），找鏡子零件的 `ScopeMesh`／`MeshData`／`SightCrosshair`。鏡子網格在 `weapon_common_part`（scope_awp、scope_cheytac、scope_cz700、scope_dragunov、scope_pm2、scope_pm50、scope_psg-1、scope_sr25…）或 `weapon_common_part01`。用 `-export -gltf -png -out=../sf2/parts <包> <物件>`，`-export -psk -out=../sf2/parts_props <包> <物件>` 匯出。根骨骼和 Bender／Zeiss 一樣是 `[-0.5,0.5,-0.5,-0.5]` 就加 `roll: 90`。
+2. **鏡子／瞄具**：看 `SFCItem_<槍>` 的 `DefaultItemClassNames`（`tools/sf2_props.py`），找鏡子零件的 `ScopeMesh`／`MeshData`／`SightCrosshair`。鏡子網格在 `weapon_common_part`（scope_awp、scope_cheytac、scope_cz700、scope_dragunov、scope_pm2、scope_pm50、scope_psg-1、scope_sr25…）或 `weapon_common_part01`。用 `-export -gltf -png -out=../sf2/parts <包> <物件>`，`-export -psk -out=../sf2/parts_props <包> <物件>` 匯出。**每顆鏡子都要試 `ROLL=0` 和 `ROLL=90` 兩張腰射截圖比對**（根骨骼一樣也不代表網格方向一樣：Bender／CZ700 要 90，Zeiss 要 0）；正確的樣子是高低轉鈕朝上、鏡環在下面架在導軌上。之後建模腳本會自動「鏡片中心對準槍膛、最低點貼齊插槽」（v64u），看 log 的 `SQUARE` 位移：超過 1 cm 通常表示轉向錯了。
 3. **建模**：`tools/sf2_rig_build.mjs` 加 `gun('<id>', { pkg, stem, tex, anim, optic })`。動畫檔名不一定是 `1st_anim_<id>`，看 `<id>_anim/<pkg>/AnimSet/`。執行 `node tools/sf2_rig_build.mjs <id>`，再 `node tools/guns/pack.mjs`。
 4. **數值**：`tools/sf2_weapon_table.py` 的 GUNS 加一行（換彈音效時間點看 Reload 片段：PSA 的 ANIMINFO 格數）；跑 `PYTHONPATH=tools python tools/sf2_weapon_table.py`。`tools/sf2_weight_table.py` 的 MAP 確認有這把，跑一次。
 5. **聲音**：`node tools/sfx_sf2.mjs <下面「聲音清單」全部> <新的>`，再把新 id 加進清單。
@@ -31,7 +31,7 @@
 
 ### A. 使用者指定的狙擊槍
 - ✅ TRG-41（v64s）
-- ⬜ M40A1（`sni_m40a1`，鏡 `Cz700_Def_Scope` → `scope_cz700`，十字預設 `mic_ScopeView`＝`tex_scope_Crosshair_Diffuse`＋`_dot`）
+- ✅ M40A1（v64t；`sni_m40a1`，鏡 `Cz700_Def_Scope` → `scope_cz700`，十字預設 `mic_ScopeView`＝`tex_scope_Crosshair_Diffuse`＋`_dot`）
 - ⬜ CZ700（`sni_cz700`，同 M40A1 的鏡和十字）
 - ⬜ CheyTac M200（`sni_cheytac`，`scope_cheytac`，預設十字；`WEAPON_DATABASE.cheytac_m200`）
 - ⬜ AWP（`sni_awp`，`scope_awp`，預設十字）

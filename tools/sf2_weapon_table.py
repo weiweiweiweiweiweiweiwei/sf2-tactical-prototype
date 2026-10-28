@@ -29,6 +29,9 @@ GUNS = {  # id: (SF2 class, rig, sound, [magout, magin, charge])
     'k14': ('K14', 'k14', 'k14', [0.31, 0.48, 0.75], {'adsType': '2d_scope_overlay', 'adsFov': 20, 'adsSpeed': 17, 'vmAdsHFov': None, 'sf2Recoil': None,
                                                        'sf2ReloadSounds': [[0.14, 'boltback'], [0.31, 'magout'], [0.48, 'magin'], [0.75, 'charge']]}),
     # v64s the TRG-41: its Reload clip is the K14's length (91 frames) and order — bolt open, mag out / in, bolt shut — marks as the K14's
+    # v64t SF2's other bolt guns: a 2D scope with SF2's default reticle ('mil', mic_ScopeView), zooms fZoomedFOV then 20; reload marks as the K14's
+    'm40a1': ('M40A1', 'm40a1', 'm40a1', [0.31, 0.48, 0.75], {'adsType': '2d_scope_overlay', 'adsFov': 20, 'adsSpeed': 17, 'vmAdsHFov': None, 'sf2Recoil': None, 'sf2Reticle': 'mil', 'zoomHFovs': [55, 20],
+                                                       'sf2ReloadSounds': [[0.14, 'boltback'], [0.31, 'magout'], [0.48, 'magin'], [0.75, 'charge']]}),
     'trg': ('TRG', 'trg', 'trg', [0.31, 0.48, 0.75], {'adsType': '2d_scope_overlay', 'adsFov': 20, 'adsSpeed': 17, 'vmAdsHFov': None, 'sf2Recoil': None,
                                                        'sf2ReloadSounds': [[0.14, 'boltback'], [0.31, 'magout'], [0.48, 'magin'], [0.75, 'charge']]}),
 }

@@ -24,7 +24,7 @@ const gun = (id, o = {}) => {
   const pkg = o.pkg || `rif_${id}`, stem = o.stem || pkg, tex = o.tex || id, mesh = `${id}/${pkg}/SkeletalMesh3/${stem}_`;
   return Object.assign({
     dir: id, base: `${mesh}body.gltf`, props: `${id}_anim/${pkg}/SkeletalMesh3/${stem}_body.props.txt`,
-    parts: [...['body', 'barrel', 'stock', 'magazine'].map((k) => [k, `${mesh}${k}.gltf`, `${tex}_${k}`]), ...ARMS],
+    parts: [...(o.partNames || ['body', 'barrel', 'stock', 'magazine']).map((k) => [k, `${mesh}${k}.gltf`, `${tex}_${k}`]), ...ARMS], // (v64t o.partNames: the M40A1 has no stock part)
     psa: `${id}_anim/${pkg}/AnimSet/${o.anim || '1st_anim_' + id}.psa`, socketSights: [],
   }, o);
 };
@@ -42,8 +42,10 @@ const REFLEX = { ...PART('weapon_common_part01', 'DOT_REFLEX'), tex: 'reflex', r
 // shots have it on top), so it is turned about the socket's forward axis (UE x) before placing
 const K14_SCOPE = { ...PART('weapon_common_part01', 'scope_k14_bender'), tex: 'bender_scope', noAim: true, roll: +(process.env.ROLL ?? 90) };
 // v64s the TRG-41's scope (SFCItem_TRG -> SFCItem_Common_Scope_Zeiess: ScopeMesh scope_zeiess, SightType 18, reticle
-// common_sight.ScopeView_Reticle_03); its root bind is the Bender's, so the same quarter turn about its mount
-const ZEISS_SCOPE = { ...PART('weapon_common_part01', 'scope_zeiess'), tex: 'zeiss', noAim: true, roll: +(process.env.ROLL ?? 90) };
+// common_sight.ScopeView_Reticle_03); its root bind matches the Bender's but its mesh is modelled upright (v64u)
+const ZEISS_SCOPE = { ...PART('weapon_common_part01', 'scope_zeiess'), tex: 'zeiss', noAim: true, roll: +(process.env.ROLL ?? 0) }; // v64u no turn: the same root bind as the Bender's, yet read as it is it already stands (elevation turret up, the big knob left, rings down — the user's 10-28 shot of +90: turrets above and below)
+// v64t the bolt guns' own scopes (weapon_common_part; SFCItem_<gun>_Def_Scope / Cz700_Def_Scope): root binds as the Bender's
+const SCOPE = (name, tex) => ({ ...PART('weapon_common_part', name), tex, noAim: true, roll: +(process.env.ROLL ?? 90) });
 const SIL = (k) => ({ ...PART('weapon_common_part', `silencer_ar_type_${k}`), tex: `silencer_type_${k}` });
 const G = {
   // v62o the rear sight is the A2 carry handle (rif_m4a1_handle_a, its own sheet handle_d / _n in weapon_common_part): SF2's ADS picture (user 10-27) has the aperture ring standing above the handle's ears; the detachable
@@ -78,6 +80,11 @@ const G = {
   // v64 the K14 bolt-action sniper (sni_k14); v64b its scope on the body's Scope socket (K14_SCOPE)
   k14: gun('k14', { pkg: 'sni_k14', stem: 'sni_k14', optic: K14_SCOPE }),
   // v64s the TRG-41 (sni_trg; its animset is 1st_ani_trg) on the Zeiss scope
+  // v64t M40A1 (no stock part) and CZ700 on the CZ700's scope; CheyTac M200 and AWP on their own (SF2's default reticle, mic_ScopeView)
+  m40a1: gun('m40a1', { pkg: 'sni_m40a1', stem: 'sni_m40a1', tex: 'm40a1', partNames: ['body', 'barrel', 'magazine'], optic: SCOPE('scope_cz700', 'scope_cz700') }),
+  cz700: gun('cz700', { pkg: 'sni_cz700', stem: 'sni_cz700', tex: 'cz700', optic: SCOPE('scope_cz700', 'scope_cz700') }),
+  cheytac: gun('cheytac', { pkg: 'sni_cheytac', stem: 'sni_cheytac', tex: 'cheytac', optic: SCOPE('scope_cheytac', 'cheytac_scope_a') }),
+  awp: gun('awp', { pkg: 'sni_awp', stem: 'sni_awp', tex: 'awp', optic: SCOPE('scope_awp', 'awp_scope_a') }),
   trg: gun('trg', { pkg: 'sni_trg', stem: 'sni_trg', tex: 'sni_trg', anim: '1st_ani_trg', optic: ZEISS_SCOPE }),
 }[GID];
 if (!G) throw new Error(`unknown gun ${GID}`);
@@ -255,7 +262,20 @@ for (const [key, socket, own, mark] of [['optic', 'Scope', 'ZoomCrosshair', 'DOT
     RC = mul(mul(T(ctr), R), T(ctr.map((x) => -x)));
     console.log('ROLL', GID, key, A.roll, 'about mesh axis', 'xyz'[ax]);
   }
-  const M = mul(mul(S, ibm), RC);
+  let M = mul(mul(S, ibm), RC);
+  if (A.roll != null) { // v64u then square it on the rail whatever the pivot did (user 10-28: the TRG-41's Zeiss sat right of and below the bore —
+    // its root bone is not under its mount): the lens centres (the tube's axis) over the socket sideways, the lowest point (the
+    // mount's foot) on the socket's height
+    const lens = [], all = [], e = [];
+    for (const p of pd.getRoot().listMeshes()[0].listPrimitives()) {
+      const isLens = /lens|glass/i.test((p.getMaterial() && p.getMaterial().getName()) || ''), P = p.getAttribute('POSITION');
+      for (let i = 0; i < P.getCount(); i++) { P.getElement(i, e); const w = xf(M, e); all.push(w); if (isLens) lens.push(w); }
+    }
+    const s = S.slice(12, 15), cx = lens.length ? lens.reduce((a, w) => a + w[0], 0) / lens.length : s[0], lowY = Math.min(...all.map((w) => w[1]));
+    const d = [s[0] - cx, s[1] - lowY, 0];
+    console.log('SQUARE', GID, key, 'shift', d.map((x) => +(x * 100).toFixed(2)), 'cm', lens.length ? '' : '(no lens: x kept)');
+    if (process.env.NOSQUARE !== '1') M = mul([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, d[0], d[1], d[2], 1], M);
+  }
   V[key] = await addPart(key, A.file, A.tex, { p: (v) => xf(M, v), n: rot3(M, 1) });
   if (!A.noAim) marks[mark] = xf(S, partSock(A.props, own));
 }
