@@ -2961,7 +2961,7 @@ for (const [id, o] of Object.entries(SF2_WEAPONS)) {
 var APEX_WEAPONS = {
   havoc: { "name": "HAVOC Rifle", "body": 20, "head": 26, "leg": 15, "pellets": 1, "rpm": 672, "headMax": 300.4 },
   hemlok: { "name": "Hemlok Burst AR", "body": 21, "head": 29.4, "leg": 15.75, "pellets": 1, "rpm": 930, "headMax": 300.4 },
-  nemesis: { "name": "Nemesis Burst AR", "body": 17, "head": 22.1, "leg": 12.8, "pellets": 1, "rpm": 1080, "headMax": 1e6 },
+  nemesis: { "name": "Nemesis Burst AR", "body": 17, "head": 22.1, "leg": 12.8, "pellets": 1, "rpm": 1080, "headMax": 300.4 },
   r301: { "name": "R-301 Carbine", "body": 15, "head": 19.5, "leg": 11.3, "pellets": 1, "rpm": 810, "headMax": 300.4 },
   flatline: { "name": "VK-47 Flatline", "body": 20, "head": 26, "leg": 15, "pellets": 1, "rpm": 600, "headMax": 300.4 },
   alternator: { "name": "Alternator SMG", "body": 18, "head": 22.5, "leg": 14.4, "pellets": 1, "rpm": 600, "headMax": 38.1 },
@@ -2973,11 +2973,11 @@ var APEX_WEAPONS = {
   lstar: { "name": "L-STAR EMG", "body": 19, "head": 23.8, "leg": 16.2, "pellets": 1, "rpm": 600, "headMax": 57.1 },
   spitfire: { "name": "M600 Spitfire", "body": 21, "head": 26.3, "leg": 17.8, "pellets": 1, "rpm": 540, "headMax": 57.1 },
   rampage: { "name": "Rampage LMG", "body": 29, "head": 36.3, "leg": 24.7, "pellets": 1, "rpm": 300, "headMax": 63.5 },
-  r3030: { "name": "30-30 Repeater", "body": 51, "head": 71.4, "leg": 43.4, "pellets": 1, "rpm": 63.5, "headMax": 450 },
+  r3030: { "name": "30-30 Repeater", "body": 51, "head": 71.4, "leg": 43.35, "pellets": 1, "rpm": 63.5, "headMax": 450 },
   bocek: { "name": "Bocek Compound Bow", "body": 35, "head": 52.5, "leg": 28, "pellets": 1, "rpm": 150, "headMax": 300.4 },
   g7: { "name": "G7 Scout", "body": 33, "head": 47.9, "leg": 24.8, "pellets": 1, "rpm": 246, "headMax": 450 },
   tripletake: { "name": "Triple Take", "body": 22, "head": 33, "leg": 19.8, "pellets": 3, "rpm": 90, "headMax": 450 },
-  chargerifle: { "name": "Charge Rifle", "body": 75, "head": 135, "leg": 67.5, "pellets": 1, "rpm": 78, "headMax": 300 },
+  chargerifle: { "name": "Charge Rifle", "body": 75, "head": 135, "leg": 67.5, "pellets": 1, "rpm": 78, "headMax": 750 },
   kraber: { "name": "Kraber .50-Cal Sniper", "body": 150, "head": 210, "leg": 120, "pellets": 1, "rpm": 24.7, "headMax": 750 },
   longbow: { "name": "Longbow DMR", "body": 60, "head": 108, "leg": 48, "pellets": 1, "rpm": 78, "headMax": 750 },
   sentinel: { "name": "Sentinel", "body": 70, "head": 126, "leg": 63, "pellets": 1, "rpm": 31.2, "headMax": 750 },
@@ -20921,7 +20921,7 @@ var BotAI = class {
         const av = this._avoidance(wx, wz);
         this.wishX = wx + av.x;
         this.wishZ = wz + av.z;
-        this.wishSpeed = this.strafeDir === 0 ? Math.abs(radial) > 0.3 ? 1.2 : 0 : kind === "sniper" ? 1.2 : 1.8 + D.strafe * 0.7;
+        this.wishSpeed = this.strafeDir === 0 ? Math.abs(radial) > 0.3 ? 1.2 : 0 : kind === "sniper" ? 1.2 : 1.8 + D.strafe * 1.4;
       }
       this.reactT -= dt;
       if (dist < 1.4 && this.meleeCd <= 0 && this.reactT <= 0) {
@@ -21506,6 +21506,65 @@ function emblemSVG(id) {
   return `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="${g}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/></linearGradient></defs><polygon points="${star}" fill="url(#${g})" stroke="#2a2f36" stroke-width="1.2"/>${rays}<circle cx="50" cy="50" r="27" fill="url(#${g})" stroke="#2a2f36" stroke-width="1.5"/><circle cx="50" cy="50" r="23" fill="#1c232c"/>${icon}</svg>`;
 }
 __name(emblemSVG, "emblemSVG");
+
+// src/14c_aidebug.js
+var TEAM_COL = { alpha: "#7fc4ff", bravo: "#ff8a7a" };
+var _v = new THREE.Vector3();
+var AIDebug = class {
+  static {
+    __name(this, "AIDebug");
+  }
+  constructor() {
+    this.on = false;
+    this.t = 0;
+    this.labels = [];
+    this.el = document.createElement("div");
+    this.el.style.cssText = "position:fixed;inset:0;pointer-events:none;z-index:40;display:none;font:600 11px/1.25 Rajdhani,system-ui,sans-serif";
+    document.body.appendChild(this.el);
+  }
+  toggle() {
+    this.on = !this.on;
+    this.el.style.display = this.on ? "" : "none";
+    return this.on;
+  }
+  label(i) {
+    while (this.labels.length <= i) {
+      const d = document.createElement("div");
+      d.style.cssText = "position:absolute;transform:translate(-50%,-100%);white-space:nowrap;padding:1px 5px;border-radius:3px;background:rgba(0,0,0,.55);text-shadow:0 1px 1px #000";
+      this.el.appendChild(d);
+      this.labels.push(d);
+    }
+    return this.labels[i];
+  }
+  update(dt, match, camera) {
+    if (!this.on) return;
+    this.t -= dt;
+    const text = this.t <= 0;
+    if (text) this.t = 0.1;
+    const w = innerWidth, h = innerHeight;
+    let n = 0;
+    for (const b of match.bots) {
+      if (!b.alive) continue;
+      _v.copy(b.motor.pos);
+      _v.y += 2.1;
+      _v.project(camera);
+      if (_v.z > 1 || Math.abs(_v.x) > 1.1 || Math.abs(_v.y) > 1.1) continue;
+      const d = this.label(n++), ai = b.ai;
+      d.style.display = "";
+      d.style.left = ((_v.x + 1) / 2 * w).toFixed(0) + "px";
+      d.style.top = ((1 - _v.y) / 2 * h).toFixed(0) + "px";
+      if (text) {
+        const tg = ai.target ? ` → ${ai.target.name}${ai.seeTarget ? " 👁" : ""}` : "";
+        d.textContent = `${b.name} · ${ai.state}${ai.goalKind ? " (" + ai.goalKind + ")" : ""}${tg} · ${Math.ceil(b.hp)} HP`;
+        d.style.color = TEAM_COL[b.team] || "#fff";
+      }
+    }
+    for (let i = n; i < this.labels.length; i++) this.labels[i].style.display = "none";
+  }
+  dispose() {
+    this.el.remove();
+  }
+};
 
 // src/14_hud.js
 var HUD = class {
@@ -24414,6 +24473,12 @@ var Match = class _Match {
   emitNoise(pos, radius, team, kind = "noise") {
     for (const b of this.bots) if (b.alive && b.team !== team) b.ai.hear(pos, radius, kind);
   }
+  // v63a F4: the AI debug labels (bots run on this machine only: offline or the host)
+  toggleAIDebug() {
+    if (this.isClient) return;
+    if (!this.aiDebug) this.aiDebug = new AIDebug();
+    this.app.hud.toast(this.aiDebug.toggle() ? "AI 除錯顯示：開（F4 關閉）" : "AI 除錯顯示：關");
+  }
   // F1–F3: queue a loadout for the NEXT respawn (the current kit is not touched); the three sets pop up mid-screen like SF2.
   queueLoadout(i) {
     if (i < 0 || i >= LOADOUT_KEYS.length) return;
@@ -24854,6 +24919,7 @@ var Match = class _Match {
     hud.markers(this.rules.markers([]), this.camera);
     hud.scoreboard(input.down("Tab") ? this : null);
     hud.update(dt, this);
+    if (this.aiDebug) this.aiDebug.update(dt, this, this.camera);
     const t4 = performance.now();
     PR.add("sim", t1 - t0);
     PR.add("ai", t2 - t1);
@@ -24879,6 +24945,7 @@ var Match = class _Match {
     }
   }
   dispose() {
+    if (this.aiDebug) this.aiDebug.dispose();
     this.running = false;
     this.rules.dispose();
     for (const b of this.bots) if (b.tag) b.tag.material.map.dispose();
@@ -28274,6 +28341,10 @@ var App = class {
       const fk = /^F([1-3])$/.exec(code);
       if (fk && m && (this.state === "playing" || this.state === "paused")) {
         m.queueLoadout(parseInt(fk[1], 10) - 1);
+        return;
+      }
+      if (code === "F4" && m && (this.state === "playing" || this.state === "paused")) {
+        m.toggleAIDebug();
         return;
       }
       if (this.state === "playing" && m && (code === "Enter" || code === "NumpadEnter") && this.room && this.room.online) {

@@ -50,9 +50,10 @@
   - ✅ 清掉 `APEX.head`／`legs`／`leg`／`scale`（v62v）
   - ⬜ 新增 Apex 原版槍當成獨立武器（需要模型：HANDOFF H5 的 RSX 匯出），讓連發、蓄力、加速類（Hemlok、Nemesis、Prowler、Charge Rifle、Triple Take、Bocek、Devotion、L-STAR、Kraber）也能用
   - ✅ 每發傷害、頭／腿倍率、爆頭距離和對應的 Apex 槍一致：`tools/_dmgmodel.mjs`（v62u）
-  - ⏸ 本機：和公開 TTK 表比對差距 > 5% 的列出來（等 HANDOFF H2 抓回 wiki 的表）
+  - ✅ 和 wiki 的擊殺發數／TTK 比對（v62z，本機 H2 抓回的表）：21／28 一致，8 把差在每發傷害，採用較新的 S30.1（自選，見 DECISIONS D9；清單在 `docs/research/apex/README.md`）
+  - ✅ S30.1 完整頁面（本機 H1）接進數值資料當 `s30.1-full` 層（v62z）
   - ✅ 散布、後座不套 Apex 的（自選，見 DECISIONS D7）：留給「新增 Apex 原版槍」用
-  - ⬜ Nemesis 的 S14 欄位（S16 才加入）：散布、後座、拔槍找其他來源
+  - ✅ Nemesis 的散布、拔槍、彈道（v62z，`s30.1-full`）；只缺每發後座表
 - ⬜ 配件系統（瞄具、彈匣、槍托、槍管、Hop-up）
 - ⏸ 本機（HANDOFF H5）：用 RSX 從 Apex 安裝檔匯出原版槍模和音效
 
@@ -72,9 +73,9 @@
 - ✅ 反編譯散射腳本 `SFWeapon.AddSpreadEx`（v62d）
 - ⬜ 開鏡時間（0.15–0.35 s）、每槍前 10 發彈道、散佈倍率（移動 ×2、跳 ×4、蹲 ×0.7）
 - ⬜ 用 SF2 日服評分和彈匣／備彈核對各槍相對強弱（`docs/research/sf2/handoff-2026-10-27/weapons.json`）
-- ⬜ Bot：反應時間（700 / 450 / 300 ms）、橫移 ≥ 2.5 m/s、低血量撤退
-- ❓ 狙擊屏息 3 秒：Shift 已是衝刺，要選別的鍵
-- ❓ AI 除錯顯示：F1–F3 已是配裝卡片，要選別的鍵
+- ✅ Bot 稽核（v63b）：反應 0.7／0.45／0.28 s（×0.8–1.3 隨機）符合；低血量（< 35，或剛受傷且 < 70）會找掩護；交戰橫移原本 1.8／2.15／2.5 m/s → 1.8／2.5／3.2（簡單維持較慢，自選，見 DECISIONS D12）
+- ✅ 狙擊屏息 3 秒：不做（自選，見 DECISIONS D11：開鏡沒有晃動，SF2 也沒有屏息）
+- ✅ AI 除錯顯示（v63a）：F4（自選，見 DECISIONS D10）
 
 ## 5. 連線
 - ⬜ 客戶端完整回溯重播修正

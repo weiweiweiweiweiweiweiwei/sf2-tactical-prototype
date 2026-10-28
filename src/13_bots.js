@@ -547,7 +547,7 @@ class BotAI {
         const sx = Math.cos(bot.yaw) * this.strafeDir, sz = -Math.sin(bot.yaw) * this.strafeDir, want = (rMin + rMax) / 2, radial = clamp((dist - want) / want, -0.45, 0.45);
         let wx = sx - Math.sin(bot.yaw) * radial, wz = sz - Math.cos(bot.yaw) * radial; const wl = Math.hypot(wx, wz) || 1; wx /= wl; wz /= wl;
         const av = this._avoidance(wx, wz);
-        this.wishX = wx + av.x; this.wishZ = wz + av.z; this.wishSpeed = this.strafeDir === 0 ? (Math.abs(radial) > 0.3 ? 1.2 : 0) : kind === 'sniper' ? 1.2 : 1.8 + D.strafe * 0.7;
+        this.wishX = wx + av.x; this.wishZ = wz + av.z; this.wishSpeed = this.strafeDir === 0 ? (Math.abs(radial) > 0.3 ? 1.2 : 0) : kind === 'sniper' ? 1.2 : 1.8 + D.strafe * 1.4; // v63b strafe m/s: easy 1.8, normal 2.5, hard 3.2 (spec: ≥ 2.5)
       }
       this.reactT -= dt;
       if (dist < 1.4 && this.meleeCd <= 0 && this.reactT <= 0) { this.meleeCd = 1.3; if (Math.random() < 0.65) this._grab(t); }

@@ -24,6 +24,7 @@ import './12_player.js';
 import './13_bots.js';
 import './13b_netplayers.js';
 import './14b_emblems.js';
+import './14c_aidebug.js';
 import './14_hud.js';
 import './15_postfx.js';
 import './15b_rules.js';
