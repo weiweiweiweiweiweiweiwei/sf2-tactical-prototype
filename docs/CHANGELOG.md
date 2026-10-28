@@ -1507,3 +1507,11 @@
   - 聲音：`Sound_FRF2`。
 - `tools/sf2_reticle_svg.py`：`_dot` 貼圖是十字發光的部分。`mic_ScopeView` 的只有中心一個紅點；`_01` 的是整組紅色線條，另外中心有一塊 37 × 13 的光暈。改成把紅色線條轉成紅色矩形，厚度超過 6 的色塊（光暈）不畫。
 - 驗證：開鏡截圖、`_reloadtime.mjs`、`check.mjs`。
+
+
+### v65d（本機，2026-10-28）：SF2 原版 M14 EBR（EOTech）
+- SF2 的 M14 EBR（`SFCItem_M14EBR`）裝的是 EOTech 全息瞄具（`SFCItem_Common_DotSight_EOTECH`），不是狙擊鏡。
+- 改成和 G36C EOTech 一樣的 3D 瞄具：眼距 15 cm，EOTech 圓圈十字；原本的 2D 狙擊鏡拿掉。
+- 數值照 `SFCWeaponM14EBR`：射擊間隔 0.3 s、換彈 3.5 s（動畫 3.63 s）、重量 6.1。
+- 聲音：`Sound_M14EBR`。
+- 驗證：開鏡截圖中紅色圓圈在視窗中央；`_reloadtime.mjs`、`check.mjs`。

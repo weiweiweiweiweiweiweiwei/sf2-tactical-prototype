@@ -54,12 +54,12 @@ class GunMats {
 /* v45 Blender gun models: assets/guns/guns.js sets window.GUN_GLB[id] = base64 GLB (file:// friendly). Meshes are named
    '<node>__<material>' in gun space; empties SIGHT / MUZZLE / MUZZLE_S mark the sight axis and the two muzzle ends. */
 const GUN_MODELS = {}, GUN_RIGS = {}; // v62 GUN_RIGS: animated first-person rigs (<id>_sf2_rig.glb, see SF2Rig)
-const RIG_EYE = { m16a3: 0.055, qbz97: 0.06, g36c_eo: 0.15, hk417_rs: 0.15, scarl_eo: 0.15 }; // v62z rigs whose eye sits this far behind their SIGHT / DOT mark (WeaponModels._rigOpts; others: as deep as the head bone). v64 the optic rigs: 15 cm — the user's SF2 HK417 Reflex hip shot (10-28: the sight 205 px of 2000 wide at the hip lens), one camera for hip and ADS as in SF2
+const RIG_EYE = { m16a3: 0.055, qbz97: 0.06, g36c_eo: 0.15, m14ebr: 0.15, hk417_rs: 0.15, scarl_eo: 0.15 }; // v62z rigs whose eye sits this far behind their SIGHT / DOT mark (WeaponModels._rigOpts; others: as deep as the head bone). v64 the optic rigs: 15 cm — the user's SF2 HK417 Reflex hip shot (10-28: the sight 205 px of 2000 wide at the hip lens), one camera for hip and ADS as in SF2
 // v64 an optic's SF2 reticle: [the ring's share of the screen's width when aimed, the ring's diameter in px of its 256 px texture, measured on the diagonal clear of the ticks] — the user's SF2 ADS shots (HK417 Reflex 6 %; G36C EOTech 16.5 % of the height)
 // v64g a scoped SF2 gun's model position at the hip (camera space, m): solved so the scope's eyepiece sits where the user's SF2 hip shot
 // has it (K14, 10-28: centre 83.5 % / 67.6 % of the screen, radius 6.25 % of its width)
 const RIG_HIP = { k14: [0.0217, -1.2026, -0.0378] }; // (projected with the game's own viewmodel camera, tools/out/_k14fit2.mjs: the EYEPIECE end — the lens facing the camera in SF2's shot)
-const RIG_RETICLE = { g36c_eo: [0.093, 82], hk417_rs: [0.06, 32], scarl_eo: [0.093, 82] };
+const RIG_RETICLE = { g36c_eo: [0.093, 82], m14ebr: [0.093, 82], hk417_rs: [0.06, 32], scarl_eo: [0.093, 82] };
 // v53 reload pose of the Blender guns: cant the other way (bottom toward the middle of the screen), swing in and lift, so the
 // magazine well and the left hand working it stay in view (the procedural guns keep RELOAD_POSE, which rolls them away)
 const GLB_RELOAD_POSE = { roll: -0.5, pitch: 0.32, drop: -0.09, shift: 0.08 };

@@ -46,6 +46,7 @@ GUNS = {  # id: (SF2 class, rig, sound, [magout, magin, charge])
     'psg1': ('PSG1', 'psg1', 'psg1', [0.2, 0.45, 0.75], {'adsType': '2d_scope_overlay', 'adsFov': 20, 'adsSpeed': 16, 'vmAdsHFov': None, 'sf2Recoil': None, 'sf2Reticle': 'mil', 'zoomHFovs': [20, 12]}),
     'frf2': ('FRF2', 'frf2', 'frf2', [0.31, 0.48, 0.75], {'adsType': '2d_scope_overlay', 'adsFov': 20, 'adsSpeed': 17, 'vmAdsHFov': None, 'sf2Recoil': None, 'sf2Reticle': 'mil1', 'zoomHFovs': [55, 20],
                                                        'sf2ReloadSounds': [[0.14, 'boltback'], [0.31, 'magout'], [0.48, 'magin'], [0.75, 'charge']]}),
+    'm14ebr': ('M14EBR', 'm14ebr', 'm14ebr', [0.2, 0.45, 0.75], {'adsType': '3d_sight', 'vmAdsHFov': 20, 'zoomHFovs': None}), # (SF2: an EOTech rifle — the 2D scope goes)
     'trg': ('TRG', 'trg', 'trg', [0.31, 0.48, 0.75], {'adsType': '2d_scope_overlay', 'adsFov': 20, 'adsSpeed': 17, 'vmAdsHFov': None, 'sf2Recoil': None,
                                                        'sf2ReloadSounds': [[0.14, 'boltback'], [0.31, 'magout'], [0.48, 'magin'], [0.75, 'charge']]}),
 }

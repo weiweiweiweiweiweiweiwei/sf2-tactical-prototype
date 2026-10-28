@@ -24,7 +24,7 @@
 7. **驗證**：`GUNID=<id> ONLY=hip,ads,ads2,fire TAG=<id> node tools/out/_rigshot.mjs`（看截圖：鏡子在槍正上方、手握得住、開鏡十字對）、`GUNID=<id> node tools/out/_reloadtime.mjs`、`node tools/check.mjs`。（`_rigshot` 的 reload 步驟把彈藥設 5，狙擊槍彈匣 5 會卡住，狙擊槍不要用 reload。）
 
 聲音清單（`tools/sfx_sf2.mjs` 參數，每加一把就更新）：
-`m4a1 ak103 g36c m16a3 k2 scarh famas xm8 galil hk417 qbz97 mp5k k14 trg m40a1 cz700 cheytac awp barrett@Barret kar98k@Kar98k_new sr25 psg1 frf2 g36c_eo=g36c+silence hk417_rs=hk417+silence scarl_eo=scarh+silence`
+`m4a1 ak103 g36c m16a3 k2 scarh famas xm8 galil hk417 qbz97 mp5k k14 trg m40a1 cz700 cheytac awp barrett@Barret kar98k@Kar98k_new sr25 psg1 frf2 m14ebr g36c_eo=g36c+silence hk417_rs=hk417+silence scarl_eo=scarh+silence`
 
 ## 佇列（由上往下做）
 狀態：⬜ 未做 · 🔄 進行中 · ✅ 完成 · ⏸ 做不到（寫原因）
@@ -47,7 +47,7 @@
 - ✅ SR-25（v65a；腰射時鏡子離鏡頭偏近，待校腰射位置；`sni_sr-25`，`scope_sr25`）
 - ✅ PSG1（v65b；腰射偏近，同 SR-25；`sni_psg-1`，`scope_psg-1`）
 - ✅ FR-F2（v65c；`sni_frf2`，`Common_Scope_PM2` → `mic_ScopeView_01`）
-- ⬜ M14 EBR（`rif_m14ebr`）
+- ✅ M14 EBR（v65d；SF2 是 EOTech 步槍，2D 鏡拿掉；`rif_m14ebr`）
 
 ### D. 步槍、衝鋒槍、機槍、散彈槍、手槍（倉庫已有，換成 SF2 原版；沒有 SF2 包的標 ⏸）
 - ⬜ AUG（`rif_aug`）・SG 551（`rif_sig551`）・Type 89（`rif_type89`）
