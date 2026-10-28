@@ -1200,3 +1200,11 @@
   - 「散彈式」腰射（設定裡可選）：例 M4A1 類型，移動到全速 0.075 → 0.12（×1.6）、跳 0.255（×3.4）、蹲 ×0.8，接近規格。
 - 結論：不改。規格來自已刪除的舊 CLAUDE.md，現在的方向是照 SF2 原版。
 
+### （本機 B，2026-10-28）SF2 新槍：G36C EOTech 消音、HK417 mod2A Reflex 消音、SCAR-L MK2 EOTech 消音、K14
+- 使用者 10-28 指定（烤漆之後再說）：「魔術迴路 G36C EOTech Silencer」就是 `SFCWeaponG36C_EOTech_Silencer_ButterflyFX`（ButterflyFX 是烤漆名），「衝擊波 K14」是 `SFCWeaponK14`。
+- 配件從 SF2 原版的包匯出：`weapon_common_part` 的 `DOT_EOTECH`、`silencer_ar_type_a/b/c`，`weapon_common_part01` 的 `DOT_REFLEX`，準心貼圖 `dot_point` 的 `eotech_reticleDot`／`reflex_reticleDot`（EOTech 圓圈＋中心點、Reflex 小圓＋點），消音槍聲 `Sound_Silence` 的 `AR_Silence`／`_T`。
+- `tools/sf2_rig_build.mjs`：新選項 `optic`／`silencer`——瞄具的根骨頭對到槍身的 `Scope` 插槽、消音器對到 `Silencer` 插槽；瞄具自己的 `ZoomCrosshair` 插槽是瞄準點（`DOT` 標記），消音器自己的 `flame` 插槽是新槍口（`MUZZLE`）；鏡片（`lens_*`／`*_glass`）用半透明材質；準心貼圖做成 2 cm 的方片放在 DOT。新槍：`g36c_eo`、`hk417_rs`、`scarl_eo`（各自原槍的骨架和動畫）、`k14`（`sni_k14`，鏡在槍身上；Fire 片段就是拉栓）。
+- 遊戲端：`SF2Rig` 有 `DOT` 時眼睛對準 DOT（深度照 `vLocZoomIN`），K14 沒有 `ZoomFire` 時用 `Fire`；透明網格不進 AO（原本鏡片被 AO 蓋成灰色）。`fromRig` 把準心方片的貼圖做成開鏡時淡入的 sprite，角度大小和 SF2 的方片一樣。`01_core.js` 新增四把槍（傷害照原槍的平衡：G36C 25/19、HK417 36/29 20 發、SCAR-L 28/21、K14 照 M40A1 110/96），時間、鏡頭、後座力由 `tools/sf2_weapon_table.py` 從各自的 SF2 類別產生（HK417 mod2A 後座比原版小、SCAR-L MK2 射速 0.0945）；三把消音槍 `suppressed`（不上雷達、沒有火光）；Bot 也會拿。
+- 聲音：`tools/sfx_sf2.mjs` 支援 `<id>=<槍>+silence` 別名（不複製資料）；K14 自己的槍聲、拉栓（`Fire_Slide` → `boltback`）、換彈（Reload 91 格：13 開栓、28 退匣、44 插匣、68 關栓）。
+- 驗證：`analyze`、`build`、`check.mjs --gpu intel`（CHECK_OK）、`_fileplay`（FILE_PLAY_OK）；`_gunshot` 腰射／開鏡（EOTech、Reflex 準心在瞄具窗正中、透得過鏡片；K14 開鏡是 2D 狙擊鏡）、`_gunreload`（HK417 換彈、K14 拉栓）。
+- 未做：烤漆（魔術迴路）；K14 的腰射位置沒有 SF2 截圖可對照。

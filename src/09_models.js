@@ -320,6 +320,12 @@ class WeaponModels {
     out.muzzle = rig.model.getObjectByName('MUZZLE');
     const sf = new SF2Flash(out.muzzle, o.flashScale ?? 0.4); if (sf.ok) out.sf2flash = sf; else out.flash = this._flash(out.muzzle, 0, 0, 0, o.flash ?? 0.2); // v62m SF2's own flash
     if (o.reticle) out.reticle = this._reticle(g, 0, true, o.reticleScale || 1, [0.25, 1, 0.3]);
+    const rm = rig.model.getObjectByName('reticle'), dot = rig.model.getObjectByName('DOT');
+    if (rm && rm.material && rm.material.map && dot) { // v64 an optic's own SF2 reticle (EOTech ring / Reflex dot): its quad's texture on the sight line, as large as the 2 cm quad at the DOT
+      rm.visible = false; rig.place(1); rig.model.updateMatrixWorld(true); const d = dot.getWorldPosition(new THREE.Vector3()).length(); rig.place(0);
+      const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: rm.material.map, blending: THREE.AdditiveBlending, depthWrite: false, depthTest: true, transparent: true, color: new THREE.Color(1, 0.12, 0.08).multiplyScalar(3), opacity: 0 }));
+      const k = 3 * 0.02 / Math.max(d, 0.05); s.position.set(0, 0, -3); s.scale.set(k, k, 1); s.renderOrder = 4; g.add(s); out.reticle = s;
+    }
     out.reloadSounds = rig.reloadSounds;
     return out;
   }
@@ -330,6 +336,11 @@ class WeaponModels {
   ak103(def) { return this.fromRig('ak103_sf2_rig', this._rigOpts(def)) || this.ak47(def); }
   mp5k(def) { return this.fromRig('mp5k_sf2_rig', this._rigOpts(def)) || this.mp5(def); } // v62z (loop H3) SF2's own MP5K; the MP5 until the pack is parsed
   g36c_sf2(def) { return this.fromRig('g36c_sf2_rig', this._rigOpts(def)) || this.g36c(def); }
+  // v64 the attachment builds and the K14 (def.sf2Rig): these stand in until the pack is parsed
+  g36c_eo(def) { return this.g36c(def); }
+  hk417_rs() { return this.hk417(); }
+  scarl_eo() { return this.scarl(); }
+  k14() { return this.m40a1(); }
   // v62z the eye behind a fitted peep (SIGHT mark) where the head bone is not right: the M16A3 carries the M4A1's handle (5.5 cm, see m4())
   _rigOpts(def) { return def ? { equipTime: def.equipTime, zoomIn: def.sf2ZoomIn, zoomOut: def.sf2ZoomOut, reloadSounds: def.sf2ReloadSounds || undefined, eyeRelief: RIG_EYE[def.sf2Rig] } : {}; }
   m4(def) { return this.fromRig('m4a1_sf2_rig', Object.assign(this._rigOpts(def), { reloadSounds: undefined, eyeRelief: 0.055 })) || this.fromGLB('m4a1_sf2', { eye: 0.03, eyeRelief: 0.025, reticle: 'tritium', reticleScale: 0.22 }) || this.fromGLB('m4a1', { eye: 0.2, eyeRelief: 0.03 }) || this.m4Proc(); } // v61 SF2's own M4A1 first (tools/blender/sf2_gun_build.py): like SF2's ADS, the eye right at the carry handle's peep and a green dot on the front post // eye 20 cm behind the hood: the holo frame fills about a quarter of the view

@@ -10,7 +10,7 @@
 |---|---|---|---|---|
 | 雲端 | claude.ai 雲端（每小時整點 20 分醒來） | `claude/intelligent-einstein-vgvrqy` | 遊戲程式 `src/`、工具、文件、合併 | （每輪更新） |
 | 本機 A（loop） | 使用者電腦，原本的專案資料夾 | `local/assets` | 「待本機」的 H 項目：D 槽 SF2／Apex 匯出、真實顯卡、網頁抓取 | |
-| 本機 B（使用者直接下指令） | 使用者電腦，**另一個資料夾**（`git worktree add ../sf2-user local/user`） | `local/user` | 使用者當下要求的事 | |
+| 本機 B（使用者直接下指令） | 使用者電腦，**另一個資料夾**（`git worktree add ../sf2-user local/user`） | `local/user` | 使用者當下要求的事 || ✅ SF2 新槍（`local/user`）：G36C EOTech 消音（魔術迴路＝`G36C_EOTech_Silencer_ButterflyFX`，先不做烤漆）、HK417 mod2A Reflex 消音、SCAR-L MK2 EOTech 消音、K14（衝擊波）。改：`src/01_core.js`（武器資料、SF2_WEAPONS、BOT_POOLS、BLURBS）、`src/09_models.js`（fromRig 準心、備用槍模）、`src/09c_sf2rig.js`（DOT 標記）、`tools/sf2_rig_build.mjs`、`tools/sf2_weapon_table.py`、`tools/sfx_sf2.mjs`、`assets/guns/guns.js`、`assets/sfx_sf2.js`、`tools/guns/{g36c_eo,hk417_rs,scarl_eo,k14}_sf2_rig.glb` |
 
 - **兩個本機視窗不能共用同一個資料夾**：同時改同一個工作目錄會互相蓋掉檔案、`git` 也會衝突。本機 B 用 `git worktree` 開自己的資料夾和分支。
 - 同一個檔案（尤其 `src/` 的同一個模組）同時只能一個視窗改；要改之前在上表「目前在做」寫下檔名。
@@ -50,6 +50,11 @@
 - 素材：兩張 Apex 地圖的 `pack/` 重新打包（碰撞 STRZ：Skull Town 10.4 → 2.3 MB、訓練場 8.9 → 2.2 MB）；`tools/pack-apex-js.mjs` 的 `strz()`。
 - 工具：`tools/_loadprof.mjs`（各載入階段計時，`LOBBY=` `PROFILE=` `RUNS=`）。
 - 驗證（合併後）：`analyze.mjs` MODULES_OK、`build.sh`、`check.mjs`、`check-apex-full` 都過。
+
+### B1 ✅（本機 B）SF2 新槍：G36C EOTech 消音、HK417 mod2A Reflex 消音、SCAR-L MK2 EOTech 消音、K14（2026-10-28）
+- 分支 `local/user`。H10 的「魔術迴路 G36C」答案：`SFCWeaponG36C_EOTech_Silencer_ButterflyFX`（槍模和 G36C 共用；烤漆貼圖還沒匯出，使用者說之後再做）。
+- 遊戲 id：`g36c_eo`、`hk417_rs`、`scarl_eo`、`k14`；rig `tools/guns/<id>_sf2_rig.glb`；配件匯出在 `tools/out/sf2/parts/`、`parts_props/`（未進 git）。詳見 CHANGELOG「本機 B」那一段。
+- 動到 `src/`：`01_core.js`（武器、SF2_WEAPONS、BOT_POOLS、BLURBS）、`09_models.js`（`fromRig` 準心、備用槍模）、`09c_sf2rig.js`（DOT、鏡片不進 AO）。
 
 ### L1 ✅ H1：apex.source.gs 29 把槍的完整頁面（2026-10-28）
 - 輸出：`docs/research/apex/source-gs-s30/<slug>.html`（原始頁面，29 個）＋ `<slug>.md`（`<main>` 逐行轉文字：標題、每個欄位和值，照網頁順序；29 個），共 6.4 MB。

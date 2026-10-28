@@ -316,6 +316,28 @@ const WEAPON_DATABASE = {
     hipSpread: 0.085, adsSpread: 0.0017, adsFov: 52, adsType: '3d_sight', mobility: 0.9, maxAmmo: 20, reloadTime: 2.5, modelUrl: null,
     sound: 'ak', rate: 0.9, penetration: 2, tp: { len: 0.96, body: 'tan', mag: 'box' }, desc: 'SCAR 的 7.62mm 版本：單發傷害高、穿透強，射速較慢。',
   },
+  // v64 SF2's attachment builds (user 10-28): the base gun's SF2 rig with SF2's own EOTech / Reflex (its reticle) and silencer
+  // (tools/sf2_rig_build.mjs g36c_eo / hk417_rs / scarl_eo); timing, lenses and recoil from their own SF2 classes (SF2_WEAPONS below),
+  // damage on the base gun's balance; suppressed (SF2's AR_Silence shot, no radar ping, no flash). The camos come later.
+  g36c_eo: {
+    name: 'G36C EOTech 消音', type: 'assault', slot: 'primary', damageNear: 25, damageFar: 19, falloffStart: 25, falloffEnd: 60, fireRate: 0.109,
+    recoilPitch: 0.011, recoilYaw: 0.012, recoilRecovery: 10,
+    hipSpread: 0.07, adsSpread: 0.0018, adsFov: 55, adsType: '3d_sight', mobility: 0.95, maxAmmo: 30, reloadTime: 2.28, modelUrl: null,
+    sound: 'g36s', suppressed: true, tracerEvery: 0, penetration: 1, tp: { len: 0.9, body: 'dark', mag: 'box' },
+    desc: 'SF2 原版 G36C，EOTech 全息瞄具 + 消音器：槍聲小、不上敵方雷達。',
+  },
+  hk417_rs: {
+    name: 'HK417 mod2A Reflex 消音', type: 'assault', slot: 'primary', damageNear: 36, damageFar: 29, falloffStart: 30, falloffEnd: 80, fireRate: 0.102, recoilPitch: 0.017, recoilYaw: 0.01, recoilRecovery: 8,
+    hipSpread: 0.085, adsSpread: 0.0015, adsFov: 55, adsType: '3d_sight', mobility: 0.9, maxAmmo: 20, reloadTime: 2.18, modelUrl: null,
+    sound: 'g36s', rate: 0.85, suppressed: true, tracerEvery: 0, penetration: 2, tp: { len: 1.15, body: 'dark', mag: 'box' },
+    desc: 'SF2 原版 HK417 mod2A，Reflex 內紅點 + 消音器：7.62mm 高傷害，後座比原版好控。',
+  },
+  scarl_eo: {
+    name: 'SCAR-L MK2 EOTech 消音', type: 'assault', slot: 'primary', damageNear: 28, damageFar: 21, falloffStart: 25, falloffEnd: 60, fireRate: 0.0945, recoilPitch: 0.011, recoilYaw: 0.008, recoilRecovery: 10,
+    hipSpread: 0.072, adsSpread: 0.0019, adsFov: 55, adsType: '3d_sight', mobility: 0.94, maxAmmo: 30, reloadTime: 2.35, modelUrl: null,
+    sound: 'g36s', rate: 0.95, suppressed: true, tracerEvery: 0, penetration: 1, tp: { len: 1.05, body: 'tan', mag: 'box' },
+    desc: 'SF2 原版 SCAR-L MK2，EOTech 全息瞄具 + 消音器：射速比 SCAR-L 快。',
+  },
   qbz97: {
     name: 'QBZ-97', type: 'assault', slot: 'primary', damageNear: 26, damageFar: 20, falloffStart: 25, falloffEnd: 65, fireRate: 0.08, recoilPitch: 0.0105, recoilYaw: 0.0085, recoilRecovery: 11,
     hipSpread: 0.07, adsSpread: 0.0017, adsFov: 44, adsType: 'red_dot', mobility: 0.96, maxAmmo: 30, reloadTime: 2.6, modelUrl: null,
@@ -335,6 +357,13 @@ const WEAPON_DATABASE = {
     name: 'M40A1', type: 'sniper', slot: 'primary', damageNear: 110, damageFar: 96, falloffStart: 60, falloffEnd: 200, fireRate: 1.35, recoilPitch: 0.065, recoilYaw: 0.01, recoilRecovery: 6,
     hipSpread: 0.14, adsSpread: 0.0, adsFov: 20, adsType: '2d_scope_overlay', mobility: 0.82, maxAmmo: 5, reloadTime: 3.3, modelUrl: null,
     sound: 'm40', zoomFovs: [20, 9], penetration: 2, range: 420, adsSpeed: 17, tracerEvery: 1, tp: { len: 1.12, body: 'green', mag: 'none', scope: true }, desc: '美軍陸戰隊栓動狙擊槍，身體 1 發，移動較 AWP 靈活。',
+  },
+  // v64 SF2's own K14 (sni_k14, tools/sf2_rig_build.mjs k14): the rig, its bolt in the Fire clip, its sounds; damage on the M40A1's balance
+  k14: {
+    name: 'K14', type: 'sniper', slot: 'primary', damageNear: 110, damageFar: 96, falloffStart: 60, falloffEnd: 200, fireRate: 1.2, recoilPitch: 0.065, recoilYaw: 0.01, recoilRecovery: 6,
+    hipSpread: 0.14, adsSpread: 0.0, adsFov: 20, adsType: '2d_scope_overlay', mobility: 0.82, maxAmmo: 5, reloadTime: 3.0, modelUrl: null,
+    sound: 'm40', zoomFovs: [20, 9], penetration: 2, range: 420, adsSpeed: 17, tracerEvery: 1, tp: { len: 1.15, body: 'dark', mag: 'box', scope: true },
+    desc: 'SF2 原版 K14（衝擊波）：韓國栓動狙擊槍，身體 1 發，開鏡快。',
   },
   sr25: {
     name: 'SR-25', type: 'sniper', slot: 'primary', damageNear: 62, damageFar: 52, falloffStart: 50, falloffEnd: 180, fireRate: 0.3, recoilPitch: 0.042, recoilYaw: 0.011, recoilRecovery: 7,
@@ -469,6 +498,10 @@ const SF2_WEAPONS = {
   hk417: {'fireRate': 0.102, 'reloadTime': 2.18, 'equipTime': 0.85, 'adsSpeed': 12, 'adsFov': 55, 'adsType': '3d_sight', 'vmHFov': 60.0, 'vmAdsHFov': 40.0, 'sf2Rig': 'hk417', 'sf2': 'hk417', 'sf2ZoomIn': [-4.0, -0.02, -0.2], 'sf2ZoomOut': [0.0, 0.0, 0.0], 'sf2ReloadSounds': [[0.16, 'magout'], [0.37, 'magin'], [0.77, 'charge']], 'sf2Recoil': {'nextCrossVert': 1.7, 'maxCrossVert': 9.0, 'vertInc': 15000.0, 'vertDec': 13.0, 'crossDecreasInc': 15.0, 'incline': 0.05, 'forceCorrection': 50.0, 'domDefault': 0.3, 'domZoomDefault': 0.0, 'domInc': 0.22, 'domMax': 2.1, 'domMin': 0.0, 'domDec': 1.35, 'maxMovingValue': 0.8, 'mulValueRun': 0.4, 'mulValueJump': 6.0, 'zoomMod': 0.35, 'crouchMod': 0.9}}, // SFCWeaponHK417
   mp5k: {'fireRate': 0.076, 'reloadTime': 2.0, 'equipTime': 0.63, 'adsSpeed': 12, 'adsFov': 55, 'adsType': '3d_sight', 'vmHFov': 60.0, 'vmAdsHFov': 35.0, 'sf2Rig': 'mp5k', 'sf2': 'mp5k', 'sf2ZoomIn': [3.0, -0.03, -0.2], 'sf2ZoomOut': [0.0, 0.0, 0.0], 'sf2ReloadSounds': [[0.17, 'magout'], [0.48, 'magin'], [0.77, 'charge']], 'sf2Recoil': {'nextCrossVert': 0.94, 'maxCrossVert': 3.0, 'vertInc': 3670.0, 'vertDec': 10.0, 'crossDecreasInc': 30.0, 'incline': 0.1, 'forceCorrection': 50.0, 'domDefault': 0.6, 'domZoomDefault': 0.0, 'domInc': 0.2, 'domMax': 1.8, 'domMin': 0.05, 'domDec': 1.0, 'maxMovingValue': 1.0, 'mulValueRun': 0.35, 'mulValueJump': 2.0, 'zoomMod': 0.6, 'crouchMod': 0.8}}, // SFCWeaponMP5K
   qbz97: {'fireRate': 0.107, 'reloadTime': 2.3, 'equipTime': 0.8, 'adsSpeed': 12, 'adsFov': 55, 'adsType': '3d_sight', 'vmHFov': 60.0, 'vmAdsHFov': 35.0, 'sf2Rig': 'qbz97', 'sf2': 'qbz97', 'sf2ZoomIn': [10.0, 0.0, -0.1], 'sf2ZoomOut': [0.0, 0.0, 0.0], 'sf2ReloadSounds': [[0.19, 'magout'], [0.4, 'magin'], [0.73, 'charge']], 'sf2Recoil': {'nextCrossVert': 1.45, 'maxCrossVert': 12.5, 'vertInc': 15000.0, 'vertDec': 11.0, 'crossDecreasInc': 15.0, 'incline': 0.08, 'forceCorrection': 50.0, 'domDefault': 0.2, 'domZoomDefault': 0.0, 'domInc': 0.25, 'domMax': 1.15, 'domMin': 0.0, 'domDec': 1.3, 'maxMovingValue': 0.8, 'mulValueRun': 0.4, 'mulValueJump': 6.0, 'zoomMod': 0.7, 'crouchMod': 0.9}}, // SFCWeaponQBZ97
+  g36c_eo: {'fireRate': 0.109, 'reloadTime': 2.28, 'equipTime': 0.85, 'adsSpeed': 12, 'adsFov': 55, 'adsType': '3d_sight', 'vmHFov': 50.0, 'vmAdsHFov': 40.0, 'sf2Rig': 'g36c_eo', 'sf2': 'g36c_eo', 'sf2ZoomIn': [2.4, -0.002, 0.3], 'sf2ZoomOut': [0.0, 0.0, 0.0], 'sf2ReloadSounds': [[0.12, 'magout'], [0.32, 'magin'], [0.76, 'charge']], 'sf2Recoil': {'nextCrossVert': 1.78, 'maxCrossVert': 10.6, 'vertInc': 15000.0, 'vertDec': 13.0, 'crossDecreasInc': 15.0, 'incline': 0.05, 'forceCorrection': 50.0, 'domDefault': 0.15, 'domZoomDefault': 0.0, 'domInc': 0.3, 'domMax': 2.2, 'domMin': 0.0, 'domDec': 1.4, 'maxMovingValue': 0.8, 'mulValueRun': 0.4, 'mulValueJump': 6.0, 'zoomMod': 0.35, 'crouchMod': 0.9}}, // SFCWeaponG36C_EOTech_Silencer_ButterflyFX
+  hk417_rs: {'fireRate': 0.102, 'reloadTime': 2.18, 'equipTime': 0.85, 'adsSpeed': 12, 'adsFov': 55, 'adsType': '3d_sight', 'vmHFov': 60.0, 'vmAdsHFov': 40.0, 'sf2Rig': 'hk417_rs', 'sf2': 'hk417_rs', 'sf2ZoomIn': [-4.0, -0.02, -0.2], 'sf2ZoomOut': [0.0, 0.0, 0.0], 'sf2ReloadSounds': [[0.16, 'magout'], [0.37, 'magin'], [0.77, 'charge']], 'sf2Recoil': {'nextCrossVert': 1.63, 'maxCrossVert': 7.9, 'vertInc': 11700.0, 'vertDec': 15.86, 'crossDecreasInc': 15.0, 'incline': 0.05, 'forceCorrection': 50.0, 'domDefault': 0.2, 'domZoomDefault': 0.0, 'domInc': 0.23, 'domMax': 1.848, 'domMin': 0.0, 'domDec': 1.539, 'maxMovingValue': 0.8, 'mulValueRun': 0.4, 'mulValueJump': 6.0, 'zoomMod': 0.35, 'crouchMod': 0.9}}, // SFCWeaponHK417_mod2A
+  scarl_eo: {'fireRate': 0.095, 'reloadTime': 2.35, 'equipTime': 0.9, 'adsSpeed': 12, 'adsFov': 55, 'adsType': '3d_sight', 'vmHFov': 60.0, 'vmAdsHFov': 35.0, 'sf2Rig': 'scarl_eo', 'sf2': 'scarl_eo', 'sf2ZoomIn': [0.0, -0.01, -0.2], 'sf2ZoomOut': [-1.0, 0.0, 0.0], 'sf2ReloadSounds': [[0.12, 'magout'], [0.44, 'magin'], [0.72, 'charge']], 'sf2Recoil': {'nextCrossVert': 2.1, 'maxCrossVert': 15.0, 'vertInc': 15000.0, 'vertDec': 12.0, 'crossDecreasInc': 9.0, 'incline': 0.35, 'forceCorrection': 50.0, 'domDefault': 0.15, 'domZoomDefault': 0.0, 'domInc': 0.22, 'domMax': 2.4, 'domMin': 0.1, 'domDec': 2.0, 'maxMovingValue': 0.7, 'mulValueRun': 0.7, 'mulValueJump': 6.0, 'zoomMod': 0.99, 'crouchMod': 0.85}}, // SFCWeaponSCARL_MK2
+  k14: {'fireRate': 1.2, 'reloadTime': 3.0, 'equipTime': 0.8, 'adsSpeed': 17, 'adsFov': 20, 'adsType': '2d_scope_overlay', 'vmHFov': 70.0, 'sf2Rig': 'k14', 'sf2': 'k14', 'sf2ZoomIn': [1.2, -0.01, -0.01], 'sf2ZoomOut': [0.0, 0.0, 0.0], 'sf2ReloadSounds': [[0.14, 'boltback'], [0.31, 'magout'], [0.48, 'magin'], [0.75, 'charge']]}, // SFCWeaponK14
 };
 for (const [id, o] of Object.entries(SF2_WEAPONS)) { const s = WEAPON_DATABASE[id]; Object.assign(s, o); delete s.vmAdsFov; delete s.adsVertical; } // (their own sights now)
 // </sf2-weapons>
@@ -539,6 +572,10 @@ const WEAPON_BLURBS = {
   aug: '內建基礎瞄具，適合中遠距離穩定輸出。',
   mp5: '經典衝鋒槍，腰射穩定、容錯率高。',
   mp5k: '短槍管 MP5，射速快、近距離靈活。',
+  g36c_eo: '緊湊型步槍加全息瞄具與消音器，不上敵方雷達。',
+  hk417_rs: '7.62mm 戰鬥步槍加內紅點與消音器，單發傷害高。',
+  scarl_eo: '高射速的 SCAR-L 加全息瞄具與消音器。',
+  k14: '韓國栓動狙擊槍，開鏡快、移動靈活。',
   p90: '50 發大彈匣，適合持續火力壓制與近距離掃射。',
   ump45: '衝鋒槍中單發傷害較高的一把，射速偏慢但穩定。',
   vector: '利用特殊槍機設計將後座力降至最低，近戰秒傷極高。',
@@ -624,9 +661,9 @@ const MODES = {
   knife: { name: '小刀戰', desc: '全員只能拿刀，貼身肉搏', slots: ['knife'] },
 };
 const BOT_POOLS = {
-  general: ['m4a1', 'ak47', 'g36c', 'g36c_gold', 'scarl', 'famas', 'aug', 'mp5', 'mp5k', 'p90', 'ump45', 'vector', 'mp7', 'remington870', 'benelli_m4', 'saiga12', 'm249', 'rpk', 'negev', 'pkm', 'cheytac_m200', 'awp', 'svd', 'kar98k', 'm16a3', 'k2', 'xm8', 'galil', 'sg551', 'hk417', 'scarh', 'qbz97', 'pp2000', 'vz61', 'aa12', 'mg4', 'k3', 'm40a1', 'sr25', 'psg1', 'm14ebr', 'type89', 'l86a1', 'hk23e', 'frf2', 'cz700'],
-  rifle: ['m4a1', 'ak47', 'g36c', 'g36c_gold', 'scarl', 'famas', 'aug', 'mp5', 'mp5k', 'p90', 'ump45', 'vector', 'mp7', 'm249', 'rpk', 'negev', 'pkm', 'mg42', 'm16a3', 'k2', 'xm8', 'galil', 'sg551', 'hk417', 'scarh', 'qbz97', 'pp2000', 'vz61', 'mg4', 'k3', 'type89', 'l86a1', 'hk23e'],
-  sniper: ['cheytac_m200', 'awp', 'barrett', 'kar98k', 'svd', 'm40a1', 'sr25', 'psg1', 'm14ebr', 'frf2', 'cz700'], pistol: ['p226', 'deagle', 'glock18', 'usp', 'm1911', 'm92fs', 'cz75', 'jericho', 'sw60', 'infinity'], knife: ['knife'],
+  general: ['m4a1', 'ak47', 'g36c', 'g36c_gold', 'g36c_eo', 'hk417_rs', 'scarl_eo', 'scarl', 'famas', 'aug', 'mp5', 'mp5k', 'p90', 'ump45', 'vector', 'mp7', 'remington870', 'benelli_m4', 'saiga12', 'm249', 'rpk', 'negev', 'pkm', 'cheytac_m200', 'k14', 'awp', 'svd', 'kar98k', 'm16a3', 'k2', 'xm8', 'galil', 'sg551', 'hk417', 'scarh', 'qbz97', 'pp2000', 'vz61', 'aa12', 'mg4', 'k3', 'm40a1', 'sr25', 'psg1', 'm14ebr', 'type89', 'l86a1', 'hk23e', 'frf2', 'cz700'],
+  rifle: ['m4a1', 'ak47', 'g36c', 'g36c_gold', 'g36c_eo', 'hk417_rs', 'scarl_eo', 'scarl', 'famas', 'aug', 'mp5', 'mp5k', 'p90', 'ump45', 'vector', 'mp7', 'm249', 'rpk', 'negev', 'pkm', 'mg42', 'm16a3', 'k2', 'xm8', 'galil', 'sg551', 'hk417', 'scarh', 'qbz97', 'pp2000', 'vz61', 'mg4', 'k3', 'type89', 'l86a1', 'hk23e'],
+  sniper: ['cheytac_m200', 'k14', 'awp', 'barrett', 'kar98k', 'svd', 'm40a1', 'sr25', 'psg1', 'm14ebr', 'frf2', 'cz700'], pistol: ['p226', 'deagle', 'glock18', 'usp', 'm1911', 'm92fs', 'cz75', 'jericho', 'sw60', 'infinity'], knife: ['knife'],
 };
 
 // Match rules (state-machine classes live in the match module).

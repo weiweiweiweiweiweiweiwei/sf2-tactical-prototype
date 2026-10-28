@@ -13,6 +13,7 @@ class SF2Rig {
       if (!x.isMesh) return;
       x.frustumCulled = false; x.castShadow = false; x.receiveShadow = true; // (skinned: the bind-pose bounds are elsewhere)
       if (x.name === 'sleeve' || x.name === 'glove') x.userData.arm = true;
+      if (x.material && x.material.transparent) { x.userData.noAO = true; x.renderOrder = 3; } // v64 an optic's lens: out of the AO pass (it greyed the window), drawn after the gun
     });
     this.mixer = new THREE.AnimationMixer(m); this.a = {};
     for (const c of gltf.animations) { const a = this.mixer.clipAction(c); a.play(); a.paused = true; a.setEffectiveWeight(0); this.a[c.name] = a; }
@@ -25,8 +26,9 @@ class SF2Rig {
     // the M4A1's −3 gives the head depth the screenshot fit found.
     // Rig space is +Z forward, −X right, +Y up: turned half a turn about Y it is camera space.
     this.pose({ Zoom: [this.dur('Zoom'), 1] });
+    // v64 an optic (EOTech / Reflex): its ZoomCrosshair socket (the DOT mark) is the aim point, at the same vLocZoomIN depth
     const sm = m.getObjectByName('SIGHT'), head = m.getObjectByName('Bip01-Head').getWorldPosition(new THREE.Vector3());
-    const s = (sm || m.getObjectByName('POST')).getWorldPosition(new THREE.Vector3());
+    const s = (sm || m.getObjectByName('DOT') || m.getObjectByName('POST')).getWorldPosition(new THREE.Vector3());
     const eye = new THREE.Vector3(s.x, s.y, sm ? (o.eyeRelief != null ? s.z - o.eyeRelief : head.z) : head.z - 0.03 - (o.zoomIn ? o.zoomIn[0] : -3) / 100);
     m.rotation.y = Math.PI; m.position.set(eye.x, -eye.y, eye.z);
     // v62i at the hip SF2 holds the mesh at vLocZoomOut, aimed at vLocZoomIN (UE cm: x forward, y right, z up), blended by the aim:
@@ -47,7 +49,7 @@ class SF2Rig {
     for (const [k, a] of Object.entries(this.a)) { const v = w[k]; a.setEffectiveWeight(v ? v[1] : 0); if (v) a.time = v[0]; }
     this.mixer.update(0);
   }
-  fire(ads) { this.fireT = 0; this.fireClip = ads ? 'ZoomFire' : 'Fire'; this.equipT = -1; }
+  fire(ads) { this.fireT = 0; this.fireClip = ads && this.a.ZoomFire ? 'ZoomFire' : 'Fire'; this.equipT = -1; } // (v64 the K14 has no ZoomFire: its Fire works the bolt)
   // s: { ads 0–1, sprint 0–1, reload phase 0–1 or −1, draw (WeaponSystem.drawT: 1 on a switch, running down) }
   update(dt, s) {
     const w = {}, fade = (t, d, i, o) => Math.max(0, Math.min(1, i > 0 ? t / i : 1, o > 0 ? (d - t) / o : 1));
