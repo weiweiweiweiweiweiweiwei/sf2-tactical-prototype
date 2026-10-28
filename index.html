@@ -14784,6 +14784,35 @@ var SkullStreaming = class {
   }
 };
 var APEX_ARENA_SHELL = /^(live_fire_frame|fs_girder_beam|fs_modular_\w*floorconnector|grave_wall_gasket|thunderdome|fake_sky)/i;
+function apexColPatchLoad(id, dir) {
+  if (/[?&]nocolpatch/.test(location.search)) return Promise.resolve(null);
+  const get = /* @__PURE__ */ __name(() => (window.APEX_COLPATCH || {})[id] || null, "get");
+  if (get()) return Promise.resolve(get());
+  return new Promise((res) => {
+    const s = document.createElement("script");
+    s.src = dir + "colpatch.js";
+    s.onload = () => res(get());
+    s.onerror = () => res(null);
+    document.head.appendChild(s);
+  });
+}
+__name(apexColPatchLoad, "apexColPatchLoad");
+function apexColPatch(id, tris, b64) {
+  if (!b64) return tris;
+  const bin = atob(b64), u8 = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+  const add = new Float32Array(u8.buffer), n = add.length / 9, nv = tris.pos.length / 3;
+  const pos = new Float32Array(tris.pos.length + add.length);
+  pos.set(tris.pos);
+  pos.set(add, tris.pos.length);
+  const idx = new Uint32Array(tris.idx.length + n * 3);
+  idx.set(tris.idx);
+  for (let i = 0; i < n * 3; i++) idx[tris.idx.length + i] = nv + i;
+  const mats = tris.mats ? new Uint8Array(tris.mats.length + n) : null;
+  if (mats) mats.set(tris.mats);
+  return { pos, idx, mats };
+}
+__name(apexColPatch, "apexColPatch");
 function apexTriMap(def) {
   return Object.assign({
     spawnPoints(team, game) {
@@ -14806,7 +14835,7 @@ function apexTriMap(def) {
       lap("glb (Draco, WebP) + lightmaps");
       const nav = p.nav ? apexNav(p.nav) : null;
       lap("nav");
-      const tris = skullTris(await apexGunzip(p.collision));
+      const tris = apexColPatch(this.id, skullTris(await apexGunzip(p.collision)), await apexColPatchLoad(this.id, this.packDir));
       lap("collision gunzip");
       const soup = new TriSoup(tris.pos, tris.idx, "concrete", tris.mats);
       lap("collision grid");
@@ -24798,6 +24827,41 @@ var Match = class _Match {
     }
     return this.phase === "over";
   }
+  // v63g triangle maps (Apex): a body that got under the floor (user 10-28, the firing range) is put back where it last stood
+  // safely. Under the floor = an up-facing floor face straight above the head with nothing between, AND no baked nav node
+  // within 2 m at this height (a one-sided upper storey over a real room has nav nodes below it). Each body is checked
+  // every 0.25 s; its safe spot is kept while it stands on the ground and passes the check.
+  _underFloor(h, client) {
+    this._ufT = (this._ufT || 0) - h;
+    if (this._ufT > 0) return;
+    this._ufT = 0.25;
+    const tris = this.collision.tris, nav = this.nav, o = TMP_V1, up = TMP_V2.set(0, 1, 0);
+    for (const c of this.combatants) {
+      if (!c.alive || !c.motor || client && c !== this.player) continue;
+      const m = c.motor, p = m.pos;
+      o.set(p.x, p.y + m.height - 0.05, p.z);
+      const hit = tris.raycast(o, up, 6);
+      let under = !!(hit && hit.n[1] > 0.7);
+      if (under && nav) {
+        let near = false;
+        nav.near(p, 2, (n) => {
+          if (!near && n.ok && Math.abs(n.p.y - p.y) < 0.8 && Math.hypot(n.p.x - p.x, n.p.z - p.z) < 2) near = true;
+        });
+        under = !near;
+      }
+      if (!under) {
+        if (m.grounded && !m.climbing) (c._safe || (c._safe = new THREE.Vector3())).copy(p);
+        c._underN = 0;
+        continue;
+      }
+      if (++c._underN >= 2 && c._safe) {
+        console.warn("under the floor", c.name, p.x.toFixed(2), p.y.toFixed(2), p.z.toFixed(2), "→ back to", c._safe.x.toFixed(2), c._safe.y.toFixed(2), c._safe.z.toFixed(2));
+        (this._ufLog || (this._ufLog = [])).push({ who: c.name, at: [p.x, p.y, p.z].map((v) => +v.toFixed(2)), to: [c._safe.x, c._safe.y, c._safe.z].map((v) => +v.toFixed(2)) });
+        m.teleport(c._safe);
+        c._underN = 0;
+      }
+    }
+  }
   // v63g one fixed step of everyone's life: AI, spawn protection, respawn countdowns, the mode's rules
   _lifeStep(h, client) {
     const p = this.player, respawns = this.rules.respawns, live = respawns && this.phase === "live";
@@ -24873,6 +24937,7 @@ var Match = class _Match {
           this.applyDamage(c, 999, "legs", c, WEAPON_DEFS.fall, null, null, { fall: true });
         }
       }
+      if (this.collision.tris) this._underFloor(h, client);
       this._lifeStep(h, client);
       this.acc -= h;
       steps++;

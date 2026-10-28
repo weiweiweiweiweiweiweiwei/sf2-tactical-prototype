@@ -857,6 +857,28 @@ class Match {
     }
     return this.phase === 'over';
   }
+  // v63g triangle maps (Apex): a body that got under the floor (user 10-28, the firing range) is put back where it last stood
+  // safely. Under the floor = an up-facing floor face straight above the head with nothing between, AND no baked nav node
+  // within 2 m at this height (a one-sided upper storey over a real room has nav nodes below it). Each body is checked
+  // every 0.25 s; its safe spot is kept while it stands on the ground and passes the check.
+  _underFloor(h, client) {
+    this._ufT = (this._ufT || 0) - h; if (this._ufT > 0) return; this._ufT = 0.25;
+    const tris = this.collision.tris, nav = this.nav, o = TMP_V1, up = TMP_V2.set(0, 1, 0);
+    for (const c of this.combatants) {
+      if (!c.alive || !c.motor || (client && c !== this.player)) continue;
+      const m = c.motor, p = m.pos;
+      o.set(p.x, p.y + m.height - 0.05, p.z); const hit = tris.raycast(o, up, 6);
+      let under = !!(hit && hit.n[1] > 0.7);
+      if (under && nav) { let near = false; nav.near(p, 2, (n) => { if (!near && n.ok && Math.abs(n.p.y - p.y) < 0.8 && Math.hypot(n.p.x - p.x, n.p.z - p.z) < 2) near = true; }); under = !near; }
+      if (!under) { if (m.grounded && !m.climbing) (c._safe || (c._safe = new THREE.Vector3())).copy(p); c._underN = 0; continue; }
+      if (++c._underN >= 2 && c._safe) { // (two checks in a row: half a second under the floor)
+        console.warn('under the floor', c.name, p.x.toFixed(2), p.y.toFixed(2), p.z.toFixed(2), '→ back to', c._safe.x.toFixed(2), c._safe.y.toFixed(2), c._safe.z.toFixed(2));
+        (this._ufLog || (this._ufLog = [])).push({ who: c.name, at: [p.x, p.y, p.z].map((v) => +v.toFixed(2)), to: [c._safe.x, c._safe.y, c._safe.z].map((v) => +v.toFixed(2)) });
+        m.teleport(c._safe); c._underN = 0;
+      }
+    }
+  }
+
   // v63g one fixed step of everyone's life: AI, spawn protection, respawn countdowns, the mode's rules
   _lifeStep(h, client) {
     const p = this.player, respawns = this.rules.respawns, live = respawns && this.phase === 'live';
@@ -908,6 +930,7 @@ class Match {
         const p=c.motor.pos,B=this.def.bounds,outside=this.def.killOutside&&(p.x<B.minX-2||p.x>B.maxX+2||p.z<B.minZ-2||p.z>B.maxZ+2);
         if (c.alive && (p.y < this.def.killY || outside)) { c.spawnProtect = 0; this.applyDamage(c, 999, 'legs', c, WEAPON_DEFS.fall, null, null, { fall: true }); }
       }
+      if (this.collision.tris) this._underFloor(h, client);
       this._lifeStep(h, client);
       this.acc -= h; steps++;
     }

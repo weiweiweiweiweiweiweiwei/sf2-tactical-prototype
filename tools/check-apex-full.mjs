@@ -1,7 +1,7 @@
 // v60 triangle Apex maps (Skull Town, the firing range): loads, doors (Apex's leaf; a double door opens as one, every leaf swings
 // into the building, never closes on someone, closes again), bodies dropped on nav nodes stand on the floor, nobody freezes on a
 // short random walk, leaving the play bounds kills.   node tools/check-apex-full.mjs [apex_full|apex_skulltown]
-import { chromium } from 'playwright'; import fs from 'node:fs'; import path from 'node:path'; import http from 'node:http';
+import { launchBrowser, routeCdn } from './pw.mjs'; import fs from 'node:fs'; import path from 'node:path'; import http from 'node:http';
 const root = process.cwd(), MAP = process.argv[2] || 'apex_full', out = path.join(root, 'tools/out');
 const server = http.createServer((req, res) => {
   const p = path.resolve(root, '.' + decodeURIComponent(new URL(req.url, 'http://localhost').pathname));
@@ -9,10 +9,10 @@ const server = http.createServer((req, res) => {
   res.setHeader('Content-Type', { '.html': 'text/html', '.js': 'text/javascript' }[path.extname(p)] || 'application/octet-stream'); fs.createReadStream(p).pipe(res);
 });
 await new Promise((r) => server.listen(0, '127.0.0.1', r));
-const browser = await chromium.launch({ channel: 'chrome', args: ['--use-angle=d3d11', '--enable-gpu', '--ignore-gpu-blocklist'] });
+const browser = await launchBrowser({ args: ['--use-angle=d3d11', '--enable-gpu', '--ignore-gpu-blocklist'] }); // v63l pw.mjs: also the cloud box's Chromium
 try {
   const page = await browser.newPage({ viewport: { width: 1280, height: 720 } }), errors = []; page.setDefaultTimeout(0);
-  page.on('pageerror', (e) => errors.push(e.message));
+  page.on('pageerror', (e) => errors.push(e.message)); await routeCdn(page, root);
   await page.goto(`http://127.0.0.1:${server.address().port}/index.html`);
   await page.waitForFunction(() => window.app && window.SF2, null, { timeout: 60000 });
   const report = await page.evaluate(async (MAP) => {
@@ -69,7 +69,7 @@ try {
     human.spawnProtect = 0; human.motor.pos.set(g.def.bounds.maxX + 6, 10, 0);
     return { res, fail };
   }, MAP);
-  await page.waitForTimeout(1000);
+  await page.waitForFunction(() => !app.match.player.alive, null, { timeout: 15000 }).catch(() => {}); // v63l up to 15 s (was a fixed 1 s: a slow software-rendered box runs few sim steps in it)
   report.boundsDeath = await page.evaluate(() => !app.match.player.alive); if (!report.boundsDeath) report.fail.push('leaving the bounds kills');
   if (errors.length) report.fail.push(...errors);
   console.log(MAP, JSON.stringify(report.res), report.fail.length ? 'FAIL ' + report.fail.join(' | ') : 'APEX_MAP_OK');
