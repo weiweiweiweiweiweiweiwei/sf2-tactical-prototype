@@ -6,6 +6,7 @@
 ## 分支規則（最優先）
 - 只在 `local/assets` 分支開發和 push。分支不存在就從 `origin/claude/intelligent-einstein-vgvrqy` 建立。
 - 不 push 到 `master` 或 `claude/intelligent-einstein-vgvrqy`，不開 PR。雲端每輪會把 `local/assets` 合進雲端分支。
+- **2026-10-28 發生過一次 `master` 被推成 `local/assets`（`f1d39c0`）**：push 前一定先確認目前分支（`git branch --show-current` 必須是 `local/assets`），只用 `git push origin local/assets`，不要用 `git push`（不帶分支）或 `--all`。
 - 每輪開始時，用 merge（不要 rebase）把 `origin/claude/intelligent-einstein-vgvrqy` 合進來，拿到雲端最新的 `HANDOFF.md`。
 - 盡量不改 `src/` 的遊戲程式，那是雲端的範圍。素材、研究資料、`tools/` 的匯出腳本、`docs/testing/` 由本機負責。H3 必須改 `src/` 時，改動越小越好，並在 HANDOFF 寫清楚改了哪裡。
 
