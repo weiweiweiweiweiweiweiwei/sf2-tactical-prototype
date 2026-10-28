@@ -38,7 +38,7 @@
 
 ### B. 周邊
 - ✅ 魔術迴路（CircuitFX）版（v64x）：AWP、CheyTac、CZ700、K14 各加一把 `<id>_circuit`（`camo: 'circuit'`，照 `g36c_circuit`）
-- ⬜ 第三人稱：不做（v63h 使用者選速度優先，士兵手上用程式槍）
+- ⏸ 第三人稱：不做（v63h 使用者選速度優先，士兵手上用程式槍）
 
 ### C. 其他狙擊／射手步槍（倉庫已有，換成 SF2 原版）
 - ⏸ SVD（`sni_dragunov`，`scope_dragunov`）：PSO 鏡是側掛的，接在槍身 `Scope` 插槽上時跑到右上方、而且大小不對（放正位移 13.7 cm），一般的接法不適用，要手動對位或找它真正的掛點。遊戲裡維持原本的 SVD。建模設定留在 `tools/sf2_rig_build.mjs svd`
@@ -61,6 +61,9 @@
 - ⏸ AA-12（`sho_aa12`）：開鏡時鏡頭在槍身裡；零件叫 body_a 等（`fileMap` 已支援），要手動量瞄準點
 - ✅ P226・Desert Eagle・Glock・M1911・CZ 75・Jericho・S&W 60・M92FS・Infinity（v65i；M92FS 沒有 SF2 聲音包，用原本的聲音）
 - ⏸ 沒有 SF2 包：MP5（只有 MP5K）、KRISS Vector（SF2 有 KrissV 類別但沒找到包，再查一次）、Negev、PKM、MG42、M1014、USP、AK-47（SF2 只有 AK-103）
+
+## 迴圈結束（2026-10-28）
+佇列全部 ✅ 或 ⏸。完成 44 把（含 5 把魔術迴路），暫停 11 把（原因寫在各項）。
 
 ## ⏸ 需要使用者
 （迴圈遇到需要使用者的事情記在這裡）
