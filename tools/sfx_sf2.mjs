@@ -20,11 +20,11 @@ for (const a of args.filter((a) => a.includes('='))) {
   } else alias.push([`sf2_${id}_fire`, `sf2_${gun}_fire`], [`sf2_${id}_far`, `sf2_${gun}_far`]);
 }
 const role = (f) => /WeaponFire\d*_T(_\d+)?\./i.test(f) ? 'far' : /WeaponFire\d*(_\d+)?\./i.test(f) ? 'fire' : // (M4A1 / AK-103: WeaponFire1.._T; G36C: WeaponFire, _01, _T, _T_01)
-   /WeaponFire_Slide/i.test(f) ? 'boltback' : /ReloadClipOut/i.test(f) ? 'magout' : /ReloadClipIn/i.test(f) ? 'magin' : /ReloadSlide/i.test(f) ? 'charge' : /WeaponEquip/i.test(f) ? 'draw' : null;
+   /WeaponFire_Slide/i.test(f) ? 'boltback' : /Rel(oa|ao)dClipOut/i.test(f) ? 'magout' : /Rel(oa|ao)dClipIn/i.test(f) ? 'magin' : /Rel(oa|ao)dSlide/i.test(f) ? 'charge' : /(Weapon)?Equip(_T)?\./i.test(f) ? 'draw' : null; // (v65e SF2's own typos: AUGA3_WeaponRelaod…, AUGA3Equip)
 for (const [id, pre] of ids) {
   const root = `tools/out/sf2/${id}`, dir = fs.readdirSync(root).filter((d) => /^Sound_/i.test(d)).map((d) => path.join(root, d, 'SoundNodeWave')).find((d) => fs.existsSync(d));
   if (!dir) { console.warn('no sounds for', id); continue; }
-  const prefix = new RegExp('^_?' + (pre || id) + '_', 'i');
+  const prefix = new RegExp('^_?' + (pre || id) + '_?(Weapon|Equip)', 'i');
   for (const f of fs.readdirSync(dir).filter((f) => prefix.test(f) && f.endsWith('.ogg'))) { // (the un-prefixed copies are the same clips)
     const r = role(f); if (!r) continue;
     (out[`sf2_${id}_${r}`] ||= []).push(fs.readFileSync(path.join(dir, f)).toString('base64'));

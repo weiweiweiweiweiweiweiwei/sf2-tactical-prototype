@@ -1515,3 +1515,16 @@
 - 數值照 `SFCWeaponM14EBR`：射擊間隔 0.3 s、換彈 3.5 s（動畫 3.63 s）、重量 6.1。
 - 聲音：`Sound_M14EBR`。
 - 驗證：開鏡截圖中紅色圓圈在視窗中央；`_reloadtime.mjs`、`check.mjs`。
+
+
+### v65e（本機，2026-10-28）：SF2 原版 AUG、SG 551、Type 89
+- AUG：`rif_aug` 加上 `rif_aug_sight` 的翻折覘孔，裝在 `Sight` 插槽。
+- SG 551：`rif_sig551`，用槍身上的照門和準星。
+- Type 89：`rif_type89`，用槍身上的照門和準星。`rif_type89_sight` 掛到 `Scope` 插槽時會浮離槍身，所以不用。
+- 數值照各自的 SF2 類別（`SFCWeaponAUGA3`／`SIG551`／`Type89`）：射速、換彈、拔槍、後座、重量。
+- 聲音：`Sound_AUGA3`／`SIG551`／`Type89`。
+- `tools/sfx_sf2.mjs` 修正：
+  - 認得 SF2 檔名的拼字錯誤（`Relaod`、沒有底線的 `AUGA3Equip`）。
+  - 只有第三人稱拔槍聲（`Equip_T`）時也拿來用（TRG）。
+- 還沒做好：Type 89 開鏡時，照門擋住部分視野。
+- 驗證：三把的腰射和開鏡截圖、`check.mjs`。

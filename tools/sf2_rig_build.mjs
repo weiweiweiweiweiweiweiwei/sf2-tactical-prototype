@@ -93,6 +93,10 @@ const G = {
   psg1: gun('psg1', { pkg: 'sni_psg-1', stem: 'sni_psg-1', tex: 'psg-1', anim: '1st_anim_psg-1', optic: SCOPE('scope_psg-1', 'psg-1_scope_a') }),
   frf2: gun('frf2', { pkg: 'sni_frf2', stem: 'sni_frf2', tex: 'frf2', optic: SCOPE('scope_pm2', 'scope_pm2') }), // (SFCItem_FRF2_Def_Scope: Common_Scope_PM2, reticle mic_ScopeView_01)
   m14ebr: gun('m14ebr', { optic: EOTECH }), // (SFCItem_M14EBR: SFCItem_Common_DotSight_EOTECH on its Scope socket)
+  // v65e docs/loop/GUNS.md D: rifles
+  aug: gun('aug', { tex: 'rif_aug', socketSights: sight('aug/rif_aug_sight/SkeletalMesh3/rif_aug_sight_up.gltf', 'aug_sight') }),
+  sg551: gun('sg551', { pkg: 'rif_sig551', tex: 'sig551', anim: '1st_anim_sig551', hoodedPost: true }), // (sights on the body)
+  type89: gun('type89', { hoodedPost: true }), // (its sight package put on the Scope socket floated off the gun: the body's own sights)
   trg: gun('trg', { pkg: 'sni_trg', stem: 'sni_trg', tex: 'sni_trg', anim: '1st_ani_trg', optic: ZEISS_SCOPE }),
 }[GID];
 if (!G) throw new Error(`unknown gun ${GID}`);

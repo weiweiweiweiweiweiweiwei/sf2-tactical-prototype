@@ -24,7 +24,7 @@
 7. **驗證**：`GUNID=<id> ONLY=hip,ads,ads2,fire TAG=<id> node tools/out/_rigshot.mjs`（看截圖：鏡子在槍正上方、手握得住、開鏡十字對）、`GUNID=<id> node tools/out/_reloadtime.mjs`、`node tools/check.mjs`。（`_rigshot` 的 reload 步驟把彈藥設 5，狙擊槍彈匣 5 會卡住，狙擊槍不要用 reload。）
 
 聲音清單（`tools/sfx_sf2.mjs` 參數，每加一把就更新）：
-`m4a1 ak103 g36c m16a3 k2 scarh famas xm8 galil hk417 qbz97 mp5k k14 trg m40a1 cz700 cheytac awp barrett@Barret kar98k@Kar98k_new sr25 psg1 frf2 m14ebr g36c_eo=g36c+silence hk417_rs=hk417+silence scarl_eo=scarh+silence`
+`m4a1 ak103 g36c m16a3 k2 scarh famas xm8 galil hk417 qbz97 mp5k k14 trg m40a1 cz700 cheytac awp barrett@Barret kar98k@Kar98k_new sr25 psg1 frf2 m14ebr aug@AUGA3 sg551@SIG551 type89 g36c_eo=g36c+silence hk417_rs=hk417+silence scarl_eo=scarh+silence`
 
 ## 佇列（由上往下做）
 狀態：⬜ 未做 · 🔄 進行中 · ✅ 完成 · ⏸ 做不到（寫原因）
@@ -50,7 +50,7 @@
 - ✅ M14 EBR（v65d；SF2 是 EOTech 步槍，2D 鏡拿掉；`rif_m14ebr`）
 
 ### D. 步槍、衝鋒槍、機槍、散彈槍、手槍（倉庫已有，換成 SF2 原版；沒有 SF2 包的標 ⏸）
-- ⬜ AUG（`rif_aug`）・SG 551（`rif_sig551`）・Type 89（`rif_type89`）
+- ✅ AUG（v65e）・SG 551（v65e）・Type 89（v65e；開鏡時照門擋住部分視野，待查）
 - ⬜ P90（`smg_p90`）・UMP45（`smg_ump45`）・MP7（`smg_mp7`）・PP-2000（`smg_pp2000`）・vz.61（`smg_cz_scorpion` 或 `smg_scorpion`）
 - ⬜ M249（`mg_spw`）・RPK（`mg_rpk74`）・MG4（`mg_mg4`）・K3（`mg_K3`）・L86A1（`mg_l86a1`）・HK23E（`mg_hk23`）
 - ⬜ Remington 870（`sho_m870`）・Benelli M4（`sho_bnill`）・KSG（`sho_ksg`）・Saiga-12（`sho_saiga12`）・AA-12（`sho_aa12`）
