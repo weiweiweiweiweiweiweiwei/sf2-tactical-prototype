@@ -1444,3 +1444,16 @@
 - 數值照 `SFCWeaponCheyTac`：換彈 3.2 s（動畫 3.48 s）、開鏡 55° 再 20°、重量 9.5。
 - 聲音：`Sound_Cheytac`。
 - 驗證：腰射截圖鏡子在正上方、有腳架；`_reloadtime.mjs` 正常。
+
+
+### v64x（本機，2026-10-28）：SF2 原版 AWP；AWP／M200／CZ700／K14 的魔術迴路版
+- AWP：
+  - `sni_awp` 裝 `scope_awp`：轉 90°，放正位移 0.41 cm（轉 0° 時是 2.57／2.83 cm）。十字 `mil`。
+  - 數值照 `SFCWeaponAWP`：彈匣 10、換彈 2.8 s（動畫 3.0 s）、重量 8.1。
+  - 聲音：`Sound_AWP_2`，有拉栓聲。
+- 魔術迴路版：SF2 也有這幾把的 CircuitFX 版（`SFCItem_<槍>_CircuitFX`）。新增 `awp_circuit`、`cheytac_m200_circuit`、`cz700_circuit`、`k14_circuit`，和原槍相同，只多了 `camo: 'circuit'`。它們在倉庫的狙擊類。
+- 驗證：
+  - AWP 腰射截圖：鏡子在正上方。
+  - `_reloadtime.mjs` 正常。
+  - AWP 魔術迴路截圖：整把槍連鏡子都是黑底綠紋。
+  - `check.mjs` CHECK_OK。

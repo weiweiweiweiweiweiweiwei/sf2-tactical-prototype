@@ -507,7 +507,8 @@ const SF2_WEIGHT = {
   vz61: [2.8, 1.8], m40a1: [5.7, 2.85], k14: [7.6, 3.8], sr25: [7.0, 3.5], psg1: [7.0, 3.5], mg4: [7.8, 3.9],
   k3: [6.8, 3.4], aa12: [4.0, 2.0], m92fs: [1.0, 0.0], cz75: [1.0, 0.0], jericho: [1.0, 0.0], sw60: [1.0, 0.0],
   m14ebr: [6.1, 3.05], type89: [4.7, 2.35], l86a1: [7.2, 3.6], hk23e: [7.9, 3.95], frf2: [6.3, 3.15], cz700: [7.5, 3.75],
-  trg: [7.3, 3.65], infinity: [1.0, 0.0], knife: [1.0, 0.0], he: [1.0, 0.0], flash: [1.0, 0.0], smoke: [1.0, 0.0],
+  trg: [7.3, 3.65], awp_circuit: [8.1, 4.05], cheytac_m200_circuit: [9.5, 4.75], cz700_circuit: [7.5, 3.75], k14_circuit: [7.6, 3.8], infinity: [1.0, 0.0],
+  knife: [1.0, 0.0], he: [1.0, 0.0], flash: [1.0, 0.0], smoke: [1.0, 0.0],
 };
 // </sf2-weights>
 // <sf2-weapons>
@@ -531,6 +532,7 @@ const SF2_WEAPONS = {
   m40a1: {'fireRate': 1.3, 'reloadTime': 2.75, 'equipTime': 0.7, 'adsSpeed': 17, 'adsFov': 20, 'adsType': '2d_scope_overlay', 'vmHFov': 65.0, 'sf2Rig': 'm40a1', 'sf2': 'm40a1', 'sf2ZoomIn': [1.2, -0.015, 0.015], 'sf2ZoomOut': [0.5, 1.0, 1.0], 'sf2ReloadSounds': [[0.14, 'boltback'], [0.31, 'magout'], [0.48, 'magin'], [0.75, 'charge']], 'sf2ReloadAnim': 2.95, 'sf2Reticle': 'mil', 'zoomHFovs': [55, 20]}, // SFCWeaponM40A1
   cz700: {'fireRate': 1.3, 'reloadTime': 3.05, 'equipTime': 0.8, 'adsSpeed': 17, 'adsFov': 20, 'adsType': '2d_scope_overlay', 'vmHFov': 60.0, 'sf2Rig': 'cz700', 'sf2': 'cz700', 'sf2ZoomIn': [1.2, -0.01, 0.01], 'sf2ZoomOut': [0.0, 0.0, 0.0], 'sf2ReloadSounds': [[0.14, 'charge'], [0.31, 'magout'], [0.48, 'magin'], [0.75, 'charge']], 'sf2ReloadAnim': 3.166, 'sf2Reticle': 'mil', 'zoomHFovs': [55, 20]}, // SFCWeaponCZ700
   cheytac_m200: {'fireRate': 1.6, 'reloadTime': 3.2, 'equipTime': 0.95, 'adsSpeed': 17, 'adsFov': 20, 'adsType': '2d_scope_overlay', 'vmHFov': 62.0, 'sf2Rig': 'cheytac', 'sf2': 'cheytac', 'sf2ZoomIn': [1.2, -0.01, 0.012], 'sf2ZoomOut': [0.0, 0.0, 0.0], 'sf2ReloadSounds': [[0.14, 'charge'], [0.31, 'magout'], [0.48, 'magin'], [0.75, 'charge']], 'sf2ReloadAnim': 3.5, 'sf2Reticle': 'mil', 'zoomHFovs': [55, 20]}, // SFCWeaponCheyTac
+  awp: {'fireRate': 1.4, 'reloadTime': 2.8, 'equipTime': 0.65, 'adsSpeed': 17, 'adsFov': 20, 'adsType': '2d_scope_overlay', 'vmHFov': 60.0, 'sf2Rig': 'awp', 'sf2': 'awp', 'sf2ZoomIn': [1.2, -0.01, 0.01], 'sf2ZoomOut': [0.0, 0.0, 0.0], 'sf2ReloadSounds': [[0.14, 'charge'], [0.31, 'magout'], [0.48, 'magin'], [0.75, 'charge']], 'sf2ReloadAnim': 3.0, 'sf2Reticle': 'mil', 'zoomHFovs': [55, 20]}, // SFCWeaponAWP
   trg: {'fireRate': 1.2, 'reloadTime': 3.3, 'equipTime': 0.7, 'adsSpeed': 17, 'adsFov': 20, 'adsType': '2d_scope_overlay', 'vmHFov': 65.0, 'sf2Rig': 'trg', 'sf2': 'trg', 'sf2ZoomIn': [1.2, -0.01, -0.01], 'sf2ZoomOut': [0.0, 0.0, 0.0], 'sf2ReloadSounds': [[0.14, 'boltback'], [0.31, 'magout'], [0.48, 'magin'], [0.75, 'charge']], 'sf2ReloadAnim': 3.466}, // SFCWeaponTRG
 };
 for (const [id, o] of Object.entries(SF2_WEAPONS)) { const s = WEAPON_DATABASE[id]; Object.assign(s, o); delete s.vmAdsFov; delete s.adsVertical; } // (their own sights now)
@@ -578,6 +580,10 @@ const WEAPON_DEFS = {};
 // (SF2Camo in src/09c_sf2rig.js); otherwise the same gun
 WEAPON_DATABASE.g36c_circuit = Object.assign({}, WEAPON_DATABASE.g36c_eo, { name: 'G36C 魔術迴路', camo: 'circuit',
   desc: 'SF2 原版 G36C EOTech 消音，魔術迴路迷彩：電路紋路流動，擊殺後閃出黃色電光 1.5 秒。' });
+// v64x SF2 also sells the CircuitFX camo on its bolt guns (SFCItem_AWP_CircuitFX, _CheyTac_, _CZ700_, _K14_): the same guns under it
+for (const [id, name] of [['awp', 'AWP'], ['cheytac_m200', 'CheyTac M200'], ['cz700', 'CZ 700'], ['k14', 'K14']]) {
+  WEAPON_DATABASE[id + '_circuit'] = Object.assign({}, WEAPON_DATABASE[id], { name: name + ' 魔術迴路', camo: 'circuit', desc: `SF2 原版 ${name}，魔術迴路迷彩：電路紋路流動，擊殺後閃出黃色電光。` });
+}
 for (const [id, s] of Object.entries(WEAPON_DATABASE)) { WEAPON_DEFS[id] = compileWeapon(id, s); WEAPON_DEFS[id].apex = apexFor(WEAPON_DEFS[id]); }
 // v64n Apex 扣血 (user 10-28 A): the same mags, but a kill takes ~2.5× the hits (200 health + shield at Apex's per-shot damage against
 // 100 at ours) — the reserve grows by that ratio of body hits to kill (1–4×; Weapon.reserveMax). B: a kill hands one mag back (Match._killAnnounce).
@@ -622,6 +628,7 @@ const WEAPON_BLURBS = {
   mp5k: '短槍管 MP5，射速快、近距離靈活。',
   g36c_eo: '緊湊型步槍加全息瞄具與消音器，不上敵方雷達。',
   g36c_circuit: '魔術迴路迷彩的 G36C EOTech 消音：電路紋路流動，擊殺時閃出電光。',
+  awp_circuit: '魔術迴路迷彩的 AWP。', cheytac_m200_circuit: '魔術迴路迷彩的 CheyTac M200。', cz700_circuit: '魔術迴路迷彩的 CZ 700。', k14_circuit: '魔術迴路迷彩的 K14。',
   hk417_rs: '7.62mm 戰鬥步槍加內紅點與消音器，單發傷害高。',
   scarl_eo: '高射速的 SCAR-L 加全息瞄具與消音器。',
   k14: '韓國栓動狙擊槍，開鏡快、移動靈活。',
@@ -713,7 +720,7 @@ const MODES = {
 const BOT_POOLS = {
   general: ['m4a1', 'ak47', 'g36c', 'g36c_gold', 'g36c_eo', 'g36c_circuit', 'hk417_rs', 'scarl_eo', 'scarl', 'famas', 'aug', 'mp5', 'mp5k', 'p90', 'ump45', 'vector', 'mp7', 'remington870', 'benelli_m4', 'saiga12', 'm249', 'rpk', 'negev', 'pkm', 'trg', 'cheytac_m200', 'k14', 'awp', 'svd', 'kar98k', 'm16a3', 'k2', 'xm8', 'galil', 'sg551', 'hk417', 'scarh', 'qbz97', 'pp2000', 'vz61', 'aa12', 'mg4', 'k3', 'm40a1', 'sr25', 'psg1', 'm14ebr', 'type89', 'l86a1', 'hk23e', 'frf2', 'cz700'],
   rifle: ['m4a1', 'ak47', 'g36c', 'g36c_gold', 'g36c_eo', 'g36c_circuit', 'hk417_rs', 'scarl_eo', 'scarl', 'famas', 'aug', 'mp5', 'mp5k', 'p90', 'ump45', 'vector', 'mp7', 'm249', 'rpk', 'negev', 'pkm', 'mg42', 'm16a3', 'k2', 'xm8', 'galil', 'sg551', 'hk417', 'scarh', 'qbz97', 'pp2000', 'vz61', 'mg4', 'k3', 'type89', 'l86a1', 'hk23e'],
-  sniper: ['trg', 'cheytac_m200', 'k14', 'awp', 'barrett', 'kar98k', 'svd', 'm40a1', 'sr25', 'psg1', 'm14ebr', 'frf2', 'cz700'], pistol: ['p226', 'deagle', 'glock18', 'usp', 'm1911', 'm92fs', 'cz75', 'jericho', 'sw60', 'infinity'], knife: ['knife'],
+  sniper: ['trg', 'cheytac_m200', 'cheytac_m200_circuit', 'k14', 'k14_circuit', 'awp_circuit', 'cz700_circuit', 'awp', 'barrett', 'kar98k', 'svd', 'm40a1', 'sr25', 'psg1', 'm14ebr', 'frf2', 'cz700'], pistol: ['p226', 'deagle', 'glock18', 'usp', 'm1911', 'm92fs', 'cz75', 'jericho', 'sw60', 'infinity'], knife: ['knife'],
 };
 
 // Match rules (state-machine classes live in the match module).
