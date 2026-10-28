@@ -1457,3 +1457,17 @@
   - `_reloadtime.mjs` 正常。
   - AWP 魔術迴路截圖：整把槍連鏡子都是黑底綠紋。
   - `check.mjs` CHECK_OK。
+
+
+### v64y（本機，2026-10-28）：SF2 原版 Barrett；SVD 暫停；迴圈工具
+- Barrett：
+  - `sni_barret` 裝 SF2 指定的 CZ700 鏡（`SFCItem_Barret_Def_Scope`）：轉 90°，放正位移 0.46 cm。
+  - 十字 `mil3`（`mic_ScopeView_03`）。
+  - 數值照 `SFCWeaponBarret`：換彈 3.7 s（動畫 3.88 s）、重量 9.9。
+  - 聲音：`Sound_Barret`。
+- SVD 暫停（⏸）：PSO 鏡是側掛的，接在 `Scope` 插槽上時位置和大小都不對（放正位移 13.7 cm）。遊戲裡維持原本的 SVD。
+- 新工具：
+  - `tools/sf2_export.sh`：一行匯出一把槍，或一個零件。
+  - `tools/sf2_reticle_svg.py`：SF2 的十字貼圖轉成 SVG，暗色像素合併成矩形，比例照鏡片遮罩換算。
+  - `tools/sfx_sf2.mjs` 接受 `<id>@<檔名字首>`。
+- 驗證：Barrett 腰射和開鏡截圖、`_reloadtime.mjs`、`check.mjs`。

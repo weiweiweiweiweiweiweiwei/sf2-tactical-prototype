@@ -8,7 +8,7 @@
 //   node tools/sfx_sf2.mjs m4a1 ak103 g36c … g36c_eo=g36c+silence
 import fs from 'node:fs'; import path from 'node:path';
 const args = process.argv.slice(2).length ? process.argv.slice(2) : ['m4a1'], out = {}, alias = [];
-const ids = args.filter((a) => !a.includes('='));
+const ids = args.filter((a) => !a.includes('=')).map((a) => a.split('@')); // v64y <id>@<file prefix> when the waves are named otherwise (svd@DragunovSVD)
 for (const a of args.filter((a) => a.includes('='))) {
   const [id, spec] = a.split('='), [gun, silence] = spec.split('+');
   for (const r of ['magout', 'magin', 'charge', 'draw', 'boltback']) alias.push([`sf2_${id}_${r}`, `sf2_${gun}_${r}`]);
@@ -21,10 +21,10 @@ for (const a of args.filter((a) => a.includes('='))) {
 }
 const role = (f) => /WeaponFire\d*_T(_\d+)?\./i.test(f) ? 'far' : /WeaponFire\d*(_\d+)?\./i.test(f) ? 'fire' : // (M4A1 / AK-103: WeaponFire1.._T; G36C: WeaponFire, _01, _T, _T_01)
    /WeaponFire_Slide/i.test(f) ? 'boltback' : /ReloadClipOut/i.test(f) ? 'magout' : /ReloadClipIn/i.test(f) ? 'magin' : /ReloadSlide/i.test(f) ? 'charge' : /WeaponEquip/i.test(f) ? 'draw' : null;
-for (const id of ids) {
+for (const [id, pre] of ids) {
   const root = `tools/out/sf2/${id}`, dir = fs.readdirSync(root).filter((d) => /^Sound_/i.test(d)).map((d) => path.join(root, d, 'SoundNodeWave')).find((d) => fs.existsSync(d));
   if (!dir) { console.warn('no sounds for', id); continue; }
-  const prefix = new RegExp('^' + id + '_', 'i');
+  const prefix = new RegExp('^_?' + (pre || id) + '_', 'i');
   for (const f of fs.readdirSync(dir).filter((f) => prefix.test(f) && f.endsWith('.ogg'))) { // (the un-prefixed copies are the same clips)
     const r = role(f); if (!r) continue;
     (out[`sf2_${id}_${r}`] ||= []).push(fs.readFileSync(path.join(dir, f)).toString('base64'));

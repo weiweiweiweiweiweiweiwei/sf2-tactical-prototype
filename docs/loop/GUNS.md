@@ -11,7 +11,7 @@
 - 每輪結束前：`sh src/build.sh`、`node tools/esm/analyze.mjs`（MODULES_OK）、`node tools/check.mjs`（CHECK_OK）。
 
 ## 一把槍的做法（照 TRG-41，v64s）
-1. **匯出**（`tools/out/umodel_win32/umodel_64.exe -game=sf2 -path=D:/SpecialForce2/SFGame/CookedPCConsole`，在該目錄執行）：
+1. **匯出**：`sh tools/sf2_export.sh <id> <pkg> <Sound_pkg> [<pkg>_texture]`；鏡子 `sh tools/sf2_export.sh --part <包> <物件> [<貼圖包> <貼圖> …]`。新的十字：`python tools/sf2_reticle_svg.py <名> <Diffuse.png> [<dot.png>]` 直接轉成 SVG。聲音檔字首和 id 不同時寫 `<id>@<字首>`。（原始指令：`tools/out/umodel_win32/umodel_64.exe -game=sf2 -path=D:/SpecialForce2/SFGame/CookedPCConsole`，在該目錄執行）：
    - `-export -gltf -png -out=../sf2/<id> <pkg>`，有 `<pkg>_texture` 包時另外匯出到同一個資料夾；
    - `-export -psk -out=../sf2/<id>_anim <pkg>`（動畫 `.psa`、槍身 `.props.txt` 的插槽）；
    - `-export -sounds -out=../sf2/<id> Sound_<槍>`。
@@ -24,7 +24,7 @@
 7. **驗證**：`GUNID=<id> ONLY=hip,ads,ads2,fire TAG=<id> node tools/out/_rigshot.mjs`（看截圖：鏡子在槍正上方、手握得住、開鏡十字對）、`GUNID=<id> node tools/out/_reloadtime.mjs`、`node tools/check.mjs`。（`_rigshot` 的 reload 步驟把彈藥設 5，狙擊槍彈匣 5 會卡住，狙擊槍不要用 reload。）
 
 聲音清單（`tools/sfx_sf2.mjs` 參數，每加一把就更新）：
-`m4a1 ak103 g36c m16a3 k2 scarh famas xm8 galil hk417 qbz97 mp5k k14 trg m40a1 cz700 cheytac awp g36c_eo=g36c+silence hk417_rs=hk417+silence scarl_eo=scarh+silence`
+`m4a1 ak103 g36c m16a3 k2 scarh famas xm8 galil hk417 qbz97 mp5k k14 trg m40a1 cz700 cheytac awp barrett@Barret g36c_eo=g36c+silence hk417_rs=hk417+silence scarl_eo=scarh+silence`
 
 ## 佇列（由上往下做）
 狀態：⬜ 未做 · 🔄 進行中 · ✅ 完成 · ⏸ 做不到（寫原因）
@@ -41,8 +41,8 @@
 - ⬜ 第三人稱：不做（v63h 使用者選速度優先，士兵手上用程式槍）
 
 ### C. 其他狙擊／射手步槍（倉庫已有，換成 SF2 原版）
-- ⬜ SVD（`sni_dragunov`，`scope_dragunov`）
-- ⬜ Barrett（`sni_barret`，十字 `mic_ScopeView_03`）
+- ⏸ SVD（`sni_dragunov`，`scope_dragunov`）：PSO 鏡是側掛的，接在槍身 `Scope` 插槽上時跑到右上方、而且大小不對（放正位移 13.7 cm），一般的接法不適用，要手動對位或找它真正的掛點。遊戲裡維持原本的 SVD。建模設定留在 `tools/sf2_rig_build.mjs svd`
+- ✅ Barrett（v64y；`sni_barret`，十字 `mic_ScopeView_03`）
 - ⬜ Kar98k（`sni_kar98k`，`Common_Scope_Kar98k`）
 - ⬜ SR-25（`sni_sr-25`，`scope_sr25`）
 - ⬜ PSG1（`sni_psg-1`，`scope_psg-1`）

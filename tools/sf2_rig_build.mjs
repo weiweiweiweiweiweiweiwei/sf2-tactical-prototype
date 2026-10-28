@@ -85,6 +85,9 @@ const G = {
   cz700: gun('cz700', { pkg: 'sni_cz700', stem: 'sni_cz700', tex: 'cz700', optic: SCOPE('scope_cz700', 'scope_cz700') }),
   cheytac: gun('cheytac', { pkg: 'sni_cheytac', stem: 'sni_cheytac', tex: 'cheytac', optic: SCOPE('scope_cheytac', 'cheytac_scope_a') }),
   awp: gun('awp', { pkg: 'sni_awp', stem: 'sni_awp', tex: 'awp', optic: SCOPE('scope_awp', 'awp_scope_a') }),
+  // v64y SF2's other scoped guns (docs/loop/GUNS.md C)
+  svd: gun('svd', { pkg: 'sni_dragunov', stem: 'sni_dragunov', tex: 'dragunov', anim: '1st_anim_dragunov', optic: SCOPE('scope_dragunov', 'dragunov_scope') }),
+  barrett: gun('barrett', { pkg: 'sni_barret', stem: 'sni_barret', tex: 'barret', anim: '1st_anim_barret', optic: SCOPE('scope_cz700', 'scope_cz700') }), // (SFCItem_Barret_Def_Scope: the CZ700's scope, reticle mic_ScopeView_03)
   trg: gun('trg', { pkg: 'sni_trg', stem: 'sni_trg', tex: 'sni_trg', anim: '1st_ani_trg', optic: ZEISS_SCOPE }),
 }[GID];
 if (!G) throw new Error(`unknown gun ${GID}`);
