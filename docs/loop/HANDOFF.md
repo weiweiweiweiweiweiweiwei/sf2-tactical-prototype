@@ -20,7 +20,7 @@
 - ✅ M4A1 第三人稱槍模（本機 2026-10-28，見「本機已完成」L4；接到 Bot 手上留給雲端）。
 - 驗證：`node tools/check.mjs`、`node tools/_gunshot.mjs`（開鏡截圖存進 `docs/testing/shots/`）。
 
-### H4 ⬜ 真實顯卡的效能檢查
+### H4 🔄 真實顯卡的效能檢查
 - `node tools/check.mjs --map all` 跑 GTX 和 `--gpu intel` 各一次，加 `--novsync` 再跑一次 GTX。
 - 輸出：`docs/testing/gpu-<日期>.md`（三張表原樣貼上；有掉幀或錯誤的地圖標出來）。
 
