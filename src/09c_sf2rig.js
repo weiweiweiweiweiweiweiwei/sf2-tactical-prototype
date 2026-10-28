@@ -54,7 +54,7 @@ class SF2Rig {
     let rest = 1;
     if (s.draw > this.lastDraw + 0.5) { this.equipT = 0; this.fireT = -1; }
     this.lastDraw = s.draw;
-    this.idleT = (this.idleT + dt) % this.dur('Idle'); this.zoomT = (this.zoomT + dt) % this.dur('Zoom'); this.dashT = (this.dashT + dt) % this.dur('dash');
+    this.idleT = (this.idleT + dt) % this.dur('Idle'); this.zoomT = (this.zoomT + dt) % this.dur('Zoom'); this.dashT = (this.dashT + dt * 0.6) % this.dur('dash'); // v63e the sprint sway at 0.6× (user: too quick)
     if (s.reload >= 0) { // the clip stretched over the game's reload time; in / out over a few frames
       const d = this.dur('Reload'), k = fade(s.reload, 1, 0.05, 0.08); w.Reload = [s.reload * d, k]; rest -= k; this.fireT = -1; this.equipT = -1;
     }

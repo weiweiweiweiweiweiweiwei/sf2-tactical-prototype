@@ -1166,3 +1166,9 @@
 - Galil 的 `tp.mag` 寫成 `'curved'`，第三人稱外形只認得 `'curve'`，所以別人手上的 Galil 一直沒有彈匣；改成 `'curve'`。
 - 驗證：`analyze`、`build`、`check.mjs` 都過。
 
+### v63e（2026-10-28）：衝刺時槍的擺動放慢到 0.6 倍；Apex 原版素材只留在本機
+- 使用者：衝刺時槍枝擺動頻率太快，試著放慢到 0.6 倍。SF2 原版槍的 `dash` 動畫播放速度 ×0.6（`src/09c_sf2rig.js`），其他槍的衝刺晃動頻率 2.1 → 1.26（×0.6，`src/11_weaponsystem.js`），擺動幅度不變。
+- 使用者 10-28 選 5A：`tools/guns/apex_r301.glb`、`apex_r301_sfx/`（EA 的素材）移出 git，`.gitignore` 加 `tools/guns/apex_*`；`tools/guns/pack.mjs` 跳過 `apex_*` 和 `*_3rd.glb`。本機要先備份再合併（HANDOFF H7）。
+- 使用者 10-28 選 6A：README 改成說明部分槍枝使用 SF2 原版素材（原本寫「沒有使用任何 SF2 原始檔案」已經不正確）。
+- 驗證：`analyze`、`build`、`check.mjs` 都過。
+

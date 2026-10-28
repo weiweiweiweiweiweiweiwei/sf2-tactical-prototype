@@ -26,3 +26,6 @@ assets/maps/apex-full/*
 
 # second Claude Code account works in its own git worktree (COLLAB.md)
 .worktrees/
+
+# Apex Legends originals exported from the user's install (RSX, loop H5) — EA's assets: kept on the user's machine only, never published (user 10-28: 5A)
+tools/guns/apex_*
