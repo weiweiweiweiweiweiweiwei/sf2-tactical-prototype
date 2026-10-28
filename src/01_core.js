@@ -545,6 +545,12 @@ const APEX_POOL = {"assault": ["r301", "flatline", "havoc"], "smg": ["alternator
 const apexFor = (def) => (APEX_POOL[def.bolt ? 'sniper_bolt' : def.type] || []).map((k) => APEX_WEAPONS[k]).reduce((best, a) => (!best || Math.abs(Math.log(a.rpm * def.interval / 60)) < Math.abs(Math.log(best.rpm * def.interval / 60)) ? a : best), null);
 const WEAPON_DEFS = {};
 for (const [id, s] of Object.entries(WEAPON_DATABASE)) { WEAPON_DEFS[id] = compileWeapon(id, s); WEAPON_DEFS[id].apex = apexFor(WEAPON_DEFS[id]); }
+// v64n Apex 扣血 (user 10-28 A): the same mags, but a kill takes ~2.5× the hits (200 health + shield at Apex's per-shot damage against
+// 100 at ours) — the reserve grows by that ratio of body hits to kill (1–4×; Weapon.reserveMax). B: a kill hands one mag back (Match._killAnnounce).
+for (const d of Object.values(WEAPON_DEFS)) if (d.apex && d.damageNear > 0) {
+  const n = d.pellets || 1, ours = Math.ceil(100 / (d.damageNear * n)), theirs = Math.ceil((100 + APEX.shields[APEX.shields.length - 1]) / (d.apex.body * (d.apex.pellets || 1)));
+  d.apexReserveMult = Math.min(4, Math.max(1, theirs / ours)); // (clamp is declared further down)
+}
 Object.assign(WEAPON_DEFS, {
   knife: {
     id: 'knife', name: 'KNIFE', kind: 'knife', model: 'knife', moveSpeed: 6.4, adsMove: 1,

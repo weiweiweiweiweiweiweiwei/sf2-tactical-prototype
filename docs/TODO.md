@@ -21,7 +21,7 @@
 ## 1. SF2 原版槍枝素材（UModel，`D:\SpecialForce2`）
 - 🔄 **使用者 10-28 指定優先（最優先）**：魔術迴路 G36C、AWP、CheyTac M200（SF2 類別 `SFCWeaponCheyTac`）、M40A1、CZ 700，以及配備瞄準鏡的步槍（清單待使用者確認）
   - 🔄 本機（HANDOFF H10）：四把狙擊槍已匯出到 `tools/out/sf2/<awp|cheytac|cz700|m40a1>`（槍身／槍管／彈匣／槍托 glTF、貼圖含所有造型、`1st_anim_<槍>.psa` 動畫、槍聲）。**狙擊鏡模型不在 `sni_*` 包裡**（類別預設的 `SightComponent` 沒指定網格，貼圖有 `*_scope_*`）：要在 `weapon_common_part.upk`（54 MB）裡找 `*_scope*` 網格，像 K14 的 `scope_k14_bender`
-  - ❓ 「魔術迴路 G36C」：SF2 沒有這個名稱的類別或造型。G36C 類別：基本、EOTech_Silencer_ButterflyFX、MK2／3／4、Magup、Phoenix；造型貼圖 13 種（`tools/out/g36c_skins.jpg`），等使用者指認
+  - 🔄 「魔術迴路 G36C」＝ SF2 的 CircuitFX 迷彩（`SFCItem_G36C_EOTech_Silencer_CircuitFX`：G36C EOTech 消音＋`WeaponCamo_CircuitFX`）。材質 `weapon_shader_base_sc` 的 `circuit_FX_m`（貼圖 `FX_circuit_Base／Shine／Kill`，擊殺後 1.5 s 變色）；AWP、CheyTac、CZ700、K14 也有 CircuitFX 版
   - ⬜ 「配備瞄準鏡的步槍」：SF2 狙擊類別的 `fZoomedFOV` 12（SVD、PSG1、SR25）是內建高倍鏡；步槍類只有 M14EBR（25）、GALIL（40）。清單等使用者確認
   - ⬜ 雲端：栓動狙擊的 SF2 動畫（開槍後拉栓片段、開鏡中拉栓退出鏡頭）、SF2 狙擊鏡畫面（取代現在的 2D 鏡）、時間和後座照 `weapons.json`
 - ✅ M4A1 原版槍模、貼圖、槍聲（v61）
@@ -61,7 +61,7 @@
   - ✅ S30.1 完整頁面（本機 H1）接進數值資料當 `s30.1-full` 層（v62z）
   - ✅ 散布、後座不套 Apex 的（自選，見 DECISIONS D7）：留給「新增 Apex 原版槍」用
   - ✅ Nemesis 的散布、拔槍、彈道（v62z，`s30.1-full`）；只缺每發後座表
-- ❓ Apex 扣血模式子彈不夠（使用者 10-28）：彈匣／備彈和 SF2 模式相同，但擊殺要的發數約 2.5 倍（M4A1→Flatline 每發 20、滿血滿盾 200 → 身體 10 發；SF2 3–5 發）。選項見 CHANGELOG v64m 的「需要你決定」
+- ✅ Apex 扣血模式子彈不夠（使用者選 A＋B，v64n）：備彈依擊殺發數比放大 1–4 倍；擊殺補回一個彈匣
 - ⬜ 配件系統（瞄具、彈匣、槍托、槍管、Hop-up）
 - ⏸ 本機（HANDOFF H5）：用 RSX 從 Apex 安裝檔匯出原版槍模和音效
 

@@ -3147,6 +3147,10 @@ for (const [id, s] of Object.entries(WEAPON_DATABASE)) {
   WEAPON_DEFS[id] = compileWeapon(id, s);
   WEAPON_DEFS[id].apex = apexFor(WEAPON_DEFS[id]);
 }
+for (const d of Object.values(WEAPON_DEFS)) if (d.apex && d.damageNear > 0) {
+  const n = d.pellets || 1, ours = Math.ceil(100 / (d.damageNear * n)), theirs = Math.ceil((100 + APEX.shields[APEX.shields.length - 1]) / (d.apex.body * (d.apex.pellets || 1)));
+  d.apexReserveMult = Math.min(4, Math.max(1, theirs / ours));
+}
 Object.assign(WEAPON_DEFS, {
   knife: {
     id: "knife",
@@ -18276,7 +18280,7 @@ var Weapon = class _Weapon {
     Object.assign(this, def);
     if (vm.reloadSounds) this.reloadSounds = vm.reloadSounds;
     this.ammo = def.mag || 0;
-    this.reserveAmmo = def.reserve || 0;
+    this.reserveAmmo = this.reserveMax;
     this.shotN = 0;
     this.cooldown = 0;
     this.bloom = 0;
@@ -18305,9 +18309,13 @@ var Weapon = class _Weapon {
   get scoped() {
     return this.adsType === "2d_scope_overlay";
   }
+  get reserveMax() {
+    return Math.round((this.def.reserve || 0) * (this.game.apex && this.def.apexReserveMult || 1));
+  }
+  // v64n Apex 扣血: a bigger reserve
   resetAmmo() {
     this.ammo = this.def.mag || 0;
-    this.reserveAmmo = this.def.reserve || 0;
+    this.reserveAmmo = this.reserveMax;
     this.shotN = 0;
     this.cooldown = 0;
     this.bloom = 0;
@@ -24592,7 +24600,15 @@ var Match = class _Match {
     p.multi = this.time - p.lastKillT < 4 ? p.multi + 1 : 1;
     p.lastKillT = this.time;
     p.lastVictim = victim;
-    hud.points(`+${pts}  ${def.kind === "knife" ? "刀殺" : def.kind === "grab" ? "擒拿擊殺" : def.kind === "grenade" ? "手榴彈擊殺" : head ? "爆頭" : "擊殺"}${opts.collateral ? " · 穿透" : ""}`);
+    let refill = "";
+    if (this.apex && ws.current && ws.current.mag && ws.current.reserveMax) {
+      const w = ws.current, add = Math.min(w.mag, w.reserveMax - w.reserveAmmo);
+      if (add > 0) {
+        w.reserveAmmo += add;
+        refill = ` · 彈藥 +${add}`;
+      }
+    }
+    hud.points(`+${pts}  ${def.kind === "knife" ? "刀殺" : def.kind === "grab" ? "擒拿擊殺" : def.kind === "grenade" ? "手榴彈擊殺" : head ? "爆頭" : "擊殺"}${opts.collateral ? " · 穿透" : ""}${refill}`);
     const E = [], d = victim ? Math.hypot(victim.motor.pos.x - p.motor.pos.x, victim.motor.pos.z - p.motor.pos.z) : 0, gun = def.kind !== "knife" && def.kind !== "grab" && def.kind !== "grenade";
     if (p.multi >= 2) E.push(["double", "multi", "specialist", "specialforce"][Math.min(p.multi - 2, 3)]);
     if (def.kind === "grenade") E.push("grenade");

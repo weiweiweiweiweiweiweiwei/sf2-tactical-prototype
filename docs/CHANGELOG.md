@@ -1300,3 +1300,13 @@
   - `tools/out/_apexfol.mjs`：草叢剩 0 個。
   - `check-apex-full.mjs apex_full`：APEX_MAP_OK。
   - `check.mjs`：CHECK_OK。
+
+
+### v64n（本機，2026-10-28）：Apex 扣血模式的子彈（使用者選 A＋B）
+- 起因：Apex 模式的彈匣、備彈和 SF2 模式一樣，但擊殺要的發數多了約 2.5 倍。
+- A 備彈放大：每把槍依「Apex 擊殺要的身體發數 ÷ SF2 的」放大，範圍 1–4 倍。
+  - Apex 那邊用對應的 Apex 槍的每發傷害，打滿血滿盾 200；SF2 這邊用我們的近距傷害打 100。
+  - 計算在 `def.apexReserveMult`（`src/01_core.js`），`Weapon.reserveMax` 套用。
+  - 例：M4A1 120 → 300、MP5 120 → 450、AK 120 → 400、AWP 50 → 150、Desert Eagle 28 → 56。彈匣大小不變。
+- B 擊殺補彈（像 Apex 舔包）：每擊殺一人，手上的槍補回一個彈匣到備彈，最多補到滿；得分提示多一段「彈藥 +30」（`Match._killAnnounce`）。
+- 驗證：`tools/out/_apexammo.mjs`。Apex 模式下 M4A1 開場備彈 300；先減到 250，擊殺一人後變 280；頁面沒有錯誤。
