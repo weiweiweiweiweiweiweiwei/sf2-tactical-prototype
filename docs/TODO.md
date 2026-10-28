@@ -82,7 +82,7 @@
 - ✅ hangar 出生點偶爾互看（v63c）：機庫中線兩端 10 對相距約 90 m 看得到；出生點產生後刪掉看得到敵方出生點的點，檢查改成全部組合
 - ⬜ Intel 內顯：warehouse、desert、harbor、office、ridge、satellite、ryokan 的 p95 ≈ 33 ms（常掉到 30 fps），ryokan p99 49.8 ms
 - ⬜ GTX 不鎖幀：snow、dam 有週期性尖峰（p95 27.8／23.3 ms）
-- ⬜ `check.mjs --map all` 不含天空城和兩張 Apex 地圖
+- ✅ `check.mjs --map all` 改成全部 19 張（v63g：加上天空城和兩張 Apex 地圖，全部 PASS、出生點互看 0）
 
 ## 5. 連線
 - ⬜ 客戶端完整回溯重播修正
