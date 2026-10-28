@@ -76,4 +76,5 @@
 - 座標：UModel 原樣（公尺、Y 朝上、**槍口朝 +X**），沒轉成 gunlib 的槍座標。四個零件共用 4 根骨頭的綁定姿勢，頂點直接用。材質 `gun:tex_m4a1_<part>`，貼圖和第一人稱同一套（SF2 沒有另外的第三人稱貼圖）。
 - 標記（空物件，公尺）：`MUZZLE` (0.497, 0.087, 0)、`SCOPE` (0.073, 0.109, 0)、`GRIP` (0.205, 0.064, 0)、`STOCK` (−0.016, 0.087, 0)——來自 `rif_m4a1_body_3rd.props.txt` 的插槽 `flame`／`Scope`／`Grip`／`stock`。
 - 注意：平頂機匣，**沒有照門和前準星**（第一人稱的提把 `rif_m4a1_handle_a` 沒有 `_3rd`；`weapon_common_part` 有 `dot_handle_3rd` 可以掛在 `SCOPE`，但它的貼圖還沒對上，見 H3 M16A3 的調查）。
+- 注意：`tools/guns/pack.mjs` 會自動把 `tools/guns/` 裡所有 .glb 打進 `assets/guns/guns.js`（多約 300 KB，遊戲會把它當成一把槍模解析）；本機沒有打包它，接 Bot 時再打包。
 - 驗證：Blender 預覽 `docs/testing/shots/m4a1_3rd_side.png`（gun_preview.py 是照 gunlib 座標取景，所以畫面偏）。
