@@ -91,6 +91,7 @@ const G = {
   kar98k: gun('kar98k', { pkg: 'sni_kar98k', stem: 'sni_kar98k', tex: 'kar98k', optic: { file: 'kar98k/sni_kar98k/SkeletalMesh3/scope_kar98k.gltf', props: 'kar98k_anim/sni_kar98k/SkeletalMesh3/scope_kar98k.props.txt', tex: 'kar98k_scope', noAim: true, roll: +(process.env.ROLL ?? 0) } }), // (its scope ships in its own package; upright as read: 0 cm sideways against 3.1 turned)
   sr25: gun('sr25', { pkg: 'sni_sr-25', stem: 'sni_sr-25', tex: 'sr25', anim: '1st_anim_sr-25', optic: SCOPE('scope_sr25', 'scope_sr25') }),
   psg1: gun('psg1', { pkg: 'sni_psg-1', stem: 'sni_psg-1', tex: 'psg-1', anim: '1st_anim_psg-1', optic: SCOPE('scope_psg-1', 'psg-1_scope_a') }),
+  frf2: gun('frf2', { pkg: 'sni_frf2', stem: 'sni_frf2', tex: 'frf2', optic: SCOPE('scope_pm2', 'scope_pm2') }), // (SFCItem_FRF2_Def_Scope: Common_Scope_PM2, reticle mic_ScopeView_01)
   trg: gun('trg', { pkg: 'sni_trg', stem: 'sni_trg', tex: 'sni_trg', anim: '1st_ani_trg', optic: ZEISS_SCOPE }),
 }[GID];
 if (!G) throw new Error(`unknown gun ${GID}`);

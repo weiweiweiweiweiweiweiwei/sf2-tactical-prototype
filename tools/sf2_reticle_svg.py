@@ -6,25 +6,26 @@ import sys
 from PIL import Image
 name, diff = sys.argv[1], sys.argv[2]; dot = sys.argv[3] if len(sys.argv) > 3 else None
 im = Image.open(diff).convert('L'); w = im.size[0]; c = w / 2; k = 71 / (200 * w / 512); R = 200 * w / 512
-rects = {}  # (x0, x1) run -> list of [y0, y1]
-for y in range(w):
-    x = 0
-    while x < w:
-        if im.getpixel((x, y)) < 128:
-            x0 = x
-            while x < w and im.getpixel((x, y)) < 128: x += 1
-            if ((x0 + x) / 2 - c) ** 2 + (y + 0.5 - c) ** 2 <= R * R:
-                L = rects.setdefault((x0, x), [])
-                if L and L[-1][1] == y: L[-1][1] = y + 1
-                else: L.append([y, y + 1])
-        else: x += 1
+def runs(dark):  # the texels where dark(x, y), as rectangles merged down the rows: {(x0, x1): [[y0, y1], …]}
+    rects = {}
+    for y in range(w):
+        x = 0
+        while x < w:
+            if dark(x, y):
+                x0 = x
+                while x < w and dark(x, y): x += 1
+                if ((x0 + x) / 2 - c) ** 2 + (y + 0.5 - c) ** 2 <= R * R:
+                    L = rects.setdefault((x0, x), [])
+                    if L and L[-1][1] == y: L[-1][1] = y + 1
+                    else: L.append([y, y + 1])
+            else: x += 1
+    return rects
+rects = runs(lambda x, y: im.getpixel((x, y)) < 128)
 f = lambda v: round(v, 2)
 parts = [f'<rect x="{f((x0 - c) * k)}" y="{f((y0 - c) * k)}" width="{f((x1 - x0) * k)}" height="{f((y1 - y0) * k)}"/>' for (x0, x1), L in rects.items() for y0, y1 in L]
 dots = ''
-if dot:
-    d = Image.open(dot).convert('RGB'); pts = [(x, y) for x in range(w) for y in range(w) if d.getpixel((x, y))[0] > 128]
-    if pts:
-        cx = sum(p[0] for p in pts) / len(pts) + 0.5 - c; cy = sum(p[1] for p in pts) / len(pts) + 0.5 - c; r = max(0.35, (len(pts) / 3.14) ** 0.5 * k)
-        dots = f'<circle cx="{f(cx * k)}" cy="{f(cy * k)}" r="{f(r)}" fill="#ff1a0a"/>'
+if dot:  # (v64y the _dot sheet is the lit part of the reticle — one red texel pair for mic_ScopeView, red line work for _01)
+    d = Image.open(dot).convert('RGB'); red = runs(lambda x, y: d.getpixel((x, y))[0] > 128)
+    dots = '<g fill="#ff1a0a">' + ''.join(f'<rect x="{f((x0 - c) * k)}" y="{f((y0 - c) * k)}" width="{f(max(x1 - x0, 1.5) * k)}" height="{f(max(y1 - y0, 1.5) * k)}"/>' for (x0, x1), L in red.items() for y0, y1 in L if x1 - x0 <= 6 or y1 - y0 <= 6) + '</g>'  # (lines only: _01's sheet also holds a 37 × 13 texel block at the centre, a glow the material masks)
 print(f'<svg class="ret {name}" viewBox="-50 -50 100 100"><g fill="#111" fill-opacity=".9">' + ''.join(parts) + '</g>' + dots + '</svg>')
 print(len(parts), 'rects', file=sys.stderr)
