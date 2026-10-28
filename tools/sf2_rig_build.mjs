@@ -142,7 +142,7 @@ async function addPart(name, file, stem, bake = null) {
     if ([...used].some((j) => remap[j] === undefined)) throw new Error(`${name}: bone missing in the base skeleton`);
   }
   const mesh = doc.createMesh(name), mat = await material(stem), out = [];
-  const glass = () => doc.createMaterial('gun:glass').setBaseColorFactor([0.3, 0.45, 0.5, 0.07]).setAlphaMode('BLEND').setMetallicFactor(0).setRoughnessFactor(0.35); // v64 an optic's lens (lens_* / *_glass_mic)
+  const glass = () => doc.createMaterial('gun:glass').setBaseColorFactor([0.22, 0.12, 0.08, 0.12]).setAlphaMode('BLEND').setMetallicFactor(0).setRoughnessFactor(0.35); // v64 an optic's lens (lens_* / *_glass_mic): a dark warm tint, as in the user's SF2 G36C EOTech shot
   // v62i each part keeps its OWN bind pose (as UE3 does: the bones are shared, each mesh its own reference pose): its own skin over
   // the body's joints with its inverse-bind matrices (the body's for bones it lacks). AK-103 / SCAR stocks have weapon_stock
   // turned 90° against the body's, the G36C's arms a whole other bind — read through the body's, the stock swung a metre off.

@@ -1207,4 +1207,5 @@
 - 遊戲端：`SF2Rig` 有 `DOT` 時眼睛對準 DOT（深度照 `vLocZoomIN`），K14 沒有 `ZoomFire` 時用 `Fire`；透明網格不進 AO（原本鏡片被 AO 蓋成灰色）。`fromRig` 把準心方片的貼圖做成開鏡時淡入的 sprite，角度大小和 SF2 的方片一樣。`01_core.js` 新增四把槍（傷害照原槍的平衡：G36C 25/19、HK417 36/29 20 發、SCAR-L 28/21、K14 照 M40A1 110/96），時間、鏡頭、後座力由 `tools/sf2_weapon_table.py` 從各自的 SF2 類別產生（HK417 mod2A 後座比原版小、SCAR-L MK2 射速 0.0945）；三把消音槍 `suppressed`（不上雷達、沒有火光）；Bot 也會拿。
 - 聲音：`tools/sfx_sf2.mjs` 支援 `<id>=<槍>+silence` 別名（不複製資料）；K14 自己的槍聲、拉栓（`Fire_Slide` → `boltback`）、換彈（Reload 91 格：13 開栓、28 退匣、44 插匣、68 關栓）。
 - 驗證：`analyze`、`build`、`check.mjs --gpu intel`（CHECK_OK）、`_fileplay`（FILE_PLAY_OK）；`_gunshot` 腰射／開鏡（EOTech、Reflex 準心在瞄具窗正中、透得過鏡片；K14 開鏡是 2D 狙擊鏡）、`_gunreload`（HK417 換彈、K14 拉栓）。
-- 未做：烤漆（魔術迴路）；K14 的腰射位置沒有 SF2 截圖可對照。
+- 照使用者的 SF2 魔術迴路 G36C 開鏡截圖校正（那張是 4:3 拉成 16:9，準心圈是橢圓，所以只比高度）：眼睛在 DOT 後 10 cm（瞄具窗和外框的寬度比 0.76，和截圖一樣）、G36C EOTech 的開鏡鏡頭 40 → 29（窗高佔畫面 52.5 %）；準心改成實心紅、不受色調映射影響，圈的高度佔畫面 17 %；鏡片改成淡暖色。HK417、SCAR-L 沒有截圖，眼睛同樣 10 cm、鏡頭用各自 SF2 類別的值。
+- 未做：烤漆（魔術迴路的綠色電路紋）；K14 的腰射位置、HK417／SCAR-L 的開鏡沒有 SF2 截圖可對照。

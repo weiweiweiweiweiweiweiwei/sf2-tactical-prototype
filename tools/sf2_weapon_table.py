@@ -19,7 +19,9 @@ GUNS = {  # id: (SF2 class, rig, sound, [magout, magin, charge])
     'mp5k': ('MP5K', 'mp5k', 'mp5k', [0.17, 0.48, 0.77]),  # (v62z loop H3: the first SMG; reload times from its Reload clip, 65 frames)
     'qbz97': ('QBZ97', 'qbz97', 'qbz97', [0.19, 0.4, 0.73]),  # (v62z loop H3: its carry-handle sights measured by hand, tools/sf2_rig_build.mjs sightMarks)
     # v64 the attachment builds (the base gun's rig + SF2's EOTech / Reflex and silencer, the suppressed AR shot; reload as the base gun)
-    'g36c_eo': ('G36C_EOTech_Silencer_ButterflyFX', 'g36c_eo', 'g36c_eo', [0.12, 0.32, 0.76]),
+    # (the aimed lens fitted to the user's SF2 ADS shot, 10-28 — 4:3 stretched to 16:9, so heights: the window through the EOTech 52.5 %
+    # of the screen's height with the eye 10 cm back (its window 0.76 of the housing's width, as there) → 29 on 16:9; the class says 40)
+    'g36c_eo': ('G36C_EOTech_Silencer_ButterflyFX', 'g36c_eo', 'g36c_eo', [0.12, 0.32, 0.76], {'vmAdsHFov': 29}),
     'hk417_rs': ('HK417_mod2A', 'hk417_rs', 'hk417_rs', [0.16, 0.37, 0.77]),
     'scarl_eo': ('SCARL_MK2', 'scarl_eo', 'scarl_eo', [0.12, 0.44, 0.72]),
     # v64 the K14 bolt action: its Reload clip (91 frames) opens the bolt at 13, the mag out at 28 / in at 44, the bolt shut at 68;

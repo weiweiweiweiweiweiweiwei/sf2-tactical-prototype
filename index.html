@@ -3073,7 +3073,7 @@ var SF2_WEAPONS = {
   // SFCWeaponMP5K
   qbz97: { "fireRate": 0.107, "reloadTime": 2.3, "equipTime": 0.8, "adsSpeed": 12, "adsFov": 55, "adsType": "3d_sight", "vmHFov": 60, "vmAdsHFov": 35, "sf2Rig": "qbz97", "sf2": "qbz97", "sf2ZoomIn": [10, 0, -0.1], "sf2ZoomOut": [0, 0, 0], "sf2ReloadSounds": [[0.19, "magout"], [0.4, "magin"], [0.73, "charge"]], "sf2Recoil": { "nextCrossVert": 1.45, "maxCrossVert": 12.5, "vertInc": 15e3, "vertDec": 11, "crossDecreasInc": 15, "incline": 0.08, "forceCorrection": 50, "domDefault": 0.2, "domZoomDefault": 0, "domInc": 0.25, "domMax": 1.15, "domMin": 0, "domDec": 1.3, "maxMovingValue": 0.8, "mulValueRun": 0.4, "mulValueJump": 6, "zoomMod": 0.7, "crouchMod": 0.9 } },
   // SFCWeaponQBZ97
-  g36c_eo: { "fireRate": 0.109, "reloadTime": 2.28, "equipTime": 0.85, "adsSpeed": 12, "adsFov": 55, "adsType": "3d_sight", "vmHFov": 50, "vmAdsHFov": 40, "sf2Rig": "g36c_eo", "sf2": "g36c_eo", "sf2ZoomIn": [2.4, -2e-3, 0.3], "sf2ZoomOut": [0, 0, 0], "sf2ReloadSounds": [[0.12, "magout"], [0.32, "magin"], [0.76, "charge"]], "sf2Recoil": { "nextCrossVert": 1.78, "maxCrossVert": 10.6, "vertInc": 15e3, "vertDec": 13, "crossDecreasInc": 15, "incline": 0.05, "forceCorrection": 50, "domDefault": 0.15, "domZoomDefault": 0, "domInc": 0.3, "domMax": 2.2, "domMin": 0, "domDec": 1.4, "maxMovingValue": 0.8, "mulValueRun": 0.4, "mulValueJump": 6, "zoomMod": 0.35, "crouchMod": 0.9 } },
+  g36c_eo: { "fireRate": 0.109, "reloadTime": 2.28, "equipTime": 0.85, "adsSpeed": 12, "adsFov": 55, "adsType": "3d_sight", "vmHFov": 50, "vmAdsHFov": 29, "sf2Rig": "g36c_eo", "sf2": "g36c_eo", "sf2ZoomIn": [2.4, -2e-3, 0.3], "sf2ZoomOut": [0, 0, 0], "sf2ReloadSounds": [[0.12, "magout"], [0.32, "magin"], [0.76, "charge"]], "sf2Recoil": { "nextCrossVert": 1.78, "maxCrossVert": 10.6, "vertInc": 15e3, "vertDec": 13, "crossDecreasInc": 15, "incline": 0.05, "forceCorrection": 50, "domDefault": 0.15, "domZoomDefault": 0, "domInc": 0.3, "domMax": 2.2, "domMin": 0, "domDec": 1.4, "maxMovingValue": 0.8, "mulValueRun": 0.4, "mulValueJump": 6, "zoomMod": 0.35, "crouchMod": 0.9 } },
   // SFCWeaponG36C_EOTech_Silencer_ButterflyFX
   hk417_rs: { "fireRate": 0.102, "reloadTime": 2.18, "equipTime": 0.85, "adsSpeed": 12, "adsFov": 55, "adsType": "3d_sight", "vmHFov": 60, "vmAdsHFov": 40, "sf2Rig": "hk417_rs", "sf2": "hk417_rs", "sf2ZoomIn": [-4, -0.02, -0.2], "sf2ZoomOut": [0, 0, 0], "sf2ReloadSounds": [[0.16, "magout"], [0.37, "magin"], [0.77, "charge"]], "sf2Recoil": { "nextCrossVert": 1.63, "maxCrossVert": 7.9, "vertInc": 11700, "vertDec": 15.86, "crossDecreasInc": 15, "incline": 0.05, "forceCorrection": 50, "domDefault": 0.2, "domZoomDefault": 0, "domInc": 0.23, "domMax": 1.848, "domMin": 0, "domDec": 1.539, "maxMovingValue": 0.8, "mulValueRun": 0.4, "mulValueJump": 6, "zoomMod": 0.35, "crouchMod": 0.9 } },
   // SFCWeaponHK417_mod2A
@@ -15568,9 +15568,9 @@ var SF2Rig = class {
       this.a[c.name] = a;
     }
     this.pose({ Zoom: [this.dur("Zoom"), 1] });
-    const sm = m.getObjectByName("SIGHT"), head = m.getObjectByName("Bip01-Head").getWorldPosition(new THREE.Vector3());
-    const s = (sm || m.getObjectByName("DOT") || m.getObjectByName("POST")).getWorldPosition(new THREE.Vector3());
-    const eye = new THREE.Vector3(s.x, s.y, sm ? o.eyeRelief != null ? s.z - o.eyeRelief : head.z : head.z - 0.03 - (o.zoomIn ? o.zoomIn[0] : -3) / 100);
+    const sm = m.getObjectByName("SIGHT"), dm = m.getObjectByName("DOT"), head = m.getObjectByName("Bip01-Head").getWorldPosition(new THREE.Vector3());
+    const s = (sm || dm || m.getObjectByName("POST")).getWorldPosition(new THREE.Vector3());
+    const eye = new THREE.Vector3(s.x, s.y, (sm || dm) && o.eyeRelief != null ? s.z - o.eyeRelief : sm ? head.z : head.z - 0.03 - (o.zoomIn ? o.zoomIn[0] : -3) / 100);
     m.rotation.y = Math.PI;
     m.position.set(eye.x, -eye.y, eye.z);
     const zi = o.zoomIn || [-3, 0, 0], zo = o.zoomOut || [0, 0, 0];
@@ -15809,7 +15809,7 @@ var GunMats = class {
 var GUN_MODELS = {};
 var GUN_RIGS = {};
 var GUN_3RD = {};
-var RIG_EYE = { m16a3: 0.055, qbz97: 0.06 };
+var RIG_EYE = { m16a3: 0.055, qbz97: 0.06, g36c_eo: 0.1, hk417_rs: 0.1, scarl_eo: 0.1 };
 var GLB_RELOAD_POSE = { roll: -0.5, pitch: 0.32, drop: -0.09, shift: 0.08 };
 function loadGunModels() {
   if (loadGunModels.p) return loadGunModels.p;
@@ -16228,12 +16228,8 @@ var WeaponModels = class {
     const rm = rig.model.getObjectByName("reticle"), dot = rig.model.getObjectByName("DOT");
     if (rm && rm.material && rm.material.map && dot) {
       rm.visible = false;
-      rig.place(1);
-      rig.model.updateMatrixWorld(true);
-      const d = dot.getWorldPosition(new THREE.Vector3()).length();
-      rig.place(0);
-      const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: rm.material.map, blending: THREE.AdditiveBlending, depthWrite: false, depthTest: true, transparent: true, color: new THREE.Color(1, 0.12, 0.08).multiplyScalar(3), opacity: 0 }));
-      const k = 3 * 0.02 / Math.max(d, 0.05);
+      const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: rm.material.map, blending: THREE.NormalBlending, depthWrite: false, depthTest: true, transparent: true, toneMapped: false, color: new THREE.Color(1.8, 0.07, 0.05), opacity: 0 }));
+      const k = 2 * 3 * 0.097 * Math.tan((o.adsHFov || 40) * Math.PI / 360) / (96 / 256);
       s.position.set(0, 0, -3);
       s.scale.set(k, k, 1);
       s.renderOrder = 4;
@@ -16271,7 +16267,7 @@ var WeaponModels = class {
   }
   // v62z the eye behind a fitted peep (SIGHT mark) where the head bone is not right: the M16A3 carries the M4A1's handle (5.5 cm, see m4())
   _rigOpts(def) {
-    return def ? { equipTime: def.equipTime, zoomIn: def.sf2ZoomIn, zoomOut: def.sf2ZoomOut, reloadSounds: def.sf2ReloadSounds || void 0, eyeRelief: RIG_EYE[def.sf2Rig] } : {};
+    return def ? { equipTime: def.equipTime, zoomIn: def.sf2ZoomIn, zoomOut: def.sf2ZoomOut, reloadSounds: def.sf2ReloadSounds || void 0, eyeRelief: RIG_EYE[def.sf2Rig], adsHFov: def.vmAdsHFov } : {};
   }
   m4(def) {
     return this.fromRig("m4a1_sf2_rig", Object.assign(this._rigOpts(def), { reloadSounds: void 0, eyeRelief: 0.055 })) || this.fromGLB("m4a1_sf2", { eye: 0.03, eyeRelief: 0.025, reticle: "tritium", reticleScale: 0.22 }) || this.fromGLB("m4a1", { eye: 0.2, eyeRelief: 0.03 }) || this.m4Proc();

@@ -26,10 +26,11 @@ class SF2Rig {
     // the M4A1's −3 gives the head depth the screenshot fit found.
     // Rig space is +Z forward, −X right, +Y up: turned half a turn about Y it is camera space.
     this.pose({ Zoom: [this.dur('Zoom'), 1] });
-    // v64 an optic (EOTech / Reflex): its ZoomCrosshair socket (the DOT mark) is the aim point, at the same vLocZoomIN depth
-    const sm = m.getObjectByName('SIGHT'), head = m.getObjectByName('Bip01-Head').getWorldPosition(new THREE.Vector3());
-    const s = (sm || m.getObjectByName('DOT') || m.getObjectByName('POST')).getWorldPosition(new THREE.Vector3());
-    const eye = new THREE.Vector3(s.x, s.y, sm ? (o.eyeRelief != null ? s.z - o.eyeRelief : head.z) : head.z - 0.03 - (o.zoomIn ? o.zoomIn[0] : -3) / 100);
+    // v64 an optic (EOTech / Reflex): its ZoomCrosshair socket (the DOT mark) is the aim point, the eye o.eyeRelief behind it
+    // (the user's SF2 G36C EOTech ADS shot, 10-28: the window half the screen wide → 6 cm), else at the vLocZoomIN depth
+    const sm = m.getObjectByName('SIGHT'), dm = m.getObjectByName('DOT'), head = m.getObjectByName('Bip01-Head').getWorldPosition(new THREE.Vector3());
+    const s = (sm || dm || m.getObjectByName('POST')).getWorldPosition(new THREE.Vector3());
+    const eye = new THREE.Vector3(s.x, s.y, (sm || dm) && o.eyeRelief != null ? s.z - o.eyeRelief : sm ? head.z : head.z - 0.03 - (o.zoomIn ? o.zoomIn[0] : -3) / 100);
     m.rotation.y = Math.PI; m.position.set(eye.x, -eye.y, eye.z);
     // v62i at the hip SF2 holds the mesh at vLocZoomOut, aimed at vLocZoomIN (UE cm: x forward, y right, z up), blended by the aim:
     // the hip eye = the aimed eye + (in − out) in rig space (−y, z, x) / 100 (M4A1: 2 cm further back and 0.87 cm lower)
