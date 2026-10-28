@@ -521,6 +521,7 @@ class Match {
   _killAnnounce(def, head, pts, opts, victim) {
     const hud = this.app.hud, p = this.player, ws = this.weapons;
     p.streak++; p.multi = this.time - p.lastKillT < 4 ? p.multi + 1 : 1; p.lastKillT = this.time; p.lastVictim = victim;
+    { const rg = ws.current && ws.current.def === def && ws.current.vm && ws.current.vm.rig; if (rg && rg.camo) rg.camo.kill(); } // v64o a camo's kill flare (魔術迴路)
     let refill = ''; // v64n Apex 扣血 (user 10-28 B, like looting a death box): a kill puts one mag of the gun in hand back in its reserve, up to the full reserve
     if (this.apex && ws.current && ws.current.mag && ws.current.reserveMax) { const w = ws.current, add = Math.min(w.mag, w.reserveMax - w.reserveAmmo); if (add > 0) { w.reserveAmmo += add; refill = ` · 彈藥 +${add}`; } }
     hud.points(`+${pts}  ${def.kind === 'knife' ? '刀殺' : def.kind === 'grab' ? '擒拿擊殺' : def.kind === 'grenade' ? '手榴彈擊殺' : head ? '爆頭' : '擊殺'}${opts.collateral ? ' · 穿透' : ''}${refill}`);

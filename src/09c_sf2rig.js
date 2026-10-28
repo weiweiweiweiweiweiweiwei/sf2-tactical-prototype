@@ -56,6 +56,7 @@ class SF2Rig {
   fire(ads) { this.reloadAt = -1; this.fireT = 0; this.fireClip = ads && this.a.ZoomFire ? 'ZoomFire' : 'Fire'; this.equipT = -1; } // (v64 the K14 has no ZoomFire: its Fire works the bolt)
   // s: { ads 0–1, sprint 0–1, reload s or −1 / reloadDone / reloadLen (the clip's s), draw (WeaponSystem.drawT: 1 on a switch, running down) }
   update(dt, s) {
+    if (this.camo) this.camo.update(dt);
     const w = {}, fade = (t, d, i, o) => Math.max(0, Math.min(1, i > 0 ? t / i : 1, o > 0 ? (d - t) / o : 1));
     let rest = 1;
     if (s.draw > this.lastDraw + 0.5) { this.equipT = 0; this.fireT = -1; }
@@ -148,4 +149,52 @@ class SF2Flash {
   hide() { if (this.ok) for (const m of ['hip', 'ads']) for (const L of this.layers[m]) L.s.visible = false; }
 }
 
-export { SF2Flash, SF2Rig };
+// v64o SF2's weapon camos (user 10-28: 魔術迴路 G36C = SFCItem_G36C_EOTech_Silencer_CircuitFX). An ECAMOT_MATERIAL camo puts its own
+// material on the gun's parts (the arms keep theirs): CircuitFX is circuit_FX_m in weapon_shader_base_sc — the teal band
+// FX_circuit_Base, the circuit lines FX_circuit_Shine, both at camo_value 2 (UV ×2) and running along the gun; a kill sets its
+// 'Kill' parameter for ActionCamoKillTime 1.5 s and the yellow lightning FX_circuit_Kill flares up. The cooked material lost its
+// panner nodes: the speeds below are set by eye. Textures: assets/camo_sf2.js (tools/camo_sf2.py). The gun's own normal map and
+// its shading stay; its colour goes dark under the camo.
+class SF2Camo {
+  static tex(id) {
+    const C = SF2Camo._t || (SF2Camo._t = {}); if (C[id] || !window.SF2_CAMO || !window.SF2_CAMO[id]) return C[id] || null;
+    const L = new THREE.TextureLoader(), t = C[id] = {};
+    for (const [k, url] of Object.entries(window.SF2_CAMO[id])) { t[k] = L.load(url); t[k].colorSpace = THREE.SRGBColorSpace; t[k].wrapS = t[k].wrapT = THREE.RepeatWrapping; }
+    return t;
+  }
+  constructor(model, id, isArm) {
+    const T = SF2Camo.tex(id); this.ok = !!T; this.killT = 0; if (!T) return;
+    this.u = { uTime: { value: 0 }, uKill: { value: 0 }, uCamoBase: { value: T.base }, uCamoShine: { value: T.shine }, uCamoKill: { value: T.kill } };
+    const done = new Map();
+    model.traverse((o) => {
+      if (!o.isMesh || isArm(o) || o.userData.noAO || !o.material || !o.material.map) return; // (a lens keeps its glass)
+      if (!done.has(o.material)) {
+        const m = o.material.clone(); m.name = o.material.name + ':camo_' + id;
+        m.onBeforeCompile = (sh) => {
+          Object.assign(sh.uniforms, this.u);
+          sh.fragmentShader = 'uniform float uTime, uKill; uniform sampler2D uCamoBase, uCamoShine, uCamoKill;\n' + sh.fragmentShader
+            .replace('#include <map_fragment>', `#include <map_fragment>
+              vec2 cu = vMapUv * 2.0; // camo_value 2
+              vec3 cb = texture2D(uCamoBase, vec2(cu.x + uTime * 0.12, cu.y)).rgb;
+              diffuseColor.rgb = diffuseColor.rgb * 0.16 + cb * 0.3;`)
+            .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
+              float sweep = texture2D(uCamoBase, vec2(cu.x * 0.5 - uTime * 0.3, 0.5)).g; // a brighter band running along the lines
+              vec3 cs = texture2D(uCamoShine, cu + vec2(uTime * 0.05, 0.0)).rgb;
+              totalEmissiveRadiance += cs * (0.5 + 2.2 * sweep) * (1.0 - 0.6 * uKill);
+              totalEmissiveRadiance += texture2D(uCamoKill, cu * 0.75 + vec2(0.0, uTime * 0.35)).rgb * uKill * 1.4;`);
+        };
+        m.customProgramCacheKey = () => 'sf2camo_' + id;
+        done.set(o.material, m);
+      }
+      o.material = done.get(o.material);
+    });
+  }
+  kill() { this.killT = 1.5; } // ActionCamoKillTime
+  update(dt) {
+    if (!this.ok) return;
+    this.u.uTime.value = (this.u.uTime.value + dt) % 400; this.killT = Math.max(0, this.killT - dt);
+    this.u.uKill.value = this.killT > 1.2 ? (1.5 - this.killT) / 0.3 : this.killT / 1.2; // flares in 0.3 s, fades over the rest
+  }
+}
+
+export { SF2Camo, SF2Flash, SF2Rig };

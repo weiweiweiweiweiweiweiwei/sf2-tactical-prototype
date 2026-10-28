@@ -6,7 +6,7 @@
    Profile coordinates (u, v): u = distance forward, v = up.
    ===================================================================== */
 import { DRACOLoader, GLTFLoader, RoundedBoxGeometry, THREE, WEAPON_DATABASE, mergeGeometries } from './01_core.js';
-import { SF2Flash, SF2Rig } from './09c_sf2rig.js';
+import { SF2Camo, SF2Flash, SF2Rig } from './09c_sf2rig.js';
 class GunMats {
   constructor(tf) {
     const wear = tf.surface('gunWear'), fab = tf.surface('fabric');
@@ -68,7 +68,7 @@ function loadGunModels() {
   return (loadGunModels.p = (async () => {
     try {
       const script = (src) => new Promise((res) => { const s = document.createElement('script'); s.src = src; s.async = true; s.onload = res; s.onerror = res; document.head.appendChild(s); });
-      await Promise.all([window.GUN_GLB ? null : script('assets/guns/guns.js'), window.SF2_FX ? null : script('assets/fx_sf2.js')]); // v62m + SF2's own muzzle-flash textures
+      await Promise.all([window.GUN_GLB ? null : script('assets/guns/guns.js'), window.SF2_FX ? null : script('assets/fx_sf2.js'), window.SF2_CAMO ? null : script('assets/camo_sf2.js')]); // (v64o + SF2's weapon camos) // v62m + SF2's own muzzle-flash textures
       const L = new GLTFLoader(), D = new DRACOLoader(); // v49 gunlib exports Draco-compressed GLBs (older ones are plain; both load)
       D.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/libs/draco/gltf/'); L.setDRACOLoader(D);
       for (const [id, b64] of Object.entries(window.GUN_GLB || {})) {
@@ -185,7 +185,7 @@ class WeaponModels {
   // without arms, frozen into plain meshes once per gun (a skinned rig is baked at its pose; geometry shared by every drop),
   // centred, muzzle toward −Z, real size. Cheap to clone: a drop is a few static meshes, no skeleton.
   dropModel(def) {
-    const key = def.sf2Rig || def.model || def.id, c = (this.dropCache || (this.dropCache = new Map())).get(key);
+    const key = (def.sf2Rig || def.model || def.id) + (def.camo ? ':' + def.camo : ''), c = (this.dropCache || (this.dropCache = new Map())).get(key);
     if (c) return c.clone();
     const vm = this.build(def), g = vm.group, out = new THREE.Group(), v = new THREE.Vector3(), inv = new THREE.Matrix4();
     g.position.set(0, 0, 0); g.rotation.set(0, 0, 0); g.updateMatrixWorld(true); inv.copy(g.matrixWorld).invert();
@@ -355,6 +355,7 @@ class WeaponModels {
       const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: rm.material.map, blending: THREE.NormalBlending, depthWrite: false, depthTest: true, transparent: true, toneMapped: false, color: new THREE.Color(1.8, 0.07, 0.05), opacity: 0 }));
       const [rw, rpx] = o.sf2Reticle || [0.097, 96], k = 2 * 3 * rw * Math.tan(((o.adsHFov || 40) * Math.PI) / 360) / (rpx / 256); s.position.set(0, 0, -3); s.scale.set(k, k, 1); s.renderOrder = 4; g.add(s); out.reticle = s;
     }
+    if (o.camo) { const c = new SF2Camo(rig.model, o.camo, (x) => this.isArm(x)); if (c.ok) rig.camo = c; } // v64o SF2's weapon camo (魔術迴路)
     out.reloadSounds = rig.reloadSounds;
     return out;
   }
@@ -371,7 +372,7 @@ class WeaponModels {
   scarl_eo() { return this.scarl(); }
   k14() { return this.m40a1(); }
   // v62z the eye behind a fitted peep (SIGHT mark) where the head bone is not right: the M16A3 carries the M4A1's handle (5.5 cm, see m4())
-  _rigOpts(def) { return def ? { equipTime: def.equipTime, zoomIn: def.sf2ZoomIn, zoomOut: def.sf2ZoomOut, reloadSounds: def.sf2ReloadSounds || undefined, eyeRelief: RIG_EYE[def.sf2Rig], adsHFov: def.vmAdsHFov, sf2Reticle: RIG_RETICLE[def.sf2Rig], hipPos: RIG_HIP[def.sf2Rig] } : {}; }
+  _rigOpts(def) { return def ? { equipTime: def.equipTime, zoomIn: def.sf2ZoomIn, zoomOut: def.sf2ZoomOut, reloadSounds: def.sf2ReloadSounds || undefined, eyeRelief: RIG_EYE[def.sf2Rig], adsHFov: def.vmAdsHFov, sf2Reticle: RIG_RETICLE[def.sf2Rig], hipPos: RIG_HIP[def.sf2Rig], camo: def.camo } : {}; }
   m4(def) { return this.fromRig('m4a1_sf2_rig', Object.assign(this._rigOpts(def), { reloadSounds: undefined, eyeRelief: 0.055 })) || this.fromGLB('m4a1_sf2', { eye: 0.03, eyeRelief: 0.025, reticle: 'tritium', reticleScale: 0.22 }) || this.fromGLB('m4a1', { eye: 0.2, eyeRelief: 0.03 }) || this.m4Proc(); } // v61 SF2's own M4A1 first (tools/blender/sf2_gun_build.py): like SF2's ADS, the eye right at the carry handle's peep and a green dot on the front post // eye 20 cm behind the hood: the holo frame fills about a quarter of the view
   m4Proc() {
     const M = this.M, gb = new GunBuilder(M);

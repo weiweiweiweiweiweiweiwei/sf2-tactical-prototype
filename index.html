@@ -3045,6 +3045,7 @@ function compileWeapon(id, s) {
     sf2ZoomOut: s.sf2ZoomOut || null,
     sf2ReloadSounds: s.sf2ReloadSounds || null,
     sf2ReloadAnim: s.sf2ReloadAnim || null,
+    camo: s.camo || null,
     // v62h (sf2 never reached the def before: v61's SF2 gun sounds never played)
     suppressed: !!s.suppressed,
     tracerEvery: s.tracerEvery ?? 2,
@@ -3143,6 +3144,11 @@ var APEX_WEAPONS = {
 var APEX_POOL = { "assault": ["r301", "flatline", "havoc"], "smg": ["alternator", "car", "r99", "volt"], "lmg": ["spitfire", "rampage"], "pistol": ["p2020", "re45", "wingman"], "shotgun": ["eva8", "mastiff", "peacekeeper", "mozambique"], "sniper": ["longbow", "g7", "r3030"], "sniper_bolt": ["kraber", "sentinel"] };
 var apexFor = /* @__PURE__ */ __name((def) => (APEX_POOL[def.bolt ? "sniper_bolt" : def.type] || []).map((k) => APEX_WEAPONS[k]).reduce((best, a) => !best || Math.abs(Math.log(a.rpm * def.interval / 60)) < Math.abs(Math.log(best.rpm * def.interval / 60)) ? a : best, null), "apexFor");
 var WEAPON_DEFS = {};
+WEAPON_DATABASE.g36c_circuit = Object.assign({}, WEAPON_DATABASE.g36c_eo, {
+  name: "G36C 魔術迴路",
+  camo: "circuit",
+  desc: "SF2 原版 G36C EOTech 消音，魔術迴路迷彩：電路紋路流動，擊殺後閃出黃色電光 1.5 秒。"
+});
 for (const [id, s] of Object.entries(WEAPON_DATABASE)) {
   WEAPON_DEFS[id] = compileWeapon(id, s);
   WEAPON_DEFS[id].apex = apexFor(WEAPON_DEFS[id]);
@@ -3185,6 +3191,7 @@ var WEAPON_BLURBS = {
   mp5: "經典衝鋒槍，腰射穩定、容錯率高。",
   mp5k: "短槍管 MP5，射速快、近距離靈活。",
   g36c_eo: "緊湊型步槍加全息瞄具與消音器，不上敵方雷達。",
+  g36c_circuit: "魔術迴路迷彩的 G36C EOTech 消音：電路紋路流動，擊殺時閃出電光。",
   hk417_rs: "7.62mm 戰鬥步槍加內紅點與消音器，單發傷害高。",
   scarl_eo: "高射速的 SCAR-L 加全息瞄具與消音器。",
   k14: "韓國栓動狙擊槍，開鏡快、移動靈活。",
@@ -3272,8 +3279,8 @@ var MODES = {
   knife: { name: "小刀戰", desc: "全員只能拿刀，貼身肉搏", slots: ["knife"] }
 };
 var BOT_POOLS = {
-  general: ["m4a1", "ak47", "g36c", "g36c_gold", "g36c_eo", "hk417_rs", "scarl_eo", "scarl", "famas", "aug", "mp5", "mp5k", "p90", "ump45", "vector", "mp7", "remington870", "benelli_m4", "saiga12", "m249", "rpk", "negev", "pkm", "cheytac_m200", "k14", "awp", "svd", "kar98k", "m16a3", "k2", "xm8", "galil", "sg551", "hk417", "scarh", "qbz97", "pp2000", "vz61", "aa12", "mg4", "k3", "m40a1", "sr25", "psg1", "m14ebr", "type89", "l86a1", "hk23e", "frf2", "cz700"],
-  rifle: ["m4a1", "ak47", "g36c", "g36c_gold", "g36c_eo", "hk417_rs", "scarl_eo", "scarl", "famas", "aug", "mp5", "mp5k", "p90", "ump45", "vector", "mp7", "m249", "rpk", "negev", "pkm", "mg42", "m16a3", "k2", "xm8", "galil", "sg551", "hk417", "scarh", "qbz97", "pp2000", "vz61", "mg4", "k3", "type89", "l86a1", "hk23e"],
+  general: ["m4a1", "ak47", "g36c", "g36c_gold", "g36c_eo", "g36c_circuit", "hk417_rs", "scarl_eo", "scarl", "famas", "aug", "mp5", "mp5k", "p90", "ump45", "vector", "mp7", "remington870", "benelli_m4", "saiga12", "m249", "rpk", "negev", "pkm", "cheytac_m200", "k14", "awp", "svd", "kar98k", "m16a3", "k2", "xm8", "galil", "sg551", "hk417", "scarh", "qbz97", "pp2000", "vz61", "aa12", "mg4", "k3", "m40a1", "sr25", "psg1", "m14ebr", "type89", "l86a1", "hk23e", "frf2", "cz700"],
+  rifle: ["m4a1", "ak47", "g36c", "g36c_gold", "g36c_eo", "g36c_circuit", "hk417_rs", "scarl_eo", "scarl", "famas", "aug", "mp5", "mp5k", "p90", "ump45", "vector", "mp7", "m249", "rpk", "negev", "pkm", "mg42", "m16a3", "k2", "xm8", "galil", "sg551", "hk417", "scarh", "qbz97", "pp2000", "vz61", "mg4", "k3", "type89", "l86a1", "hk23e"],
   sniper: ["cheytac_m200", "k14", "awp", "barrett", "kar98k", "svd", "m40a1", "sr25", "psg1", "m14ebr", "frf2", "cz700"],
   pistol: ["p226", "deagle", "glock18", "usp", "m1911", "m92fs", "cz75", "jericho", "sw60", "infinity"],
   knife: ["knife"]
@@ -15697,6 +15704,7 @@ var SF2Rig = class {
   // (v64 the K14 has no ZoomFire: its Fire works the bolt)
   // s: { ads 0–1, sprint 0–1, reload s or −1 / reloadDone / reloadLen (the clip's s), draw (WeaponSystem.drawT: 1 on a switch, running down) }
   update(dt, s) {
+    if (this.camo) this.camo.update(dt);
     const w = {}, fade = /* @__PURE__ */ __name((t, d, i, o) => Math.max(0, Math.min(1, i > 0 ? t / i : 1, o > 0 ? (d - t) / o : 1)), "fade");
     let rest = 1;
     if (s.draw > this.lastDraw + 0.5) {
@@ -15837,6 +15845,61 @@ var SF2Flash = class _SF2Flash {
     if (this.ok) for (const m of ["hip", "ads"]) for (const L of this.layers[m]) L.s.visible = false;
   }
 };
+var SF2Camo = class _SF2Camo {
+  static {
+    __name(this, "SF2Camo");
+  }
+  static tex(id) {
+    const C = _SF2Camo._t || (_SF2Camo._t = {});
+    if (C[id] || !window.SF2_CAMO || !window.SF2_CAMO[id]) return C[id] || null;
+    const L = new THREE.TextureLoader(), t = C[id] = {};
+    for (const [k, url] of Object.entries(window.SF2_CAMO[id])) {
+      t[k] = L.load(url);
+      t[k].colorSpace = THREE.SRGBColorSpace;
+      t[k].wrapS = t[k].wrapT = THREE.RepeatWrapping;
+    }
+    return t;
+  }
+  constructor(model, id, isArm) {
+    const T = _SF2Camo.tex(id);
+    this.ok = !!T;
+    this.killT = 0;
+    if (!T) return;
+    this.u = { uTime: { value: 0 }, uKill: { value: 0 }, uCamoBase: { value: T.base }, uCamoShine: { value: T.shine }, uCamoKill: { value: T.kill } };
+    const done = /* @__PURE__ */ new Map();
+    model.traverse((o) => {
+      if (!o.isMesh || isArm(o) || o.userData.noAO || !o.material || !o.material.map) return;
+      if (!done.has(o.material)) {
+        const m = o.material.clone();
+        m.name = o.material.name + ":camo_" + id;
+        m.onBeforeCompile = (sh) => {
+          Object.assign(sh.uniforms, this.u);
+          sh.fragmentShader = "uniform float uTime, uKill; uniform sampler2D uCamoBase, uCamoShine, uCamoKill;\n" + sh.fragmentShader.replace("#include <map_fragment>", `#include <map_fragment>
+              vec2 cu = vMapUv * 2.0; // camo_value 2
+              vec3 cb = texture2D(uCamoBase, vec2(cu.x + uTime * 0.12, cu.y)).rgb;
+              diffuseColor.rgb = diffuseColor.rgb * 0.16 + cb * 0.3;`).replace("#include <emissivemap_fragment>", `#include <emissivemap_fragment>
+              float sweep = texture2D(uCamoBase, vec2(cu.x * 0.5 - uTime * 0.3, 0.5)).g; // a brighter band running along the lines
+              vec3 cs = texture2D(uCamoShine, cu + vec2(uTime * 0.05, 0.0)).rgb;
+              totalEmissiveRadiance += cs * (0.5 + 2.2 * sweep) * (1.0 - 0.6 * uKill);
+              totalEmissiveRadiance += texture2D(uCamoKill, cu * 0.75 + vec2(0.0, uTime * 0.35)).rgb * uKill * 1.4;`);
+        };
+        m.customProgramCacheKey = () => "sf2camo_" + id;
+        done.set(o.material, m);
+      }
+      o.material = done.get(o.material);
+    });
+  }
+  kill() {
+    this.killT = 1.5;
+  }
+  // ActionCamoKillTime
+  update(dt) {
+    if (!this.ok) return;
+    this.u.uTime.value = (this.u.uTime.value + dt) % 400;
+    this.killT = Math.max(0, this.killT - dt);
+    this.u.uKill.value = this.killT > 1.2 ? (1.5 - this.killT) / 0.3 : this.killT / 1.2;
+  }
+};
 
 // src/09_models.js
 var GunMats = class {
@@ -15912,7 +15975,7 @@ function loadGunModels() {
         s.onerror = res;
         document.head.appendChild(s);
       }), "script");
-      await Promise.all([window.GUN_GLB ? null : script("assets/guns/guns.js"), window.SF2_FX ? null : script("assets/fx_sf2.js")]);
+      await Promise.all([window.GUN_GLB ? null : script("assets/guns/guns.js"), window.SF2_FX ? null : script("assets/fx_sf2.js"), window.SF2_CAMO ? null : script("assets/camo_sf2.js")]);
       const L = new GLTFLoader(), D = new DRACOLoader();
       D.setDecoderPath("https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/libs/draco/gltf/");
       L.setDRACOLoader(D);
@@ -16102,7 +16165,7 @@ var WeaponModels = class {
   // without arms, frozen into plain meshes once per gun (a skinned rig is baked at its pose; geometry shared by every drop),
   // centred, muzzle toward −Z, real size. Cheap to clone: a drop is a few static meshes, no skeleton.
   dropModel(def) {
-    const key = def.sf2Rig || def.model || def.id, c = (this.dropCache || (this.dropCache = /* @__PURE__ */ new Map())).get(key);
+    const key = (def.sf2Rig || def.model || def.id) + (def.camo ? ":" + def.camo : ""), c = (this.dropCache || (this.dropCache = /* @__PURE__ */ new Map())).get(key);
     if (c) return c.clone();
     const vm = this.build(def), g = vm.group, out = new THREE.Group(), v = new THREE.Vector3(), inv = new THREE.Matrix4();
     g.position.set(0, 0, 0);
@@ -16355,6 +16418,10 @@ var WeaponModels = class {
       g.add(s);
       out.reticle = s;
     }
+    if (o.camo) {
+      const c = new SF2Camo(rig.model, o.camo, (x) => this.isArm(x));
+      if (c.ok) rig.camo = c;
+    }
     out.reloadSounds = rig.reloadSounds;
     return out;
   }
@@ -16386,7 +16453,7 @@ var WeaponModels = class {
   }
   // v62z the eye behind a fitted peep (SIGHT mark) where the head bone is not right: the M16A3 carries the M4A1's handle (5.5 cm, see m4())
   _rigOpts(def) {
-    return def ? { equipTime: def.equipTime, zoomIn: def.sf2ZoomIn, zoomOut: def.sf2ZoomOut, reloadSounds: def.sf2ReloadSounds || void 0, eyeRelief: RIG_EYE[def.sf2Rig], adsHFov: def.vmAdsHFov, sf2Reticle: RIG_RETICLE[def.sf2Rig], hipPos: RIG_HIP[def.sf2Rig] } : {};
+    return def ? { equipTime: def.equipTime, zoomIn: def.sf2ZoomIn, zoomOut: def.sf2ZoomOut, reloadSounds: def.sf2ReloadSounds || void 0, eyeRelief: RIG_EYE[def.sf2Rig], adsHFov: def.vmAdsHFov, sf2Reticle: RIG_RETICLE[def.sf2Rig], hipPos: RIG_HIP[def.sf2Rig], camo: def.camo } : {};
   }
   m4(def) {
     return this.fromRig("m4a1_sf2_rig", Object.assign(this._rigOpts(def), { reloadSounds: void 0, eyeRelief: 0.055 })) || this.fromGLB("m4a1_sf2", { eye: 0.03, eyeRelief: 0.025, reticle: "tritium", reticleScale: 0.22 }) || this.fromGLB("m4a1", { eye: 0.2, eyeRelief: 0.03 }) || this.m4Proc();
@@ -24600,6 +24667,10 @@ var Match = class _Match {
     p.multi = this.time - p.lastKillT < 4 ? p.multi + 1 : 1;
     p.lastKillT = this.time;
     p.lastVictim = victim;
+    {
+      const rg = ws.current && ws.current.def === def && ws.current.vm && ws.current.vm.rig;
+      if (rg && rg.camo) rg.camo.kill();
+    }
     let refill = "";
     if (this.apex && ws.current && ws.current.mag && ws.current.reserveMax) {
       const w = ws.current, add = Math.min(w.mag, w.reserveMax - w.reserveAmmo);

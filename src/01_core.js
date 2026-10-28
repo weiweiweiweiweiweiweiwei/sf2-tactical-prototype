@@ -470,7 +470,7 @@ function compileWeapon(id, s) {
     recoil: { first: s.recoilPitch * 0.75, climb: s.recoilPitch, climbShots: 10, late: s.recoilPitch * 0.75, h: s.recoilYaw, hStart: 6, jitter: s.recoilYaw * 0.35 },
     recoilRecovery: s.recoilRecovery, adsFov: s.adsFov, vmAdsFov: s.vmAdsFov, vmHFov: s.vmHFov || 0, vmAdsHFov: s.vmAdsHFov || 0, adsVertical: s.adsVertical || 0, adsType: s.adsType, adsRecoilMult: 1, adsSpeed: s.adsSpeed || (s.type === 'smg' ? 24 : 20),
     moveSpeed: CFG.player.baseSpeed * s.mobility, mobility: s.mobility, reloadTime: s.reloadTime, equipTime: s.equipTime || 0, sf2Recoil: s.sf2Recoil || null, sound: s.sound || id,
-    sf2: s.sf2 || null, sf2Rig: s.sf2Rig || null, sf2ZoomIn: s.sf2ZoomIn || null, sf2ZoomOut: s.sf2ZoomOut || null, sf2ReloadSounds: s.sf2ReloadSounds || null, sf2ReloadAnim: s.sf2ReloadAnim || null, // v62h (sf2 never reached the def before: v61's SF2 gun sounds never played)
+    sf2: s.sf2 || null, sf2Rig: s.sf2Rig || null, sf2ZoomIn: s.sf2ZoomIn || null, sf2ZoomOut: s.sf2ZoomOut || null, sf2ReloadSounds: s.sf2ReloadSounds || null, sf2ReloadAnim: s.sf2ReloadAnim || null, camo: s.camo || null, // v62h (sf2 never reached the def before: v61's SF2 gun sounds never played)
     suppressed: !!s.suppressed, tracerEvery: s.tracerEvery ?? 2, shellReload: s.shellReload || 0, zoomFovs: s.zoomFovs || [s.adsFov], zoomHFovs: s.zoomHFovs || null,
     noise: s.suppressed ? 14 : t.noise, pump, bolt, soundRate: s.rate || 1, tpSpec: s.tp || null,
     fireMode: auto ? 'AUTO' : pump ? 'PUMP' : bolt ? 'BOLT' : 'SEMI',
@@ -544,6 +544,10 @@ const APEX_POOL = {"assault": ["r301", "flatline", "havoc"], "smg": ["alternator
 // v62u the Apex counterpart of a gun (Apex damage model): same class (bolt actions to Apex's bolt guns), nearest rate of fire in log scale (rechamber included)
 const apexFor = (def) => (APEX_POOL[def.bolt ? 'sniper_bolt' : def.type] || []).map((k) => APEX_WEAPONS[k]).reduce((best, a) => (!best || Math.abs(Math.log(a.rpm * def.interval / 60)) < Math.abs(Math.log(best.rpm * def.interval / 60)) ? a : best), null);
 const WEAPON_DEFS = {};
+// v64o 魔術迴路 G36C (user 10-28): SF2's SFCItem_G36C_EOTech_Silencer_CircuitFX — the G36C EOTech + silencer with the CircuitFX camo
+// (SF2Camo in src/09c_sf2rig.js); otherwise the same gun
+WEAPON_DATABASE.g36c_circuit = Object.assign({}, WEAPON_DATABASE.g36c_eo, { name: 'G36C 魔術迴路', camo: 'circuit',
+  desc: 'SF2 原版 G36C EOTech 消音，魔術迴路迷彩：電路紋路流動，擊殺後閃出黃色電光 1.5 秒。' });
 for (const [id, s] of Object.entries(WEAPON_DATABASE)) { WEAPON_DEFS[id] = compileWeapon(id, s); WEAPON_DEFS[id].apex = apexFor(WEAPON_DEFS[id]); }
 // v64n Apex 扣血 (user 10-28 A): the same mags, but a kill takes ~2.5× the hits (200 health + shield at Apex's per-shot damage against
 // 100 at ours) — the reserve grows by that ratio of body hits to kill (1–4×; Weapon.reserveMax). B: a kill hands one mag back (Match._killAnnounce).
@@ -579,6 +583,7 @@ const WEAPON_BLURBS = {
   mp5: '經典衝鋒槍，腰射穩定、容錯率高。',
   mp5k: '短槍管 MP5，射速快、近距離靈活。',
   g36c_eo: '緊湊型步槍加全息瞄具與消音器，不上敵方雷達。',
+  g36c_circuit: '魔術迴路迷彩的 G36C EOTech 消音：電路紋路流動，擊殺時閃出電光。',
   hk417_rs: '7.62mm 戰鬥步槍加內紅點與消音器，單發傷害高。',
   scarl_eo: '高射速的 SCAR-L 加全息瞄具與消音器。',
   k14: '韓國栓動狙擊槍，開鏡快、移動靈活。',
@@ -667,8 +672,8 @@ const MODES = {
   knife: { name: '小刀戰', desc: '全員只能拿刀，貼身肉搏', slots: ['knife'] },
 };
 const BOT_POOLS = {
-  general: ['m4a1', 'ak47', 'g36c', 'g36c_gold', 'g36c_eo', 'hk417_rs', 'scarl_eo', 'scarl', 'famas', 'aug', 'mp5', 'mp5k', 'p90', 'ump45', 'vector', 'mp7', 'remington870', 'benelli_m4', 'saiga12', 'm249', 'rpk', 'negev', 'pkm', 'cheytac_m200', 'k14', 'awp', 'svd', 'kar98k', 'm16a3', 'k2', 'xm8', 'galil', 'sg551', 'hk417', 'scarh', 'qbz97', 'pp2000', 'vz61', 'aa12', 'mg4', 'k3', 'm40a1', 'sr25', 'psg1', 'm14ebr', 'type89', 'l86a1', 'hk23e', 'frf2', 'cz700'],
-  rifle: ['m4a1', 'ak47', 'g36c', 'g36c_gold', 'g36c_eo', 'hk417_rs', 'scarl_eo', 'scarl', 'famas', 'aug', 'mp5', 'mp5k', 'p90', 'ump45', 'vector', 'mp7', 'm249', 'rpk', 'negev', 'pkm', 'mg42', 'm16a3', 'k2', 'xm8', 'galil', 'sg551', 'hk417', 'scarh', 'qbz97', 'pp2000', 'vz61', 'mg4', 'k3', 'type89', 'l86a1', 'hk23e'],
+  general: ['m4a1', 'ak47', 'g36c', 'g36c_gold', 'g36c_eo', 'g36c_circuit', 'hk417_rs', 'scarl_eo', 'scarl', 'famas', 'aug', 'mp5', 'mp5k', 'p90', 'ump45', 'vector', 'mp7', 'remington870', 'benelli_m4', 'saiga12', 'm249', 'rpk', 'negev', 'pkm', 'cheytac_m200', 'k14', 'awp', 'svd', 'kar98k', 'm16a3', 'k2', 'xm8', 'galil', 'sg551', 'hk417', 'scarh', 'qbz97', 'pp2000', 'vz61', 'aa12', 'mg4', 'k3', 'm40a1', 'sr25', 'psg1', 'm14ebr', 'type89', 'l86a1', 'hk23e', 'frf2', 'cz700'],
+  rifle: ['m4a1', 'ak47', 'g36c', 'g36c_gold', 'g36c_eo', 'g36c_circuit', 'hk417_rs', 'scarl_eo', 'scarl', 'famas', 'aug', 'mp5', 'mp5k', 'p90', 'ump45', 'vector', 'mp7', 'm249', 'rpk', 'negev', 'pkm', 'mg42', 'm16a3', 'k2', 'xm8', 'galil', 'sg551', 'hk417', 'scarh', 'qbz97', 'pp2000', 'vz61', 'mg4', 'k3', 'type89', 'l86a1', 'hk23e'],
   sniper: ['cheytac_m200', 'k14', 'awp', 'barrett', 'kar98k', 'svd', 'm40a1', 'sr25', 'psg1', 'm14ebr', 'frf2', 'cz700'], pistol: ['p226', 'deagle', 'glock18', 'usp', 'm1911', 'm92fs', 'cz75', 'jericho', 'sw60', 'infinity'], knife: ['knife'],
 };
 

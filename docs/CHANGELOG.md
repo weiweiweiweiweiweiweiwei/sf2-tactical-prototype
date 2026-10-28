@@ -1310,3 +1310,26 @@
   - 例：M4A1 120 → 300、MP5 120 → 450、AK 120 → 400、AWP 50 → 150、Desert Eagle 28 → 56。彈匣大小不變。
 - B 擊殺補彈（像 Apex 舔包）：每擊殺一人，手上的槍補回一個彈匣到備彈，最多補到滿；得分提示多一段「彈藥 +30」（`Match._killAnnounce`）。
 - 驗證：`tools/out/_apexammo.mjs`。Apex 模式下 M4A1 開場備彈 300；先減到 250，擊殺一人後變 280；頁面沒有錯誤。
+
+
+### v64o（本機，2026-10-28）：魔術迴路 G36C（SF2 的 CircuitFX 迷彩）
+- 使用者 10-28：魔術迴路的貼圖會動，擊殺敵人後還會變色。對應的 SF2 道具：
+  - 這把槍是 `SFCItem_G36C_EOTech_Silencer_CircuitFX`：G36C、EOTech 全息瞄具、消音器，再加 `SFCItem_Func_WeaponCamo_CircuitFX` 迷彩。
+  - 迷彩類型是 ECAMOT_MATERIAL：整把槍換成迷彩自己的材質，手臂不換。
+  - 擊殺後 `ActionCamoKillTime` 為 1.5 s。
+- 材質是 `weapon_shader_base_sc` 的 `circuit_FX_m`，用三張貼圖：
+  - `FX_circuit_Base`：青綠色光帶。
+  - `FX_circuit_Shine`：電路紋路。
+  - `FX_circuit_Kill`：黃色電光。
+  - 參數 `camo_value 2`（UV ×2）、`Kill`。
+  - 烘焙後的材質只留下參數，平移節點沒了，所以流動速度是目測設的。
+- 實作：
+  - `tools/camo_sf2.py` 產生 `assets/camo_sf2.js`（186 KB，和槍包一起載入）。
+  - `SF2Camo`（`src/09c_sf2rig.js`）在槍的零件材質上加著色：槍原本的顏色壓暗、疊上流動的光帶；電路紋路發光，並有一道亮帶沿槍身跑。
+  - 擊殺時（`Match._killAnnounce`）電光 0.3 s 亮起，之後 1.2 s 淡掉。
+  - 槍的法線貼圖和打光照舊；瞄具鏡片不套迷彩。
+- 新槍 `g36c_circuit`「G36C 魔術迴路」：數值、動畫、聲音和 `g36c_eo` 相同，在倉庫的步槍類。地上的掉落模型也有迷彩（掉落快取依迷彩分開）。
+- 驗證：
+  - `tools/out/_rigshot.mjs`（GUNID=g36c_circuit，hip／ads／kill）截圖：平常是暗青綠加電路紋路，擊殺時整把亮出黃色電光。
+  - `check.mjs` CHECK_OK。
+- AWP、CheyTac、CZ700、K14 在 SF2 也有 CircuitFX 版（`SFCItem_<槍>_CircuitFX`），之後做到這些槍時，加 `camo: 'circuit'` 就能用。
