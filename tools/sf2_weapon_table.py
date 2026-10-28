@@ -43,6 +43,7 @@ GUNS = {  # id: (SF2 class, rig, sound, [magout, magin, charge])
     'kar98k': ('Kar98k', 'kar98k', 'kar98k', [0.31, 0.48, 0.75], {'adsType': '2d_scope_overlay', 'adsFov': 20, 'adsSpeed': 17, 'vmAdsHFov': None, 'sf2Recoil': None, 'sf2Reticle': 'mil', 'zoomHFovs': [55, 20],
                                                        'sf2ReloadSounds': [[0.14, 'boltback'], [0.31, 'magout'], [0.48, 'magin'], [0.75, 'charge']]}),
     'sr25': ('SR25', 'sr25', 'sr25', [0.2, 0.45, 0.75], {'adsType': '2d_scope_overlay', 'adsFov': 20, 'adsSpeed': 16, 'vmAdsHFov': None, 'sf2Recoil': None, 'sf2Reticle': 'mil', 'zoomHFovs': [20, 12]}), # (fZoomedFOV 12: its high power as the second step)
+    'psg1': ('PSG1', 'psg1', 'psg1', [0.2, 0.45, 0.75], {'adsType': '2d_scope_overlay', 'adsFov': 20, 'adsSpeed': 16, 'vmAdsHFov': None, 'sf2Recoil': None, 'sf2Reticle': 'mil', 'zoomHFovs': [20, 12]}),
     'trg': ('TRG', 'trg', 'trg', [0.31, 0.48, 0.75], {'adsType': '2d_scope_overlay', 'adsFov': 20, 'adsSpeed': 17, 'vmAdsHFov': None, 'sf2Recoil': None,
                                                        'sf2ReloadSounds': [[0.14, 'boltback'], [0.31, 'magout'], [0.48, 'magin'], [0.75, 'charge']]}),
 }
