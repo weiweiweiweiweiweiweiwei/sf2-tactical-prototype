@@ -21,10 +21,6 @@
 - ✅ M4A1 第三人稱槍模（本機 2026-10-28，見「本機已完成」L4；接到 Bot 手上留給雲端）。
 - 驗證：`node tools/check.mjs`、`node tools/_gunshot.mjs`（開鏡截圖存進 `docs/testing/shots/`）。
 
-### H4 🔄 真實顯卡的效能檢查
-- `node tools/check.mjs --map all` 跑 GTX 和 `--gpu intel` 各一次，加 `--novsync` 再跑一次 GTX。
-- 輸出：`docs/testing/gpu-<日期>.md`（三張表原樣貼上；有掉幀或錯誤的地圖標出來）。
-
 ### H6 ⏸ 需要使用者本人
 - AK-103、G36C 的 SF2 開鏡截圖（要進 SF2 遊戲裡截）。
 - 實際試玩的手感意見（M4A1 腰射位置、拔槍 0.8 s、後座力）。
@@ -85,3 +81,10 @@
   - **`tools/guns/apex_r301_sfx/*.wav`**（11 個、2.4 MB，16-bit 立體聲）：fire_first／fire_loop／fire_tail／fire_single／magout／maggrab／magin／boltback／boltfwd／draw／adsin。工具 `tools/apex-sfx.mjs`。
 - 注意：模型還在 Apex 的模型空間（英寸 → 公尺），**沒有轉成 gunlib 槍座標、沒有 MUZZLE／SIGHT 標記**，也還沒接進遊戲和音效包（留給雲端）。`tools/guns/pack.mjs` 會自動把 `apex_r301.glb` 打進 `guns.js`，本機沒有打包。
 - 驗證：GLB 有 1 個材質、3 張貼圖（顏色、金屬粗糙、法線）、3 個網格；尺寸 0.88 m 長 × 0.26 m 高（和實槍相近）；Blender 預覽 `docs/testing/shots/apex_r301.jpg`。
+
+### L6 ✅ H4：真實顯卡效能檢查（2026-10-28）
+- 輸出：**`docs/testing/gpu-2026-10-28.md`**（三張表原樣貼上＋摘要）。
+- GTX：16 張全部 59–60 fps；**失敗只有 hangar 出生點互看 1/256**（另外兩次 0/256，偶發）。
+- Intel UHD：全過，平均 52–58 fps，但 warehouse、desert、harbor、office、ridge、satellite、ryokan 的 p95 ≈ 33 ms（常掉 30 fps），ryokan p99 49.8 ms 最差。
+- GTX 不鎖幀：平均 206–429 fps；snow、dam 有週期性尖峰（p95 27.8／23.3 ms）。
+- 注意：`--map all` 不含天空城、兩張 Apex 地圖。
