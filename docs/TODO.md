@@ -19,8 +19,8 @@
 - ✅ M4A1 照門外形（v62o）：改用 SF2 預設的 A2 提把（`rif_m4a1_handle_a`＋自己的貼圖 `handle_d`），環高出護翼、下方有「0-2」；眼距、前準星距離照 SF2 截圖量
 
 ## 1. SF2 原版槍枝素材（UModel，`D:\SpecialForce2`）
-- 🔄 **使用者 10-28 指定優先（最優先）**：魔術迴路 G36C、AWP、CheyTac M200（SF2 類別 `SFCWeaponCheyTac`）、M40A1、CZ 700，以及配備瞄準鏡的步槍（清單待使用者確認）
-  - ⬜ 本機（HANDOFF H10）：匯出四把狙擊槍的槍模、動畫（含拉栓）、槍聲、狙擊鏡畫面貼圖；找出「魔術迴路 G36C」是哪個 SF2 類別（`SFCWeaponG36C_*` 的造型版本之一）
+- 🔄 **使用者 10-28 指定優先（最優先）**：AWP、CheyTac M200（SF2 類別 `SFCWeaponCheyTac`）、M40A1、CZ 700；✅ 魔術迴路 G36C（= G36C EOTech Silencer，使用者 10-28 確認已做好）；（「配備瞄準鏡的步槍」使用者撤回，之後重新描述）
+  - ⬜ 本機（HANDOFF H10）：匯出四把狙擊槍的槍模、動畫（含拉栓）、槍聲、狙擊鏡畫面貼圖
   - ⬜ 雲端：栓動狙擊的 SF2 動畫（開槍後拉栓片段、開鏡中拉栓退出鏡頭）、SF2 狙擊鏡畫面（取代現在的 2D 鏡）、時間和後座照 `weapons.json`
 - ✅ M4A1 原版槍模、貼圖、槍聲（v61）
 - ⬜ 材質照原版著色方式：SF2 是 Phong（`weapon_shader_base` 的 `gun_base`：高光貼圖 `_s`、SPPowerLow 100／High 30、SpecularIntensity 10、RimLight Power 3、cubemap 反射）。把 `_s` 高光貼圖換算成霧面／反光分布（roughness），再看要不要加邊緣光
