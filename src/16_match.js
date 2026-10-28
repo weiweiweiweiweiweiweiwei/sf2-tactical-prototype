@@ -92,7 +92,7 @@ class Match {
     }
     this.combatants.push(...this.bots);
     this.combatants.forEach((c, i) => { c.netId = i + 1; this.refit(c); }); this.netSeq = this.combatants.length; // v25: stable ids (network snapshots, seeded spread)
-    this.spawns = { alpha: this.makeSpawns('alpha'), bravo: this.makeSpawns('bravo') };
+    this.spawns = { alpha: this.makeSpawns('alpha'), bravo: this.makeSpawns('bravo') }; this.pruneSpawnLOS();
     this.spawnLOS = this.checkSpawnLOS(); window.__debug = Object.assign(window.__debug || {}, { map: def.id, spawnLOS: this.spawnLOS.visible > 0, spawnLOSPairs: this.spawnLOS });
     this.playerModel = app.soldiers.create(this.player.team, 'm4'); this.playerModel.root.visible = false; this.scene.add(this.playerModel.root); // third-person you, for killcams
     this.rules.init();
@@ -207,9 +207,25 @@ class Match {
     return { pts, yaw: z.yaw };
   }
 
+  // v63c a spawn point that sees any enemy spawn point (eye to eye) is dropped, keeping at least half of each side — Hangar's long
+  // centre line had 10 such pairs ~90 m apart (z ≈ 3–4) that the sampled check caught 1 time in 3
+  pruneSpawnLOS() {
+    const A = this.spawns.alpha.pts, B = this.spawns.bravo.pts;
+    if (!A.length || !B.length || A.length * B.length > 40000) return;
+    const a = new THREE.Vector3(), b = new THREE.Vector3(), seeA = new Set(), seeB = new Set();
+    for (const p of A) for (const q of B) {
+      a.set(p.x, p.y + 1.6, p.z); b.set(q.x, q.y + 1.6, q.z);
+      if (this.collision.segmentClear(a, b)) { seeA.add(p); seeB.add(q); }
+    }
+    if (seeA.size && seeA.size <= A.length / 2) this.spawns.alpha.pts = A.filter((p) => !seeA.has(p));
+    if (seeB.size && seeB.size <= B.length / 2) this.spawns.bravo.pts = B.filter((p) => !seeB.has(p));
+  }
+
   // CLAUDE.md §4.8: eye-to-eye rays between enemy main spawn zones (standing eye height). Any clear pair = error for tools/check.mjs.
+  // v63c every pair when there are not too many (was 16 sampled points a side)
   checkSpawnLOS() {
-    const pick = (pts) => pts.filter((_, i) => i % Math.max(1, Math.floor(pts.length / 16)) === 0).slice(0, 16), A = pick(this.spawns.alpha.pts), B = pick(this.spawns.bravo.pts);
+    const all = this.spawns.alpha.pts.length * this.spawns.bravo.pts.length <= 40000;
+    const pick = (pts) => all ? pts : pts.filter((_, i) => i % Math.max(1, Math.floor(pts.length / 16)) === 0).slice(0, 16), A = pick(this.spawns.alpha.pts), B = pick(this.spawns.bravo.pts);
     const a = new THREE.Vector3(), b = new THREE.Vector3(); let visible = 0, minDist = Infinity;
     for (const p of A) for (const q of B) {
       a.set(p.x, p.y + 1.6, p.z); b.set(q.x, q.y + 1.6, q.z); minDist = Math.min(minDist, a.distanceTo(b));

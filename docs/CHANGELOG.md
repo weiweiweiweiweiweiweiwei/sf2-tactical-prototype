@@ -1155,3 +1155,14 @@
 - 交戰橫移：`1.8 + strafe × 0.7` → `1.8 + strafe × 1.4` m/s：簡單 1.8、普通 2.15 → 2.5、困難 2.5 → 3.2（規格 ≥ 2.5）。簡單維持較慢（D12）。狙擊手的 1.2 不變。
 - 驗證：`analyze`、`build`、`check.mjs` 都過（雲端軟體繪圖，沒有實測移動速度）。
 
+### v63c（2026-10-28）：出生點互看的修正（本機 H4 抓到的 hangar 1/256）
+- 合併本機分支：MP5K（SF2 原版衝鋒槍）、M4A1 第三人稱槍模（`tools/guns/m4a1_3rd.glb`，還沒接）、Apex 原版 R-301 槍模和槍聲（`tools/guns/apex_r301.glb`、`apex_r301_sfx/`，還沒接）、真實顯卡檢查 `docs/testing/gpu-2026-10-28.md`、QBZ-97／M16A3 調查。
+- 原因：機庫中線（z ≈ 3–4）兩端各有幾個出生點，相距約 90 m 互相看得到（全部 65×65 組合裡 10 對）；檢查每邊只抽 16 點，所以偶爾才抽中。
+- `Match.pruneSpawnLOS()`：雙方出生點產生後，刪掉看得到任何敵方出生點的點（每邊最多刪一半）；`checkSpawnLOS()` 組合數 ≤ 40000 時改成檢查全部組合，不再抽樣。
+- 驗證：hangar 連續 3 次 59／59 點、互看 0；`check.mjs --map all` 16 張全部 PASS，全部組合互看都是 0（例 ruins 0/22500、ridge 0/20736）；`analyze`、`build` 過。
+
+### v63d（2026-10-28）：MP5K 的第三人稱外形；Galil 第三人稱彈匣
+- MP5K（本機 H3 做的 SF2 原版槍）加上 `tp: { len: 0.36, body: 'dark', mag: 'box' }`，別人手上看到的是短槍身加直彈匣（原本用預設長度）。Bot 清單本機已經加了。
+- Galil 的 `tp.mag` 寫成 `'curved'`，第三人稱外形只認得 `'curve'`，所以別人手上的 Galil 一直沒有彈匣；改成 `'curve'`。
+- 驗證：`analyze`、`build`、`check.mjs` 都過。
+

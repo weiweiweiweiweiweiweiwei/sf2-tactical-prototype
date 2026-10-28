@@ -119,7 +119,7 @@ const WEAPON_DATABASE = {
     name: 'MP5K', type: 'smg', slot: 'primary', damageNear: 25, damageFar: 16, falloffStart: 10, falloffEnd: 35, fireRate: 0.07,
     recoilPitch: 0.008, recoilYaw: 0.008, recoilRecovery: 12,
     hipSpread: 0.055, adsSpread: 0.003, adsFov: 55, adsType: '3d_sight', mobility: 1.04, maxAmmo: 30, reloadTime: 2.0, modelUrl: null,
-    model: 'mp5k', sound: 'mp5', sf2: 'mp5k', range: 160, tracerEvery: 3, desc: '短槍管 MP5，SF2 原版槍模與動畫。',
+    model: 'mp5k', sound: 'mp5', sf2: 'mp5k', range: 160, tracerEvery: 3, tp: { len: 0.36, body: 'dark', mag: 'box' }, desc: '短槍管 MP5，SF2 原版槍模與動畫。',
   },
   p90: {
     name: 'P90', type: 'smg', slot: 'primary', damageNear: 22, damageFar: 14, falloffStart: 10, falloffEnd: 35, fireRate: 0.066,
@@ -299,7 +299,7 @@ const WEAPON_DATABASE = {
   galil: {
     name: 'GALIL', type: 'assault', slot: 'primary', damageNear: 31, damageFar: 23, falloffStart: 25, falloffEnd: 60, fireRate: 0.092, recoilPitch: 0.0145, recoilYaw: 0.011, recoilRecovery: 8,
     hipSpread: 0.078, adsSpread: 0.0026, adsFov: 56, adsType: '3d_sight', mobility: 0.93, maxAmmo: 35, reloadTime: 2.6, modelUrl: null,
-    sound: 'ak', rate: 1.06, penetration: 1, tp: { len: 0.95, body: 'wood', mag: 'curved' }, desc: '以色列 AK 系步槍，35 發大彈匣，威力與後座介於 M4 和 AK 之間。',
+    sound: 'ak', rate: 1.06, penetration: 1, tp: { len: 0.95, body: 'wood', mag: 'curve' }, desc: '以色列 AK 系步槍，35 發大彈匣，威力與後座介於 M4 和 AK 之間。',
   },
   sg551: {
     name: 'SG 551', type: 'assault', slot: 'primary', damageNear: 27, damageFar: 22, falloffStart: 30, falloffEnd: 70, fireRate: 0.097, recoilPitch: 0.0105, recoilYaw: 0.0065, recoilRecovery: 11,
