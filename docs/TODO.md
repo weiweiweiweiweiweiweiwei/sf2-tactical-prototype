@@ -42,6 +42,7 @@
   - ⬜ 下載大小還能再減：模型 23 MB（Draco 幾何 ≈ 15 MB＋WebP 貼圖 8.6 MB）
   - ❓ 「即將部署」地圖預覽固定 1.6–1.7 秒，要不要縮短
 - ⬜ 依遊玩回饋繼續修（卡點、亮度、碰撞）
+- 🔄 掉到地板下：v63h 先加保護（拉回安全位置）；⬜ 根本修正：找出碰撞網格的缺口（`tools/out/_underfloor.mjs` 找得到位置）補上碰撞面
 
 ## 3. Apex 槍枝（資料：`docs/research/apex/weapons-full.json`，說明 `docs/research/apex/README.md`）
 - 🔄 29 把槍的數值接進 Apex 扣血模式
