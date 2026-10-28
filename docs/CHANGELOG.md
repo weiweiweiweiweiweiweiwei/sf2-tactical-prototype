@@ -1258,3 +1258,10 @@
 - 從使用者的安裝檔匯出（UModel `-export -sounds`），照 SF2 自己的 SoundCue 對應：破片 `M67_Explo_01／02`（`Cue_M67_Explo`）、閃光 `M84_Explo_01／02`、煙霧 `M18_Explo_01`、拉環 `Grenade_Pin`、投擲 `Grenade_Throw`、拿出 `Grenade_Equip`；命中 `bullet_hit_2d_03`（`HitNormal_cue`）；致命一擊 `Bullet_flesh_01–05` 降調 0.8（`HitDead_cue`）＋擊殺 `kill3_New`（`cue_kill3_new`）；換槍 `hud_switch05`（SFGame 腳本裡的名稱）。
 - `tools/sfx_sf2_fx.mjs` → `assets/sfx_sf2_fx.js`（432 KB），`src/02_audio.js` 載入後併進音效包：爆炸／煙霧改播錄音（沒有時退回原本的），`MECH_REC` 加拉環／投擲／拿出，命中音效清單新增「SF2 原版」並設為預設（舊設定一次性改過去，清單裡其他的還能選），自己換槍時多一聲 HUD 切換。
 - 驗證：`tools/out/_sfxfx.mjs` 10 組都載入、每個呼叫不報錯；`check.mjs` 過。
+
+
+### （本機，2026-10-28）：K14 狙擊鏡轉正、SF2 原版的鏡內畫面和兩段倍率
+- 使用者 10-28（SF2 K14 截圖：手持、開鏡、兩段放大）：鏡子的模型轉錯 90 度——SF2 的高低轉鈕在上、側邊轉鈕在左，我們的在左側。`scope_k14_bender` 照自己的綁定讀進來就躺了 1/4 圈；`tools/sf2_rig_build.mjs` 新增零件選項 `roll`：繞零件自己網格的長軸、經過中心轉（K14 +90°，`ROLL` 環境變數可試）。
+- 倍率：SF2 第一段是 K14 的 `fZoomedFOV` 45°，第二段 20°（`SFPawn` 的 `CamFOVSniperZoomIn2nd`；使用者截圖量到第二段約為第一段的 2.5 倍，tan 比 2.35 吻合），兩者都是 UE3 的水平角——`zoomHFovs: [45, 20]`，遊戲照螢幕比例換成垂直角。
+- 鏡內畫面（`hud_sniper` 是 Flash，UModel 匯不出來，照使用者截圖量 2000×1124）：鏡筒亮區半徑 71vh、內緣深褐色漸暗；十字：中心圓半徑 6.6vh、豎線從上方 13.8vh 到圓的底部、橫線較粗到 ±18.9vh（圓內斷開）、每 3vh 一根往上的刻度（長 4vh／短 1.3vh）、橘紅中心點。兩段倍率十字大小不變。只套在 SF2 原版狙擊槍（目前是 K14），其他狙擊槍維持原本的鏡。
+- 驗證：遊戲中 K14 腰射截圖轉鈕在上；開鏡兩段截圖和 SF2 的對照；`check.mjs` 過。

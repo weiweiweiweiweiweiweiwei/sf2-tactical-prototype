@@ -38,7 +38,9 @@ const EOTECH = { ...PART('weapon_common_part', 'DOT_EOTECH'), tex: 'eotech', ret
 const REFLEX = { ...PART('weapon_common_part01', 'DOT_REFLEX'), tex: 'reflex', reticle: 'parts/dot_point/Texture2D/reflex_reticleDot.png' };
 // v64b the K14's scope (user 10-28: the K14 had none): scope_k14_bender — its UVs fit the K14 skins' scope sheets, sni_k14 redirects
 // to its bender_scope_* textures; no ZoomCrosshair socket (a sniper aims through the full-screen scope, so no DOT mark)
-const K14_SCOPE = { ...PART('weapon_common_part01', 'scope_k14_bender'), tex: 'bender_scope', noAim: true };
+// roll: read through its own bind it lies a quarter turn about the bore (the elevation turret on the left — the user's SF2 K14
+// shots have it on top), so it is turned about the socket's forward axis (UE x) before placing
+const K14_SCOPE = { ...PART('weapon_common_part01', 'scope_k14_bender'), tex: 'bender_scope', noAim: true, roll: +(process.env.ROLL ?? 90) };
 const SIL = (k) => ({ ...PART('weapon_common_part', `silencer_ar_type_${k}`), tex: `silencer_type_${k}` });
 const G = {
   // v62o the rear sight is the A2 carry handle (rif_m4a1_handle_a, its own sheet handle_d / _n in weapon_common_part): SF2's ADS picture (user 10-27) has the aperture ring standing above the handle's ears; the detachable
@@ -235,7 +237,18 @@ const partSock = (props, name) => {
 };
 for (const [key, socket, own, mark] of [['optic', 'Scope', 'ZoomCrosshair', 'DOT'], ['silencer', 'Silencer', 'flame', 'MUZZLE']]) {
   const A = G[key]; if (!A) continue;
-  const pd = await io.read(SRC + A.file), sk = pd.getRoot().listSkins()[0], ibm = Array.from(sk.getInverseBindMatrices().getArray()).slice(0, 16), S = sockAt(socket), M = mul(S, ibm);
+  const pd = await io.read(SRC + A.file), sk = pd.getRoot().listSkins()[0], ibm = Array.from(sk.getInverseBindMatrices().getArray()).slice(0, 16), S = sockAt(socket);
+  let RC = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
+  if (A.roll) { // about the part's own long axis (its mesh space), through the middle of its bounds
+    const ps = [], e = []; for (const p of pd.getRoot().listMeshes()[0].listPrimitives()) { const P = p.getAttribute('POSITION'); for (let i = 0; i < P.getCount(); i++) { P.getElement(i, e); ps.push(e.slice(0, 3)); } }
+    const lo = [0, 1, 2].map((k) => min(ps, k)), hi = [0, 1, 2].map((k) => max(ps, k)), ext = hi.map((h, k) => h - lo[k]), ax = ext.indexOf(Math.max(...ext)), ctr = hi.map((h, k) => (h + lo[k]) / 2);
+    const a = A.roll * Math.PI / 180, c = Math.cos(a), sn = Math.sin(a), u = (ax + 1) % 3, w = (ax + 2) % 3, R = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
+    R[u * 4 + u] = c; R[u * 4 + w] = sn; R[w * 4 + u] = -sn; R[w * 4 + w] = c; // (column-major: column u = rotated u axis)
+    const T = (t) => [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, t[0], t[1], t[2], 1];
+    RC = mul(mul(T(ctr), R), T(ctr.map((x) => -x)));
+    console.log('ROLL', GID, key, A.roll, 'about mesh axis', 'xyz'[ax]);
+  }
+  const M = mul(mul(S, ibm), RC);
   V[key] = await addPart(key, A.file, A.tex, { p: (v) => xf(M, v), n: rot3(M, 1) });
   if (!A.noAim) marks[mark] = xf(S, partSock(A.props, own));
 }

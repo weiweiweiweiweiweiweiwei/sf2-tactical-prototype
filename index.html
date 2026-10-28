@@ -53,6 +53,14 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
 #scope .mil{position:absolute;left:50%;top:50%;width:0;height:0}
 #scope .mil i{position:absolute;background:#000;width:1px;height:7px;top:-3.5px}
 #scope .cd{position:absolute;left:50%;top:50%;width:3px;height:3px;margin:-1.5px;background:#ff2020;border-radius:50%;box-shadow:0 0 4px #f00}
+/* v64f SF2's own sniper view (its SF2 snipers: the K14), measured on the user's SF2 K14 shots (10-28, 2000×1124): a dark tube
+   (sni_scope_zin) whose bright lens is a circle of 71vh radius with a soft brown inner edge; the HUD reticle (hud_sniper, a Flash
+   movie): a centre ring, a vertical line from 13.8vh above down to the ring's bottom, a heavier horizontal bar out to ±18.9vh
+   broken inside the ring with up-ticks every 3vh (tall 4vh / short 1.3vh), an orange-red dot. Same size on both zoom steps. */
+#scope.sf2 .lh,#scope.sf2 .lv,#scope.sf2 .tk,#scope.sf2 .cd,#scope.sf2 .zl{display:none}
+#scope.sf2 .lens{width:142vh;height:142vh;box-shadow:0 0 0 200vmax #070504,inset 0 0 9vh 4vh rgba(12,7,4,.97),inset 0 0 22vh 2vh rgba(40,24,14,.55);background:none}
+#scope .ret{display:none;position:absolute;left:50%;top:50%;width:100vh;height:100vh;transform:translate(-50%,-50%);overflow:visible}
+#scope.sf2 .ret{display:block}
 #scope .zl{position:absolute;right:calc(50% - 44vh);bottom:calc(50% - 40vh);font-weight:700;color:rgba(255,255,255,.5);font-size:14px;letter-spacing:2px}
 
 #vignette{position:absolute;inset:0;opacity:0;background:radial-gradient(ellipse at center,rgba(0,0,0,0) 40%,rgba(150,0,0,.55) 78%,rgba(200,0,0,.9) 100%)}
@@ -723,7 +731,7 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
 <div id="hud" class="hidden minimal">
   <div id="vignette"></div><div id="lowhp"></div><div id="flashWhite"></div>
   <div id="scope"><div class="lens"></div><div class="lh"></div><div class="lv"></div>
-    <div class="tk l"></div><div class="tk r"></div><div class="tk t"></div><div class="tk b"></div><div class="cd"></div><div class="zl" id="zoomLbl"></div></div>
+    <div class="tk l"></div><div class="tk r"></div><div class="tk t"></div><div class="tk b"></div><div class="cd"></div><div class="zl" id="zoomLbl"></div><svg class="ret" viewBox="-50 -50 100 100"><g stroke="#111" stroke-opacity=".88" fill="none"><circle r="6.6" stroke-width=".2"/><line x1="0" y1="-13.8" x2="0" y2="6.6" stroke-width=".2"/><g stroke-width=".28"><line x1="-18.9" y1="0" x2="-6.6" y2="0"/><line x1="6.6" y1="0" x2="18.9" y2="0"/></g><g stroke-width=".2"><line x1="-18.9" y1="0" x2="-18.9" y2="-4.0"/><line x1="18.9" y1="0" x2="18.9" y2="-4.0"/><line x1="-16.0" y1="0" x2="-16.0" y2="-1.33"/><line x1="16.0" y1="0" x2="16.0" y2="-1.33"/><line x1="-12.85" y1="0" x2="-12.85" y2="-4.0"/><line x1="12.85" y1="0" x2="12.85" y2="-4.0"/><line x1="-9.8" y1="0" x2="-9.8" y2="-1.33"/><line x1="9.8" y1="0" x2="9.8" y2="-1.33"/><line x1="-6.85" y1="0" x2="-6.85" y2="-4.0"/><line x1="6.85" y1="0" x2="6.85" y2="-4.0"/></g></g><circle r=".55" fill="#ff5a1e"/><circle r=".8" fill="#ff4010" fill-opacity=".22"/></svg></div>
   <div id="markers"></div>
   <div id="crosshair"><div class="ch t"></div><div class="ch b"></div><div class="ch l"></div><div class="ch r"></div></div>
   <div id="aimName"></div><div id="charge"><div class="fill" id="chargeFill"></div></div>
@@ -2495,11 +2503,13 @@ var WEAPON_DATABASE = {
     modelUrl: null,
     sound: "m40",
     zoomFovs: [20, 9],
+    zoomHFovs: [45, 20],
     penetration: 2,
     range: 420,
     adsSpeed: 17,
     tracerEvery: 1,
     tp: { len: 1.15, body: "dark", mag: "box", scope: true },
+    // v64f zoomHFovs: SF2's own two steps, horizontal like UE3 — fZoomedFOV 45, then 20 (SFPawn's CamFOVSniperZoomIn2nd; the user's SF2 shots: step 2 ≈ 2.5× step 1)
     desc: "SF2 原版 K14（衝擊波）：韓國栓動狙擊槍，身體 1 發，開鏡快。"
   },
   sr25: {
@@ -3031,6 +3041,7 @@ function compileWeapon(id, s) {
     tracerEvery: s.tracerEvery ?? 2,
     shellReload: s.shellReload || 0,
     zoomFovs: s.zoomFovs || [s.adsFov],
+    zoomHFovs: s.zoomHFovs || null,
     noise: s.suppressed ? 14 : t.noise,
     pump,
     bolt,
@@ -19506,11 +19517,11 @@ var WeaponSystem = class extends Arsenal {
     if (sc !== this._scopeShown || sc && this.scopeLevel !== this._scopeLvl) {
       this._scopeShown = sc;
       this._scopeLvl = this.scopeLevel;
-      g.app.hud.setScope(sc, this.scopeLevel);
+      g.app.hud.setScope(sc, this.scopeLevel, !!w.def.sf2Rig);
     }
     w.vm.group.visible = !sc;
     const vert = /* @__PURE__ */ __name((h) => 2 * Math.atan(Math.tan(h * Math.PI / 360) / this.camera.aspect) * 180 / Math.PI, "vert");
-    const target = this.ads ? w.scoped ? this.scopedIn ? w.def.zoomFovs[this.zoomLevel - 1] : this.baseFov * 0.82 : w.def.vmAdsHFov ? vert(w.def.adsFov) : w.def.adsFov : this.baseFov;
+    const target = this.ads ? w.scoped ? this.scopedIn ? w.def.zoomHFovs ? vert(w.def.zoomHFovs[this.zoomLevel - 1]) : w.def.zoomFovs[this.zoomLevel - 1] : this.baseFov * 0.82 : w.def.vmAdsHFov ? vert(w.def.adsFov) : w.def.adsFov : this.baseFov;
     this.fov = THREE.MathUtils.lerp(this.fov, target, 1 - Math.exp(-(w.scoped ? 32 : w.def.adsSpeed * 1.4 || 28) * dt));
     if (Math.abs(this.fov - target) < 0.01 || w.scoped && this.scopedIn) this.fov = target;
     const fovNow = this.fov + p.fovPunch;
@@ -21943,8 +21954,9 @@ var HUD = class {
       this.cache.chg = g;
     }
   }
-  setScope(on, level) {
+  setScope(on, level, sf2 = false) {
     this._cls("scope", this.el.scope, "on", on);
+    this._cls("scopeSf2", this.el.scope, "sf2", on && sf2);
     this._set("zl", this.el.zoomLbl, "text", on ? level === 2 ? "×10" : "×4" : "");
   }
   // The scope overlay stays perfectly crisp (no blur / line thickening); moving-scope inaccuracy is still simulated in the ballistics.

@@ -267,12 +267,12 @@ class WeaponSystem extends Arsenal {
     w.animate(dt, this);
     // the 2D scope overlay follows the gameplay state (tick): one place for every way into or out of the scope
     const sc = w.scoped && this.scopedIn;
-    if (sc !== this._scopeShown || (sc && this.scopeLevel !== this._scopeLvl)) { this._scopeShown = sc; this._scopeLvl = this.scopeLevel; g.app.hud.setScope(sc, this.scopeLevel); }
+    if (sc !== this._scopeShown || (sc && this.scopeLevel !== this._scopeLvl)) { this._scopeShown = sc; this._scopeLvl = this.scopeLevel; g.app.hud.setScope(sc, this.scopeLevel, !!w.def.sf2Rig); }
     w.vm.group.visible = !sc;
 
     // v62f / v62w SF2 lenses (the guns with vmAdsHFov: adsFov = SF2 fZoomedFOV) are horizontal like UE3: turned into three.js's vertical FOV for this screen (16:9: 55° → 32.6°)
     const vert = (h) => 2 * Math.atan(Math.tan(h * Math.PI / 360) / this.camera.aspect) * 180 / Math.PI;
-    const target = this.ads ? (w.scoped ? (this.scopedIn ? w.def.zoomFovs[this.zoomLevel - 1] : this.baseFov * 0.82) : w.def.vmAdsHFov ? vert(w.def.adsFov) : w.def.adsFov) : this.baseFov;
+    const target = this.ads ? (w.scoped ? (this.scopedIn ? (w.def.zoomHFovs ? vert(w.def.zoomHFovs[this.zoomLevel - 1]) : w.def.zoomFovs[this.zoomLevel - 1]) : this.baseFov * 0.82) : w.def.vmAdsHFov ? vert(w.def.adsFov) : w.def.adsFov) : this.baseFov;
     this.fov = THREE.MathUtils.lerp(this.fov, target, 1 - Math.exp(-(w.scoped ? 32 : w.def.adsSpeed * 1.4 || 28) * dt));
     if (Math.abs(this.fov - target) < 0.01 || (w.scoped && this.scopedIn)) this.fov = target; // scope zoom is instant
     const fovNow = this.fov + p.fovPunch;

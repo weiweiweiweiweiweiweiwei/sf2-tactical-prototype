@@ -362,7 +362,7 @@ const WEAPON_DATABASE = {
   k14: {
     name: 'K14', type: 'sniper', slot: 'primary', damageNear: 110, damageFar: 96, falloffStart: 60, falloffEnd: 200, fireRate: 1.2, recoilPitch: 0.065, recoilYaw: 0.01, recoilRecovery: 6,
     hipSpread: 0.14, adsSpread: 0.0, adsFov: 20, adsType: '2d_scope_overlay', mobility: 0.82, maxAmmo: 5, reloadTime: 3.0, modelUrl: null,
-    sound: 'm40', zoomFovs: [20, 9], penetration: 2, range: 420, adsSpeed: 17, tracerEvery: 1, tp: { len: 1.15, body: 'dark', mag: 'box', scope: true },
+    sound: 'm40', zoomFovs: [20, 9], zoomHFovs: [45, 20], penetration: 2, range: 420, adsSpeed: 17, tracerEvery: 1, tp: { len: 1.15, body: 'dark', mag: 'box', scope: true }, // v64f zoomHFovs: SF2's own two steps, horizontal like UE3 — fZoomedFOV 45, then 20 (SFPawn's CamFOVSniperZoomIn2nd; the user's SF2 shots: step 2 ≈ 2.5× step 1)
     desc: 'SF2 原版 K14（衝擊波）：韓國栓動狙擊槍，身體 1 發，開鏡快。',
   },
   sr25: {
@@ -471,7 +471,7 @@ function compileWeapon(id, s) {
     recoilRecovery: s.recoilRecovery, adsFov: s.adsFov, vmAdsFov: s.vmAdsFov, vmHFov: s.vmHFov || 0, vmAdsHFov: s.vmAdsHFov || 0, adsVertical: s.adsVertical || 0, adsType: s.adsType, adsRecoilMult: 1, adsSpeed: s.adsSpeed || (s.type === 'smg' ? 24 : 20),
     moveSpeed: CFG.player.baseSpeed * s.mobility, mobility: s.mobility, reloadTime: s.reloadTime, equipTime: s.equipTime || 0, sf2Recoil: s.sf2Recoil || null, sound: s.sound || id,
     sf2: s.sf2 || null, sf2Rig: s.sf2Rig || null, sf2ZoomIn: s.sf2ZoomIn || null, sf2ZoomOut: s.sf2ZoomOut || null, sf2ReloadSounds: s.sf2ReloadSounds || null, // v62h (sf2 never reached the def before: v61's SF2 gun sounds never played)
-    suppressed: !!s.suppressed, tracerEvery: s.tracerEvery ?? 2, shellReload: s.shellReload || 0, zoomFovs: s.zoomFovs || [s.adsFov],
+    suppressed: !!s.suppressed, tracerEvery: s.tracerEvery ?? 2, shellReload: s.shellReload || 0, zoomFovs: s.zoomFovs || [s.adsFov], zoomHFovs: s.zoomHFovs || null,
     noise: s.suppressed ? 14 : t.noise, pump, bolt, soundRate: s.rate || 1, tpSpec: s.tp || null,
     fireMode: auto ? 'AUTO' : pump ? 'PUMP' : bolt ? 'BOLT' : 'SEMI',
     bot: { rate: bolt ? 1.45 : s.type === 'sniper' ? Math.max(0.5, s.fireRate * 2) : s.type === 'pistol' ? (auto ? s.fireRate * 1.1 : Math.max(0.3, s.fireRate * 2.2)) : s.type === 'shotgun' ? Math.max(0.35, s.fireRate * 1.3) : s.fireRate * 1.05 },

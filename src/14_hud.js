@@ -57,8 +57,8 @@ class HUD {
     this._set('chv', this.el.ch, 'display', visible ? 'block' : 'none');
     if (visible && this.cache.chg !== g) { this.el.ch.style.setProperty('--gap', g + 'px'); this.cache.chg = g; }
   }
-  setScope(on, level) {
-    this._cls('scope', this.el.scope, 'on', on);
+  setScope(on, level, sf2 = false) {
+    this._cls('scope', this.el.scope, 'on', on); this._cls('scopeSf2', this.el.scope, 'sf2', on && sf2); // v64f SF2's own tube + reticle
     this._set('zl', this.el.zoomLbl, 'text', on ? (level === 2 ? '×10' : '×4') : '');
   }
   // The scope overlay stays perfectly crisp (no blur / line thickening); moving-scope inaccuracy is still simulated in the ballistics.
