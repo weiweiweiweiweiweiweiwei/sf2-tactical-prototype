@@ -545,7 +545,7 @@ class AudioEngine {
     const S2 = HIT_SOUNDS[Settings.data.hitSound] && HIT_SOUNDS[Settings.data.hitSound].sf2 && this._s('sf2_hit');
     if (S2) { // v64e SF2: bullet_hit_2d_03 (its cue: volume 1.5–2); the killing hit is HitDead_cue (Bullet_flesh_0x at pitch 0.8) and kill3_New
       if (kind === 'kill') { const d = this._s('sf2_hitdead'), k = this._s('sf2_kill'); if (d) this._one(pick(d), out, 1.1, 0.8); if (k) this._one(pick(k), out, 0.9); }
-      else this._one(pick(S2), out, 1.0, 0.98 + Math.random() * 0.04);
+      else this._one(this._hitHead(S2[0]), out, 1.0, 0.98 + Math.random() * 0.04);
       return;
     }
     const H = HIT_SOUNDS[Settings.data.hitSound] || HIT_SOUNDS.flesh, k = (kind === 'kill' ? 1.2 : kind === 'head' ? 1.1 : 1) * (H.gain || 1);
@@ -555,6 +555,14 @@ class AudioEngine {
     if (H.killS && kind === 'kill') { const l = this._s(H.killS); if (l) this._one(pick(l), out, 0.8, 0.95 + Math.random() * 0.1); }
     if (H.synth || (!played && H.s)) this['_hit_' + (H.synth || 'juice')](t, out, k);
     if (kind === 'head' && H.key !== 'none') { this._nb(t, out, 'highpass', 5200, 0.9, 0.24, 0.0003, 0.006); this._osc('triangle', t, 1300, 700, 0.028, out, 0.14, 0.0005); }
+  }
+  // v64g bullet_hit_2d_03 carries a second sound after the hit (user 10-28: a man's odd laugh, from 0.40 s): only its first 0.37 s,
+  // faded out over the last 25 ms (its RMS: the hit 0.04–0.36 s, down to −36 dB at 0.38, the other sound rising again at 0.40)
+  _hitHead(buf) {
+    if (this._hitCut && this._hitCut.src === buf) return this._hitCut.buf;
+    const n = Math.min(buf.length, Math.round(buf.sampleRate * 0.37)), f = Math.round(buf.sampleRate * 0.025), out = this.ctx.createBuffer(buf.numberOfChannels, n, buf.sampleRate);
+    for (let c = 0; c < buf.numberOfChannels; c++) { const a = buf.getChannelData(c), b = out.getChannelData(c); for (let i = 0; i < n; i++) b[i] = a[i] * Math.min(1, (n - i) / f); }
+    this._hitCut = { src: buf, buf: out }; return out;
   }
   _hit_juice(t, out, k) { // v36 synthesized wet hit
     this._osc('sine', t, 170, 55, 0.08, out, 0.5 * k, 0.001);

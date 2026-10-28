@@ -36,6 +36,9 @@ class SF2Rig {
     // the hip eye = the aimed eye + (in − out) in rig space (−y, z, x) / 100 (M4A1: 2 cm further back and 0.87 cm lower)
     const zi = o.zoomIn || [-3, 0, 0], zo = o.zoomOut || [0, 0, 0];
     this.eyeAim = eye.clone(); this.hipShift = new THREE.Vector3(-(zi[1] - zo[1]), zi[2] - zo[2], zi[0] - zo[0]).multiplyScalar(0.01);
+    // v64g o.hipPos: the model's position at the hip given outright (camera space) — a scoped gun has no sight line to derive it from
+    // (the K14: fitted to the user's SF2 hip shot, tools/out/_k14fit.mjs); the aim end stays the eye rule's
+    if (o.hipPos) this.hipShift.set(o.hipPos[0] - eye.x, -o.hipPos[1] - eye.y, o.hipPos[2] - eye.z);
     this.place(0);
     this.reloadSounds = o.reloadSounds || null;
     // v62d play the Equip clip over the gun's draw time (def.equipTime, SF2's own 0.8 s for the M4A1); with none, the old 1.6×

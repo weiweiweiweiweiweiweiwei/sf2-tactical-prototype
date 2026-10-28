@@ -56,7 +56,9 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
 /* v64f SF2's own sniper view (its SF2 snipers: the K14), measured on the user's SF2 K14 shots (10-28, 2000×1124): a dark tube
    (sni_scope_zin) whose bright lens is a circle of 71vh radius with a soft brown inner edge; the HUD reticle (hud_sniper, a Flash
    movie): a centre ring, a vertical line from 13.8vh above down to the ring's bottom, a heavier horizontal bar out to ±18.9vh
-   broken inside the ring with up-ticks every 3vh (tall 4vh / short 1.3vh), an orange-red dot. Same size on both zoom steps. */
+   broken inside the ring with up-ticks every 3vh (tall 4vh / short 1.3vh), an orange-red dot. Same size on both zoom steps.
+   v64g (the user's SF2 shots, the clearest at 2000×1182; R = the ring's radius): the bar heavier (0.065R) out to 2.91R, a thin line across
+   the ring (the dot on it), the thin vertical from 2.13R above down to a heavy post (0.087R wide) from 1.43R to 2.52R below. */
 #scope.sf2 .lh,#scope.sf2 .lv,#scope.sf2 .tk,#scope.sf2 .cd,#scope.sf2 .zl{display:none}
 #scope.sf2 .lens{width:142vh;height:142vh;box-shadow:0 0 0 200vmax #070504,inset 0 0 9vh 4vh rgba(12,7,4,.97),inset 0 0 22vh 2vh rgba(40,24,14,.55);background:none}
 #scope .ret{display:none;position:absolute;left:50%;top:50%;width:100vh;height:100vh;transform:translate(-50%,-50%);overflow:visible}
@@ -731,7 +733,7 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
 <div id="hud" class="hidden minimal">
   <div id="vignette"></div><div id="lowhp"></div><div id="flashWhite"></div>
   <div id="scope"><div class="lens"></div><div class="lh"></div><div class="lv"></div>
-    <div class="tk l"></div><div class="tk r"></div><div class="tk t"></div><div class="tk b"></div><div class="cd"></div><div class="zl" id="zoomLbl"></div><svg class="ret" viewBox="-50 -50 100 100"><g stroke="#111" stroke-opacity=".88" fill="none"><circle r="6.6" stroke-width=".2"/><line x1="0" y1="-13.8" x2="0" y2="6.6" stroke-width=".2"/><g stroke-width=".28"><line x1="-18.9" y1="0" x2="-6.6" y2="0"/><line x1="6.6" y1="0" x2="18.9" y2="0"/></g><g stroke-width=".2"><line x1="-18.9" y1="0" x2="-18.9" y2="-4.0"/><line x1="18.9" y1="0" x2="18.9" y2="-4.0"/><line x1="-16.0" y1="0" x2="-16.0" y2="-1.33"/><line x1="16.0" y1="0" x2="16.0" y2="-1.33"/><line x1="-12.85" y1="0" x2="-12.85" y2="-4.0"/><line x1="12.85" y1="0" x2="12.85" y2="-4.0"/><line x1="-9.8" y1="0" x2="-9.8" y2="-1.33"/><line x1="9.8" y1="0" x2="9.8" y2="-1.33"/><line x1="-6.85" y1="0" x2="-6.85" y2="-4.0"/><line x1="6.85" y1="0" x2="6.85" y2="-4.0"/></g></g><circle r=".55" fill="#ff5a1e"/><circle r=".8" fill="#ff4010" fill-opacity=".22"/></svg></div>
+    <div class="tk l"></div><div class="tk r"></div><div class="tk t"></div><div class="tk b"></div><div class="cd"></div><div class="zl" id="zoomLbl"></div><svg class="ret" viewBox="-50 -50 100 100"><g stroke="#111" stroke-opacity=".88" fill="none"><circle r="6.6" stroke-width=".2"/><line x1="0" y1="-14.1" x2="0" y2="9.4" stroke-width=".2"/><line x1="-6.6" y1="0" x2="6.6" y2="0" stroke-width=".2"/><g stroke-width=".45"><line x1="-18.9" y1="0" x2="-6.6" y2="0"/><line x1="6.6" y1="0" x2="18.9" y2="0"/></g><line x1="0" y1="9.4" x2="0" y2="16.6" stroke-width=".57"/><g stroke-width=".2"><line x1="-18.9" y1="0" x2="-18.9" y2="-4.0"/><line x1="18.9" y1="0" x2="18.9" y2="-4.0"/><line x1="-16.0" y1="0" x2="-16.0" y2="-1.33"/><line x1="16.0" y1="0" x2="16.0" y2="-1.33"/><line x1="-12.85" y1="0" x2="-12.85" y2="-4.0"/><line x1="12.85" y1="0" x2="12.85" y2="-4.0"/><line x1="-9.8" y1="0" x2="-9.8" y2="-1.33"/><line x1="9.8" y1="0" x2="9.8" y2="-1.33"/><line x1="-6.85" y1="0" x2="-6.85" y2="-4.0"/><line x1="6.85" y1="0" x2="6.85" y2="-4.0"/></g></g><circle r=".57" fill="#ff5a24"/></svg></div>
   <div id="markers"></div>
   <div id="crosshair"><div class="ch t"></div><div class="ch b"></div><div class="ch l"></div><div class="ch r"></div></div>
   <div id="aimName"></div><div id="charge"><div class="fill" id="chargeFill"></div></div>
@@ -4597,7 +4599,7 @@ var AudioEngine = class _AudioEngine {
         const d = this._s("sf2_hitdead"), k2 = this._s("sf2_kill");
         if (d) this._one(pick(d), out, 1.1, 0.8);
         if (k2) this._one(pick(k2), out, 0.9);
-      } else this._one(pick(S2), out, 1, 0.98 + Math.random() * 0.04);
+      } else this._one(this._hitHead(S2[0]), out, 1, 0.98 + Math.random() * 0.04);
       return;
     }
     const H = HIT_SOUNDS[Settings.data.hitSound] || HIT_SOUNDS.flesh, k = (kind === "kill" ? 1.2 : kind === "head" ? 1.1 : 1) * (H.gain || 1);
@@ -4622,6 +4624,18 @@ var AudioEngine = class _AudioEngine {
       this._nb(t, out, "highpass", 5200, 0.9, 0.24, 3e-4, 6e-3);
       this._osc("triangle", t, 1300, 700, 0.028, out, 0.14, 5e-4);
     }
+  }
+  // v64g bullet_hit_2d_03 carries a second sound after the hit (user 10-28: a man's odd laugh, from 0.40 s): only its first 0.37 s,
+  // faded out over the last 25 ms (its RMS: the hit 0.04–0.36 s, down to −36 dB at 0.38, the other sound rising again at 0.40)
+  _hitHead(buf) {
+    if (this._hitCut && this._hitCut.src === buf) return this._hitCut.buf;
+    const n = Math.min(buf.length, Math.round(buf.sampleRate * 0.37)), f = Math.round(buf.sampleRate * 0.025), out = this.ctx.createBuffer(buf.numberOfChannels, n, buf.sampleRate);
+    for (let c = 0; c < buf.numberOfChannels; c++) {
+      const a = buf.getChannelData(c), b = out.getChannelData(c);
+      for (let i = 0; i < n; i++) b[i] = a[i] * Math.min(1, (n - i) / f);
+    }
+    this._hitCut = { src: buf, buf: out };
+    return out;
   }
   _hit_juice(t, out, k) {
     this._osc("sine", t, 170, 55, 0.08, out, 0.5 * k, 1e-3);
@@ -15621,6 +15635,7 @@ var SF2Rig = class {
     const zi = o.zoomIn || [-3, 0, 0], zo = o.zoomOut || [0, 0, 0];
     this.eyeAim = eye.clone();
     this.hipShift = new THREE.Vector3(-(zi[1] - zo[1]), zi[2] - zo[2], zi[0] - zo[0]).multiplyScalar(0.01);
+    if (o.hipPos) this.hipShift.set(o.hipPos[0] - eye.x, -o.hipPos[1] - eye.y, o.hipPos[2] - eye.z);
     this.place(0);
     this.reloadSounds = o.reloadSounds || null;
     this.equipRate = o.equipTime ? this.dur("Equip") / o.equipTime : o.equipRate || 1.6;
@@ -15854,6 +15869,7 @@ var GunMats = class {
 var GUN_MODELS = {};
 var GUN_RIGS = {};
 var RIG_EYE = { m16a3: 0.055, qbz97: 0.06, g36c_eo: 0.15, hk417_rs: 0.15, scarl_eo: 0.15 };
+var RIG_HIP = { k14: [0.0607, -1.1632, -0.0377] };
 var RIG_RETICLE = { g36c_eo: [0.093, 82], hk417_rs: [0.06, 32], scarl_eo: [0.093, 82] };
 var GLB_RELOAD_POSE = { roll: -0.5, pitch: 0.32, drop: -0.09, shift: 0.08 };
 function loadGunModels() {
@@ -16342,7 +16358,7 @@ var WeaponModels = class {
   }
   // v62z the eye behind a fitted peep (SIGHT mark) where the head bone is not right: the M16A3 carries the M4A1's handle (5.5 cm, see m4())
   _rigOpts(def) {
-    return def ? { equipTime: def.equipTime, zoomIn: def.sf2ZoomIn, zoomOut: def.sf2ZoomOut, reloadSounds: def.sf2ReloadSounds || void 0, eyeRelief: RIG_EYE[def.sf2Rig], adsHFov: def.vmAdsHFov, sf2Reticle: RIG_RETICLE[def.sf2Rig] } : {};
+    return def ? { equipTime: def.equipTime, zoomIn: def.sf2ZoomIn, zoomOut: def.sf2ZoomOut, reloadSounds: def.sf2ReloadSounds || void 0, eyeRelief: RIG_EYE[def.sf2Rig], adsHFov: def.vmAdsHFov, sf2Reticle: RIG_RETICLE[def.sf2Rig], hipPos: RIG_HIP[def.sf2Rig] } : {};
   }
   m4(def) {
     return this.fromRig("m4a1_sf2_rig", Object.assign(this._rigOpts(def), { reloadSounds: void 0, eyeRelief: 0.055 })) || this.fromGLB("m4a1_sf2", { eye: 0.03, eyeRelief: 0.025, reticle: "tritium", reticleScale: 0.22 }) || this.fromGLB("m4a1", { eye: 0.2, eyeRelief: 0.03 }) || this.m4Proc();
