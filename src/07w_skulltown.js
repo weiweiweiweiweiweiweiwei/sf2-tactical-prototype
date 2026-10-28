@@ -122,6 +122,25 @@ class SkullStreaming {
 // Skull Town is an Arenas map: a hex dome (live_fire_frame), its rings, girders and walls close it in. Node names are the models (a multi-material one: its parent's).
 const APEX_ARENA_SHELL = /^(live_fire_frame|fs_girder_beam|fs_modular_\w*floorconnector|grave_wall_gasket|thunderdome|fake_sky)/i;
 
+// v63i walkable surfaces you can see but not stand on (user 10-28: a ramp in the firing range, hills with nothing under them):
+// tools/apex-colpatch.mjs finds the up-facing render triangles with no collision floor at or just under them and writes
+// <packDir>/colpatch.js (window.APEX_COLPATCH[id] = base64 Float32, 9 per triangle); they join the collision here.
+function apexColPatchLoad(id, dir) {
+  if (/[?&]nocolpatch/.test(location.search)) return Promise.resolve(null); // (the tool itself measures without it)
+  const get = () => (window.APEX_COLPATCH || {})[id] || null;
+  if (get()) return Promise.resolve(get());
+  return new Promise((res) => { const s = document.createElement('script'); s.src = dir + 'colpatch.js'; s.onload = () => res(get()); s.onerror = () => res(null); document.head.appendChild(s); });
+}
+function apexColPatch(id, tris, b64) {
+  if (!b64) return tris;
+  const bin = atob(b64), u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+  const add = new Float32Array(u8.buffer), n = add.length / 9, nv = tris.pos.length / 3;
+  const pos = new Float32Array(tris.pos.length + add.length); pos.set(tris.pos); pos.set(add, tris.pos.length);
+  const idx = new Uint32Array(tris.idx.length + n * 3); idx.set(tris.idx); for (let i = 0; i < n * 3; i++) idx[tris.idx.length + i] = nv + i;
+  const mats = tris.mats ? new Uint8Array(tris.mats.length + n) : null; if (mats) mats.set(tris.mats); // (patch: the soup's default surface)
+  return { pos, idx, mats };
+}
+
 // Shared by the triangle-collision Apex maps (Skull Town, the rebuilt firing range): the pack (packDir) holds glb, collision,
 // manifest, lm_inner, lm_outer, door and — once tools/bake-apex-nav.mjs has run — nav + navMeta.
 function apexTriMap(def) {
@@ -137,7 +156,7 @@ function apexTriMap(def) {
       const p = await apexPack(this.id, this.packDir), text = (b) => JSON.parse(new TextDecoder().decode(b)); lap('pack scripts + base64');
       const manifest = text(p.manifest), navMeta = p.navMeta ? text(p.navMeta) : null;
       const [lmInner, lmOuter, gltf, door] = await Promise.all([skullTexture(p.lm_inner), skullTexture(p.lm_outer), apexGLTF(p.glb), apexGLTF(p.door)]); lap('glb (Draco, WebP) + lightmaps');
-      const nav = p.nav ? apexNav(p.nav) : null; lap('nav'); const tris = skullTris(await apexGunzip(p.collision)); lap('collision gunzip');
+      const nav = p.nav ? apexNav(p.nav) : null; lap('nav'); const tris = apexColPatch(this.id, skullTris(await apexGunzip(p.collision)), await apexColPatchLoad(this.id, this.packDir)); lap('collision gunzip');
       const soup = new TriSoup(tris.pos, tris.idx, 'concrete', tris.mats); lap('collision grid'); // (v62t here, not in build: the room's preload pays for it)
       this._tri = { manifest, navMeta, nav, tris, soup, gltf, door: door.scene, lm: { inner: lmInner, outer: lmOuter } };
       const B = manifest.playBounds; this.bounds = { minX: Math.floor(B.minX), maxX: Math.ceil(B.maxX), minZ: Math.floor(B.minZ), maxZ: Math.ceil(B.maxZ) };
