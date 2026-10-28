@@ -65,6 +65,14 @@ GUNS = {  # id: (SF2 class, rig, sound, [magout, magin, charge])
     'saiga12': ('SAIGA12', 'saiga12', 'saiga12', [0.15, 0.4, 0.75]),
     # v65i docs/loop/GUNS.md D: pistols
     'p226': ('P226', 'p226', 'p226', [0.15, 0.45, 0.8]),
+    'deagle': ('DESERTEAGLE', 'deagle', 'deagle', [0.15, 0.45, 0.8]),
+    'glock18': ('GLOCK17', 'glock18', 'glock18', [0.15, 0.45, 0.8]),
+    'm1911': ('Colt1911', 'm1911', 'm1911', [0.15, 0.45, 0.8]),
+    'cz75': ('CZ75BD', 'cz75', 'cz75', [0.15, 0.45, 0.8]),
+    'jericho': ('JERICHO941', 'jericho', 'jericho', [0.15, 0.45, 0.8]),
+    'sw60': ('RevolverSW60', 'sw60', 'sw60', [0.15, 0.45, 0.8]),
+    'm92fs': ('M92FS', 'm92fs', 'm92fs', [0.15, 0.45, 0.8]),
+    'infinity': ('INFINITY', 'infinity', 'infinity', [0.15, 0.45, 0.8]),
     'trg': ('TRG', 'trg', 'trg', [0.31, 0.48, 0.75], {'adsType': '2d_scope_overlay', 'adsFov': 20, 'adsSpeed': 17, 'vmAdsHFov': None, 'sf2Recoil': None,
                                                        'sf2ReloadSounds': [[0.14, 'boltback'], [0.31, 'magout'], [0.48, 'magin'], [0.75, 'charge']]}),
 }

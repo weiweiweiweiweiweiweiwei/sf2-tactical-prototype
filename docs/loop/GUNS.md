@@ -15,7 +15,7 @@
    - `-export -gltf -png -out=../sf2/<id> <pkg>`，有 `<pkg>_texture` 包時另外匯出到同一個資料夾；
    - `-export -psk -out=../sf2/<id>_anim <pkg>`（動畫 `.psa`、槍身 `.props.txt` 的插槽）；
    - `-export -sounds -out=../sf2/<id> Sound_<槍>`。
-   - 一次只能給一個包名（第二個參數會被當成物件名）。
+   - 一次只能給一個包名（第二個參數會被當成物件名）。手槍包整包 `-psk` 匯出會卡住：用 `tools/out/_pistol_export.py` 逐個物件匯出。
 2. **鏡子／瞄具**：看 `SFCItem_<槍>` 的 `DefaultItemClassNames`（`tools/sf2_props.py`），找鏡子零件的 `ScopeMesh`／`MeshData`／`SightCrosshair`。鏡子網格在 `weapon_common_part`（scope_awp、scope_cheytac、scope_cz700、scope_dragunov、scope_pm2、scope_pm50、scope_psg-1、scope_sr25…）或 `weapon_common_part01`。用 `-export -gltf -png -out=../sf2/parts <包> <物件>`，`-export -psk -out=../sf2/parts_props <包> <物件>` 匯出。**每顆鏡子都要試 `ROLL=0` 和 `ROLL=90` 兩張腰射截圖比對**（根骨骼一樣也不代表網格方向一樣：Bender／CZ700 要 90，Zeiss 要 0）；正確的樣子是高低轉鈕朝上、鏡環在下面架在導軌上。之後建模腳本會自動「鏡片中心對準槍膛、最低點貼齊插槽」（v64u），看 log 的 `SQUARE` 位移：超過 1 cm 通常表示轉向錯了。
 3. **建模**：`tools/sf2_rig_build.mjs` 加 `gun('<id>', { pkg, stem, tex, anim, optic })`。動畫檔名不一定是 `1st_anim_<id>`，看 `<id>_anim/<pkg>/AnimSet/`。執行 `node tools/sf2_rig_build.mjs <id>`，再 `node tools/guns/pack.mjs`。
 4. **數值**：`tools/sf2_weapon_table.py` 的 GUNS 加一行（換彈音效時間點看 Reload 片段：PSA 的 ANIMINFO 格數）；跑 `PYTHONPATH=tools python tools/sf2_weapon_table.py`。`tools/sf2_weight_table.py` 的 MAP 確認有這把，跑一次。
@@ -24,7 +24,7 @@
 7. **驗證**：`GUNID=<id> ONLY=hip,ads,ads2,fire TAG=<id> node tools/out/_rigshot.mjs`（看截圖：鏡子在槍正上方、手握得住、開鏡十字對）、`GUNID=<id> node tools/out/_reloadtime.mjs`、`node tools/check.mjs`。（`_rigshot` 的 reload 步驟把彈藥設 5，狙擊槍彈匣 5 會卡住，狙擊槍不要用 reload。）
 
 聲音清單（`tools/sfx_sf2.mjs` 參數，每加一把就更新）：
-`m4a1 ak103 g36c m16a3 k2 scarh famas xm8 galil hk417 qbz97 mp5k k14 trg m40a1 cz700 cheytac awp barrett@Barret kar98k@Kar98k_new sr25 psg1 frf2 m14ebr aug@AUGA3 sg551@SIG551 type89 ump45 mp7 mg4 k3 hk23e remington870@M870 benelli_m4@Bnlli ksg saiga12 g36c_eo=g36c+silence hk417_rs=hk417+silence scarl_eo=scarh+silence`
+`m4a1 ak103 g36c m16a3 k2 scarh famas xm8 galil hk417 qbz97 mp5k k14 trg m40a1 cz700 cheytac awp barrett@Barret kar98k@Kar98k_new sr25 psg1 frf2 m14ebr aug@AUGA3 sg551@SIG551 type89 ump45 mp7 mg4 k3 hk23e remington870@M870 benelli_m4@Bnlli ksg saiga12 p226@SIGP226 deagle@DesertEagle glock18@Glock17 m1911@Colt911 cz75@CZ75 jericho@Jericho914 sw60@SW60 infinity@Infi g36c_eo=g36c+silence hk417_rs=hk417+silence scarl_eo=scarh+silence`
 
 ## 佇列（由上往下做）
 狀態：⬜ 未做 · 🔄 進行中 · ✅ 完成 · ⏸ 做不到（寫原因）
@@ -59,7 +59,7 @@
 - ⏸ RPK（`mg_rpk74`）、L86A1（`mg_l86a1`，SUSAT 鏡）：開鏡時鏡頭落在槍身／瞄具裡（灰畫面），要手動量瞄準點
 - ✅ Remington 870・Benelli M4・KSG・Saiga-12（v65h；三段換彈 ReloadStart／Loop／End）
 - ⏸ AA-12（`sho_aa12`）：開鏡時鏡頭在槍身裡；零件叫 body_a 等（`fileMap` 已支援），要手動量瞄準點
-- ⬜ P226（`pis_p226`）・Desert Eagle（`pis_deserteagle`）・Glock（`pis_glock17`）・M1911（`pis_colt1911`）・CZ 75（`pis_cz75`）・Jericho（`pis_jericho941`）・S&W 60（`pis_sw60`）・M92FS（`pis_m92f`）・Infinity（`pis_infi`）
+- ✅ P226・Desert Eagle・Glock・M1911・CZ 75・Jericho・S&W 60・M92FS・Infinity（v65i；M92FS 沒有 SF2 聲音包，用原本的聲音）
 - ⏸ 沒有 SF2 包：MP5（只有 MP5K）、KRISS Vector（SF2 有 KrissV 類別但沒找到包，再查一次）、Negev、PKM、MG42、M1014、USP、AK-47（SF2 只有 AK-103）
 
 ## ⏸ 需要使用者

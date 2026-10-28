@@ -119,6 +119,14 @@ const G = {
   // v65i docs/loop/GUNS.md D: pistols (body_a + magazine_a; the slide is a bone of the body)
   p226: gun('p226', { pkg: 'pis_p226', partNames: ['body', 'magazine'], props: 'p226_anim/pis_p226/SkeletalMesh3/pis_p226_body_a.props.txt',
     fileMap: { body: 'p226/pis_p226/SkeletalMesh3/pis_p226_body_a.gltf', magazine: 'p226/pis_p226/SkeletalMesh3/pis_p226_magazine_a.gltf' }, texMap: { body: 'p226_body_a', magazine: 'p226_magazine_a' } }),
+  deagle: gun('deagle', { pkg: 'pis_deserteagle', tex: 'deserteagle', anim: '1st_anim_deserteagle', partNames: ['body', 'magazine'], texMap: { body: 'deserteagle_body', magazine: 'deserteagle_body' } }),
+  glock18: gun('glock18', { pkg: 'pis_glock17', tex: 'glock17', anim: '1st_anim_glock17', partNames: ['body', 'magazine'] }),
+  m1911: gun('m1911', { pkg: 'pis_colt1911', tex: 'colt1911', anim: '1st_anim_colt1911', partNames: ['body', 'magazine'] }),
+  cz75: gun('cz75', { pkg: 'pis_cz75', tex: 'cz75', anim: '1st_anim_cz75', partNames: ['body', 'magazine'] }),
+  jericho: gun('jericho', { pkg: 'pis_jericho941', tex: 'jerico941', anim: '1st_anim_jericho941', partNames: ['body', 'magazine'] }),
+  sw60: gun('sw60', { pkg: 'pis_sw60', tex: 'revolver_sw60', anim: '1st_anim_sw60', partNames: ['body'], texMap: { body: 'revolver_sw60' } }),
+  m92fs: gun('m92fs', { pkg: 'pis_m92f', tex: 'm92f', anim: '1st_anim_m92f', partNames: ['body', 'magazine'] }),
+  infinity: gun('infinity', { pkg: 'pis_infi', tex: 'infi', anim: '1st_anim_infinity', partNames: ['body', 'magazine'], texMap: { magazine: 'infi_magazine_a' } }),
   trg: gun('trg', { pkg: 'sni_trg', stem: 'sni_trg', tex: 'sni_trg', anim: '1st_ani_trg', optic: ZEISS_SCOPE }),
 }[GID];
 if (!G) throw new Error(`unknown gun ${GID}`);

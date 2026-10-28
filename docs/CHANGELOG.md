@@ -1563,3 +1563,13 @@
   - 四把的腰射和開鏡截圖。
   - `tools/out/_shellreload.mjs`（870）：0.3 s 開始段；0.9 s 和 1.8 s 循環段，彈藥 2 → 3 → 5；裝滿 8 發後播結束段。
   - `check.mjs`。
+
+
+### v65i（本機，2026-10-28）：SF2 原版手槍九把
+- 換成 SF2 原版的模型、動畫、聲音和數值：P226、Desert Eagle、Glock（`GLOCK17`）、M1911（`Colt1911`）、CZ 75、Jericho 941、S&W 60（轉輪）、M92FS、Infinity。
+- 零件只有槍身和彈匣（S&W 60 只有槍身），滑套是槍身的骨骼。
+- 匯出：手槍包整包 `-psk` 匯出時，UModel 會卡在動畫組。改用 `tools/out/_pistol_export.py` 逐個物件匯出。
+- 建模腳本：槍管零件不存在時，前準星搜尋也能正常執行。
+- M92FS 沒有 SF2 聲音包，維持原本的聲音。
+- 槍模檔案 `assets/guns/guns.js` 現在 59.3 MB。
+- 驗證：九把的腰射和開鏡截圖、P226 `_reloadtime.mjs`（1.3 s）、`check.mjs`。
