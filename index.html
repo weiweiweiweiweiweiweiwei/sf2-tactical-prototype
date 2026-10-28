@@ -6932,6 +6932,11 @@ var CollisionWorld = class _CollisionWorld {
     this.tris = new TriSoup(pos, idx, material, mats);
     return this.tris;
   }
+  useTris(soup) {
+    this.tris = soup;
+    return soup;
+  }
+  // v62t a soup built once per map (it only keeps query scratch between calls)
   _key(ix, iz) {
     return (ix + 4096) * 8192 + (iz + 4096);
   }
@@ -14570,6 +14575,31 @@ async function apexGunzip(buf) {
 __name(apexGunzip, "apexGunzip");
 function skullTris(buf) {
   const v = new DataView(buf);
+  if (v.getUint32(0, true) === 1515344979 && v.getUint32(4, true) === 1) {
+    const nv2 = v.getUint32(8, true), nt2 = v.getUint32(12, true), s2 = v.getFloat32(16, true), nb = v.getUint32(20, true), B = new Uint8Array(buf), pos2 = new Float32Array(nv2 * 3);
+    let o = 24;
+    for (let c = 0; c < 3; c++, o += nv2 * 2) {
+      let pv = 0;
+      for (let i = 0; i < nv2; i++) {
+        pv = pv + (B[o + i] | B[o + nv2 + i] << 8) & 65535;
+        pos2[i * 3 + c] = (pv << 16 >> 16) / s2;
+      }
+    }
+    const idx2 = new Uint32Array(nt2 * 3);
+    let hi = -1, p = o;
+    for (let i = 0; i < nt2 * 3; i++) {
+      let z = 0, sh = 0, b;
+      do {
+        b = B[p++];
+        z |= (b & 127) << sh;
+        sh += 7;
+      } while (b & 128);
+      const x = z === 0 ? hi + 1 : hi - z + 1;
+      idx2[i] = x;
+      if (x > hi) hi = x;
+    }
+    return { pos: pos2, idx: idx2, mats: B.slice(o + nb, o + nb + nt2) };
+  }
   if (v.getUint32(0, true) !== 1364350035 || v.getUint32(4, true) !== 1) throw new Error("Skull Town collision: unknown format");
   const nv = v.getUint32(8, true), nt = v.getUint32(12, true), s = v.getFloat32(16, true);
   const q = new Int16Array(buf, 20, nv * 3), pos = new Float32Array(nv * 3);
@@ -14728,10 +14758,21 @@ function apexTriMap(def) {
     },
     async preload() {
       if (this._tri) return;
+      const LT = window.__loadT = {}, t0 = performance.now(), lap = /* @__PURE__ */ __name((k) => {
+        LT[k] = Math.round(performance.now() - t0 - Object.values(LT).reduce((a, v) => a + v, 0));
+      }, "lap");
       const p = await apexPack(this.id, this.packDir), text = /* @__PURE__ */ __name((b) => JSON.parse(new TextDecoder().decode(b)), "text");
+      lap("pack scripts + base64");
       const manifest = text(p.manifest), navMeta = p.navMeta ? text(p.navMeta) : null;
       const [lmInner, lmOuter, gltf, door] = await Promise.all([skullTexture(p.lm_inner), skullTexture(p.lm_outer), apexGLTF(p.glb), apexGLTF(p.door)]);
-      this._tri = { manifest, navMeta, nav: p.nav ? apexNav(p.nav) : null, tris: skullTris(await apexGunzip(p.collision)), gltf, door: door.scene, lm: { inner: lmInner, outer: lmOuter } };
+      lap("glb (Draco, WebP) + lightmaps");
+      const nav = p.nav ? apexNav(p.nav) : null;
+      lap("nav");
+      const tris = skullTris(await apexGunzip(p.collision));
+      lap("collision gunzip");
+      const soup = new TriSoup(tris.pos, tris.idx, "concrete", tris.mats);
+      lap("collision grid");
+      this._tri = { manifest, navMeta, nav, tris, soup, gltf, door: door.scene, lm: { inner: lmInner, outer: lmOuter } };
       const B = manifest.playBounds;
       this.bounds = { minX: Math.floor(B.minX), maxX: Math.ceil(B.maxX), minZ: Math.floor(B.minZ), maxZ: Math.ceil(B.maxZ) };
       this.killY = manifest.killY;
@@ -14759,7 +14800,8 @@ function apexTriMap(def) {
       if (nav) b.navBaked = nav;
       b.game.camera.far = 1600;
       b.game.camera.updateProjectionMatrix();
-      const soup = b.col.addTris(tris.pos, tris.idx, "concrete", tris.mats);
+      const LT = window.__loadT || {}, t1 = performance.now();
+      const soup = b.col.useTris(this._tri.soup);
       b.phys.triGround = new TriGround(soup);
       const B = this.bounds, H = 120, L = -60;
       for (const a of [[B.minX - 3, L, B.minZ - 3, B.minX - 2, H, B.maxZ + 3], [B.maxX + 2, L, B.minZ - 3, B.maxX + 3, H, B.maxZ + 3], [B.minX - 3, L, B.minZ - 3, B.maxX + 3, H, B.minZ - 2], [B.minX - 3, L, B.maxZ + 2, B.maxX + 3, H, B.maxZ + 3]]) {
@@ -14824,6 +14866,7 @@ function apexTriMap(def) {
       const doors = new ApexDoors(b, manifest.doors, this._tri.door);
       b.mechs.push(doors, new SkullStreaming(b, soup, meshes));
       window.__triMap = { objects, drawGroups: batches.size, doors: doors.doors.length, triangles: soup.n, manifest };
+      LT["visuals + doors"] = Math.round(performance.now() - t1);
     }
   }, def);
 }
@@ -22619,6 +22662,19 @@ var PostFX = class {
     this.scale = clamp(this.scale, q.minScale, 1);
     r.setPixelRatio(this.pixelRatio());
     r.setSize(innerWidth, innerHeight);
+    this.applyWorld(match, qName);
+    r.shadowMap.autoUpdate = true;
+    this.frameN = 0;
+    if (!q.post) {
+      this.applyLook(resolveLook(match.def));
+      return;
+    }
+    this._composer(match, q);
+  }
+  // v62t what of a preset reaches the world's shader programs (shadow filter, which point lights exist, world IBL): Match.build
+  // runs it as soon as the level is lit, so the shaders compile in the background while the rest loads; configure() repeats it
+  applyWorld(match, qName) {
+    const q = QUALITY[qName] || QUALITY.high, r = this.r;
     const sun = match.sun, type = q.soft ? THREE.PCFSoftShadowMap : q.hard ? THREE.BasicShadowMap : THREE.PCFShadowMap, relink = r.shadowMap.type !== type;
     r.shadowMap.type = type;
     if (sun && (sun.shadow.mapSize.x !== q.shadow || relink)) {
@@ -22642,13 +22698,9 @@ var PostFX = class {
       const ml = match.vmEnv && match.vmEnv.userData.meanLum || 0.35;
       match.ambFill.intensity = q.worldEnv === false ? clamp(5.8 * match.envK * ml, 0.35, 2.4) : 0;
     }
-    r.shadowMap.autoUpdate = true;
-    this.frameN = 0;
-    if (!q.post) {
-      this.applyLook(resolveLook(match.def));
-      return;
-    }
-    const size = r.getDrawingBufferSize(new THREE.Vector2());
+  }
+  _composer(match, q) {
+    const r = this.r, size = r.getDrawingBufferSize(new THREE.Vector2());
     const rt = new THREE.WebGLRenderTarget(size.x, size.y, { type: THREE.HalfFloatType });
     const c = this.composer = new EffectComposer(r, rt);
     c.addPass(new RenderPass(match.scene, match.camera));
@@ -23477,14 +23529,31 @@ var Match = class _Match {
     this.builder = new MapBuilder(this, def);
     progress(0.12, "建構地圖幾何");
     await nextFrame();
-    if (def.preload) await def.preload();
+    if (def.preload) {
+      if (def._preloadP) await def._preloadP;
+      if (!def._preloadP) def._preloadP = def.preload().catch((e) => {
+        def._preloadP = null;
+        throw e;
+      });
+      await def._preloadP;
+    }
+    const tb = performance.now();
     def.build(this.builder);
+    const tf = performance.now();
     this.builder.flush();
     this.builder.bakeContactAO();
+    if (window.__loadT) Object.assign(window.__loadT, { "def.build": Math.round(tf - tb), "flush + contact AO": Math.round(performance.now() - tf) });
     progress(0.38, "載入 HDRI 環境光");
     await nextFrame();
     this.setupLighting();
     await this.setupEnvironment();
+    this.effects = new Effects(this.scene, app.tex, this.audio);
+    app.post.applyWorld(this, activeQuality());
+    const tc = performance.now();
+    this._precompile = app.renderer.compileAsync ? app.renderer.compileAsync(this.scene, this.camera).then(() => {
+      if (window.__loadT) window.__loadT["world shaders (background)"] = Math.round(performance.now() - tc);
+    }).catch(() => {
+    }) : null;
     progress(0.56, "計算 Bot 導航網格");
     await nextFrame();
     this.nav = new NavGraph(this.collision, this.builder, def);
@@ -23495,10 +23564,11 @@ var Match = class _Match {
     });
     progress(0.7, "部署部隊");
     await nextFrame();
-    this.effects = new Effects(this.scene, app.tex, this.audio);
     this.player = new Player(this);
     if (this.isClient) this.player.team = this.net.team === "bravo" ? "bravo" : "alpha";
+    const tg = performance.now();
     await loadGunModels();
+    if (window.__loadT) window.__loadT["gun models"] = Math.round(performance.now() - tg);
     this.weapons = new WeaponSystem(this, loadoutDefs(this.mode, Settings.data.loadouts[this.loadoutIndex]));
     this.weapons.setEnvironment(this.vmEnv || this.scene.environment);
     this.combatants.push(this.player);
@@ -23535,6 +23605,9 @@ var Match = class _Match {
     this.player.updateCamera(1);
     this.weapons.update(0, app.input, { x: 0, y: 0 });
     if (app.renderer.compileAsync) {
+      const tw = performance.now();
+      await this._precompile;
+      if (window.__loadT) window.__loadT["waited for world shaders"] = Math.round(performance.now() - tw);
       await app.renderer.compileAsync(this.scene, this.camera);
       await app.renderer.compileAsync(this.weapons.scene, this.weapons.camera);
     } else {
@@ -23651,7 +23724,7 @@ var Match = class _Match {
       ms.forEach((m) => set(m, 1, this.scene.environment));
     });
     const ml = this.vmEnv && this.vmEnv.userData.meanLum, vmMul = ml ? clamp(0.2 / (ml * k), 0.6, 2.2) : 2.2;
-    this.weapons.scene.traverse((o) => {
+    if (this.weapons) this.weapons.scene.traverse((o) => {
       const ms = Array.isArray(o.material) ? o.material : [o.material];
       ms.forEach((m) => set(m, vmMul, this.weapons.scene.environment));
     });
@@ -27619,6 +27692,15 @@ var App = class {
   async warm(i) {
     const token = this.warmToken = (this.warmToken || 0) + 1, def = MAPS[i];
     if (Settings.data.hdri && def.hdri) this.loadHDR(def.hdri);
+    if (def.preload && !def._preloadP) {
+      const t0 = performance.now();
+      def._preloadP = def.preload().then(() => {
+        window.__warmLoad = Object.assign(window.__warmLoad || {}, { [def.id]: Math.round(performance.now() - t0) });
+      }, (e) => {
+        def._preloadP = null;
+        console.warn("map preload", def.id, e);
+      });
+    }
     for (const name of this.dry[i].used) {
       if (this.warmToken !== token || this.state !== "lobby") return;
       if (!this.mats.cache.has(name)) {

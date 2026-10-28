@@ -83,6 +83,28 @@ const skullTris = (buf, B, M = 12) => { // only triangles touching the play boun
   console.log('  triangles', nt, 'vertices', nv, 'scale', scale, '(', (1 / scale * 100).toFixed(1), 'cm )');
   return Buffer.concat([head, q, pad, idx, mats]);
 };
+// v62t 'STRZ' (decoded by skullTris() too): the STRQ soup welded (equal Int16 positions → one vertex, 1.6 M → 0.8 M on Skull
+// Town) and re-ordered by first use; positions as per-axis deltas in two byte planes, indices as LEB128 codes against the highest
+// index so far (0 = the next new vertex, k = that minus k − 1), surfaces as they were — gzipped, 10.4 MB → 2.3 MB
+const strz = (buf) => {
+  const nv = buf.readUInt32LE(8), nt = buf.readUInt32LE(12), scale = buf.readFloatLE(16), q = new Int16Array(buf.buffer.slice(buf.byteOffset + 20, buf.byteOffset + 20 + nv * 6));
+  const io = (20 + nv * 6 + 3) & ~3, idx = new Uint32Array(buf.buffer.slice(buf.byteOffset + io, buf.byteOffset + io + nt * 12)), mats = buf.subarray(io + nt * 12, io + nt * 13);
+  const weld = new Map(), first = new Int32Array(nv).fill(-1), P = [], code = [];
+  let hi = -1;
+  for (let i = 0; i < nt * 3; i++) {
+    const v = idx[i], k = q[v * 3] + ',' + q[v * 3 + 1] + ',' + q[v * 3 + 2];
+    let u = first[v] >= 0 ? first[v] : weld.get(k);
+    if (u === undefined) { u = P.length / 3; weld.set(k, u); P.push(q[v * 3], q[v * 3 + 1], q[v * 3 + 2]); }
+    first[v] = u;
+    let z = u === hi + 1 ? 0 : hi - u + 1; if (u > hi) hi = u;
+    while (z >= 0x80) { code.push((z & 0x7f) | 0x80); z >>>= 7; } code.push(z);
+  }
+  const nu = P.length / 3, pos = Buffer.alloc(nu * 6);
+  for (let c = 0; c < 3; c++) { let pv = 0; for (let v = 0; v < nu; v++) { const x = P[v * 3 + c], d = (x - pv) & 0xffff; pv = x; pos[c * nu * 2 + v] = d & 0xff; pos[c * nu * 2 + nu + v] = d >> 8; } }
+  const head = Buffer.alloc(24); head.write('STRZ', 0); head.writeUInt32LE(1, 4); head.writeUInt32LE(nu, 8); head.writeUInt32LE(nt, 12); head.writeFloatLE(scale, 16); head.writeUInt32LE(code.length, 20);
+  console.log('  STRZ: vertices', nv, '->', nu, '· index stream', code.length, 'bytes');
+  return Buffer.concat([head, pos, Buffer.from(code), Buffer.from(mats)]);
+};
 const DOOR = 'tools/out/apex/door/door.glb'; // Apex's door leaf (tools/blender/apex_door.py), both full maps
 const TRI = { skulltown: ['apex_skulltown', 'assets/maps/apex-skulltown'], range: ['apex_full', 'assets/maps/apex-range'] }; // tools/blender/apex_maps.py names
 if (TRI[process.argv[2]]) {
@@ -90,7 +112,7 @@ if (TRI[process.argv[2]]) {
   fs.mkdirSync(D, { recursive: true });
   pack(ID, D, {
     glb: await compress(glbFromGltf(X, 'scene.gltf'), true),
-    collision: zlib.gzipSync(skullTris(fs.readFileSync(path.join(X, 'collision.bin')), JSON.parse(fs.readFileSync(path.join(X, 'manifest.json'))).playBounds), { level: 9 }), // (apexGunzip in the game)
+    collision: zlib.gzipSync(strz(skullTris(fs.readFileSync(path.join(X, 'collision.bin')), JSON.parse(fs.readFileSync(path.join(X, 'manifest.json'))).playBounds)), { level: 9 }), // (apexGunzip in the game; v62t STRZ)
     manifest: fs.readFileSync(path.join(X, 'manifest.json')),
     lm_inner: fs.readFileSync(path.join(X, 'lm_inner.jpg')),
     lm_outer: fs.readFileSync(path.join(X, 'lm_outer.jpg')),

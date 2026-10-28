@@ -37,4 +37,14 @@
 
 ## 本機已完成（本機寫，雲端接手）
 
-（空）
+### L0 ✅ 合併本機 master 上兩個沒推的 commit（使用者 10-27 選 C：Apex 載入時間；loop 開始前做的）
+- `85c4ebd` 載入時間、`4ae2787` 碰撞資料縮小——在 CHANGELOG 改編號為 **v62x、v62y**（雲端已用掉 v62t–w；commit 訊息裡仍寫 v62t／v62u）。
+- 動到 `src/`（使用者直接要求的功能，在 loop 分工前完成）：
+  - `07w_skulltown.js`：預載時建好碰撞 `TriSoup`（`_tri.soup`）、讀新碰撞格式 `STRZ`、載入計時 `window.__loadT`；新 import `TriSoup`。
+  - `04_collision.js`：`CollisionWorld.useTris(soup)`，export `TriSoup`。
+  - `16_match.js`：`def._preloadP` 共用預載；`setupEnvironment` 後先建 `Effects`、`post.applyWorld` 再背景 `compileAsync`；`applyEnvIntensity` 在 weapons 還沒建時跳過槍模。
+  - `15_postfx.js`：`configure` 拆出 `applyWorld(match, q)`、`_composer(match, q)`。
+  - `17_app.js`：`warm()` 在房間就呼叫 `def.preload()`。
+- 素材：兩張 Apex 地圖的 `pack/` 重新打包（碰撞 STRZ：Skull Town 10.4 → 2.3 MB、訓練場 8.9 → 2.2 MB）；`tools/pack-apex-js.mjs` 的 `strz()`。
+- 工具：`tools/_loadprof.mjs`（各載入階段計時，`LOBBY=` `PROFILE=` `RUNS=`）。
+- 驗證（合併後）：`analyze.mjs` MODULES_OK、`build.sh`、`check.mjs`、`check-apex-full` 都過。

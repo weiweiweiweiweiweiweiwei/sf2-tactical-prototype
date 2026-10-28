@@ -57,21 +57,32 @@ class Match {
     this.collision = new CollisionWorld(); this.physics = new PhysicsWorld(this.scene, this.audio);
     this.builder = new MapBuilder(this, def);
     progress(0.12, '建構地圖幾何'); await nextFrame();
-    if (def.preload) await def.preload(); // v44: maps with Blender visuals (GLB) load them before building the colliders
-    def.build(this.builder); this.builder.flush(); this.builder.bakeContactAO();
+    // v44: maps with Blender visuals (GLB) load them before building the colliders. v62t one shared load per map (def._preloadP): the
+    // room starts it in the background (App.warm) — a match that begins meanwhile waits for that one instead of starting another
+    if (def.preload) {
+      if (def._preloadP) await def._preloadP;
+      if (!def._preloadP) def._preloadP = def.preload().catch((e) => { def._preloadP = null; throw e; });
+      await def._preloadP;
+    }
+    const tb = performance.now(); def.build(this.builder); const tf = performance.now(); this.builder.flush(); this.builder.bakeContactAO();
+    if (window.__loadT) Object.assign(window.__loadT, { 'def.build': Math.round(tf - tb), 'flush + contact AO': Math.round(performance.now() - tf) }); // v62t (tools/_loadprof.mjs)
     progress(0.38, '載入 HDRI 環境光'); await nextFrame();
     this.setupLighting();
     await this.setupEnvironment();
+    // v62t the level is complete and lit: its shaders start compiling now (KHR_parallel_shader_compile — off the main thread) while
+    // the nav graph, soldiers and guns load; the compile stage below then waits only for what is left (soldiers, viewmodel, effects)
+    this.effects = new Effects(this.scene, app.tex, this.audio); // (v62t before the compile: its muzzle / blast lights count in every lit shader)
+    app.post.applyWorld(this, activeQuality());
+    const tc = performance.now(); this._precompile = app.renderer.compileAsync ? app.renderer.compileAsync(this.scene, this.camera).then(() => { if (window.__loadT) window.__loadT['world shaders (background)'] = Math.round(performance.now() - tc); }).catch(() => {}) : null;
     progress(0.56, '計算 Bot 導航網格'); await nextFrame();
     this.nav = new NavGraph(this.collision, this.builder, def);
     for (const mc of this.builder.mechs) if (mc.initNav) mc.initNav(this.nav);
     // v5 patrol network: designer waypoints snapped onto reachable nav nodes (bots patrol these until they see / hear something)
     this.patrol = this.builder.waypoints.map((p) => this.nav.snap(p, 8)).filter((p) => { const n = this.nav.nearest(p, false); return n && n.p.distanceTo(p) < 3; });
     progress(0.7, '部署部隊'); await nextFrame();
-    this.effects = new Effects(this.scene, app.tex, this.audio);
     this.player = new Player(this);
     if (this.isClient) this.player.team = this.net.team === 'bravo' ? 'bravo' : 'alpha'; // a client plays on his room team, with no bots of its own
-    await loadGunModels(); // v45 Blender gun models (GLB) must be parsed before the viewmodels are built
+    const tg = performance.now(); await loadGunModels(); if (window.__loadT) window.__loadT['gun models'] = Math.round(performance.now() - tg); // v45 Blender gun models (GLB) must be parsed before the viewmodels are built
     this.weapons = new WeaponSystem(this, loadoutDefs(this.mode, Settings.data.loadouts[this.loadoutIndex])); this.weapons.setEnvironment(this.vmEnv || this.scene.environment);
     this.combatants.push(this.player);
     if (!this.isClient) {
@@ -91,7 +102,7 @@ class Match {
     app.post.configure(this, activeQuality());
     if (this.isClient) { this.round = 1; this.rules.startRound(); } else this.startRound(); // v27: a client attaches once the host's match takes him in (App.startMatch)
     this.player.updateCamera(1); this.weapons.update(0, app.input, { x: 0, y: 0 });
-    if (app.renderer.compileAsync) { await app.renderer.compileAsync(this.scene, this.camera); await app.renderer.compileAsync(this.weapons.scene, this.weapons.camera); }
+    if (app.renderer.compileAsync) { const tw = performance.now(); await this._precompile; if (window.__loadT) window.__loadT['waited for world shaders'] = Math.round(performance.now() - tw); await app.renderer.compileAsync(this.scene, this.camera); await app.renderer.compileAsync(this.weapons.scene, this.weapons.camera); }
     else { app.renderer.compile(this.scene, this.camera); app.renderer.compile(this.weapons.scene, this.weapons.camera); }
     app.post.render(0.016, true);
     progress(1, '準備完成');
@@ -169,7 +180,7 @@ class Match {
     // viewmodel: reflections normalised to the same average brightness on every map (v19) — dark gun metal still reads as metal on dim maps
     // (up to ×2.2, the v16 value) but no longer turns chrome-white under bright HDRI skies (harbor sunset was ×4 brighter than desert)
     const ml = this.vmEnv && this.vmEnv.userData.meanLum, vmMul = ml ? clamp(0.2 / (ml * k), 0.6, 2.2) : 2.2;
-    this.weapons.scene.traverse((o) => { const ms = Array.isArray(o.material) ? o.material : [o.material]; ms.forEach((m) => set(m, vmMul, this.weapons.scene.environment)); });
+    if (this.weapons) this.weapons.scene.traverse((o) => { const ms = Array.isArray(o.material) ? o.material : [o.material]; ms.forEach((m) => set(m, vmMul, this.weapons.scene.environment)); }); // (v62t applyWorld runs it before the weapons exist)
   }
 
   _zonePoints(z) {

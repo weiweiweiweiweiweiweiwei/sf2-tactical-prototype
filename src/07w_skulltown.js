@@ -1,4 +1,5 @@
 import { CANNON, THREE, clamp } from './01_core.js';
+import { TriSoup } from './04_collision.js';
 import { MAPS } from './07_maps.js';
 import { apexGLTF, apexPack } from './07u_apex.js';
 import { ApexDoors, apexBakedSpawns, apexNav } from './07v_apex_full.js';
@@ -16,6 +17,14 @@ async function apexGunzip(buf) {
 }
 function skullTris(buf) {
   const v = new DataView(buf);
+  if (v.getUint32(0, true) === 0x5a525453 && v.getUint32(4, true) === 1) { // v62t 'STRZ' (tools/pack-apex-js.mjs strz): welded, delta / LEB128 coded
+    const nv = v.getUint32(8, true), nt = v.getUint32(12, true), s = v.getFloat32(16, true), nb = v.getUint32(20, true), B = new Uint8Array(buf), pos = new Float32Array(nv * 3);
+    let o = 24;
+    for (let c = 0; c < 3; c++, o += nv * 2) { let pv = 0; for (let i = 0; i < nv; i++) { pv = (pv + (B[o + i] | (B[o + nv + i] << 8))) & 0xffff; pos[i * 3 + c] = ((pv << 16) >> 16) / s; } }
+    const idx = new Uint32Array(nt * 3); let hi = -1, p = o;
+    for (let i = 0; i < nt * 3; i++) { let z = 0, sh = 0, b; do { b = B[p++]; z |= (b & 0x7f) << sh; sh += 7; } while (b & 0x80); const x = z === 0 ? hi + 1 : hi - z + 1; idx[i] = x; if (x > hi) hi = x; }
+    return { pos, idx, mats: B.slice(o + nb, o + nb + nt) };
+  }
   if (v.getUint32(0, true) !== 0x51525453 || v.getUint32(4, true) !== 1) throw new Error('Skull Town collision: unknown format');
   const nv = v.getUint32(8, true), nt = v.getUint32(12, true), s = v.getFloat32(16, true);
   const q = new Int16Array(buf, 20, nv * 3), pos = new Float32Array(nv * 3);
@@ -124,10 +133,13 @@ function apexTriMap(def) {
     },
     async preload() {
       if (this._tri) return;
-      const p = await apexPack(this.id, this.packDir), text = (b) => JSON.parse(new TextDecoder().decode(b));
+      const LT = window.__loadT = {}, t0 = performance.now(), lap = (k) => { LT[k] = Math.round(performance.now() - t0 - Object.values(LT).reduce((a, v) => a + v, 0)); }; // v62t load profile (tools/_loadprof.mjs)
+      const p = await apexPack(this.id, this.packDir), text = (b) => JSON.parse(new TextDecoder().decode(b)); lap('pack scripts + base64');
       const manifest = text(p.manifest), navMeta = p.navMeta ? text(p.navMeta) : null;
-      const [lmInner, lmOuter, gltf, door] = await Promise.all([skullTexture(p.lm_inner), skullTexture(p.lm_outer), apexGLTF(p.glb), apexGLTF(p.door)]);
-      this._tri = { manifest, navMeta, nav: p.nav ? apexNav(p.nav) : null, tris: skullTris(await apexGunzip(p.collision)), gltf, door: door.scene, lm: { inner: lmInner, outer: lmOuter } };
+      const [lmInner, lmOuter, gltf, door] = await Promise.all([skullTexture(p.lm_inner), skullTexture(p.lm_outer), apexGLTF(p.glb), apexGLTF(p.door)]); lap('glb (Draco, WebP) + lightmaps');
+      const nav = p.nav ? apexNav(p.nav) : null; lap('nav'); const tris = skullTris(await apexGunzip(p.collision)); lap('collision gunzip');
+      const soup = new TriSoup(tris.pos, tris.idx, 'concrete', tris.mats); lap('collision grid'); // (v62t here, not in build: the room's preload pays for it)
+      this._tri = { manifest, navMeta, nav, tris, soup, gltf, door: door.scene, lm: { inner: lmInner, outer: lmOuter } };
       const B = manifest.playBounds; this.bounds = { minX: Math.floor(B.minX), maxX: Math.ceil(B.maxX), minZ: Math.floor(B.minZ), maxZ: Math.ceil(B.maxZ) };
       this.killY = manifest.killY;
       if (navMeta) {
@@ -143,7 +155,8 @@ function apexTriMap(def) {
       const { manifest, tris, gltf, lm, nav } = this._tri;
       if (nav) b.navBaked = nav;
       b.game.camera.far = 1600; b.game.camera.updateProjectionMatrix();
-      const soup = b.col.addTris(tris.pos, tris.idx, 'concrete', tris.mats);
+      const LT = window.__loadT || {}, t1 = performance.now();
+      const soup = b.col.useTris(this._tri.soup);
       b.phys.triGround = new TriGround(soup);
       // the edge of the arena: invisible walls 2 m outside the play bounds (moves, shots, grenades)
       const B = this.bounds, H = 120, L = -60;
@@ -189,6 +202,7 @@ function apexTriMap(def) {
       const doors = new ApexDoors(b, manifest.doors, this._tri.door);
       b.mechs.push(doors, new SkullStreaming(b, soup, meshes));
       window.__triMap = { objects, drawGroups: batches.size, doors: doors.doors.length, triangles: soup.n, manifest };
+      LT['visuals + doors'] = Math.round(performance.now() - t1);
     }
   }, def);
 }

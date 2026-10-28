@@ -1122,3 +1122,17 @@
 - 現在：有 `vmAdsHFov`（SF2 鏡頭）的槍，`adsFov` 當水平角，依畫面比例換成垂直（16:9：55° → 32.6°）；和 v62f 槍模鏡頭的換算一致。開鏡畫面的世界放大和 SF2 原版一樣。其他槍不變。自選決策 D8。
 - 驗證：無頭瀏覽器 1280×720 開鏡，M4A1 鏡頭 FOV 穩定在 32.64°（原本 55°）、腰射 75°；`analyze`、`build`、`check.mjs` 都過。
 
+### v62x（2026-10-27，本機；commit 訊息寫 v62t）：Apex 地圖載入時間（使用者選 C）
+- 新工具 `tools/_loadprof.mjs`（`MAP=`、`LOBBY=<秒>` 先在房間等、`PROFILE=<資料夾>` 保留 Chrome 快取像真的玩家、`RUNS=2` 同分頁第二場）：每個載入階段、內部細項（`window.__loadT`）、編譯的著色器數、開打後前 4 秒的卡頓。
+- 原本（Skull Town，6v6）：冷啟動 11.8 s、Chrome 有快取時 9.7 s——包裝檔 50 MB 讀取 2.2–2.5 s、Draco／WebP／光照貼圖 1.5 s、碰撞網格 0.45 s、槍模 0.3–0.7 s、著色器 1.9 s（冷 3.7 s）、「即將部署」地圖預覽 1.6 s（固定）。
+- 改動：
+  - 房間裡就先載入地圖資料（`App.warm` 呼叫 `def.preload`，地圖和比賽共用同一個載入 `def._preloadP`；旅館、天空城原本「載入中」就把旗標設好、同時開始會漏資料，一起修掉）。
+  - 碰撞網格（`TriSoup`）在預載時建好，每場重用（`CollisionWorld.useTris`）。
+  - 場景完成、打好光後就在背景編譯世界的著色器（`PostFX.applyWorld` 先套畫質對著色器有影響的部分；特效的燈光提前建立，否則燈數改變會整批重編），導航、士兵、槍模同時載入。
+- 結果（有快取、在房間等 9 秒）：Skull Town 9.7 → 3.4 s、訓練場 → 3.9 s；直接開（沒等）8.8 s；同分頁第二場 2.7 s。剩下：著色器 1.4–2.0 s、地圖預覽 1.6 s。
+- `check-apex-full`、`check-apex-traversal`、`_nettest MAP=apex_skulltown`、`check.mjs` 都過。
+
+### v62y（2026-10-27，本機；commit 訊息寫 v62u）：Apex 碰撞資料縮成 1/4（下載大小）
+- 碰撞格式 `STRZ`（`tools/pack-apex-js.mjs` 的 `strz()`，遊戲端 `skullTris()` 兩種格式都讀）：相同位置的頂點合併（Skull Town 160 萬 → 81 萬）、依第一次使用排序；座標存成各軸差值的兩個位元組平面，索引存成「相對目前最大索引」的變長碼；再 gzip。
+- Skull Town 碰撞 10.4 → 2.3 MB、訓練場 8.9 → 2.2 MB；整包（base64）50 → 39 MB、39 → 30 MB。解碼 49 ms。
+- 驗證：和舊格式逐個三角形比對，114 萬個三角形的頂點、表面材質 0 差異；`check-apex-full`、`check-apex-traversal` 過。

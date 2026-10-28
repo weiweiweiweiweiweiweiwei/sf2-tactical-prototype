@@ -219,6 +219,7 @@ class CollisionWorld {
     this.packed = null; this.tris = null; // v60 triangle maps (TriSoup)
   }
   addTris(pos, idx, material = 'concrete', mats = null) { this.tris = new TriSoup(pos, idx, material, mats); return this.tris; }
+  useTris(soup) { this.tris = soup; return soup; } // v62t a soup built once per map (it only keeps query scratch between calls)
 
   _key(ix, iz) { return (ix + 4096) * 8192 + (iz + 4096); }
 
@@ -731,4 +732,4 @@ class CharacterMotor {
   }
 }
 
-export { CharacterMotor, CollisionWorld, MAX_SLOPE, Terrain, triBox, triHeight };
+export { CharacterMotor, CollisionWorld, MAX_SLOPE, Terrain, TriSoup, triBox, triHeight };
