@@ -15,6 +15,7 @@
     - 改用 M4A1 自己的提把 `rif_m4a1_handle_a`＋A2 前準星（`railSights`，和 M4A1 一樣）：零件放得上，但 `V.handle` 的點是 **M4A1 綁定姿勢**的座標（OWNBIND），算出的 SIGHT 和 M4A1 完全一樣，開鏡錯位；要先把提把的點用 M16A3 的 `weapon_root` 綁定矩陣換算過去才行。
     - 這輪已全部還原（M16A3 仍是舊槍模），`sf2_weapon_table.py` 的 m16a3 仍註解。
 - QBZ-97：提把上的瞄準線（現在眼睛落在照門本體上），對照 `.props.txt` 的插槽。
+  - 🔄 本機 2026-10-28：暫時打開 qbz97 量開鏡（白底、世界隱藏，`tools/out/_ringcenter.mjs`＋`_ringmeasure.py`）：眼睛在一個大圓孔正中（偏 0／−9.5 px，孔寬 473 px @1080p），**但孔裡看不到前準星**。QBZ-97 的照門和前準星都在提把上，`POST` 現在是找「槍管中線前 25 cm 的最高點」（`hoodedPost`），可能抓到槍管上的點而不是提把前端的準星，眼睛高度就錯了。下一步：從側面分析提把前後兩端（前準星尖、覘孔中心）的高度，給 qbz97 自己的 SIGHT／POST。已還原（仍是舊槍模）。
 - ✅ MP5K（本機 2026-10-28，見「本機已完成」L3）。
 - ✅ M4A1 第三人稱槍模（本機 2026-10-28，見「本機已完成」L4；接到 Bot 手上留給雲端）。
 - 驗證：`node tools/check.mjs`、`node tools/_gunshot.mjs`（開鏡截圖存進 `docs/testing/shots/`）。
