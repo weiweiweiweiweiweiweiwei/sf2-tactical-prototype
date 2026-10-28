@@ -1437,3 +1437,10 @@
 - 聲音：`Sound_CZ700`，兩種槍聲。
 - 建模腳本：狙擊槍的槍管上沒有前準星時，POST 標記改用槍口位置。
 - 驗證：腰射截圖鏡子在正上方；`_reloadtime.mjs` 正常。
+
+
+### v64w（本機，2026-10-28）：SF2 原版 CheyTac M200
+- `sni_cheytac` 裝 `scope_cheytac`。比對轉向：轉 90° 時放正位移 0.41 cm，轉 0° 時 2.65／2.81 cm，所以用 90°。十字 `mil`。
+- 數值照 `SFCWeaponCheyTac`：換彈 3.2 s（動畫 3.48 s）、開鏡 55° 再 20°、重量 9.5。
+- 聲音：`Sound_Cheytac`。
+- 驗證：腰射截圖鏡子在正上方、有腳架；`_reloadtime.mjs` 正常。

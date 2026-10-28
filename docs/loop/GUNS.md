@@ -24,7 +24,7 @@
 7. **驗證**：`GUNID=<id> ONLY=hip,ads,ads2,fire TAG=<id> node tools/out/_rigshot.mjs`（看截圖：鏡子在槍正上方、手握得住、開鏡十字對）、`GUNID=<id> node tools/out/_reloadtime.mjs`、`node tools/check.mjs`。（`_rigshot` 的 reload 步驟把彈藥設 5，狙擊槍彈匣 5 會卡住，狙擊槍不要用 reload。）
 
 聲音清單（`tools/sfx_sf2.mjs` 參數，每加一把就更新）：
-`m4a1 ak103 g36c m16a3 k2 scarh famas xm8 galil hk417 qbz97 mp5k k14 trg m40a1 cz700 g36c_eo=g36c+silence hk417_rs=hk417+silence scarl_eo=scarh+silence`
+`m4a1 ak103 g36c m16a3 k2 scarh famas xm8 galil hk417 qbz97 mp5k k14 trg m40a1 cz700 cheytac g36c_eo=g36c+silence hk417_rs=hk417+silence scarl_eo=scarh+silence`
 
 ## 佇列（由上往下做）
 狀態：⬜ 未做 · 🔄 進行中 · ✅ 完成 · ⏸ 做不到（寫原因）
@@ -33,7 +33,7 @@
 - ✅ TRG-41（v64s）
 - ✅ M40A1（v64t；`sni_m40a1`，鏡 `Cz700_Def_Scope` → `scope_cz700`，十字預設 `mic_ScopeView`＝`tex_scope_Crosshair_Diffuse`＋`_dot`）
 - ✅ CZ700（v64v；`sni_cz700`，同 M40A1 的鏡和十字）
-- ⬜ CheyTac M200（`sni_cheytac`，`scope_cheytac`，預設十字；`WEAPON_DATABASE.cheytac_m200`）
+- ✅ CheyTac M200（v64w；`sni_cheytac`，`scope_cheytac`，預設十字；`WEAPON_DATABASE.cheytac_m200`）
 - ⬜ AWP（`sni_awp`，`scope_awp`，預設十字）
 
 ### B. 周邊

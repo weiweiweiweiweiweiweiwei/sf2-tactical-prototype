@@ -34,6 +34,8 @@ GUNS = {  # id: (SF2 class, rig, sound, [magout, magin, charge])
                                                        'sf2ReloadSounds': [[0.14, 'boltback'], [0.31, 'magout'], [0.48, 'magin'], [0.75, 'charge']]}),
     'cz700': ('CZ700', 'cz700', 'cz700', [0.31, 0.48, 0.75], {'adsType': '2d_scope_overlay', 'adsFov': 20, 'adsSpeed': 17, 'vmAdsHFov': None, 'sf2Recoil': None, 'sf2Reticle': 'mil', 'zoomHFovs': [55, 20],
                                                        'sf2ReloadSounds': [[0.14, 'charge'], [0.31, 'magout'], [0.48, 'magin'], [0.75, 'charge']]}),
+    'cheytac_m200': ('CheyTac', 'cheytac', 'cheytac', [0.31, 0.48, 0.75], {'adsType': '2d_scope_overlay', 'adsFov': 20, 'adsSpeed': 17, 'vmAdsHFov': None, 'sf2Recoil': None, 'sf2Reticle': 'mil', 'zoomHFovs': [55, 20],
+                                                       'sf2ReloadSounds': [[0.14, 'charge'], [0.31, 'magout'], [0.48, 'magin'], [0.75, 'charge']]}),
     'trg': ('TRG', 'trg', 'trg', [0.31, 0.48, 0.75], {'adsType': '2d_scope_overlay', 'adsFov': 20, 'adsSpeed': 17, 'vmAdsHFov': None, 'sf2Recoil': None,
                                                        'sf2ReloadSounds': [[0.14, 'boltback'], [0.31, 'magout'], [0.48, 'magin'], [0.75, 'charge']]}),
 }
