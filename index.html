@@ -20885,7 +20885,7 @@ var BotAI = class {
         const av = this._avoidance(wx, wz);
         this.wishX = wx + av.x;
         this.wishZ = wz + av.z;
-        this.wishSpeed = this.strafeDir === 0 ? Math.abs(radial) > 0.3 ? 1.2 : 0 : kind === "sniper" ? 1.2 : 1.8 + D.strafe * 0.7;
+        this.wishSpeed = this.strafeDir === 0 ? Math.abs(radial) > 0.3 ? 1.2 : 0 : kind === "sniper" ? 1.2 : 1.8 + D.strafe * 1.4;
       }
       this.reactT -= dt;
       if (dist < 1.4 && this.meleeCd <= 0 && this.reactT <= 0) {
