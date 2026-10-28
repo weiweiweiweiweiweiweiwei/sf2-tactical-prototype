@@ -239,9 +239,11 @@ for (const [key, socket, own, mark] of [['optic', 'Scope', 'ZoomCrosshair', 'DOT
   const A = G[key]; if (!A) continue;
   const pd = await io.read(SRC + A.file), sk = pd.getRoot().listSkins()[0], ibm = Array.from(sk.getInverseBindMatrices().getArray()).slice(0, 16), S = sockAt(socket);
   let RC = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
-  if (A.roll) { // about the part's own long axis (its mesh space), through the middle of its bounds
+  if (A.roll) { // about the part's own long axis (its mesh space), through its root bone (the mount on the socket). v64p: it went through the
+    // middle of the bounds — the turrets and rings put that off the tube, which ended up beside and below the bore (user 10-28 sketch);
+    // the scope's root bind differs from the EOTech's by exactly this quarter turn about mesh x, about the bone's origin
     const ps = [], e = []; for (const p of pd.getRoot().listMeshes()[0].listPrimitives()) { const P = p.getAttribute('POSITION'); for (let i = 0; i < P.getCount(); i++) { P.getElement(i, e); ps.push(e.slice(0, 3)); } }
-    const lo = [0, 1, 2].map((k) => min(ps, k)), hi = [0, 1, 2].map((k) => max(ps, k)), ext = hi.map((h, k) => h - lo[k]), ax = ext.indexOf(Math.max(...ext)), ctr = hi.map((h, k) => (h + lo[k]) / 2);
+    const lo = [0, 1, 2].map((k) => min(ps, k)), hi = [0, 1, 2].map((k) => max(ps, k)), ext = hi.map((h, k) => h - lo[k]), ax = ext.indexOf(Math.max(...ext)), ctr = inv4(ibm).slice(12, 15);
     const a = A.roll * Math.PI / 180, c = Math.cos(a), sn = Math.sin(a), u = (ax + 1) % 3, w = (ax + 2) % 3, R = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
     R[u * 4 + u] = c; R[u * 4 + w] = sn; R[w * 4 + u] = -sn; R[w * 4 + w] = c; // (column-major: column u = rotated u axis)
     const T = (t) => [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, t[0], t[1], t[2], 1];
