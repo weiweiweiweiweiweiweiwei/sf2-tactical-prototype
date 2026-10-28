@@ -293,15 +293,15 @@ class WeaponSystem extends Arsenal {
     if (sc !== this._scopeShown || (sc && this.scopeLevel !== this._scopeLvl)) { this._scopeShown = sc; this._scopeLvl = this.scopeLevel; g.app.hud.setScope(sc, this.scopeLevel); }
     w.vm.group.visible = !sc;
 
-    const target = this.ads ? (w.scoped ? (this.scopedIn ? w.def.zoomFovs[this.zoomLevel - 1] : this.baseFov * 0.82) : w.def.adsFov) : this.baseFov;
+    // v62f / v62w SF2 lenses (the guns with vmAdsHFov: adsFov = SF2 fZoomedFOV) are horizontal like UE3: turned into three.js's vertical FOV for this screen (16:9: 55° → 32.6°)
+    const vert = (h) => 2 * Math.atan(Math.tan(h * Math.PI / 360) / this.camera.aspect) * 180 / Math.PI;
+    const target = this.ads ? (w.scoped ? (this.scopedIn ? w.def.zoomFovs[this.zoomLevel - 1] : this.baseFov * 0.82) : w.def.vmAdsHFov ? vert(w.def.adsFov) : w.def.adsFov) : this.baseFov;
     this.fov = THREE.MathUtils.lerp(this.fov, target, 1 - Math.exp(-(w.scoped ? 32 : w.def.adsSpeed * 1.4 || 28) * dt));
     if (Math.abs(this.fov - target) < 0.01 || (w.scoped && this.scopedIn)) this.fov = target; // scope zoom is instant
     const fovNow = this.fov + p.fovPunch;
     if (Math.abs(cam.fov - fovNow) > 1e-4) { cam.fov = fovNow; cam.updateProjectionMatrix(); }
     this.sprintT = damp(this.sprintT, p.sprinting ? 1 : 0, 12, dt);
-    // v45 vmAdsFov: narrower viewmodel lens = bigger holo window; v62f vmHFov / vmAdsHFov: SF2's own lenses, horizontal like UE3
-    // (so the gun keeps its size across screen shapes), turned into three.js's vertical FOV for this screen
-    const vert = (h) => 2 * Math.atan(Math.tan(h * Math.PI / 360) / this.camera.aspect) * 180 / Math.PI;
+    // v45 vmAdsFov: narrower viewmodel lens = bigger holo window; v62f vmHFov / vmAdsHFov: SF2's own lenses (so the gun keeps its size across screen shapes)
     const vmFov = lerp(w.def.vmHFov ? vert(w.def.vmHFov) : 58, w.def.vmAdsHFov ? vert(w.def.vmAdsHFov) : (w.def.vmAdsFov || 48), this.adsT * (w.scoped ? 0 : 1));
     if (Math.abs(this.camera.fov - vmFov) > 0.01) { this.camera.fov = vmFov; this.camera.updateProjectionMatrix(); }
 

@@ -1117,3 +1117,8 @@
 - 散布、後座不套 Apex 的數值（自選決策 D7）。
 - 驗證：`_ttk.mjs` 61 把槍的 SF2／Apex 數字和 v62u 完全一樣；`_dmgmodel.mjs` DMG_MODEL_OK；`analyze`、`build`、`check.mjs` 都過。
 
+### v62w（2026-10-28）：SF2 原版槍開鏡時的世界視角照 SF2 的水平 FOV
+- 原本：SF2 原版槍（M4A1、AK-103、G36C、K2、SCAR-L／H、FAMAS、XM8、GALIL、HK417）的 `adsFov` 55（SF2 的 `fZoomedFOV`）直接當成 three.js 的垂直 FOV，開鏡放大倍率比 SF2 小。
+- 現在：有 `vmAdsHFov`（SF2 鏡頭）的槍，`adsFov` 當水平角，依畫面比例換成垂直（16:9：55° → 32.6°）；和 v62f 槍模鏡頭的換算一致。開鏡畫面的世界放大和 SF2 原版一樣。其他槍不變。自選決策 D8。
+- 驗證：無頭瀏覽器 1280×720 開鏡，M4A1 鏡頭 FOV 穩定在 32.64°（原本 55°）、腰射 75°；`analyze`、`build`、`check.mjs` 都過。
+
