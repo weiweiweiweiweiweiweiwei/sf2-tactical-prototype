@@ -204,7 +204,7 @@ class PhysicsWorld {
     }
   }
 
-  // v62r one simulation step on the match's fixed clock (CFG.fixedStep, 120 Hz — was cannon's own 90 Hz accumulator on the
+  // v62r one simulation step on the match's fixed clock (CFG.fixedStep, 60 Hz since v63g — was cannon's own 90 Hz accumulator on the
   // frame time): every body's state before it is kept, so sync() can draw between the last two steps at any frame rate
   fixedStep(h) {
     for (const d of this.dynamics) {
@@ -213,7 +213,7 @@ class PhysicsWorld {
       if (d.corpse && d.age > 0.5 && d.age < 5) { // never leave a body standing: still upright after 0.5 s → shove the shoulders over
         const q = b.quaternion, upY = 1 - 2 * (q.x * q.x + q.z * q.z);
         if (upY > 0.75) {
-          d.shove = (d.shove || 0) + 1; const f = d.shove % 80 < 40 ? 1 : -1; // alternate direction (every 1/3 s) in case a wall blocks one side
+          d.shove = (d.shove || 0) + h; const f = d.shove % (2 / 3) < 1 / 3 ? 1 : -1; // alternate direction (every 1/3 s) in case a wall blocks one side (v63g: by time, not steps)
           const top = this._top || (this._top = new CANNON.Vec3()), imp = this._shv || (this._shv = new CANNON.Vec3());
           b.quaternion.vmult(new CANNON.Vec3(0, 0.75, 0), top); imp.copy(d.fallDir).scale(f * 60 * 1.6 * h, imp);
           b.wakeUp(); b.applyImpulse(imp, top);

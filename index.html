@@ -998,7 +998,8 @@ import { SMAAPass } from "three/addons/postprocessing/SMAAPass.js";
 import { Pass, FullScreenQuad } from "three/addons/postprocessing/Pass.js";
 var CFG = {
   gravity: -20,
-  fixedStep: 1 / 120,
+  fixedStep: 1 / 60,
+  // v63g the whole simulation (Match.tick) — was 1/120 for movement, weapons and physics only
   player: {
     radius: 0.34,
     height: 1.8,
@@ -8080,7 +8081,7 @@ var PhysicsWorld = class {
       b.applyImpulse(new CANNON.Vec3(dx / dist * k, (dy / dist + 0.6) * k, dz / dist * k));
     }
   }
-  // v62r one simulation step on the match's fixed clock (CFG.fixedStep, 120 Hz — was cannon's own 90 Hz accumulator on the
+  // v62r one simulation step on the match's fixed clock (CFG.fixedStep, 60 Hz since v63g — was cannon's own 90 Hz accumulator on the
   // frame time): every body's state before it is kept, so sync() can draw between the last two steps at any frame rate
   fixedStep(h) {
     for (const d of this.dynamics) {
@@ -8091,8 +8092,8 @@ var PhysicsWorld = class {
       if (d.corpse && d.age > 0.5 && d.age < 5) {
         const q = b.quaternion, upY = 1 - 2 * (q.x * q.x + q.z * q.z);
         if (upY > 0.75) {
-          d.shove = (d.shove || 0) + 1;
-          const f = d.shove % 80 < 40 ? 1 : -1;
+          d.shove = (d.shove || 0) + h;
+          const f = d.shove % (2 / 3) < 1 / 3 ? 1 : -1;
           const top = this._top || (this._top = new CANNON.Vec3()), imp = this._shv || (this._shv = new CANNON.Vec3());
           b.quaternion.vmult(new CANNON.Vec3(0, 0.75, 0), top);
           imp.copy(d.fallDir).scale(f * 60 * 1.6 * h, imp);
@@ -15524,6 +15525,7 @@ var SF2Rig = class {
     this.place(s.ads);
   }
 };
+var FLASH_OPACITY = 0.8;
 var SF2_FLASH = {
   hip: [
     { tex: "front", life: [0.03, 0.06], size: [10, 21], grow: [1.732, 1.732], rgb: [0.544, 0.402, 0.248], fadeFrom: 0.3, spin: 0.05 },
@@ -15532,8 +15534,8 @@ var SF2_FLASH = {
     { tex: "lens", life: [0.03, 0.05], size: [25, 50], grow: [1.165, 1.174], rgb: [1.78, 0.929, 0.726], fwd: 10 }
   ],
   ads: [
-    { tex: "front", life: [0.03, 0.06], size: [10, 27], grow: [1.732, 1.732], rgb: [4.657, 1.89, 0.983], spin: 0.03 },
-    { tex: "smoke", life: [0.5, 0.8], size: [30, 50], grow: [1.008, 2.295], rgb: [0.78, 0.78, 0.78], vel: [20, 50], smoke: true }
+    { tex: "front", life: [0.03, 0.06], size: [10, 27], grow: [1.732, 1.732], rgb: [4.657, 1.89, 0.983], spin: 0.03 }
+    // (v63g SF2's thin smoke puff, M_thin_smoke_Z_06, left out at the user's word — 10-28)
   ]
 };
 var SF2Flash = class _SF2Flash {
@@ -15563,7 +15565,7 @@ var SF2Flash = class _SF2Flash {
           map = map.clone();
           map.repeat.set(1 / d.sub, 1 / d.sub);
         }
-        const m = new THREE.SpriteMaterial({ map, transparent: true, depthWrite: false, blending: d.smoke ? THREE.NormalBlending : THREE.AdditiveBlending, opacity: d.smoke ? 0 : 1 });
+        const m = new THREE.SpriteMaterial({ map, transparent: true, depthWrite: false, blending: d.smoke ? THREE.NormalBlending : THREE.AdditiveBlending, opacity: d.smoke ? 0 : FLASH_OPACITY });
         const s = new THREE.Sprite(m);
         s.visible = false;
         s.renderOrder = d.smoke ? 9 : 10;
@@ -16080,7 +16082,7 @@ var WeaponModels = class {
     out.magMove = new V();
     out.magRot = 0;
     out.muzzle = rig.model.getObjectByName("MUZZLE");
-    const sf = new SF2Flash(out.muzzle, o.flashScale ?? 0.5);
+    const sf = new SF2Flash(out.muzzle, o.flashScale ?? 0.4);
     if (sf.ok) out.sf2flash = sf;
     else out.flash = this._flash(out.muzzle, 0, 0, 0, o.flash ?? 0.2);
     if (o.reticle) out.reticle = this._reticle(g, 0, true, o.reticleScale || 1, [0.25, 1, 0.3]);
@@ -19144,16 +19146,6 @@ var WeaponSystem = class extends Arsenal {
     this.flashLight = new THREE.PointLight(16755251, 0, 8, 2);
     this.scene.add(this.flashLight);
     this.flashLightT = 0;
-    this.smokeT = 0;
-    this.wisps = [];
-    const smokeTex = game.app.tex.smoke();
-    for (let i = 0; i < 14; i++) {
-      const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: smokeTex, color: 14079698, transparent: true, depthWrite: false, opacity: 0 }));
-      s.visible = false;
-      s.renderOrder = 8;
-      this.scene.add(s);
-      this.wisps.push({ s, t: 0, life: 0, v: new THREE.Vector3() });
-    }
     this.root = new THREE.Group();
     this.scene.add(this.root);
     const models = game.app.models;
@@ -19267,41 +19259,6 @@ var WeaponSystem = class extends Arsenal {
     this.flashLight.intensity = this.ads ? 0 : 15 * strength;
   }
   // aimed, the gun is the sight picture: lit by its own flash the sight's inner faces flared white (even at 15 %)
-  _barrelSmoke(dt, w) {
-    const g = this.game, since = g.time - this.lastShotT;
-    this.heat = Math.max(0, this.heat - dt * (since < 0.15 ? 0.4 : 3.6));
-    if (this.heat > 3 && since > 0.12 && !this.scopedIn && w.vm.muzzle && w.vm.group.visible) {
-      this.smokeT -= dt;
-      if (this.smokeT <= 0) {
-        this.smokeT = 0.06 + Math.random() * 0.05;
-        const p = this.wisps.find((q) => q.t >= q.life);
-        if (p) {
-          w.vm.group.updateMatrixWorld();
-          w.vm.muzzle.getWorldPosition(p.s.position);
-          p.t = 0;
-          p.life = 0.8 + Math.random() * 0.5;
-          p.v.set(rand(-0.05, 0.05), 0.16 + Math.random() * 0.12, rand(-0.05, 0.05));
-          p.s.material.rotation = Math.random() * 6.28;
-          p.s.visible = true;
-          p.a = Math.min(1, this.heat / 10) * 0.32;
-        }
-      }
-    }
-    for (const q of this.wisps) {
-      if (q.t >= q.life) {
-        if (q.s.visible) q.s.visible = false;
-        continue;
-      }
-      q.t += dt;
-      const k = q.t / q.life;
-      q.s.position.addScaledVector(q.v, dt);
-      q.v.x += rand(-0.2, 0.2) * dt;
-      q.v.z += rand(-0.2, 0.2) * dt;
-      const sz = 0.025 + k * 0.14;
-      q.s.scale.set(sz, sz, 1);
-      q.s.material.opacity = q.a * Math.sin(Math.PI * Math.min(1, k * 1.4)) * (1 - k);
-    }
-  }
   // Mouse buttons at event time: only ADS is decided here (toggle / hold is a local preference). Firing, knife and grenades
   // run from the latched FIRE / ALT bits of the next UserCmd (tick).
   onButton(btn, down) {
@@ -19368,7 +19325,6 @@ var WeaponSystem = class extends Arsenal {
       if (this.flashLightT <= 0) this.flashLight.intensity = 0;
     }
     if (w.vm.reticle) w.vm.reticle.material.opacity = clamp((this.adsT - 0.55) / 0.35, 0, 1);
-    this._barrelSmoke(dt, w);
     const spread = w.kind === "knife" || w.kind === "grenade" ? 6e-3 : w.spread(this);
     const gap = 3 + Math.tan(spread) / Math.tan(THREE.MathUtils.degToRad(cam.fov / 2)) * (innerHeight / 2);
     const hud = g.app.hud;
@@ -19901,7 +19857,6 @@ var Player = class extends Human {
     this.punch += this.punchV * dt;
     this.fovPunch = damp(this.fovPunch, 0, 10, dt);
     this.shake = Math.max(0, this.shake - dt * 2.5);
-    if (this.spawnProtect > 0) this.spawnProtect = Math.max(0, this.spawnProtect - dt);
     this.eyeH = damp(this.eyeH, this.motor.crouching ? CFG.player.crouchEye - (this.slideT > 0 ? 0.12 : 0) : CFG.player.eye, 16, dt);
     this.slideK = damp(this.slideK, this.slideT > 0 ? 1 : 0, 10, dt);
     this.mantleK = damp(this.mantleK, this.mantleT > 0 ? 1 : 0, 18, dt);
@@ -20238,17 +20193,23 @@ var Bot = class extends Combatant {
     const occluded = d > 3 && !g.collision.segmentClear(g.camera.position, TMP_V4.copy(p).setY(p.y + 0.5));
     g.audio.footstep(p, surface, loud, { pitch: this.stepPitch, occluded });
   }
-  update(dt, alpha) {
+  // v63g the bot's brain on the match's fixed 60 Hz clock (was once per drawn frame): timers, then the AI picks the next step's
+  // wish / aim. prevYaw keeps the turn for the drawn frames in between (update's alpha)
+  simUpdate(h) {
+    this.prevYaw = this.yaw;
     if (!this.alive) return;
-    if (this.spawnProtect > 0) this.spawnProtect = Math.max(0, this.spawnProtect - dt);
+    if (this.spawnProtect > 0) this.spawnProtect = Math.max(0, this.spawnProtect - h);
     if (this.reloadT > 0) {
-      this.reloadT -= dt;
+      this.reloadT -= h;
       if (this.reloadT <= 0) this.ammo = this.def.mag;
     }
-    this.ai.update(dt);
-    const m = this.motor, M = this.model;
+    this.ai.update(h);
+  }
+  update(dt, alpha) {
+    if (!this.alive) return;
+    const m = this.motor, M = this.model, py = this.prevYaw ?? this.yaw;
     M.root.position.lerpVectors(m.prevPos, m.pos, alpha);
-    M.root.rotation.y = this.yaw;
+    M.root.rotation.y = py + wrapAngle(this.yaw - py) * alpha;
     animateSoldier(this, dt, m.horizontalSpeed(), m.crouching, this.aimPitch, this.reloadT > 0 || m.climbing);
     if (this.tag) {
       this.tag.position.set(M.root.position.x, M.root.position.y + 2.1, M.root.position.z);
@@ -21278,9 +21239,12 @@ var NetPlayer = class _NetPlayer extends Human {
       this.stalls = (this.stalls || 0) + 1;
     }
   }
+  simUpdate(h) {
+    if (this.alive && this.spawnProtect > 0) this.spawnProtect = Math.max(0, this.spawnProtect - h);
+  }
+  // v63g on the fixed clock
   update(dt, alpha) {
     if (!this.alive) return;
-    if (this.spawnProtect > 0) this.spawnProtect = Math.max(0, this.spawnProtect - dt);
     const m = this.motor, M = this.model, w = this.arsenal.current;
     if (this.modelGun !== w.def.id) {
       this.modelGun = w.def.id;
@@ -24785,44 +24749,87 @@ var Match = class _Match {
     }
   }
   /* ------------------------------ frame ------------------------------ */
-  tick(dt, mouse) {
-    const p = this.player, h = CFG.fixedStep, hud = this.app.hud, input = this.app.input, rb = this.rules.roundBased, PR = this.prof || (this.prof = new FrameProfiler()), t0 = performance.now();
-    this.time += dt;
-    const client = this.isClient;
-    if (client) {
-      if (this.phase === "freeze") hud.freeze(true, Math.max(1, Math.ceil(this.freezeT)), "準備開戰", input.locked);
-    } else if (this.phase === "freeze") {
-      this.freezeT -= dt;
-      hud.freeze(true, Math.ceil(this.freezeT), rb ? `ROUND ${this.round}` : "準備開戰", input.locked);
+  // v63g one fixed step of the match phase (host / solo): the freeze count, the clock, the pause between rounds; true once over
+  _phaseStep(h) {
+    const hud = this.app.hud, rb = this.rules.roundBased;
+    if (this.phase === "freeze") {
+      this.freezeT -= h;
       if (this.freezeT <= 0) {
         this.phase = "live";
         hud.freeze(false);
         hud.announce("FIGHT!", rb ? `ROUND ${this.round} · ${RULES[this.rule].name}` : `${RULES[this.rule].name} · ${MODES[this.mode].name}`);
       }
     } else if (this.phase === "live") {
-      this.timeLeft -= dt;
+      this.timeLeft -= h;
       if (this.timeLeft <= 0) {
         this.timeLeft = 0;
         this.onTimeUp();
       }
     } else if (this.phase === "roundEnd") {
-      this.roundEndT -= dt;
+      this.roundEndT -= h;
       if (this.roundEndT <= 0) {
         if (this.roundWins.alpha >= this.target || this.roundWins.bravo >= this.target) {
           this.phase = "live";
           this.endMatch(this.roundWins.alpha >= this.target ? "alpha" : "bravo");
-          return;
+          return true;
         }
         this.startRound();
       }
     }
+    return this.phase === "over";
+  }
+  // v63g one fixed step of everyone's life: AI, spawn protection, respawn countdowns, the mode's rules
+  _lifeStep(h, client) {
+    const p = this.player, respawns = this.rules.respawns, live = respawns && this.phase === "live";
+    for (const b of this.bots) {
+      b.simUpdate(h);
+      if (!b.alive && live) {
+        b.respawnT -= h;
+        if (b.respawnT <= 0) {
+          const sp = this.pickSpawn(b.team);
+          b.respawn(sp, sp.spawnYaw ?? this.spawns[b.team].yaw);
+        }
+      }
+    }
+    for (const np of this.humans) {
+      np.simUpdate(h);
+      if (!np.alive && live) {
+        np.respawnT -= h;
+        if (np.respawnT <= 0) {
+          const sp = this.pickSpawn(np.team);
+          np.respawn(sp, sp.spawnYaw ?? this.spawns[np.team].yaw);
+        }
+      }
+    }
+    if (p.alive) {
+      if (p.spawnProtect > 0) p.spawnProtect = Math.max(0, p.spawnProtect - h);
+    } else if (respawns) {
+      p.respawnT -= h;
+      if (!client && p.respawnT <= 0 && this.phase === "live") {
+        const sp = this.pickSpawn(p.team);
+        p.respawn(sp, sp.spawnYaw ?? this.spawns[p.team].yaw);
+        this.app.hud.showDeath(false);
+      }
+    }
+    if (!client) this.rules.tick(h);
+  }
+  // v63g ALL of the simulation on one fixed clock, CFG.fixedStep (60 Hz, was 120 Hz for movement / weapons / physics only):
+  // the match clock, phase and round timers, scheduled events, the player's / bots' / friends' movement and weapons, the
+  // bots' AI, spawn protection, respawns, the mode's rules, falling out of the map. A drawn frame runs as many steps as the
+  // time asks for (at most 8 — a stall does not fast-forward) and only draws: soldiers, camera and props interpolated by
+  // alpha, effects, HUD. Mouse look and the view's recoil stay per frame (they are the camera, sent with every command).
+  tick(dt, mouse) {
+    const p = this.player, h = CFG.fixedStep, hud = this.app.hud, input = this.app.input, rb = this.rules.roundBased, PR = this.prof || (this.prof = new FrameProfiler()), t0 = performance.now();
+    const client = this.isClient;
     if (this.phase === "over") return;
-    this.runTimers();
     p.look(mouse.x, mouse.y);
     if (input.wheel && p.alive) this.app.cmds.switchTo(this.weapons.wheelTarget(input.wheel));
     this.acc += dt;
     let steps = 0;
-    while (this.acc >= h && steps < 14) {
+    while (this.acc >= h && steps < 8) {
+      this.time += h;
+      if (!client && this._phaseStep(h)) return;
+      this.runTimers();
       const cmd = this.app.cmds.build(p, this.weapons, !this.app.chatOpen);
       p.fixedUpdate(h, cmd);
       this.weapons.tick(h, cmd);
@@ -24846,47 +24853,25 @@ var Match = class _Match {
           this.applyDamage(c, 999, "legs", c, WEAPON_DEFS.fall, null, null, { fall: true });
         }
       }
+      this._lifeStep(h, client);
       this.acc -= h;
       steps++;
     }
-    if (steps >= 14) this.acc = 0;
+    if (steps >= 8) this.acc = 0;
+    if (client) {
+      if (this.phase === "freeze") hud.freeze(true, Math.max(1, Math.ceil(this.freezeT)), "準備開戰", input.locked);
+    } else if (this.phase === "freeze") hud.freeze(true, Math.ceil(this.freezeT), rb ? `ROUND ${this.round}` : "準備開戰", input.locked);
     const t1 = performance.now();
     const alpha = this.acc / h;
     p.update(dt);
-    const respawns = this.rules.respawns;
-    for (const b of this.bots) {
-      if (b.alive) b.update(dt, alpha);
-      else if (respawns && this.phase === "live") {
-        b.respawnT -= dt;
-        if (b.respawnT <= 0) {
-          const sp = this.pickSpawn(b.team);
-          b.respawn(sp, sp.spawnYaw ?? this.spawns[b.team].yaw);
-        }
-      }
-    }
-    for (const np of this.humans) {
-      if (np.alive) np.update(dt, alpha);
-      else if (respawns && this.phase === "live") {
-        np.respawnT -= dt;
-        if (np.respawnT <= 0) {
-          const sp = this.pickSpawn(np.team);
-          np.respawn(sp, sp.spawnYaw ?? this.spawns[np.team].yaw);
-        }
-      }
-    }
-    if (!client) this.rules.tick(dt);
-    else if (this.rules.netTick) this.rules.netTick(dt);
+    for (const b of this.bots) if (b.alive) b.update(dt, alpha);
+    for (const np of this.humans) if (np.alive) np.update(dt, alpha);
+    if (client && this.rules.netTick) this.rules.netTick(dt);
     if (this.net) this.net.frame(dt);
-    const t2 = performance.now();
+    const t2 = performance.now(), respawns = this.rules.respawns;
     if (!p.alive) {
       if (respawns) {
-        p.respawnT -= dt;
         hud.setDeathTimer(`RESPAWN IN ${Math.max(0, p.respawnT).toFixed(1)}s${this.nextSpawnLoadoutIndex !== null ? `  ·  下次配裝 ${LOADOUT_KEYS[this.nextSpawnLoadoutIndex]}` : ""}`);
-        if (!client && p.respawnT <= 0 && this.phase === "live") {
-          const sp = this.pickSpawn(p.team);
-          p.respawn(sp, sp.spawnYaw ?? this.spawns[p.team].yaw);
-          hud.showDeath(false);
-        }
       } else {
         if (p.spectating && !p.spectating.alive) this.nextSpectate();
         if (p.deathT > 1.6) {
@@ -24906,9 +24891,10 @@ var Match = class _Match {
     this.weapons.update(dt, input, mouse);
     this.physics.sync(dt, alpha);
     this.effects.update(dt);
-    for (const fn of this.builder.animated) fn(dt, this.time);
+    const rt = this.time + this.acc;
+    for (const fn of this.builder.animated) fn(dt, rt);
     for (const mc of this.builder.mechs) mc.render(dt, alpha);
-    for (const m of this.builder.shafts) m.uniforms.uTime.value = this.time;
+    for (const m of this.builder.shafts) m.uniforms.uTime.value = rt;
     this.spotT -= dt;
     if (this.spotT <= 0) {
       this.spotT = 0.15;
@@ -25001,7 +24987,7 @@ var Match = class _Match {
 var NET_VERSION = 30;
 var NET_PHASES = ["loading", "freeze", "live", "roundEnd", "over"];
 var NET_SNAP_HZ = 30;
-var NET_CMD_EVERY = 2;
+var NET_CMD_EVERY = 1;
 var NET_INTERP = 0.1;
 var NET_REWIND_MAX = 0.4;
 var LoopbackTransport = class {

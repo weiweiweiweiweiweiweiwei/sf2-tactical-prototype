@@ -840,30 +840,58 @@ class Match {
   }
 
   /* ------------------------------ frame ------------------------------ */
-  tick(dt, mouse) {
-    const p = this.player, h = CFG.fixedStep, hud = this.app.hud, input = this.app.input, rb = this.rules.roundBased, PR = this.prof || (this.prof = new FrameProfiler()), t0 = performance.now();
-    this.time += dt;
-    const client = this.isClient;
-    if (client) { if (this.phase === 'freeze') hud.freeze(true, Math.max(1, Math.ceil(this.freezeT)), '準備開戰', input.locked); } // phase, clock and score come from the host
-    else if (this.phase === 'freeze') {
-      this.freezeT -= dt;
-      hud.freeze(true, Math.ceil(this.freezeT), rb ? `ROUND ${this.round}` : '準備開戰', input.locked);
+  // v63g one fixed step of the match phase (host / solo): the freeze count, the clock, the pause between rounds; true once over
+  _phaseStep(h) {
+    const hud = this.app.hud, rb = this.rules.roundBased;
+    if (this.phase === 'freeze') {
+      this.freezeT -= h;
       if (this.freezeT <= 0) { this.phase = 'live'; hud.freeze(false); hud.announce('FIGHT!', rb ? `ROUND ${this.round} · ${RULES[this.rule].name}` : `${RULES[this.rule].name} · ${MODES[this.mode].name}`); }
     } else if (this.phase === 'live') {
-      this.timeLeft -= dt; if (this.timeLeft <= 0) { this.timeLeft = 0; this.onTimeUp(); }
+      this.timeLeft -= h; if (this.timeLeft <= 0) { this.timeLeft = 0; this.onTimeUp(); }
     } else if (this.phase === 'roundEnd') {
-      this.roundEndT -= dt;
+      this.roundEndT -= h;
       if (this.roundEndT <= 0) {
-        if (this.roundWins.alpha >= this.target || this.roundWins.bravo >= this.target) { this.phase = 'live'; this.endMatch(this.roundWins.alpha >= this.target ? 'alpha' : 'bravo'); return; }
+        if (this.roundWins.alpha >= this.target || this.roundWins.bravo >= this.target) { this.phase = 'live'; this.endMatch(this.roundWins.alpha >= this.target ? 'alpha' : 'bravo'); return true; }
         this.startRound();
       }
     }
+    return this.phase === 'over';
+  }
+  // v63g one fixed step of everyone's life: AI, spawn protection, respawn countdowns, the mode's rules
+  _lifeStep(h, client) {
+    const p = this.player, respawns = this.rules.respawns, live = respawns && this.phase === 'live';
+    for (const b of this.bots) {
+      b.simUpdate(h);
+      if (!b.alive && live) { b.respawnT -= h; if (b.respawnT <= 0) { const sp = this.pickSpawn(b.team); b.respawn(sp, sp.spawnYaw ?? this.spawns[b.team].yaw); } }
+    }
+    for (const np of this.humans) {
+      np.simUpdate(h);
+      if (!np.alive && live) { np.respawnT -= h; if (np.respawnT <= 0) { const sp = this.pickSpawn(np.team); np.respawn(sp, sp.spawnYaw ?? this.spawns[np.team].yaw); } }
+    }
+    if (p.alive) { if (p.spawnProtect > 0) p.spawnProtect = Math.max(0, p.spawnProtect - h); }
+    else if (respawns) {
+      p.respawnT -= h;
+      if (!client && p.respawnT <= 0 && this.phase === 'live') { const sp = this.pickSpawn(p.team); p.respawn(sp, sp.spawnYaw ?? this.spawns[p.team].yaw); this.app.hud.showDeath(false); }
+    }
+    if (!client) this.rules.tick(h);
+  }
+
+  // v63g ALL of the simulation on one fixed clock, CFG.fixedStep (60 Hz, was 120 Hz for movement / weapons / physics only):
+  // the match clock, phase and round timers, scheduled events, the player's / bots' / friends' movement and weapons, the
+  // bots' AI, spawn protection, respawns, the mode's rules, falling out of the map. A drawn frame runs as many steps as the
+  // time asks for (at most 8 — a stall does not fast-forward) and only draws: soldiers, camera and props interpolated by
+  // alpha, effects, HUD. Mouse look and the view's recoil stay per frame (they are the camera, sent with every command).
+  tick(dt, mouse) {
+    const p = this.player, h = CFG.fixedStep, hud = this.app.hud, input = this.app.input, rb = this.rules.roundBased, PR = this.prof || (this.prof = new FrameProfiler()), t0 = performance.now();
+    const client = this.isClient;
     if (this.phase === 'over') return;
-    this.runTimers();
     p.look(mouse.x, mouse.y);
     if (input.wheel && p.alive) this.app.cmds.switchTo(this.weapons.wheelTarget(input.wheel));
     this.acc += dt; let steps = 0;
-    while (this.acc >= h && steps < 14) {
+    while (this.acc >= h && steps < 8) {
+      this.time += h;
+      if (!client && this._phaseStep(h)) return; // the match ended
+      this.runTimers();
       // v25: one UserCmd per fixed step drives the local player's movement AND weapons (the host steps remote humans the same way)
       const cmd = this.app.cmds.build(p, this.weapons, !this.app.chatOpen); // v31: typing a chat line → the soldier stands still
       p.fixedUpdate(h, cmd);
@@ -874,34 +902,29 @@ class Match {
       const ms = []; for (const c of this.combatants) if (c.alive) ms.push(c.motor);
       for (let i = 0; i < ms.length; i++) for (let j = i + 1; j < ms.length; j++) CharacterMotor.separate(ms[i], ms[j]);
       for (const mc of this.builder.mechs) mc.tick(h); // v46 trams / drawbridge carry whoever stands on them
-      this.physics.fixedStep(h); this.stepGrenades(h); // v62r debris, bodies and grenades on the same 120 Hz clock
+      this.physics.fixedStep(h); this.stepGrenades(h); // v62r debris, bodies and grenades on the same clock
       if (!client && this.apex) this._regen(h);
       if (!client && this.def.killY !== undefined) for (const c of this.combatants) {
         const p=c.motor.pos,B=this.def.bounds,outside=this.def.killOutside&&(p.x<B.minX-2||p.x>B.maxX+2||p.z<B.minZ-2||p.z>B.maxZ+2);
         if (c.alive && (p.y < this.def.killY || outside)) { c.spawnProtect = 0; this.applyDamage(c, 999, 'legs', c, WEAPON_DEFS.fall, null, null, { fall: true }); }
       }
+      this._lifeStep(h, client);
       this.acc -= h; steps++;
     }
-    if (steps >= 14) this.acc = 0;
+    if (steps >= 8) this.acc = 0;
+    if (client) { if (this.phase === 'freeze') hud.freeze(true, Math.max(1, Math.ceil(this.freezeT)), '準備開戰', input.locked); } // phase, clock and score come from the host
+    else if (this.phase === 'freeze') hud.freeze(true, Math.ceil(this.freezeT), rb ? `ROUND ${this.round}` : '準備開戰', input.locked);
     const t1 = performance.now();
     const alpha = this.acc / h;
     p.update(dt);
-    const respawns = this.rules.respawns;
-    for (const b of this.bots) {
-      if (b.alive) b.update(dt, alpha);
-      else if (respawns && this.phase === 'live') { b.respawnT -= dt; if (b.respawnT <= 0) { const sp = this.pickSpawn(b.team); b.respawn(sp, sp.spawnYaw ?? this.spawns[b.team].yaw); } }
-    }
-    for (const np of this.humans) { // v25 host: friends' soldiers
-      if (np.alive) np.update(dt, alpha);
-      else if (respawns && this.phase === 'live') { np.respawnT -= dt; if (np.respawnT <= 0) { const sp = this.pickSpawn(np.team); np.respawn(sp, sp.spawnYaw ?? this.spawns[np.team].yaw); } }
-    }
-    if (!client) this.rules.tick(dt); else if (this.rules.netTick) this.rules.netTick(dt); // v29: a client only animates the mode; its state comes from the host
+    for (const b of this.bots) if (b.alive) b.update(dt, alpha);
+    for (const np of this.humans) if (np.alive) np.update(dt, alpha); // v25 host: friends' soldiers
+    if (client && this.rules.netTick) this.rules.netTick(dt); // v29: a client only animates the mode; its state comes from the host
     if (this.net) this.net.frame(dt);
-    const t2 = performance.now();
+    const t2 = performance.now(), respawns = this.rules.respawns;
     if (!p.alive) {
       if (respawns) {
-        p.respawnT -= dt; hud.setDeathTimer(`RESPAWN IN ${Math.max(0, p.respawnT).toFixed(1)}s${this.nextSpawnLoadoutIndex !== null ? `  ·  下次配裝 ${LOADOUT_KEYS[this.nextSpawnLoadoutIndex]}` : ''}`);
-        if (!client && p.respawnT <= 0 && this.phase === 'live') { const sp = this.pickSpawn(p.team); p.respawn(sp, sp.spawnYaw ?? this.spawns[p.team].yaw); hud.showDeath(false); }
+        hud.setDeathTimer(`RESPAWN IN ${Math.max(0, p.respawnT).toFixed(1)}s${this.nextSpawnLoadoutIndex !== null ? `  ·  下次配裝 ${LOADOUT_KEYS[this.nextSpawnLoadoutIndex]}` : ''}`);
       } else {
         if (p.spectating && !p.spectating.alive) this.nextSpectate();
         if (p.deathT > 1.6) { hud.showDeath(false); hud.spectate(p.spectating ? `觀戰中：${p.spectating.name} · 左鍵切換隊友 · 等待下一回合` : '全隊陣亡 · 等待下一回合'); }
@@ -916,9 +939,10 @@ class Match {
     this.weapons.update(dt, input, mouse);
     this.physics.sync(dt, alpha);
     this.effects.update(dt);
-    for (const fn of this.builder.animated) fn(dt, this.time);
+    const rt = this.time + this.acc; // (the drawn moment between two steps)
+    for (const fn of this.builder.animated) fn(dt, rt);
     for (const mc of this.builder.mechs) mc.render(dt, alpha);
-    for (const m of this.builder.shafts) m.uniforms.uTime.value = this.time;
+    for (const m of this.builder.shafts) m.uniforms.uTime.value = rt;
     this.spotT -= dt; if (this.spotT <= 0) { this.spotT = 0.15; this.updateSpotting(); }
     this.soldierLOD();
     this.audio.setListener(this.camera.position, this.camera.getWorldDirection(TMP_V1));

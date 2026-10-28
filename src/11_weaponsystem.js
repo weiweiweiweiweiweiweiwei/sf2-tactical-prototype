@@ -184,10 +184,6 @@ class WeaponSystem extends Arsenal {
     this.fill = new THREE.DirectionalLight(0x9fc4ff, 0.35); this.scene.add(this.fill, this.fill.target);
     this.key = new THREE.DirectionalLight(0xfff0dc, 5); this.scene.add(this.key, this.key.target); // v16 camera-relative key light: the back of the gun catches highlights instead of reading as a black block
     this.flashLight = new THREE.PointLight(0xffaa33, 0, 8, 2); this.scene.add(this.flashLight); this.flashLightT = 0;
-    // v8 barrel smoke: pooled soft sprites in world space, emitted from the muzzle after sustained fire
-    this.smokeT = 0; this.wisps = [];
-    const smokeTex = game.app.tex.smoke();
-    for (let i = 0; i < 14; i++) { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: smokeTex, color: 0xd6d6d2, transparent: true, depthWrite: false, opacity: 0 })); s.visible = false; s.renderOrder = 8; this.scene.add(s); this.wisps.push({ s, t: 0, life: 0, v: new THREE.Vector3() }); }
     this.root = new THREE.Group(); this.scene.add(this.root);
     const models = game.app.models;
     this.vmPool = new Map(); // viewmodels are built once per weapon and reused when the loadout changes
@@ -253,25 +249,6 @@ class WeaponSystem extends Arsenal {
   }
   muzzleLight(strength) { this.flashLightT = 0.04; this.flashLight.intensity = this.ads ? 0 : 15 * strength; } // aimed, the gun is the sight picture: lit by its own flash the sight's inner faces flared white (even at 15 %)
 
-  _barrelSmoke(dt, w) {
-    const g = this.game, since = g.time - this.lastShotT;
-    this.heat = Math.max(0, this.heat - dt * (since < 0.15 ? 0.4 : 3.6));
-    if (this.heat > 3 && since > 0.12 && !this.scopedIn && w.vm.muzzle && w.vm.group.visible) {
-      this.smokeT -= dt;
-      if (this.smokeT <= 0) {
-        this.smokeT = 0.06 + Math.random() * 0.05;
-        const p = this.wisps.find((q) => q.t >= q.life);
-        if (p) { w.vm.group.updateMatrixWorld(); w.vm.muzzle.getWorldPosition(p.s.position); p.t = 0; p.life = 0.8 + Math.random() * 0.5; p.v.set(rand(-0.05, 0.05), 0.16 + Math.random() * 0.12, rand(-0.05, 0.05)); p.s.material.rotation = Math.random() * 6.28; p.s.visible = true; p.a = Math.min(1, this.heat / 10) * 0.32; }
-      }
-    }
-    for (const q of this.wisps) {
-      if (q.t >= q.life) { if (q.s.visible) q.s.visible = false; continue; }
-      q.t += dt; const k = q.t / q.life;
-      q.s.position.addScaledVector(q.v, dt); q.v.x += rand(-0.2, 0.2) * dt; q.v.z += rand(-0.2, 0.2) * dt;
-      const sz = 0.025 + k * 0.14; q.s.scale.set(sz, sz, 1); q.s.material.opacity = q.a * Math.sin(Math.PI * Math.min(1, k * 1.4)) * (1 - k);
-    }
-  }
-
   // Mouse buttons at event time: only ADS is decided here (toggle / hold is a local preference). Firing, knife and grenades
   // run from the latched FIRE / ALT bits of the next UserCmd (tick).
   onButton(btn, down) {
@@ -321,7 +298,7 @@ class WeaponSystem extends Arsenal {
     if (w.vm.sf2flash) w.vm.sf2flash.update(dt);
     if (this.flashLightT > 0) { this.flashLightT -= dt; if (w.vm.muzzle) { w.vm.group.updateMatrixWorld(); w.vm.muzzle.getWorldPosition(this.flashLight.position); } if (this.flashLightT <= 0) this.flashLight.intensity = 0; }
     if (w.vm.reticle) w.vm.reticle.material.opacity = clamp((this.adsT - 0.55) / 0.35, 0, 1);
-    this._barrelSmoke(dt, w);
+    // (v63g the barrel smoke after a burst is gone — user 10-28: SF2 has none)
 
     const spread = w.kind === 'knife' || w.kind === 'grenade' ? 0.006 : w.spread(this);
     const gap = 3 + Math.tan(spread) / Math.tan(THREE.MathUtils.degToRad(cam.fov / 2)) * (innerHeight / 2);

@@ -314,7 +314,7 @@ class WeaponModels {
     const V = THREE.Vector3, out = { group: g, nodes: {}, rig, mag: null, bolt: null, slide: null, charge: null, pin: null, nade: null, pump: null, cover: null, lhand: null };
     out.hipPos = new V(); out.adsPos = new V(); out.hipRot = new THREE.Euler(); out.adsRot = new THREE.Euler(); out.magMove = new V(); out.magRot = 0;
     out.muzzle = rig.model.getObjectByName('MUZZLE');
-    const sf = new SF2Flash(out.muzzle, o.flashScale ?? 0.5); if (sf.ok) out.sf2flash = sf; else out.flash = this._flash(out.muzzle, 0, 0, 0, o.flash ?? 0.2); // v62m SF2's own flash
+    const sf = new SF2Flash(out.muzzle, o.flashScale ?? 0.4); if (sf.ok) out.sf2flash = sf; else out.flash = this._flash(out.muzzle, 0, 0, 0, o.flash ?? 0.2); // v62m SF2's own flash
     if (o.reticle) out.reticle = this._reticle(g, 0, true, o.reticleScale || 1, [0.25, 1, 0.3]);
     out.reloadSounds = rig.reloadSounds;
     return out;

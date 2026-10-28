@@ -82,7 +82,9 @@ class SF2Rig {
    × SizeMultiplyLife), colour (ColorOverLife; additive, over 1 burns to the white core), start spin (turns), offset along
    the barrel. Hip: front flare, 4×4 explosion sequence, star flare, lens glow; aimed: the front flare alone (its four
    prongs round the post) and one slow smoke puff (translucent). scale 0.5 (fromRig): SF2's sizes as they are filled the middle
-   of the hip view white and spread the aimed flare's prongs past the rear sight; half reads as SF2's burst (tools/out/_flashshot.mjs). */
+   of the hip view white and spread the aimed flare's prongs past the rear sight; half reads as SF2's burst (tools/out/_flashshot.mjs).
+   v63g (user 10-28: smaller, 0.8 opacity): scale 0.4 and every sprite at 0.8. */
+const FLASH_OPACITY = 0.8;
 const SF2_FLASH = {
   hip: [
     { tex: 'front', life: [0.03, 0.06], size: [10, 21], grow: [1.732, 1.732], rgb: [0.544, 0.402, 0.248], fadeFrom: 0.3, spin: 0.05 },
@@ -92,7 +94,7 @@ const SF2_FLASH = {
   ],
   ads: [
     { tex: 'front', life: [0.03, 0.06], size: [10, 27], grow: [1.732, 1.732], rgb: [4.657, 1.89, 0.983], spin: 0.03 },
-    { tex: 'smoke', life: [0.5, 0.8], size: [30, 50], grow: [1.008, 2.295], rgb: [0.78, 0.78, 0.78], vel: [20, 50], smoke: true },
+    // (v63g SF2's thin smoke puff, M_thin_smoke_Z_06, left out at the user's word — 10-28)
   ],
 };
 class SF2Flash {
@@ -110,7 +112,7 @@ class SF2Flash {
       for (const d of defs) {
         let map = T[d.tex];
         if (d.sub) { map = map.clone(); map.repeat.set(1 / d.sub, 1 / d.sub); } // (a clone shares the image; its own offset per frame)
-        const m = new THREE.SpriteMaterial({ map, transparent: true, depthWrite: false, blending: d.smoke ? THREE.NormalBlending : THREE.AdditiveBlending, opacity: d.smoke ? 0 : 1 });
+        const m = new THREE.SpriteMaterial({ map, transparent: true, depthWrite: false, blending: d.smoke ? THREE.NormalBlending : THREE.AdditiveBlending, opacity: d.smoke ? 0 : FLASH_OPACITY });
         const s = new THREE.Sprite(m); s.visible = false; s.renderOrder = d.smoke ? 9 : 10; muzzle.add(s);
         this.layers[mode].push({ d, s, t: 0, life: 0, size: 0, x: 0, v: 0 });
       }

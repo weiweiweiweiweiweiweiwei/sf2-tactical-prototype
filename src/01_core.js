@@ -21,7 +21,7 @@ import { Pass, FullScreenQuad } from 'three/addons/postprocessing/Pass.js';
    ===================================================================== */
 const CFG = {
   gravity: -20,
-  fixedStep: 1 / 120,
+  fixedStep: 1 / 60, // v63g the whole simulation (Match.tick) — was 1/120 for movement, weapons and physics only
   player: {
     radius: 0.34, height: 1.8, crouchHeight: 1.2, eye: 1.64, crouchEye: 1.06,
     stepHeight: 0.45, airStep: 0.36, jumpVel: 7.0, jumpBuffer: 0.12,

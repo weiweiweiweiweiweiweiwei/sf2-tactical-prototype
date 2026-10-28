@@ -205,7 +205,6 @@ class Player extends Human {
     else { this.recoilPitch = damp(this.recoilPitch, this.recoilTP, 42, dt); this.recoilYaw = damp(this.recoilYaw, this.recoilTY, 42, dt); }
     this.punchV += (-this.punch * 160 - this.punchV * 16) * dt; this.punch += this.punchV * dt;
     this.fovPunch = damp(this.fovPunch, 0, 10, dt); this.shake = Math.max(0, this.shake - dt * 2.5);
-    if (this.spawnProtect > 0) this.spawnProtect = Math.max(0, this.spawnProtect - dt);
     this.eyeH = damp(this.eyeH, this.motor.crouching ? CFG.player.crouchEye - (this.slideT > 0 ? 0.12 : 0) : CFG.player.eye, 16, dt);
     this.slideK = damp(this.slideK, this.slideT > 0 ? 1 : 0, 10, dt);
     this.mantleK = damp(this.mantleK, this.mantleT > 0 ? 1 : 0, 18, dt);
