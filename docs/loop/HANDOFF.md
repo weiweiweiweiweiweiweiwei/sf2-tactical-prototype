@@ -6,7 +6,7 @@
 
 ## 待本機（雲端寫，本機做）
 
-### H3 ⬜ SF2 原版素材（`D:\SpecialForce2`，UModel；流程見 `docs/pipelines/guns.md`「SF2 原版槍＋原版動畫」）
+### H3 🔄 SF2 原版素材（`D:\SpecialForce2`，UModel；流程見 `docs/pipelines/guns.md`「SF2 原版槍＋原版動畫」）
 - M16A3：找平頂機匣的照門或瞄具零件（不在類別預設裡，搜尋 `weapon_common_part*`、`rif_m16a3*` 的全部零件）。找到後照第 7 步加進 `tools/sf2_rig_build.mjs`，再取消 `tools/sf2_weapon_table.py` 裡 m16a3 那行的註解。
 - QBZ-97：提把上的瞄準線（現在眼睛落在照門本體上），對照 `.props.txt` 的插槽。
 - MP5K：照第 7 步新增（衝鋒槍類別）。
