@@ -56,7 +56,7 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
 /* v64f SF2's own sniper view (its SF2 snipers: the K14), measured on the user's SF2 K14 shots (10-28, 2000×1124): a dark tube
    (sni_scope_zin) whose bright lens is a circle of 71vh radius with a soft brown inner edge; the HUD reticle (hud_sniper, a Flash
    movie): a centre ring, a vertical line from 13.8vh above down to the ring's bottom, a heavier horizontal bar out to ±18.9vh
-   broken inside the ring with up-ticks every 3vh (tall 4vh / short 1.3vh), an orange-red dot. Same size on both zoom steps.
+   broken inside the ring with up-ticks every 3vh (tall 4vh / short 1.3vh), an orange-red dot (v64q user: a touch smaller, 80 % opaque, a slight glow round it). Same size on both zoom steps.
    v64g (the user's SF2 shots, the clearest at 2000×1182; R = the ring's radius): the bar heavier (0.065R) out to 2.91R, a thin line across
    the ring (the dot on it), the thin vertical from 2.13R above down to a heavy post (0.087R wide) from 1.43R to 2.52R below. */
 #scope.sf2 .lh,#scope.sf2 .lv,#scope.sf2 .tk,#scope.sf2 .cd,#scope.sf2 .zl{display:none}
@@ -733,7 +733,7 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
 <div id="hud" class="hidden minimal">
   <div id="vignette"></div><div id="lowhp"></div><div id="flashWhite"></div>
   <div id="scope"><div class="lens"></div><div class="lh"></div><div class="lv"></div>
-    <div class="tk l"></div><div class="tk r"></div><div class="tk t"></div><div class="tk b"></div><div class="cd"></div><div class="zl" id="zoomLbl"></div><svg class="ret" viewBox="-50 -50 100 100"><g stroke="#111" stroke-opacity=".88" fill="none"><circle r="6.6" stroke-width=".2"/><line x1="0" y1="-14.1" x2="0" y2="9.4" stroke-width=".2"/><line x1="-6.6" y1="0" x2="6.6" y2="0" stroke-width=".2"/><g stroke-width=".45"><line x1="-18.9" y1="0" x2="-6.6" y2="0"/><line x1="6.6" y1="0" x2="18.9" y2="0"/></g><line x1="0" y1="9.4" x2="0" y2="16.6" stroke-width=".57"/><g stroke-width=".2"><line x1="-18.9" y1="0" x2="-18.9" y2="-4.0"/><line x1="18.9" y1="0" x2="18.9" y2="-4.0"/><line x1="-16.0" y1="0" x2="-16.0" y2="-1.33"/><line x1="16.0" y1="0" x2="16.0" y2="-1.33"/><line x1="-12.85" y1="0" x2="-12.85" y2="-4.0"/><line x1="12.85" y1="0" x2="12.85" y2="-4.0"/><line x1="-9.8" y1="0" x2="-9.8" y2="-1.33"/><line x1="9.8" y1="0" x2="9.8" y2="-1.33"/><line x1="-6.85" y1="0" x2="-6.85" y2="-4.0"/><line x1="6.85" y1="0" x2="6.85" y2="-4.0"/></g></g><circle r=".57" fill="#ff5a24"/></svg></div>
+    <div class="tk l"></div><div class="tk r"></div><div class="tk t"></div><div class="tk b"></div><div class="cd"></div><div class="zl" id="zoomLbl"></div><svg class="ret" viewBox="-50 -50 100 100"><g stroke="#111" stroke-opacity=".88" fill="none"><circle r="6.6" stroke-width=".2"/><line x1="0" y1="-14.1" x2="0" y2="9.4" stroke-width=".2"/><line x1="-6.6" y1="0" x2="6.6" y2="0" stroke-width=".2"/><g stroke-width=".45"><line x1="-18.9" y1="0" x2="-6.6" y2="0"/><line x1="6.6" y1="0" x2="18.9" y2="0"/></g><line x1="0" y1="9.4" x2="0" y2="16.6" stroke-width=".57"/><g stroke-width=".2"><line x1="-18.9" y1="0" x2="-18.9" y2="-4.0"/><line x1="18.9" y1="0" x2="18.9" y2="-4.0"/><line x1="-16.0" y1="0" x2="-16.0" y2="-1.33"/><line x1="16.0" y1="0" x2="16.0" y2="-1.33"/><line x1="-12.85" y1="0" x2="-12.85" y2="-4.0"/><line x1="12.85" y1="0" x2="12.85" y2="-4.0"/><line x1="-9.8" y1="0" x2="-9.8" y2="-1.33"/><line x1="9.8" y1="0" x2="9.8" y2="-1.33"/><line x1="-6.85" y1="0" x2="-6.85" y2="-4.0"/><line x1="6.85" y1="0" x2="6.85" y2="-4.0"/></g></g><defs><radialGradient id="k14dot"><stop offset="0" stop-color="#ff5a24" stop-opacity=".5"/><stop offset="1" stop-color="#ff5a24" stop-opacity="0"/></radialGradient></defs><circle r="1.05" fill="url(#k14dot)"/><circle r=".48" fill="#ff5a24" fill-opacity=".8"/></svg></div>
   <div id="markers"></div>
   <div id="crosshair"><div class="ch t"></div><div class="ch b"></div><div class="ch l"></div><div class="ch r"></div></div>
   <div id="aimName"></div><div id="charge"><div class="fill" id="chargeFill"></div></div>
@@ -15877,10 +15877,11 @@ var SF2Camo = class _SF2Camo {
           sh.fragmentShader = "uniform float uTime, uKill; uniform sampler2D uCamoBase, uCamoShine, uCamoKill;\n" + sh.fragmentShader.replace("#include <map_fragment>", `#include <map_fragment>
               vec2 cu = vMapUv * 2.0; // camo_value 2
               vec3 cb = texture2D(uCamoBase, vec2(cu.x + uTime * 0.12, cu.y)).rgb;
-              diffuseColor.rgb = diffuseColor.rgb * 0.16 + cb * 0.3;`).replace("#include <emissivemap_fragment>", `#include <emissivemap_fragment>
+              diffuseColor.rgb = diffuseColor.rgb * 0.07 + cb * 0.06; // v64q (user, SF2's own picture): near-black under bright lines`).replace("#include <emissivemap_fragment>", `#include <emissivemap_fragment>
               float sweep = texture2D(uCamoBase, vec2(cu.x * 0.5 - uTime * 0.3, 0.5)).g; // a brighter band running along the lines
               vec3 cs = texture2D(uCamoShine, cu + vec2(uTime * 0.05, 0.0)).rgb;
-              totalEmissiveRadiance += cs * (0.5 + 2.2 * sweep) * (1.0 - 0.6 * uKill);
+              float ln = smoothstep(0.012, 0.09, dot(cs, vec3(0.3, 0.6, 0.1))); // v64q contrast (user, SF2's own picture): the lines cut hard, bright green on near-black
+              totalEmissiveRadiance += ln * vec3(0.02, 1.0, 0.22) * (0.75 + 0.9 * sweep) * (1.0 - 0.6 * uKill);
               totalEmissiveRadiance += texture2D(uCamoKill, cu * 0.75 + vec2(0.0, uTime * 0.35)).rgb * uKill * 1.4;`);
         };
         m.customProgramCacheKey = () => "sf2camo_" + id;
@@ -15890,14 +15891,14 @@ var SF2Camo = class _SF2Camo {
     });
   }
   kill() {
-    this.killT = 1.5;
+    this.killT = 4.5;
   }
-  // ActionCamoKillTime
+  // SF2's ActionCamoKillTime is 1.5 s; v64q the user asked for 3× that
   update(dt) {
     if (!this.ok) return;
     this.u.uTime.value = (this.u.uTime.value + dt) % 400;
     this.killT = Math.max(0, this.killT - dt);
-    this.u.uKill.value = this.killT > 1.2 ? (1.5 - this.killT) / 0.3 : this.killT / 1.2;
+    this.u.uKill.value = this.killT > 4.2 ? (4.5 - this.killT) / 0.3 : Math.min(1, this.killT / 1.5);
   }
 };
 

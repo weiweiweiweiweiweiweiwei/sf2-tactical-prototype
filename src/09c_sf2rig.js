@@ -176,11 +176,12 @@ class SF2Camo {
             .replace('#include <map_fragment>', `#include <map_fragment>
               vec2 cu = vMapUv * 2.0; // camo_value 2
               vec3 cb = texture2D(uCamoBase, vec2(cu.x + uTime * 0.12, cu.y)).rgb;
-              diffuseColor.rgb = diffuseColor.rgb * 0.16 + cb * 0.3;`)
+              diffuseColor.rgb = diffuseColor.rgb * 0.07 + cb * 0.06; // v64q (user, SF2's own picture): near-black under bright lines`)
             .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
               float sweep = texture2D(uCamoBase, vec2(cu.x * 0.5 - uTime * 0.3, 0.5)).g; // a brighter band running along the lines
               vec3 cs = texture2D(uCamoShine, cu + vec2(uTime * 0.05, 0.0)).rgb;
-              totalEmissiveRadiance += cs * (0.5 + 2.2 * sweep) * (1.0 - 0.6 * uKill);
+              float ln = smoothstep(0.012, 0.09, dot(cs, vec3(0.3, 0.6, 0.1))); // v64q contrast (user, SF2's own picture): the lines cut hard, bright green on near-black
+              totalEmissiveRadiance += ln * vec3(0.02, 1.0, 0.22) * (0.75 + 0.9 * sweep) * (1.0 - 0.6 * uKill);
               totalEmissiveRadiance += texture2D(uCamoKill, cu * 0.75 + vec2(0.0, uTime * 0.35)).rgb * uKill * 1.4;`);
         };
         m.customProgramCacheKey = () => 'sf2camo_' + id;
@@ -189,11 +190,11 @@ class SF2Camo {
       o.material = done.get(o.material);
     });
   }
-  kill() { this.killT = 1.5; } // ActionCamoKillTime
+  kill() { this.killT = 4.5; } // SF2's ActionCamoKillTime is 1.5 s; v64q the user asked for 3× that
   update(dt) {
     if (!this.ok) return;
     this.u.uTime.value = (this.u.uTime.value + dt) % 400; this.killT = Math.max(0, this.killT - dt);
-    this.u.uKill.value = this.killT > 1.2 ? (1.5 - this.killT) / 0.3 : this.killT / 1.2; // flares in 0.3 s, fades over the rest
+    this.u.uKill.value = this.killT > 4.2 ? (4.5 - this.killT) / 0.3 : Math.min(1, this.killT / 1.5); // flares in 0.3 s, holds, fades over the last 1.5 s
   }
 }
 
