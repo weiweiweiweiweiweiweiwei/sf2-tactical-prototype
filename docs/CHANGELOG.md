@@ -1172,3 +1172,9 @@
 - 使用者 10-28 選 6A：README 改成說明部分槍枝使用 SF2 原版素材（原本寫「沒有使用任何 SF2 原始檔案」已經不正確）。
 - 驗證：`analyze`、`build`、`check.mjs` 都過。
 
+
+### v63f（2026-10-28，本機）：衝刺中跳躍，空中槍枝回到一般姿勢（照 SF2）
+- 使用者：按住 Shift 奔跑時跳躍，空中那段槍還在甩。
+- SF2 原版（反編譯 `SFPawn.IsSprintPossible`）：衝刺必須 `Physics == PHYS_Walking`；`DoJump` 把物理設成 falling，`SetSprinting` 就把衝刺關掉、`SetWeaponSprinting(false)`——空中不是衝刺狀態，落地仍按著 W+Shift 才再衝刺。
+- `src/12_player.js`：`sprinting` 要在地面；空中的移動速度沿用起跳時的衝刺（`sprintAir`），跳的距離不變。散布也跟著 SF2：空中用跳躍的散布，不是衝刺的。
+- 驗證（`tools/out/_sprintjump.mjs`，倉庫）：空中 41 格衝刺狀態 41 → 0～1（起跳那一步）、槍的奔跑姿勢權重 1.0 → 由 0.82 降到 0，落地後回到 0.98；空中位移 0.65 m 新舊相同；`check.mjs` 過。

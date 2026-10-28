@@ -127,10 +127,15 @@ class Human extends Combatant {
     const ws = this.gear(), w = ws.current;
     if (this.sprintBlock > 0) this.sprintBlock -= h;
     const intent = shift && f > 0; if (!intent) this.adsSprintLock = false;
-    this.sprinting = intent && !this.adsSprintLock && !m.crouching && !w.reloading && this.sprintBlock <= 0 && !(w.kind === 'grenade' && w.state !== 'idle'); // v45: W+Shift while aimed drops the sight and sprints (any gun)
+    const canSprint = intent && !this.adsSprintLock && !m.crouching && !w.reloading && this.sprintBlock <= 0 && !(w.kind === 'grenade' && w.state !== 'idle'); // v45: W+Shift while aimed drops the sight and sprints (any gun)
+    // v63f SF2: SFPawn.IsSprintPossible needs Physics == PHYS_Walking — a jump (PHYS_Falling) ends the sprint, the weapon leaves its
+    // run pose (SetWeaponSprinting false) and the air spread is the jump's; landing with W+Shift held sprints again. The run's pace
+    // is kept through the air (sprintAir: sprinting at take-off), so the jump carries as far as before
+    if (m.grounded) this.sprintAir = canSprint;
+    this.sprinting = canSprint && m.grounded;
     m.edgeGuard = crouchKey && m.grounded; // v59 SF2: holding crouch (Ctrl / C) at a ledge keeps you on it; Shift only sprints
     let speed = w.moveSpeed * (this.carrying ? 0.88 : 1);
-    if (m.crouching) speed *= P.crouchMult; else if (this.sprinting) speed *= P.sprintMult;
+    if (m.crouching) speed *= P.crouchMult; else if (this.sprinting || (canSprint && this.sprintAir)) speed *= P.sprintMult;
     if (ws.ads) speed *= w.adsMove ?? 1;
     if (w.reloading) speed *= RELOAD_MOVE; // v34: reloading = slower walk, no sprint
     m.step(h, wx, wz, len > 0 ? speed : 0);

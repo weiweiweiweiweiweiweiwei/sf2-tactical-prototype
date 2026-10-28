@@ -19761,11 +19761,13 @@ var Human = class extends Combatant {
     if (this.sprintBlock > 0) this.sprintBlock -= h;
     const intent = shift && f > 0;
     if (!intent) this.adsSprintLock = false;
-    this.sprinting = intent && !this.adsSprintLock && !m.crouching && !w.reloading && this.sprintBlock <= 0 && !(w.kind === "grenade" && w.state !== "idle");
+    const canSprint = intent && !this.adsSprintLock && !m.crouching && !w.reloading && this.sprintBlock <= 0 && !(w.kind === "grenade" && w.state !== "idle");
+    if (m.grounded) this.sprintAir = canSprint;
+    this.sprinting = canSprint && m.grounded;
     m.edgeGuard = crouchKey && m.grounded;
     let speed = w.moveSpeed * (this.carrying ? 0.88 : 1);
     if (m.crouching) speed *= P.crouchMult;
-    else if (this.sprinting) speed *= P.sprintMult;
+    else if (this.sprinting || canSprint && this.sprintAir) speed *= P.sprintMult;
     if (ws.ads) speed *= w.adsMove ?? 1;
     if (w.reloading) speed *= RELOAD_MOVE;
     m.step(h, wx, wz, len > 0 ? speed : 0);
