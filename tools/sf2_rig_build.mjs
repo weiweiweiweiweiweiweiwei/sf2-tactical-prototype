@@ -101,6 +101,13 @@ const G = {
   p90: gun('p90', { pkg: 'smg_p90', extraParts: [['dot_a', 'p90/smg_p90/SkeletalMesh3/smg_p90_dot_a.gltf', 'p90_dot_a'], ['dot_b', 'p90/smg_p90/SkeletalMesh3/smg_p90_dot_b.gltf', 'p90_dot_b']] }),
   ump45: gun('ump45', { pkg: 'smg_ump45', hoodedPost: true, socketSights: sight('ump45/smg_ump45/SkeletalMesh3/smg_upm45_sight_up.gltf', 'ump45_sight') }),
   mp7: gun('mp7', { pkg: 'smg_mp7', texMap: { stock: 'mp7_stock_a' }, socketSights: sight('mp7/smg_mp7_sight/SkeletalMesh3/smg_mp7_sight_up.gltf', 'mp7_sight') }),
+  // v65g docs/loop/GUNS.md D: machine guns (their sight parts on the Sight socket; the belt guns' ammo belts left out)
+  m249: gun('m249', { pkg: 'mg_spw', tex: 'spw', anim: '1st_anim_spw', hoodedPost: true, socketSights: sight('m249/mg_spw/SkeletalMesh3/mg_spw_sight_up.gltf', 'spw_sight') }),
+  rpk: gun('rpk', { pkg: 'mg_rpk74', tex: 'rpk74', anim: '1st_anim_rpk74', socketSights: sight('rpk/mg_rpk74/SkeletalMesh3/mg_rpk74_sight_up.gltf', 'rpk74_sight') }),
+  mg4: gun('mg4', { pkg: 'mg_mg4', hoodedPost: true, socketSights: sight('mg4/mg_mg4_sight/SkeletalMesh3/mg_mg4_sight_up.gltf', 'mg4_sight_bw') }), // (its sight's sheet: mg4_sight_bw)
+  k3: gun('k3', { pkg: 'mg_K3', stem: 'mg_k3', anim: '1st_anim_K3', hoodedPost: true, socketSights: sight('k3/mg_K3/SkeletalMesh3/mg_k3_sight_up.gltf', 'k3_sight') }),
+  l86a1: gun('l86a1', { pkg: 'mg_l86a1', socketSights: sight('l86a1/mg_l86a1_sight/SkeletalMesh3/mg_l86a1_sight_up.gltf', 'l86a1_sight') }),
+  hk23e: gun('hk23e', { pkg: 'mg_hk23', tex: 'hk23', anim: '1st_anim_hk23', hoodedPost: true, socketSights: sight('hk23e/mg_hk23/SkeletalMesh3/mg_hk23_sight_up.gltf', 'hk23_sight') }),
   trg: gun('trg', { pkg: 'sni_trg', stem: 'sni_trg', tex: 'sni_trg', anim: '1st_ani_trg', optic: ZEISS_SCOPE }),
 }[GID];
 if (!G) throw new Error(`unknown gun ${GID}`);
