@@ -41,6 +41,9 @@ const REFLEX = { ...PART('weapon_common_part01', 'DOT_REFLEX'), tex: 'reflex', r
 // roll: read through its own bind it lies a quarter turn about the bore (the elevation turret on the left — the user's SF2 K14
 // shots have it on top), so it is turned about the socket's forward axis (UE x) before placing
 const K14_SCOPE = { ...PART('weapon_common_part01', 'scope_k14_bender'), tex: 'bender_scope', noAim: true, roll: +(process.env.ROLL ?? 90) };
+// v64s the TRG-41's scope (SFCItem_TRG -> SFCItem_Common_Scope_Zeiess: ScopeMesh scope_zeiess, SightType 18, reticle
+// common_sight.ScopeView_Reticle_03); its root bind is the Bender's, so the same quarter turn about its mount
+const ZEISS_SCOPE = { ...PART('weapon_common_part01', 'scope_zeiess'), tex: 'zeiss', noAim: true, roll: +(process.env.ROLL ?? 90) };
 const SIL = (k) => ({ ...PART('weapon_common_part', `silencer_ar_type_${k}`), tex: `silencer_type_${k}` });
 const G = {
   // v62o the rear sight is the A2 carry handle (rif_m4a1_handle_a, its own sheet handle_d / _n in weapon_common_part): SF2's ADS picture (user 10-27) has the aperture ring standing above the handle's ears; the detachable
@@ -74,6 +77,8 @@ const G = {
   scarl_eo: gun('scarl', { pkg: 'rif_scar_L', tex: 'scar_L', anim: '1st_anim_scar_L', optic: EOTECH, silencer: SIL('c') }),
   // v64 the K14 bolt-action sniper (sni_k14); v64b its scope on the body's Scope socket (K14_SCOPE)
   k14: gun('k14', { pkg: 'sni_k14', stem: 'sni_k14', optic: K14_SCOPE }),
+  // v64s the TRG-41 (sni_trg; its animset is 1st_ani_trg) on the Zeiss scope
+  trg: gun('trg', { pkg: 'sni_trg', stem: 'sni_trg', tex: 'sni_trg', anim: '1st_ani_trg', optic: ZEISS_SCOPE }),
 }[GID];
 if (!G) throw new Error(`unknown gun ${GID}`);
 const TEX = {

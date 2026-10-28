@@ -28,6 +28,9 @@ GUNS = {  # id: (SF2 class, rig, sound, [magout, magin, charge])
     # the 2D scope stays the game's (zoom levels like the M40A1), and SF2's 20° kick block is left out (the bolt drops the scope anyway)
     'k14': ('K14', 'k14', 'k14', [0.31, 0.48, 0.75], {'adsType': '2d_scope_overlay', 'adsFov': 20, 'adsSpeed': 17, 'vmAdsHFov': None, 'sf2Recoil': None,
                                                        'sf2ReloadSounds': [[0.14, 'boltback'], [0.31, 'magout'], [0.48, 'magin'], [0.75, 'charge']]}),
+    # v64s the TRG-41: its Reload clip is the K14's length (91 frames) and order — bolt open, mag out / in, bolt shut — marks as the K14's
+    'trg': ('TRG', 'trg', 'trg', [0.31, 0.48, 0.75], {'adsType': '2d_scope_overlay', 'adsFov': 20, 'adsSpeed': 17, 'vmAdsHFov': None, 'sf2Recoil': None,
+                                                       'sf2ReloadSounds': [[0.14, 'boltback'], [0.31, 'magout'], [0.48, 'magin'], [0.75, 'charge']]}),
 }
 REC = ['nextCrossVert', 'maxCrossVert', 'vertInc', 'vertDec', 'crossDecreasInc', 'incline', 'forceCorrection', 'domDefault', 'domZoomDefault',
        'domInc', 'domMax', 'domMin', 'domDec', 'maxMovingValue', 'mulValueRun', 'mulValueJump']

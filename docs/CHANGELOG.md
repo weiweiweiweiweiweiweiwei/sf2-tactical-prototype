@@ -1382,3 +1382,26 @@
 - 驗證：
   - `tools/out/_walkspeed.mjs`：各組合的負重和速度如上表；實際走路量到 AK-103 4.942、狙擊槍 4.826 m/s，和公式一致。
   - `check.mjs` CHECK_OK。
+
+
+### v64s（本機，2026-10-28）：SF2 原版 TRG-41（使用者指定的第一把狙擊槍）
+- 模型與動畫：
+  - `sni_trg` 的槍身、槍管、彈匣、槍托，加上 SF2 原版手臂，綁在同一副骨架上。
+  - 動畫 `1st_ani_trg` 有 14 段：開槍含拉栓、換彈 91 格、開鏡、衝刺等。
+  - 狙擊鏡是 SF2 給 TRG 的 `Common_Scope_Zeiess`（`weapon_common_part01` 的 `scope_zeiess`，貼圖 `zeiss_*`）。它的根骨骼和 K14 的 Bender 鏡相同，所以一樣繞鏡座轉 1/4 圈。
+  - 建模：`tools/sf2_rig_build.mjs trg` 產生 `tools/guns/trg_sf2_rig.glb`（1061 KB）。
+- 數值（`SFCWeaponTRG`，`tools/sf2_weapon_table.py`）：
+  - 射擊間隔 1.2 s；換彈 3.3 s，動畫 3.45 s；拔槍 0.7 s。
+  - 開鏡兩段：水平視角 55°，再 20°。
+  - 重量 7.3：走路速度和其他狙擊槍相同。
+  - 傷害照 K14 的平衡。
+- 聲音：`Sound_TRG` 的三種槍聲、遠方槍聲、拉栓、退彈匣、裝彈匣、上膛、拔槍（`tools/sfx_sf2.mjs … trg`）。
+- 鏡內十字：照 SF2 的 Zeiss 鏡（`ScopeView_Reticle_03`）。
+  - 細紅十字貫穿整個鏡筒，中心是 2 px 的粉紫點。
+  - HUD 改成每把槍可指定自己的十字（`def.sf2Reticle`：K14 是 `bender`、TRG 是 `zeiss`；`#scope[data-ret]`）。
+- 倉庫：狙擊類第一把，一般清單也有。
+- 驗證：
+  - `_rigshot.mjs` 截圖：腰射時鏡在槍上方、轉鈕朝上；開鏡兩段都是 Zeiss 十字；開槍有拉栓動作。
+  - `_reloadtime.mjs`：子彈 3.3 s 補進、動畫播到 3.45 s。
+  - `check.mjs` CHECK_OK。
+- 還沒做：TRG 的腰射位置沒有對 SF2 截圖（K14 有）。目前用狙擊鏡的預設推法，需要使用者的 SF2 腰射截圖才能校。

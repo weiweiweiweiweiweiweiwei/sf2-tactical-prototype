@@ -62,7 +62,7 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
 #scope.sf2 .lh,#scope.sf2 .lv,#scope.sf2 .tk,#scope.sf2 .cd,#scope.sf2 .zl{display:none}
 #scope.sf2 .lens{width:142vh;height:142vh;box-shadow:0 0 0 200vmax #070504,inset 0 0 9vh 4vh rgba(12,7,4,.97),inset 0 0 22vh 2vh rgba(40,24,14,.55);background:none}
 #scope .ret{display:none;position:absolute;left:50%;top:50%;width:100vh;height:100vh;transform:translate(-50%,-50%);overflow:visible}
-#scope.sf2 .ret{display:block}
+#scope.sf2[data-ret="bender"] .ret.bender,#scope.sf2[data-ret="zeiss"] .ret.zeiss{display:block} /* v64s each scope its own SF2 reticle (common_sight: the K14's Bender ScopeView_Reticle_06, the TRG-41's Zeiss _03) */
 #scope .zl{position:absolute;right:calc(50% - 44vh);bottom:calc(50% - 40vh);font-weight:700;color:rgba(255,255,255,.5);font-size:14px;letter-spacing:2px}
 
 #vignette{position:absolute;inset:0;opacity:0;background:radial-gradient(ellipse at center,rgba(0,0,0,0) 40%,rgba(150,0,0,.55) 78%,rgba(200,0,0,.9) 100%)}
@@ -733,7 +733,7 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
 <div id="hud" class="hidden minimal">
   <div id="vignette"></div><div id="lowhp"></div><div id="flashWhite"></div>
   <div id="scope"><div class="lens"></div><div class="lh"></div><div class="lv"></div>
-    <div class="tk l"></div><div class="tk r"></div><div class="tk t"></div><div class="tk b"></div><div class="cd"></div><div class="zl" id="zoomLbl"></div><svg class="ret" viewBox="-50 -50 100 100"><g stroke="#111" stroke-opacity=".88" fill="none"><circle r="6.6" stroke-width=".2"/><line x1="0" y1="-14.1" x2="0" y2="9.4" stroke-width=".2"/><line x1="-6.6" y1="0" x2="6.6" y2="0" stroke-width=".2"/><g stroke-width=".45"><line x1="-18.9" y1="0" x2="-6.6" y2="0"/><line x1="6.6" y1="0" x2="18.9" y2="0"/></g><line x1="0" y1="9.4" x2="0" y2="16.6" stroke-width=".57"/><g stroke-width=".2"><line x1="-18.9" y1="0" x2="-18.9" y2="-4.0"/><line x1="18.9" y1="0" x2="18.9" y2="-4.0"/><line x1="-16.0" y1="0" x2="-16.0" y2="-1.33"/><line x1="16.0" y1="0" x2="16.0" y2="-1.33"/><line x1="-12.85" y1="0" x2="-12.85" y2="-4.0"/><line x1="12.85" y1="0" x2="12.85" y2="-4.0"/><line x1="-9.8" y1="0" x2="-9.8" y2="-1.33"/><line x1="9.8" y1="0" x2="9.8" y2="-1.33"/><line x1="-6.85" y1="0" x2="-6.85" y2="-4.0"/><line x1="6.85" y1="0" x2="6.85" y2="-4.0"/></g></g><defs><radialGradient id="k14dot"><stop offset="0" stop-color="#ff5a24" stop-opacity=".5"/><stop offset="1" stop-color="#ff5a24" stop-opacity="0"/></radialGradient></defs><circle r="1.05" fill="url(#k14dot)"/><circle r=".48" fill="#ff5a24" fill-opacity=".8"/></svg></div>
+    <div class="tk l"></div><div class="tk r"></div><div class="tk t"></div><div class="tk b"></div><div class="cd"></div><div class="zl" id="zoomLbl"></div><svg class="ret bender" viewBox="-50 -50 100 100"><g stroke="#111" stroke-opacity=".88" fill="none"><circle r="6.6" stroke-width=".2"/><line x1="0" y1="-14.1" x2="0" y2="9.4" stroke-width=".2"/><line x1="-6.6" y1="0" x2="6.6" y2="0" stroke-width=".2"/><g stroke-width=".45"><line x1="-18.9" y1="0" x2="-6.6" y2="0"/><line x1="6.6" y1="0" x2="18.9" y2="0"/></g><line x1="0" y1="9.4" x2="0" y2="16.6" stroke-width=".57"/><g stroke-width=".2"><line x1="-18.9" y1="0" x2="-18.9" y2="-4.0"/><line x1="18.9" y1="0" x2="18.9" y2="-4.0"/><line x1="-16.0" y1="0" x2="-16.0" y2="-1.33"/><line x1="16.0" y1="0" x2="16.0" y2="-1.33"/><line x1="-12.85" y1="0" x2="-12.85" y2="-4.0"/><line x1="12.85" y1="0" x2="12.85" y2="-4.0"/><line x1="-9.8" y1="0" x2="-9.8" y2="-1.33"/><line x1="9.8" y1="0" x2="9.8" y2="-1.33"/><line x1="-6.85" y1="0" x2="-6.85" y2="-4.0"/><line x1="6.85" y1="0" x2="6.85" y2="-4.0"/></g></g><defs><radialGradient id="k14dot"><stop offset="0" stop-color="#ff5a24" stop-opacity=".5"/><stop offset="1" stop-color="#ff5a24" stop-opacity="0"/></radialGradient></defs><circle r="1.05" fill="url(#k14dot)"/><circle r=".48" fill="#ff5a24" fill-opacity=".8"/></svg><svg class="ret zeiss" viewBox="-50 -50 100 100"><g stroke="#ff0000" stroke-width=".18"><line x1="-70" y1="0" x2="70" y2="0"/><line x1="0" y1="-70" x2="0" y2="70"/></g><circle r=".36" fill="#ff55ff"/></svg></div>
   <div id="markers"></div>
   <div id="crosshair"><div class="ch t"></div><div class="ch b"></div><div class="ch l"></div><div class="ch r"></div></div>
   <div id="aimName"></div><div id="charge"><div class="fill" id="chargeFill"></div></div>
@@ -2522,6 +2522,40 @@ var WEAPON_DATABASE = {
     // v64f zoomHFovs: SF2's own two steps, horizontal like UE3 — fZoomedFOV 45, then 20 (SFPawn's CamFOVSniperZoomIn2nd; the user's SF2 shots: step 2 ≈ 2.5× step 1)
     desc: "SF2 原版 K14（衝擊波）：韓國栓動狙擊槍，身體 1 發，開鏡快。"
   },
+  // v64s SF2's own TRG-41 (sni_trg on the Zeiss scope, tools/sf2_rig_build.mjs trg; user 10-28's first sniper): timing, zoom and
+  // recoil from SFCWeaponTRG (SF2_WEAPONS), its scope's own reticle (Zeiss: ScopeView_Reticle_03); damage on the K14's balance
+  trg: {
+    name: "TRG-41",
+    type: "sniper",
+    slot: "primary",
+    damageNear: 110,
+    damageFar: 96,
+    falloffStart: 60,
+    falloffEnd: 200,
+    fireRate: 1.2,
+    recoilPitch: 0.065,
+    recoilYaw: 0.01,
+    recoilRecovery: 6,
+    hipSpread: 0.14,
+    adsSpread: 0,
+    adsFov: 20,
+    adsType: "2d_scope_overlay",
+    mobility: 0.82,
+    maxAmmo: 5,
+    reloadTime: 3,
+    modelUrl: null,
+    sf2Reticle: "zeiss",
+    sound: "m40",
+    zoomFovs: [20, 9],
+    zoomHFovs: [55, 20],
+    penetration: 2,
+    range: 420,
+    adsSpeed: 17,
+    tracerEvery: 1,
+    tp: { len: 1.2, body: "dark", mag: "box", scope: true },
+    // (zoomHFovs: SFCWeaponTRG fZoomedFOV 55, then SFPawn's 20)
+    desc: "SF2 原版 TRG-41：芬蘭 Sako 栓動狙擊槍，Zeiss 狙擊鏡，身體 1 發。"
+  },
   sr25: {
     name: "SR-25",
     type: "sniper",
@@ -3047,6 +3081,7 @@ function compileWeapon(id, s) {
     sf2ZoomOut: s.sf2ZoomOut || null,
     sf2ReloadSounds: s.sf2ReloadSounds || null,
     sf2ReloadAnim: s.sf2ReloadAnim || null,
+    sf2Reticle: s.sf2Reticle || null,
     camo: s.camo || null,
     // v62h (sf2 never reached the def before: v61's SF2 gun sounds never played)
     suppressed: !!s.suppressed,
@@ -3143,6 +3178,7 @@ var SF2_WEIGHT = {
   hk23e: [7.9, 3.95],
   frf2: [6.3, 3.15],
   cz700: [7.5, 3.75],
+  trg: [7.3, 3.65],
   infinity: [1, 0],
   knife: [1, 0],
   he: [1, 0],
@@ -3176,8 +3212,10 @@ var SF2_WEAPONS = {
   // SFCWeaponHK417_mod2A
   scarl_eo: { "fireRate": 0.095, "reloadTime": 2.35, "equipTime": 0.9, "adsSpeed": 12, "adsFov": 55, "adsType": "3d_sight", "vmHFov": 60, "vmAdsHFov": 20, "sf2Rig": "scarl_eo", "sf2": "scarl_eo", "sf2ZoomIn": [0, -0.01, -0.2], "sf2ZoomOut": [-1, 0, 0], "sf2ReloadSounds": [[0.12, "magout"], [0.44, "magin"], [0.72, "charge"]], "sf2Recoil": { "nextCrossVert": 2.1, "maxCrossVert": 15, "vertInc": 15e3, "vertDec": 12, "crossDecreasInc": 9, "incline": 0.35, "forceCorrection": 50, "domDefault": 0.15, "domZoomDefault": 0, "domInc": 0.22, "domMax": 2.4, "domMin": 0.1, "domDec": 2, "maxMovingValue": 0.7, "mulValueRun": 0.7, "mulValueJump": 6, "zoomMod": 0.99, "crouchMod": 0.85 }, "sf2ReloadAnim": 2.45 },
   // SFCWeaponSCARL_MK2
-  k14: { "fireRate": 1.2, "reloadTime": 3, "equipTime": 0.8, "adsSpeed": 17, "adsFov": 20, "adsType": "2d_scope_overlay", "vmHFov": 70, "sf2Rig": "k14", "sf2": "k14", "sf2ZoomIn": [1.2, -0.01, -0.01], "sf2ZoomOut": [0, 0, 0], "sf2ReloadSounds": [[0.14, "boltback"], [0.31, "magout"], [0.48, "magin"], [0.75, "charge"]], "sf2ReloadAnim": 3.25 }
+  k14: { "fireRate": 1.2, "reloadTime": 3, "equipTime": 0.8, "adsSpeed": 17, "adsFov": 20, "adsType": "2d_scope_overlay", "vmHFov": 70, "sf2Rig": "k14", "sf2": "k14", "sf2ZoomIn": [1.2, -0.01, -0.01], "sf2ZoomOut": [0, 0, 0], "sf2ReloadSounds": [[0.14, "boltback"], [0.31, "magout"], [0.48, "magin"], [0.75, "charge"]], "sf2ReloadAnim": 3.25 },
   // SFCWeaponK14
+  trg: { "fireRate": 1.2, "reloadTime": 3.3, "equipTime": 0.7, "adsSpeed": 17, "adsFov": 20, "adsType": "2d_scope_overlay", "vmHFov": 65, "sf2Rig": "trg", "sf2": "trg", "sf2ZoomIn": [1.2, -0.01, -0.01], "sf2ZoomOut": [0, 0, 0], "sf2ReloadSounds": [[0.14, "boltback"], [0.31, "magout"], [0.48, "magin"], [0.75, "charge"]], "sf2ReloadAnim": 3.466 }
+  // SFCWeaponTRG
 };
 for (const [id, o] of Object.entries(SF2_WEAPONS)) {
   const s = WEAPON_DATABASE[id];
@@ -3283,6 +3321,7 @@ var WEAPON_BLURBS = {
   hk417_rs: "7.62mm 戰鬥步槍加內紅點與消音器，單發傷害高。",
   scarl_eo: "高射速的 SCAR-L 加全息瞄具與消音器。",
   k14: "韓國栓動狙擊槍，開鏡快、移動靈活。",
+  trg: "芬蘭 Sako 栓動狙擊槍，Zeiss 鏡，細十字貫穿視野。",
   p90: "50 發大彈匣，適合持續火力壓制與近距離掃射。",
   ump45: "衝鋒槍中單發傷害較高的一把，射速偏慢但穩定。",
   vector: "利用特殊槍機設計將後座力降至最低，近戰秒傷極高。",
@@ -3368,9 +3407,9 @@ var MODES = {
   knife: { name: "小刀戰", desc: "全員只能拿刀，貼身肉搏", slots: ["knife"] }
 };
 var BOT_POOLS = {
-  general: ["m4a1", "ak47", "g36c", "g36c_gold", "g36c_eo", "g36c_circuit", "hk417_rs", "scarl_eo", "scarl", "famas", "aug", "mp5", "mp5k", "p90", "ump45", "vector", "mp7", "remington870", "benelli_m4", "saiga12", "m249", "rpk", "negev", "pkm", "cheytac_m200", "k14", "awp", "svd", "kar98k", "m16a3", "k2", "xm8", "galil", "sg551", "hk417", "scarh", "qbz97", "pp2000", "vz61", "aa12", "mg4", "k3", "m40a1", "sr25", "psg1", "m14ebr", "type89", "l86a1", "hk23e", "frf2", "cz700"],
+  general: ["m4a1", "ak47", "g36c", "g36c_gold", "g36c_eo", "g36c_circuit", "hk417_rs", "scarl_eo", "scarl", "famas", "aug", "mp5", "mp5k", "p90", "ump45", "vector", "mp7", "remington870", "benelli_m4", "saiga12", "m249", "rpk", "negev", "pkm", "trg", "cheytac_m200", "k14", "awp", "svd", "kar98k", "m16a3", "k2", "xm8", "galil", "sg551", "hk417", "scarh", "qbz97", "pp2000", "vz61", "aa12", "mg4", "k3", "m40a1", "sr25", "psg1", "m14ebr", "type89", "l86a1", "hk23e", "frf2", "cz700"],
   rifle: ["m4a1", "ak47", "g36c", "g36c_gold", "g36c_eo", "g36c_circuit", "hk417_rs", "scarl_eo", "scarl", "famas", "aug", "mp5", "mp5k", "p90", "ump45", "vector", "mp7", "m249", "rpk", "negev", "pkm", "mg42", "m16a3", "k2", "xm8", "galil", "sg551", "hk417", "scarh", "qbz97", "pp2000", "vz61", "mg4", "k3", "type89", "l86a1", "hk23e"],
-  sniper: ["cheytac_m200", "k14", "awp", "barrett", "kar98k", "svd", "m40a1", "sr25", "psg1", "m14ebr", "frf2", "cz700"],
+  sniper: ["trg", "cheytac_m200", "k14", "awp", "barrett", "kar98k", "svd", "m40a1", "sr25", "psg1", "m14ebr", "frf2", "cz700"],
   pistol: ["p226", "deagle", "glock18", "usp", "m1911", "m92fs", "cz75", "jericho", "sw60", "infinity"],
   knife: ["knife"]
 };
@@ -19723,7 +19762,7 @@ var WeaponSystem = class extends Arsenal {
     if (sc !== this._scopeShown || sc && this.scopeLevel !== this._scopeLvl) {
       this._scopeShown = sc;
       this._scopeLvl = this.scopeLevel;
-      g.app.hud.setScope(sc, this.scopeLevel, !!w.def.sf2Rig);
+      g.app.hud.setScope(sc, this.scopeLevel, w.def.sf2Rig ? w.def.sf2Reticle || "bender" : false);
     }
     w.vm.group.visible = !sc;
     const vert = /* @__PURE__ */ __name((h) => 2 * Math.atan(Math.tan(h * Math.PI / 360) / this.camera.aspect) * 180 / Math.PI, "vert");
@@ -22163,7 +22202,8 @@ var HUD = class {
   }
   setScope(on, level, sf2 = false) {
     this._cls("scope", this.el.scope, "on", on);
-    this._cls("scopeSf2", this.el.scope, "sf2", on && sf2);
+    this._cls("scopeSf2", this.el.scope, "sf2", on && !!sf2);
+    if (sf2 && this.el.scope.dataset.ret !== sf2) this.el.scope.dataset.ret = sf2;
     this._set("zl", this.el.zoomLbl, "text", on ? level === 2 ? "×10" : "×4" : "");
   }
   // The scope overlay stays perfectly crisp (no blur / line thickening); moving-scope inaccuracy is still simulated in the ballistics.

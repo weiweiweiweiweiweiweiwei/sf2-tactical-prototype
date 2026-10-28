@@ -267,7 +267,7 @@ class WeaponSystem extends Arsenal {
     w.animate(dt, this);
     // the 2D scope overlay follows the gameplay state (tick): one place for every way into or out of the scope
     const sc = w.scoped && this.scopedIn;
-    if (sc !== this._scopeShown || (sc && this.scopeLevel !== this._scopeLvl)) { this._scopeShown = sc; this._scopeLvl = this.scopeLevel; g.app.hud.setScope(sc, this.scopeLevel, !!w.def.sf2Rig); }
+    if (sc !== this._scopeShown || (sc && this.scopeLevel !== this._scopeLvl)) { this._scopeShown = sc; this._scopeLvl = this.scopeLevel; g.app.hud.setScope(sc, this.scopeLevel, w.def.sf2Rig ? w.def.sf2Reticle || 'bender' : false); }
     w.vm.group.visible = !sc;
 
     // v62f / v62w SF2 lenses (the guns with vmAdsHFov: adsFov = SF2 fZoomedFOV) are horizontal like UE3: turned into three.js's vertical FOV for this screen (16:9: 55° → 32.6°)

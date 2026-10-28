@@ -365,6 +365,14 @@ const WEAPON_DATABASE = {
     sound: 'm40', zoomFovs: [20, 9], zoomHFovs: [45, 20], penetration: 2, range: 420, adsSpeed: 17, tracerEvery: 1, tp: { len: 1.15, body: 'dark', mag: 'box', scope: true }, // v64f zoomHFovs: SF2's own two steps, horizontal like UE3 — fZoomedFOV 45, then 20 (SFPawn's CamFOVSniperZoomIn2nd; the user's SF2 shots: step 2 ≈ 2.5× step 1)
     desc: 'SF2 原版 K14（衝擊波）：韓國栓動狙擊槍，身體 1 發，開鏡快。',
   },
+  // v64s SF2's own TRG-41 (sni_trg on the Zeiss scope, tools/sf2_rig_build.mjs trg; user 10-28's first sniper): timing, zoom and
+  // recoil from SFCWeaponTRG (SF2_WEAPONS), its scope's own reticle (Zeiss: ScopeView_Reticle_03); damage on the K14's balance
+  trg: {
+    name: 'TRG-41', type: 'sniper', slot: 'primary', damageNear: 110, damageFar: 96, falloffStart: 60, falloffEnd: 200, fireRate: 1.2, recoilPitch: 0.065, recoilYaw: 0.01, recoilRecovery: 6,
+    hipSpread: 0.14, adsSpread: 0.0, adsFov: 20, adsType: '2d_scope_overlay', mobility: 0.82, maxAmmo: 5, reloadTime: 3.0, modelUrl: null, sf2Reticle: 'zeiss',
+    sound: 'm40', zoomFovs: [20, 9], zoomHFovs: [55, 20], penetration: 2, range: 420, adsSpeed: 17, tracerEvery: 1, tp: { len: 1.2, body: 'dark', mag: 'box', scope: true }, // (zoomHFovs: SFCWeaponTRG fZoomedFOV 55, then SFPawn's 20)
+    desc: 'SF2 原版 TRG-41：芬蘭 Sako 栓動狙擊槍，Zeiss 狙擊鏡，身體 1 發。',
+  },
   sr25: {
     name: 'SR-25', type: 'sniper', slot: 'primary', damageNear: 62, damageFar: 52, falloffStart: 50, falloffEnd: 180, fireRate: 0.3, recoilPitch: 0.042, recoilYaw: 0.011, recoilRecovery: 7,
     hipSpread: 0.1, adsSpread: 0.0007, adsFov: 26, adsType: '2d_scope_overlay', mobility: 0.87, maxAmmo: 20, reloadTime: 3.0, modelUrl: null,
@@ -470,7 +478,7 @@ function compileWeapon(id, s) {
     recoil: { first: s.recoilPitch * 0.75, climb: s.recoilPitch, climbShots: 10, late: s.recoilPitch * 0.75, h: s.recoilYaw, hStart: 6, jitter: s.recoilYaw * 0.35 },
     recoilRecovery: s.recoilRecovery, adsFov: s.adsFov, vmAdsFov: s.vmAdsFov, vmHFov: s.vmHFov || 0, vmAdsHFov: s.vmAdsHFov || 0, adsVertical: s.adsVertical || 0, adsType: s.adsType, adsRecoilMult: 1, adsSpeed: s.adsSpeed || (s.type === 'smg' ? 24 : 20),
     moveSpeed: CFG.player.baseSpeed * s.mobility, mobility: s.mobility, reloadTime: s.reloadTime, equipTime: s.equipTime || 0, sf2Recoil: s.sf2Recoil || null, sound: s.sound || id,
-    sf2: s.sf2 || null, sf2Rig: s.sf2Rig || null, sf2ZoomIn: s.sf2ZoomIn || null, sf2ZoomOut: s.sf2ZoomOut || null, sf2ReloadSounds: s.sf2ReloadSounds || null, sf2ReloadAnim: s.sf2ReloadAnim || null, camo: s.camo || null, // v62h (sf2 never reached the def before: v61's SF2 gun sounds never played)
+    sf2: s.sf2 || null, sf2Rig: s.sf2Rig || null, sf2ZoomIn: s.sf2ZoomIn || null, sf2ZoomOut: s.sf2ZoomOut || null, sf2ReloadSounds: s.sf2ReloadSounds || null, sf2ReloadAnim: s.sf2ReloadAnim || null, sf2Reticle: s.sf2Reticle || null, camo: s.camo || null, // v62h (sf2 never reached the def before: v61's SF2 gun sounds never played)
     suppressed: !!s.suppressed, tracerEvery: s.tracerEvery ?? 2, shellReload: s.shellReload || 0, zoomFovs: s.zoomFovs || [s.adsFov], zoomHFovs: s.zoomHFovs || null,
     noise: s.suppressed ? 14 : t.noise, pump, bolt, soundRate: s.rate || 1, tpSpec: s.tp || null,
     fireMode: auto ? 'AUTO' : pump ? 'PUMP' : bolt ? 'BOLT' : 'SEMI',
@@ -499,7 +507,7 @@ const SF2_WEIGHT = {
   vz61: [2.8, 1.8], m40a1: [5.7, 2.85], k14: [7.6, 3.8], sr25: [7.0, 3.5], psg1: [7.0, 3.5], mg4: [7.8, 3.9],
   k3: [6.8, 3.4], aa12: [4.0, 2.0], m92fs: [1.0, 0.0], cz75: [1.0, 0.0], jericho: [1.0, 0.0], sw60: [1.0, 0.0],
   m14ebr: [6.1, 3.05], type89: [4.7, 2.35], l86a1: [7.2, 3.6], hk23e: [7.9, 3.95], frf2: [6.3, 3.15], cz700: [7.5, 3.75],
-  infinity: [1.0, 0.0], knife: [1.0, 0.0], he: [1.0, 0.0], flash: [1.0, 0.0], smoke: [1.0, 0.0],
+  trg: [7.3, 3.65], infinity: [1.0, 0.0], knife: [1.0, 0.0], he: [1.0, 0.0], flash: [1.0, 0.0], smoke: [1.0, 0.0],
 };
 // </sf2-weights>
 // <sf2-weapons>
@@ -520,6 +528,7 @@ const SF2_WEAPONS = {
   hk417_rs: {'fireRate': 0.102, 'reloadTime': 2.18, 'equipTime': 0.85, 'adsSpeed': 12, 'adsFov': 55, 'adsType': '3d_sight', 'vmHFov': 60.0, 'vmAdsHFov': 15, 'sf2Rig': 'hk417_rs', 'sf2': 'hk417_rs', 'sf2ZoomIn': [-4.0, -0.02, -0.2], 'sf2ZoomOut': [0.0, 0.0, 0.0], 'sf2ReloadSounds': [[0.16, 'magout'], [0.37, 'magin'], [0.77, 'charge']], 'sf2Recoil': {'nextCrossVert': 1.63, 'maxCrossVert': 7.9, 'vertInc': 11700.0, 'vertDec': 15.86, 'crossDecreasInc': 15.0, 'incline': 0.05, 'forceCorrection': 50.0, 'domDefault': 0.2, 'domZoomDefault': 0.0, 'domInc': 0.23, 'domMax': 1.848, 'domMin': 0.0, 'domDec': 1.539, 'maxMovingValue': 0.8, 'mulValueRun': 0.4, 'mulValueJump': 6.0, 'zoomMod': 0.35, 'crouchMod': 0.9}, 'sf2ReloadAnim': 2.3}, // SFCWeaponHK417_mod2A
   scarl_eo: {'fireRate': 0.095, 'reloadTime': 2.35, 'equipTime': 0.9, 'adsSpeed': 12, 'adsFov': 55, 'adsType': '3d_sight', 'vmHFov': 60.0, 'vmAdsHFov': 20, 'sf2Rig': 'scarl_eo', 'sf2': 'scarl_eo', 'sf2ZoomIn': [0.0, -0.01, -0.2], 'sf2ZoomOut': [-1.0, 0.0, 0.0], 'sf2ReloadSounds': [[0.12, 'magout'], [0.44, 'magin'], [0.72, 'charge']], 'sf2Recoil': {'nextCrossVert': 2.1, 'maxCrossVert': 15.0, 'vertInc': 15000.0, 'vertDec': 12.0, 'crossDecreasInc': 9.0, 'incline': 0.35, 'forceCorrection': 50.0, 'domDefault': 0.15, 'domZoomDefault': 0.0, 'domInc': 0.22, 'domMax': 2.4, 'domMin': 0.1, 'domDec': 2.0, 'maxMovingValue': 0.7, 'mulValueRun': 0.7, 'mulValueJump': 6.0, 'zoomMod': 0.99, 'crouchMod': 0.85}, 'sf2ReloadAnim': 2.45}, // SFCWeaponSCARL_MK2
   k14: {'fireRate': 1.2, 'reloadTime': 3.0, 'equipTime': 0.8, 'adsSpeed': 17, 'adsFov': 20, 'adsType': '2d_scope_overlay', 'vmHFov': 70.0, 'sf2Rig': 'k14', 'sf2': 'k14', 'sf2ZoomIn': [1.2, -0.01, -0.01], 'sf2ZoomOut': [0.0, 0.0, 0.0], 'sf2ReloadSounds': [[0.14, 'boltback'], [0.31, 'magout'], [0.48, 'magin'], [0.75, 'charge']], 'sf2ReloadAnim': 3.25}, // SFCWeaponK14
+  trg: {'fireRate': 1.2, 'reloadTime': 3.3, 'equipTime': 0.7, 'adsSpeed': 17, 'adsFov': 20, 'adsType': '2d_scope_overlay', 'vmHFov': 65.0, 'sf2Rig': 'trg', 'sf2': 'trg', 'sf2ZoomIn': [1.2, -0.01, -0.01], 'sf2ZoomOut': [0.0, 0.0, 0.0], 'sf2ReloadSounds': [[0.14, 'boltback'], [0.31, 'magout'], [0.48, 'magin'], [0.75, 'charge']], 'sf2ReloadAnim': 3.466}, // SFCWeaponTRG
 };
 for (const [id, o] of Object.entries(SF2_WEAPONS)) { const s = WEAPON_DATABASE[id]; Object.assign(s, o); delete s.vmAdsFov; delete s.adsVertical; } // (their own sights now)
 // </sf2-weapons>
@@ -613,6 +622,7 @@ const WEAPON_BLURBS = {
   hk417_rs: '7.62mm 戰鬥步槍加內紅點與消音器，單發傷害高。',
   scarl_eo: '高射速的 SCAR-L 加全息瞄具與消音器。',
   k14: '韓國栓動狙擊槍，開鏡快、移動靈活。',
+  trg: '芬蘭 Sako 栓動狙擊槍，Zeiss 鏡，細十字貫穿視野。',
   p90: '50 發大彈匣，適合持續火力壓制與近距離掃射。',
   ump45: '衝鋒槍中單發傷害較高的一把，射速偏慢但穩定。',
   vector: '利用特殊槍機設計將後座力降至最低，近戰秒傷極高。',
@@ -698,9 +708,9 @@ const MODES = {
   knife: { name: '小刀戰', desc: '全員只能拿刀，貼身肉搏', slots: ['knife'] },
 };
 const BOT_POOLS = {
-  general: ['m4a1', 'ak47', 'g36c', 'g36c_gold', 'g36c_eo', 'g36c_circuit', 'hk417_rs', 'scarl_eo', 'scarl', 'famas', 'aug', 'mp5', 'mp5k', 'p90', 'ump45', 'vector', 'mp7', 'remington870', 'benelli_m4', 'saiga12', 'm249', 'rpk', 'negev', 'pkm', 'cheytac_m200', 'k14', 'awp', 'svd', 'kar98k', 'm16a3', 'k2', 'xm8', 'galil', 'sg551', 'hk417', 'scarh', 'qbz97', 'pp2000', 'vz61', 'aa12', 'mg4', 'k3', 'm40a1', 'sr25', 'psg1', 'm14ebr', 'type89', 'l86a1', 'hk23e', 'frf2', 'cz700'],
+  general: ['m4a1', 'ak47', 'g36c', 'g36c_gold', 'g36c_eo', 'g36c_circuit', 'hk417_rs', 'scarl_eo', 'scarl', 'famas', 'aug', 'mp5', 'mp5k', 'p90', 'ump45', 'vector', 'mp7', 'remington870', 'benelli_m4', 'saiga12', 'm249', 'rpk', 'negev', 'pkm', 'trg', 'cheytac_m200', 'k14', 'awp', 'svd', 'kar98k', 'm16a3', 'k2', 'xm8', 'galil', 'sg551', 'hk417', 'scarh', 'qbz97', 'pp2000', 'vz61', 'aa12', 'mg4', 'k3', 'm40a1', 'sr25', 'psg1', 'm14ebr', 'type89', 'l86a1', 'hk23e', 'frf2', 'cz700'],
   rifle: ['m4a1', 'ak47', 'g36c', 'g36c_gold', 'g36c_eo', 'g36c_circuit', 'hk417_rs', 'scarl_eo', 'scarl', 'famas', 'aug', 'mp5', 'mp5k', 'p90', 'ump45', 'vector', 'mp7', 'm249', 'rpk', 'negev', 'pkm', 'mg42', 'm16a3', 'k2', 'xm8', 'galil', 'sg551', 'hk417', 'scarh', 'qbz97', 'pp2000', 'vz61', 'mg4', 'k3', 'type89', 'l86a1', 'hk23e'],
-  sniper: ['cheytac_m200', 'k14', 'awp', 'barrett', 'kar98k', 'svd', 'm40a1', 'sr25', 'psg1', 'm14ebr', 'frf2', 'cz700'], pistol: ['p226', 'deagle', 'glock18', 'usp', 'm1911', 'm92fs', 'cz75', 'jericho', 'sw60', 'infinity'], knife: ['knife'],
+  sniper: ['trg', 'cheytac_m200', 'k14', 'awp', 'barrett', 'kar98k', 'svd', 'm40a1', 'sr25', 'psg1', 'm14ebr', 'frf2', 'cz700'], pistol: ['p226', 'deagle', 'glock18', 'usp', 'm1911', 'm92fs', 'cz75', 'jericho', 'sw60', 'infinity'], knife: ['knife'],
 };
 
 // Match rules (state-machine classes live in the match module).

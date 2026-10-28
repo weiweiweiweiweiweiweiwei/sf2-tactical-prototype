@@ -16,7 +16,7 @@ MAP = {  # our id: SF2 class (~ = no class of its own in SF2, the nearest kind)
     'xm8': 'XM8', 'galil': 'GALIL', 'sg551': 'SIG551', 'hk417': 'HK417', 'scarh': 'SCARH', 'hk417_rs': 'HK417_mod2A', 'qbz97': 'QBZ97',
     'pp2000': 'PP2000', 'vz61': 'Scorpion', 'm40a1': 'M40A1', 'k14': 'K14', 'sr25': 'SR25', 'psg1': 'PSG1', 'mg4': 'MG4', 'k3': 'K3',
     'aa12': 'AA12', 'm92fs': 'M92FS', 'cz75': 'CZ75BD', 'jericho': 'JERICHO941', 'sw60': 'RevolverSW60', 'm14ebr': 'M14EBR',
-    'type89': 'Type89', 'l86a1': 'L86A1', 'hk23e': 'HK23E', 'frf2': 'FRF2', 'cz700': 'CZ700', 'infinity': 'INFINITY',
+    'type89': 'Type89', 'l86a1': 'L86A1', 'hk23e': 'HK23E', 'frf2': 'FRF2', 'cz700': 'CZ700', 'trg': 'TRG', 'infinity': 'INFINITY',
     'knife': 'BowieKnife', 'he': 'M67FRAG', 'flash': 'M84FLASHBANG', 'smoke': 'M18SMOKE',
 }
 p = S.Pkg(S.PKG_DIR + 'SFGameContent.upk'); W = {}
@@ -31,6 +31,7 @@ approx = ', '.join(f"{g} ≈ {c[1:]}" for g, c in MAP.items() if c[0] == '~')
 js = ("/* v64r SF2's weapon weights [equip, unequip] (SFGameContent; tools/sf2_weight_table.py) — the load in hand sets the walking speed\n"
       f"   (src/12_player.js sf2Speed). No SF2 class of their own: {approx}. */\nconst SF2_WEIGHT = {{\n  " +
       ',\n  '.join(', '.join(rows[i:i + 6]) for i in range(0, len(rows), 6)) + ",\n};\n")
-f = 'src/01_core.js'; s = open(f, encoding='utf-8', newline='').read(); a, b = '// <sf2-weights>\n', '// </sf2-weights>\n'
-if a not in s: s = s.replace('// <sf2-weapons>\n', a + b + '// <sf2-weapons>\n', 1)
+f = 'src/01_core.js'; s = open(f, encoding='utf-8', newline='').read(); nl = '\r\n' if '\r\n' in s else '\n'  # (keep the file's line ends)
+a, b = '// <sf2-weights>' + nl, '// </sf2-weights>' + nl; js = js.replace('\n', nl)
+if a not in s: s = s.replace('// <sf2-weapons>' + nl, a + b + '// <sf2-weapons>' + nl, 1)
 i, j = s.index(a) + len(a), s.index(b); open(f, 'w', encoding='utf-8', newline='').write(s[:i] + js + s[j:]); print(f, len(rows), 'weights')
