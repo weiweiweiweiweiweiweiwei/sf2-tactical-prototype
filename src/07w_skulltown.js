@@ -173,6 +173,9 @@ function apexTriMap(def) {
           mesh.matrixAutoUpdate = false; mesh.matrix.copy(o.matrixWorld); mesh.matrixWorldNeedsUpdate = true;
           mesh.receiveShadow = true; mesh.castShadow = false; b.scene.add(mesh); return;
         }
+        // v64m Apex's grass clumps (universal_grass_clump_*) came without their texture: their cards drew as flat grey / dark shards that read
+        // as noise from afar (user 10-28) — left out (15 on the range, 1.8k triangles)
+        if ([].concat(o.material).some((m) => /grass_clump/i.test(m.name) && !m.map)) return;
         for (const m of Array.isArray(o.material) ? o.material : [o.material]) {
           if (m.transparent && !/glass/i.test(m.name)) { m.alphaTest = 0.35; m.transparent = false; m.depthWrite = true; }
           if (m.alphaTest > 0 || /grass|plant|bush|foliage|leaf|fence|chain|wire/i.test(m.name)) m.side = THREE.DoubleSide;

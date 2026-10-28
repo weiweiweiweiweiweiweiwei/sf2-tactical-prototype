@@ -1272,3 +1272,31 @@
 - K14 腰射：使用者的 SF2 手持截圖裡，正對鏡頭的大鏡片是**目鏡**（槍是從後方看）。`tools/out/_k14fit2.mjs` 在遊戲中用第一人稱攝影機投影瞄準鏡最靠近鏡頭的一圈，反覆調整腰射時的槍模位置，讓目鏡中心落在畫面 83.5 %／67.6 %、半徑 6.25 % 畫面寬（SF2 截圖量的）；結果寫在 `RIG_HIP.k14`，`SF2Rig` 新選項 `hipPos`（開鏡端不變）。
 - 鏡內十字（使用者兩張更清楚的 SF2 截圖，以中心圓半徑 R 量）：橫桿加粗（0.065R）、圓內補一條細橫線（紅點在上面）、豎線從上方 2.13R 一路到圓下方、圓下方加粗柱（1.43R–2.52R，寬 0.087R）；紅點不發光（純橘紅、半徑 0.087R）。
 - 驗證：同一頁投影＋截圖確認目鏡落在目標圈上；`check.mjs` 過。
+
+
+### v64m（本機，2026-10-28）：SF2 的擊殺音效分五級、換彈動畫照 SF2 的長度、Apex 訓練場拿掉沒貼圖的草叢
+- 擊殺音效（使用者：命中有聲音、擊殺沒有）：SF2 的擊殺聲由 `SFKillMessage.GetKillFeedBackSound` 決定，依這次擊殺最強的訊息分五級：
+  - `hud_kill_default`：一般擊殺、助攻。
+  - `normal`：瞬間秒殺、遠射高手、同歸於盡。
+  - `special`：命中頭部、無處可藏、背後突襲、復仇使者、刀、手榴彈。
+  - `rare`：最後一擊、首殺、捲土重來。
+  - `continuous`：2 連殺以上。
+  - 等級表照 `GetKillFeedBackType`，以及 `KillMsgStringArray`／`WeaponKillMsgStringArray` 解出來的順序。
+  - 之前只播 `kill3_New`（舊的通用音效），現在五級各播自己的錄音。`tools/sfx_sf2_fx.mjs` 加 `kfb_*`；新增 `AudioEngine.killFeedback(tier)`；`Match._killAnnounce` 依徽章選等級。只在命中音效選「SF2 原版」（預設）時播。
+  - 另外，master 之前停在 v63i，沒有 v64e 的擊殺音效，這次一起推上去。
+- 換彈（使用者：K14 換彈偏快）：
+  - 實測 K14 從按 R 到子彈補滿是 3.007 s，和 SF2 的 `ReloadTimes` 3.0 一致（`SFWeapon.GetReloadTime`、`WeaponReloading` 的 `Reloaded` 計時器）。
+  - 差別在動畫：SF2 把 Reload 片段播在 `ReloadBlendTime` 上（`GetReloadBlendTime`，K14 是 3.25 s），我們之前壓進 3.0 s，快了 8 %。
+  - 現在片段照 `sf2ReloadAnim`（= ReloadBlendTime）播完。`tools/sf2_weapon_table.py` 從 SFGameContent 讀這個值；M4A1、AK-103（2.533）和 G36C（2.5）是手寫的。
+  - 子彈仍在 reloadTime 補進，補進後就可以開槍；開槍會切掉剩下的動畫，和 SF2 一樣。換彈音效的時間點改成片段長度的比例。
+  - 實測：K14 子彈 3.0 s、動畫到 3.234 s；M4A1 子彈 2.3 s、動畫到 2.517 s。
+- Apex 訓練場的「雜訊」（使用者截圖紅圈）：
+  - 是 Apex 的草叢 `universal_grass_clump_tall／medium_01_green_01`。匯出時沒有貼圖、也沒有透明裁切，每片草卡變成灰黑色的實心三角形。
+  - 地圖上有 15 個（共 1.8k 三角形），全部不載入（`src/07w_skulltown.js`；Skull Town 用同一段程式，也適用）。
+- 狙擊槍調查（使用者 10-28 指定）：AWP、CheyTac M200、CZ700、M40A1 的槍模、貼圖、動畫、槍聲已匯出到 `tools/out/sf2/`。狙擊鏡網格不在各自的包裡（見 TODO §1）。
+- 驗證：
+  - `tools/out/_reloadtime.mjs`：K14、M4A1。
+  - `tools/out/_killsnd.mjs`：五級都載入、都播出。
+  - `tools/out/_apexfol.mjs`：草叢剩 0 個。
+  - `check-apex-full.mjs apex_full`：APEX_MAP_OK。
+  - `check.mjs`：CHECK_OK。

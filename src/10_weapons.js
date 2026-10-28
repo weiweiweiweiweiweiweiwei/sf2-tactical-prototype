@@ -233,10 +233,11 @@ class Weapon {
   }
   // magazine travel over the reload: out 0.15–0.35, away 0.35–0.55, back in 0.55–0.72
   magOff(p) { return p > 0.15 && p < 0.35 ? (p - 0.15) / 0.2 : p >= 0.35 && p < 0.55 ? 1 : p >= 0.55 && p < 0.72 ? 1 - (p - 0.55) / 0.17 : 0; }
+  // (v64m the SF2 guns' sound marks are fractions of their Reload clip, played over sf2ReloadAnim — see SF2Rig.update)
   _reload(h) {
     if (!this.reloading) return;
     this.reloadT += h;
-    for (const [t, snd] of this.reloadSounds) if (this.reloadT >= t * this.reloadTime && !this.reloadFired.has(snd)) { this.reloadFired.add(snd); this._mech(snd); }
+    for (const [t, snd] of this.reloadSounds) if (this.reloadT >= t * (this.def.sf2ReloadAnim || this.reloadTime) && !this.reloadFired.has(snd)) { this.reloadFired.add(snd); this._mech(snd); }
     if (this.reloadT >= this.reloadTime) { const take = Math.min(this.mag - this.ammo, this.reserveAmmo); this.ammo += take; this.reserveAmmo -= take; this.reloading = false; }
   }
 }

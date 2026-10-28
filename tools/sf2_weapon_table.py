@@ -36,9 +36,21 @@ REC = ['nextCrossVert', 'maxCrossVert', 'vertInc', 'vertDec', 'crossDecreasInc',
 def r3(v): return round(float(v), 3)
 
 
+def reload_blend():
+    """v64m ReloadBlendTime of every weapon class (SFGameContent class defaults): SF2 plays the Reload clip over it (SFWeapon.
+    GetReloadBlendTime) while the rounds go in at ReloadTimes[0] (GetReloadTime, WeaponReloading's 'Reloaded' timer) — the K14: 3.25 / 3.0."""
+    import sf2_props as S
+    pk = S.Pkg(S.PKG_DIR + 'SFGameContent.upk'); out = {}
+    for e in pk.exports:
+        if e['name'].startswith('Default__SFCWeapon'):
+            for n, i, t, v in pk.props(e):
+                if n == 'ReloadBlendTime': out[e['name'][9:]] = float(v)
+    return out
+
+
 def main():
     w = json.load(open('docs/research/sf2/client-data/weapons.json', encoding='utf-8'))
-    rows = []
+    rows = []; blend = reload_blend()
     for gid, (cls, rig, snd, rs, *extra) in GUNS.items():
         d = w['SFCWeapon' + cls]; rc = d['RecoilDefault']
         rec = {k: r3(rc.get(k, 0)) for k in REC}; rec['zoomMod'] = r3(d.get('RecoilZoomModifier', 1)); rec['crouchMod'] = r3(d.get('RecoilCrouchModifier', 1))
@@ -48,6 +60,8 @@ def main():
             'sf2Rig': rig, 'sf2': snd, 'sf2ZoomIn': [r3(x) for x in d.get('vLocZoomIN', [0, 0, 0])], 'sf2ZoomOut': [r3(x) for x in d.get('vLocZoomOut', [0, 0, 0])],
             'sf2ReloadSounds': [[rs[0], 'magout'], [rs[1], 'magin'], [rs[2], 'charge']], 'sf2Recoil': rec,
         }
+        rb = next((blend[c] for c in d.get('chain', ['SFCWeapon' + cls]) if c in blend), None)  # v64m the Reload clip's own length (GetReloadBlendTime)
+        if rb and rb > o['reloadTime']: o['sf2ReloadAnim'] = r3(rb)
         for k, v in (extra[0] if extra else {}).items():  # (v64 per-gun overrides; None drops the key)
             if v is None: o.pop(k, None)
             else: o[k] = v

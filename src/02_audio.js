@@ -544,7 +544,7 @@ class AudioEngine {
     if (kind === 'helmet') { this._hit_ping(t, out, 1.1); this._osc('sine', t, 260, 120, 0.06, out, 0.25, 0.001); return; }
     const S2 = HIT_SOUNDS[Settings.data.hitSound] && HIT_SOUNDS[Settings.data.hitSound].sf2 && this._s('sf2_hit');
     if (S2) { // v64e SF2: bullet_hit_2d_03 (its cue: volume 1.5–2); the killing hit is HitDead_cue (Bullet_flesh_0x at pitch 0.8) and kill3_New
-      if (kind === 'kill') { const d = this._s('sf2_hitdead'), k = this._s('sf2_kill'); if (d) this._one(pick(d), out, 1.1, 0.8); if (k) this._one(pick(k), out, 0.9); }
+      if (kind === 'kill') { const d = this._s('sf2_hitdead'), k = !this._s('kfb_default') && this._s('sf2_kill'); if (d) this._one(pick(d), out, 1.1, 0.8); if (k) this._one(pick(k), out, 0.9); } // (the kill's own sound: killFeedback)
       else this._one(this._hitHead(S2[0]), out, 1.0, 0.98 + Math.random() * 0.04);
       return;
     }
@@ -555,6 +555,14 @@ class AudioEngine {
     if (H.killS && kind === 'kill') { const l = this._s(H.killS); if (l) this._one(pick(l), out, 0.8, 0.95 + Math.random() * 0.1); }
     if (H.synth || (!played && H.s)) this['_hit_' + (H.synth || 'juice')](t, out, k);
     if (kind === 'head' && H.key !== 'none') { this._nb(t, out, 'highpass', 5200, 0.9, 0.24, 0.0003, 0.006); this._osc('triangle', t, 1300, 700, 0.028, out, 0.14, 0.0005); }
+  }
+  // v64m SF2's kill sound (SFKillMessage.GetKillFeedBackSound): hud_kill_<tier> by the kill's strongest message — default (a plain
+  // kill), normal (瞬間秒殺 / 遠射高手 / 同歸於盡), special (爆頭 / 無處可藏 / 背後突襲 / 復仇 / 刀 / 手榴彈), rare (最後一擊 / 首殺 / 捲土重來),
+  // continuous (2 連殺 and up). Only with the 'SF2 原版' hit sound, like the hit itself.
+  killFeedback(tier) {
+    if (!this.ctx || !(HIT_SOUNDS[Settings.data.hitSound] && HIT_SOUNDS[Settings.data.hitSound].sf2)) return;
+    const l = this._s('kfb_' + tier) || this._s('kfb_default'); if (!l) return;
+    const out = this.ctx.createGain(); out.gain.value = 0.7; out.connect(this.dry); this._one(l[0], out, 1.0);
   }
   // v64g bullet_hit_2d_03 carries a second sound after the hit (user 10-28: a man's odd laugh, from 0.40 s): only its first 0.37 s,
   // faded out over the last 25 ms (its RMS: the hit 0.04–0.36 s, down to −36 dB at 0.38, the other sound rising again at 0.40)

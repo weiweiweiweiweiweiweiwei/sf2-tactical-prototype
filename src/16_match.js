@@ -540,6 +540,8 @@ class Match {
     p.deathRun = 0;
     if (!this.isClient && Math.random() < 0.06) { p.score += 100; setTimeout(() => hud.lucky(100), 900); } // SF2 'Lucky Point': a random bonus on a kill
     for (const id of E.slice(0, 4)) hud.emblem(id);
+    const T = { double: 'continuous', multi: 'continuous', specialist: 'continuous', specialforce: 'continuous', lastshot: 'rare', first: 'rare', welcome: 'rare', headshot: 'special', wall: 'special', slash: 'special', revenge: 'special', knife: 'special', grenade: 'special', grab: 'special', pierce: 'special', fastzoom: 'normal', longshot: 'normal' }; // v64m SF2 kill sound tiers
+    this.audio.killFeedback(['continuous', 'rare', 'special', 'normal'].find((t) => E.some((x) => T[x] === t)) || 'default');
     if (victim) hud.killNote(victim.name, E.find((x) => x === 'headshot' || x === 'grenade' || x === 'slash' || x === 'knife' || x === 'grab') || 'kill');
     p.emblems = p.emblems || {}; for (const id of E) p.emblems[id] = (p.emblems[id] || 0) + 1;
     const streaks = { 5: 'KILLING SPREE', 8: 'RAMPAGE', 12: 'UNSTOPPABLE', 16: 'GODLIKE' };

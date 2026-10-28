@@ -53,17 +53,20 @@ class SF2Rig {
     for (const [k, a] of Object.entries(this.a)) { const v = w[k]; a.setEffectiveWeight(v ? v[1] : 0); if (v) a.time = v[0]; }
     this.mixer.update(0);
   }
-  fire(ads) { this.fireT = 0; this.fireClip = ads && this.a.ZoomFire ? 'ZoomFire' : 'Fire'; this.equipT = -1; } // (v64 the K14 has no ZoomFire: its Fire works the bolt)
-  // s: { ads 0–1, sprint 0–1, reload phase 0–1 or −1, draw (WeaponSystem.drawT: 1 on a switch, running down) }
+  fire(ads) { this.reloadAt = -1; this.fireT = 0; this.fireClip = ads && this.a.ZoomFire ? 'ZoomFire' : 'Fire'; this.equipT = -1; } // (v64 the K14 has no ZoomFire: its Fire works the bolt)
+  // s: { ads 0–1, sprint 0–1, reload s or −1 / reloadDone / reloadLen (the clip's s), draw (WeaponSystem.drawT: 1 on a switch, running down) }
   update(dt, s) {
     const w = {}, fade = (t, d, i, o) => Math.max(0, Math.min(1, i > 0 ? t / i : 1, o > 0 ? (d - t) / o : 1));
     let rest = 1;
     if (s.draw > this.lastDraw + 0.5) { this.equipT = 0; this.fireT = -1; }
     this.lastDraw = s.draw;
     this.idleT = (this.idleT + dt) % this.dur('Idle'); this.zoomT = (this.zoomT + dt) % this.dur('Zoom'); this.dashT = (this.dashT + dt * 0.6) % this.dur('dash'); // v63e the sprint sway at 0.6× (user: too quick)
-    if (s.reload >= 0) { // the clip stretched over the game's reload time; in / out over a few frames
-      const d = this.dur('Reload'), k = fade(s.reload, 1, 0.05, 0.08); w.Reload = [s.reload * d, k]; rest -= k; this.fireT = -1; this.equipT = -1;
-    }
+    // v64m SF2 plays the Reload clip over ReloadBlendTime (s.reloadLen, the K14 3.25 s) while the rounds go in at ReloadTimes (3.0 s):
+    // the clip runs on past the reload unless the gun fires (fire() cuts it) or is switched; in / out over a few frames
+    if (s.reload >= 0) this.reloadAt = s.reload; else if (s.reloadDone && this.reloadAt >= 0) this.reloadAt += dt; else this.reloadAt = -1;
+    if (this.reloadAt >= 0 && this.reloadAt < s.reloadLen) {
+      const q = this.reloadAt / s.reloadLen, d = this.dur('Reload'), k = fade(q, 1, 0.05, 0.08); w.Reload = [q * d, k]; rest -= k; this.fireT = -1; this.equipT = -1;
+    } else this.reloadAt = -1;
     if (this.equipT >= 0) {
       const d = this.dur('Equip'); this.equipT += dt * this.equipRate;
       if (this.equipT >= d) this.equipT = -1; else { const k = rest * fade(this.equipT, d, 0, 0.12); w.Equip = [this.equipT, k]; rest -= k; }
