@@ -8,6 +8,12 @@
 
 ### H3 🔄 SF2 原版素材（`D:\SpecialForce2`，UModel；流程見 `docs/pipelines/guns.md`「SF2 原版槍＋原版動畫」）
 - M16A3：找平頂機匣的照門或瞄具零件（不在類別預設裡，搜尋 `weapon_common_part*`、`rif_m16a3*` 的全部零件）。找到後照第 7 步加進 `tools/sf2_rig_build.mjs`，再取消 `tools/sf2_weapon_table.py` 裡 m16a3 那行的註解。
+  - 🔄 本機 2026-10-28 調查（還沒做完，下一輪接著）：
+    - SF2 預設 M16A3（`wp_ar_m16a3`）只有槍管／機匣／彈匣／槍托四個零件；類別預設 `SightOnMesh = rif_m16a3_sight_up`（`SightBaseSocketName = Sight`），**沒有照門**。這個前準星是矮的折疊式（高 1.9 cm，頂端 1.183 m；機匣導軌頂 1.168 m、膛線 1.144 m）。
+    - 可用的照門零件（`wp_common_part` 的配件）：`Common_M4_Handle`（零件 `Handle` → `weapon_common_part` 的 `dot_handle`，單骨頭 `weapon_scope`）、`common_m4a1_rearsight`（`rearsight_a` → `rif_m4a1_rearsight`）。兩者掛在機匣 `Scope` 插槽時覘孔高 1.2004 m，**比 SF2 自己的前準星頂端高 33 mm**——搭不起來。
+    - `dot_handle` 用 `handle_d` 貼圖會變成灰白色（UV 不是這張），而且後端最高點是提把橫桿、不是覘孔片，不能照 M4A1 的 PEEP_DROP 算。
+    - 改用 M4A1 自己的提把 `rif_m4a1_handle_a`＋A2 前準星（`railSights`，和 M4A1 一樣）：零件放得上，但 `V.handle` 的點是 **M4A1 綁定姿勢**的座標（OWNBIND），算出的 SIGHT 和 M4A1 完全一樣，開鏡錯位；要先把提把的點用 M16A3 的 `weapon_root` 綁定矩陣換算過去才行。
+    - 這輪已全部還原（M16A3 仍是舊槍模），`sf2_weapon_table.py` 的 m16a3 仍註解。
 - QBZ-97：提把上的瞄準線（現在眼睛落在照門本體上），對照 `.props.txt` 的插槽。
 - MP5K：照第 7 步新增（衝鋒槍類別）。
 - M4A1 第三人稱槍模：`_3rd` 零件，原始匯出放在 `tools/out/sf2/m4a1_3rd/`，成品 commit 成 `tools/guns/m4a1_3rd.glb`；接到 Bot 手上的部分留給雲端（寫進「本機已完成」）。
