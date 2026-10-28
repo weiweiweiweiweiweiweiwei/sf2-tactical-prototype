@@ -20,7 +20,9 @@ const arg = (k, d) => { const i = process.argv.indexOf('--' + k); if (i < 0) ret
 const SECONDS = +arg('seconds', 10), QUALITY = arg('quality', 'high'), FILE = arg('file', 'index.html'), SHOT = arg('shot', false), HEADED = !!arg('headed', false);
 // v24 profiling options: --size 1920x1080 · --novsync (true frame cost, no 60 Hz cap) · --bots 12 (per team) · --audio (run the audio engine too)
 const [VW, VH] = String(arg('size', '1280x720')).split('x').map(Number), NOVSYNC = !!arg('novsync', false), BOTS = +arg('bots', 5), AUDIO = !!arg('audio', false);
-const MAPS = arg('map', '0') === 'all' ? [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15] : String(arg('map', '0')).split(',').map(Number);
+// v63g --map all = every map in the game (read from SF2.MAPS once the page is up: Sky City and the two Apex maps were left out of the old 0–15)
+const MAP_ALL = arg('map', '0') === 'all';
+let MAPS = MAP_ALL ? [] : String(arg('map', '0')).split(',').map(Number);
 
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.mjs': 'text/javascript', '.json': 'application/json', '.png': 'image/png', '.webp': 'image/webp', '.jpg': 'image/jpeg', '.css': 'text/css', '.cube': 'text/plain' };
 const server = http.createServer((req, res) => {
@@ -51,6 +53,11 @@ if (!browser) { console.error('No Chrome / Edge / Playwright Chromium found'); p
 
 let failed = false;
 const rows = [], prof = [];
+if (MAP_ALL) {
+  const pg = await browser.newPage(); await routeCdn(pg, ROOT);
+  await pg.goto(base + encodeURI(FILE) + '?count=' + Date.now(), { waitUntil: 'load', timeout: 60000 }); await pg.waitForFunction(() => window.SF2 && window.SF2.MAPS, null, { timeout: 60000 });
+  MAPS = [...Array(await pg.evaluate(() => window.SF2.MAPS.length)).keys()]; await pg.close();
+}
 for (const map of MAPS) {
   const page = await browser.newPage({ viewport: { width: VW, height: VH } });
   const errors = [];
