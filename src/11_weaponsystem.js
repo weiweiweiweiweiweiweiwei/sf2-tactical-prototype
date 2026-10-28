@@ -347,7 +347,7 @@ class WeaponSystem extends Arsenal {
     const mk = this.game.player.mantleK || 0; if (mk > 0.01) { pos.y -= 0.09 * mk; pos.z += 0.04 * mk; ex -= 0.45 * mk; ez += 0.2 * mk; } // v15 mantle: gun dips while the hands grab the ledge
     const sk = this.game.player.slideK || 0; if (sk > 0.01) { pos.x -= 0.025 * sk * (1 - this.adsT); pos.y -= 0.015 * sk; ez += 0.32 * sk * (1 - this.adsT * 0.7); } // v14 slide tilt
     if (!rig && this.sprintT > 0.01 && w.kind !== 'knife') { const s = this.sprintT; pos.x -= 0.03 * s; pos.y -= 0.045 * s; pos.z += 0.02 * s; ex -= 0.32 * s; ey += 0.62 * s; ez += 0.28 * s; }
-    if (rig) rig.update(dt, { ads: this.adsT, sprint: this.sprintT, reload: w.reloading ? w.reloadT : -1, reloadDone: !w.reloading && w.reloadT >= w.reloadTime, reloadLen: w.def.sf2ReloadAnim || w.reloadTime, draw: this.drawT });
+    if (rig) rig.update(dt, { ads: this.adsT, sprint: this.sprintT, reloading: !!w.reloading, reload: w.reloading && !w.shellReload ? w.reloadT : -1, reloadDone: !w.reloading && w.reloadT >= w.reloadTime, reloadLen: w.def.sf2ReloadAnim || w.reloadTime, draw: this.drawT });
     if (this.drawT > 0) { this.drawT = Math.max(0, this.drawT - dt / 0.22); const e = rig ? 0 : this.drawT * this.drawT; pos.y -= 0.13 * e; ex -= 0.7 * e; ez += 0.2 * e; }
     if (!rig && w.reloading && !(w.kind === 'shotgun' && w.shellReload)) { const s = Math.sin(Math.PI * w.reloadPhase), rp = vm.reloadPose || RELOAD_POSE; ez += rp.roll * s; ex += rp.pitch * s; pos.y -= rp.drop * s; pos.x -= rp.shift * s; } // v51: per viewmodel (vm.reloadPose)
     if (w.kind === 'sniper' && w.boltPhase > 0) { // bolt cycle pose; v50: per viewmodel (vm.boltPose) — the M200 swings in so its bolt shows

@@ -1549,3 +1549,17 @@
   - M249：腰射時槍朝左上，照門貼圖缺。
   - RPK、L86A1：開鏡時鏡頭在槍身裡。
 - 驗證：三把的腰射和開鏡截圖、`check.mjs`。
+
+
+### v65h（本機，2026-10-28）：SF2 原版 Remington 870、Benelli M4、KSG、Saiga-12；散彈槍三段換彈；AA-12 暫停
+- 四把散彈槍換成 SF2 原版：模型、動畫、聲音，數值照 `M870`／`BNLLI`／`KeltecKSG`／`SAIGA12`。KSG 裝 `sho_ksg_sight_up`。
+- 三段換彈（`src/09c_sf2rig.js`）：SF2 的管狀彈倉散彈槍沒有單一 `Reload` 片段，而是 `ReloadStart`、`ReloadLoop`、`ReloadEnd` 三段。
+  - 換彈中先播開始段一次，接著每裝一發循環一次。
+  - 停止換彈時（裝滿或開槍打斷）播結束段；開槍時不播結束段，因為開槍片段本身會上膛。
+  - `WeaponSystem` 多傳 `reloading` 給骨架。
+- 建模腳本新增 `fileMap`，可指定零件檔名（例如 AA-12 的 `body_a`）。
+- 暫停（⏸）：AA-12 開鏡時鏡頭在槍身裡。
+- 驗證：
+  - 四把的腰射和開鏡截圖。
+  - `tools/out/_shellreload.mjs`（870）：0.3 s 開始段；0.9 s 和 1.8 s 循環段，彈藥 2 → 3 → 5；裝滿 8 發後播結束段。
+  - `check.mjs`。

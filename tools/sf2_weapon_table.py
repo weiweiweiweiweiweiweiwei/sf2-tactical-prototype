@@ -58,6 +58,11 @@ GUNS = {  # id: (SF2 class, rig, sound, [magout, magin, charge])
     'mg4': ('MG4', 'mg4', 'mg4', [0.15, 0.45, 0.8]),
     'k3': ('K3', 'k3', 'k3', [0.15, 0.45, 0.8]),
     'hk23e': ('HK23E', 'hk23e', 'hk23e', [0.15, 0.45, 0.8]),
+    # v65h docs/loop/GUNS.md D: shotguns
+    'remington870': ('M870', 'remington870', 'remington870', [0.2, 0.5, 0.8]),
+    'benelli_m4': ('BNLLI', 'benelli_m4', 'benelli_m4', [0.2, 0.5, 0.8]),
+    'ksg': ('KeltecKSG', 'ksg', 'ksg', [0.2, 0.5, 0.8]),
+    'saiga12': ('SAIGA12', 'saiga12', 'saiga12', [0.15, 0.4, 0.75]),
     'trg': ('TRG', 'trg', 'trg', [0.31, 0.48, 0.75], {'adsType': '2d_scope_overlay', 'adsFov': 20, 'adsSpeed': 17, 'vmAdsHFov': None, 'sf2Recoil': None,
                                                        'sf2ReloadSounds': [[0.14, 'boltback'], [0.31, 'magout'], [0.48, 'magin'], [0.75, 'charge']]}),
 }

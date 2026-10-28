@@ -23,8 +23,8 @@ const ARMS = [['sleeve', 'arms/c_comm_skelet/SkeletalMesh3/com_1starm_b01.gltf',
 const gun = (id, o = {}) => {
   const pkg = o.pkg || `rif_${id}`, stem = o.stem || pkg, tex = o.tex || id, mesh = `${id}/${pkg}/SkeletalMesh3/${stem}_`;
   return Object.assign({
-    dir: id, base: `${mesh}body.gltf`, props: `${id}_anim/${pkg}/SkeletalMesh3/${stem}_body.props.txt`,
-    parts: [...(o.partNames || ['body', 'barrel', 'stock', 'magazine']).map((k) => [k, `${mesh}${k}.gltf`, (o.texMap || {})[k] || `${tex}_${k}`]), ...ARMS], // (v65f o.texMap: a part whose sheet is named otherwise — the MP7's mp7_stock_a) // (v64t o.partNames: the M40A1 has no stock part)
+    dir: id, base: (o.fileMap || {}).body || `${mesh}body.gltf`, props: `${id}_anim/${pkg}/SkeletalMesh3/${stem}_body.props.txt`, // (v65h o.fileMap: parts named otherwise — the AA-12's body_a …)
+    parts: [...(o.partNames || ['body', 'barrel', 'stock', 'magazine']).map((k) => [k, (o.fileMap || {})[k] || `${mesh}${k}.gltf`, (o.texMap || {})[k] || `${tex}_${k}`]), ...ARMS], // (v65f o.texMap: a part whose sheet is named otherwise — the MP7's mp7_stock_a) // (v64t o.partNames: the M40A1 has no stock part)
     psa: `${id}_anim/${pkg}/AnimSet/${o.anim || '1st_anim_' + id}.psa`, socketSights: [],
   }, o);
 };
@@ -108,6 +108,14 @@ const G = {
   k3: gun('k3', { pkg: 'mg_K3', stem: 'mg_k3', anim: '1st_anim_K3', hoodedPost: true, socketSights: sight('k3/mg_K3/SkeletalMesh3/mg_k3_sight_up.gltf', 'k3_sight') }),
   l86a1: gun('l86a1', { pkg: 'mg_l86a1', socketSights: sight('l86a1/mg_l86a1_sight/SkeletalMesh3/mg_l86a1_sight_up.gltf', 'l86a1_sight') }),
   hk23e: gun('hk23e', { pkg: 'mg_hk23', tex: 'hk23', anim: '1st_anim_hk23', hoodedPost: true, socketSights: sight('hk23e/mg_hk23/SkeletalMesh3/mg_hk23_sight_up.gltf', 'hk23_sight') }),
+  // v65h docs/loop/GUNS.md D: shotguns (the pump / tube guns reload shell by shell: ReloadStart / Loop / End, src/09c_sf2rig.js)
+  remington870: gun('remington870', { pkg: 'sho_m870', tex: 'm870', anim: '1st_anim_m870' }),
+  benelli_m4: gun('benelli_m4', { pkg: 'sho_bnill', stem: 'sho_bnlli', tex: 'bnlli', anim: '1st_anim_bnill' }),
+  ksg: gun('ksg', { pkg: 'sho_ksg', socketSights: sight('ksg/sho_ksg/SkeletalMesh3/sho_ksg_sight_up.gltf', 'ksg_ironsight') }),
+  saiga12: gun('saiga12', { pkg: 'sho_saiga12' }),
+  aa12: gun('aa12', { pkg: 'sho_aa12', partNames: ['body', 'barrel', 'magazine'], props: 'aa12_anim/sho_aa12/SkeletalMesh3/sho_aa12_body_a.props.txt',
+    fileMap: { body: 'aa12/sho_aa12/SkeletalMesh3/sho_aa12_body_a.gltf', barrel: 'aa12/sho_aa12/SkeletalMesh3/sho_aa12_barrel_a.gltf', magazine: 'aa12/sho_aa12/SkeletalMesh3/sho_aa12_magazine_a.gltf' },
+    texMap: { body: 'aa12_body_a', barrel: 'aa12_barrel_a', magazine: 'aa12_magazine_a' }, socketSights: sight('aa12/sho_aa12/SkeletalMesh3/sho_aa12_sight_up.gltf', 'aa12_dot_a') }),
   trg: gun('trg', { pkg: 'sni_trg', stem: 'sni_trg', tex: 'sni_trg', anim: '1st_ani_trg', optic: ZEISS_SCOPE }),
 }[GID];
 if (!G) throw new Error(`unknown gun ${GID}`);

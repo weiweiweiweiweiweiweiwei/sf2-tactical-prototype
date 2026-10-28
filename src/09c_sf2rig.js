@@ -53,7 +53,7 @@ class SF2Rig {
     for (const [k, a] of Object.entries(this.a)) { const v = w[k]; a.setEffectiveWeight(v ? v[1] : 0); if (v) a.time = v[0]; }
     this.mixer.update(0);
   }
-  fire(ads) { this.reloadAt = -1; this.fireT = 0; this.fireClip = ads && this.a.ZoomFire ? 'ZoomFire' : 'Fire'; this.equipT = -1; } // (v64 the K14 has no ZoomFire: its Fire works the bolt)
+  fire(ads) { this.reloadAt = -1; this.shellEnd = -1; this.fireT = 0; this.fireClip = ads && this.a.ZoomFire ? 'ZoomFire' : 'Fire'; this.equipT = -1; } // (v64 the K14 has no ZoomFire: its Fire works the bolt)
   // s: { ads 0–1, sprint 0–1, reload s or −1 / reloadDone / reloadLen (the clip's s), draw (WeaponSystem.drawT: 1 on a switch, running down) }
   update(dt, s) {
     if (this.camo) this.camo.update(dt);
@@ -68,6 +68,13 @@ class SF2Rig {
     if (this.reloadAt >= 0 && this.reloadAt < s.reloadLen) {
       const q = this.reloadAt / s.reloadLen, d = this.dur('Reload'), k = fade(q, 1, 0.05, 0.08); w.Reload = [q * d, k]; rest -= k; this.fireT = -1; this.equipT = -1;
     } else this.reloadAt = -1;
+    if (this.a.ReloadLoop && !this.a.Reload) { // v65h a shell-by-shell gun (SF2's shotguns): ReloadStart once, ReloadLoop per shell while
+      // reloading (s.reloading), ReloadEnd when it stops — full, or cut by a shot (fire() drops the End: the Fire clip pumps)
+      if (s.reloading) { this.shellT = this.shellT >= 0 ? this.shellT + dt : 0; this.shellEnd = -1; } else if (this.shellT >= 0) { this.shellT = -1; this.shellEnd = 0; }
+      const ds = this.dur('ReloadStart'), dl = this.dur('ReloadLoop'), de = this.dur('ReloadEnd');
+      if (this.shellT >= 0) { const k = fade(this.shellT, 1e9, 0.08, 0); if (this.shellT < ds) w.ReloadStart = [this.shellT, k]; else w.ReloadLoop = [(this.shellT - ds) % dl, k]; rest -= k; this.fireT = -1; this.equipT = -1; }
+      else if (this.shellEnd >= 0) { this.shellEnd += dt; if (this.shellEnd < de) { const k = fade(this.shellEnd, de, 0, 0.1); w.ReloadEnd = [this.shellEnd, k]; rest -= k; } else this.shellEnd = -1; }
+    }
     if (this.equipT >= 0) {
       const d = this.dur('Equip'); this.equipT += dt * this.equipRate;
       if (this.equipT >= d) this.equipT = -1; else { const k = rest * fade(this.equipT, d, 0, 0.12); w.Equip = [this.equipT, k]; rest -= k; }

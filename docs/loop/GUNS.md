@@ -24,7 +24,7 @@
 7. **驗證**：`GUNID=<id> ONLY=hip,ads,ads2,fire TAG=<id> node tools/out/_rigshot.mjs`（看截圖：鏡子在槍正上方、手握得住、開鏡十字對）、`GUNID=<id> node tools/out/_reloadtime.mjs`、`node tools/check.mjs`。（`_rigshot` 的 reload 步驟把彈藥設 5，狙擊槍彈匣 5 會卡住，狙擊槍不要用 reload。）
 
 聲音清單（`tools/sfx_sf2.mjs` 參數，每加一把就更新）：
-`m4a1 ak103 g36c m16a3 k2 scarh famas xm8 galil hk417 qbz97 mp5k k14 trg m40a1 cz700 cheytac awp barrett@Barret kar98k@Kar98k_new sr25 psg1 frf2 m14ebr aug@AUGA3 sg551@SIG551 type89 ump45 mp7 mg4 k3 hk23e g36c_eo=g36c+silence hk417_rs=hk417+silence scarl_eo=scarh+silence`
+`m4a1 ak103 g36c m16a3 k2 scarh famas xm8 galil hk417 qbz97 mp5k k14 trg m40a1 cz700 cheytac awp barrett@Barret kar98k@Kar98k_new sr25 psg1 frf2 m14ebr aug@AUGA3 sg551@SIG551 type89 ump45 mp7 mg4 k3 hk23e remington870@M870 benelli_m4@Bnlli ksg saiga12 g36c_eo=g36c+silence hk417_rs=hk417+silence scarl_eo=scarh+silence`
 
 ## 佇列（由上往下做）
 狀態：⬜ 未做 · 🔄 進行中 · ✅ 完成 · ⏸ 做不到（寫原因）
@@ -57,7 +57,8 @@
 - ✅ MG4（v65g；照門用 `mg4_sight_bw`，SF2 這把只有這張）・K3（v65g）・HK23E（v65g）
 - ⏸ M249（`mg_spw`）：腰射時槍朝左上 45°，照門貼圖缺（全白）
 - ⏸ RPK（`mg_rpk74`）、L86A1（`mg_l86a1`，SUSAT 鏡）：開鏡時鏡頭落在槍身／瞄具裡（灰畫面），要手動量瞄準點
-- ⬜ Remington 870（`sho_m870`）・Benelli M4（`sho_bnill`）・KSG（`sho_ksg`）・Saiga-12（`sho_saiga12`）・AA-12（`sho_aa12`）
+- ✅ Remington 870・Benelli M4・KSG・Saiga-12（v65h；三段換彈 ReloadStart／Loop／End）
+- ⏸ AA-12（`sho_aa12`）：開鏡時鏡頭在槍身裡；零件叫 body_a 等（`fileMap` 已支援），要手動量瞄準點
 - ⬜ P226（`pis_p226`）・Desert Eagle（`pis_deserteagle`）・Glock（`pis_glock17`）・M1911（`pis_colt1911`）・CZ 75（`pis_cz75`）・Jericho（`pis_jericho941`）・S&W 60（`pis_sw60`）・M92FS（`pis_m92f`）・Infinity（`pis_infi`）
 - ⏸ 沒有 SF2 包：MP5（只有 MP5K）、KRISS Vector（SF2 有 KrissV 類別但沒找到包，再查一次）、Negev、PKM、MG42、M1014、USP、AK-47（SF2 只有 AK-103）
 
