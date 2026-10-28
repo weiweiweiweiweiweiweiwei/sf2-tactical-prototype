@@ -6,7 +6,7 @@
 
 ## 待本機（雲端寫，本機做）
 
-### H2 ⬜ 抓公開的 TTK 表和 wiki 數值，給雲端比對
+### H2 🔄 抓公開的 TTK 表和 wiki 數值，給雲端比對
 - 來源：`https://apexlegends.wiki.gg/wiki/<槍名>`（每把槍頁面的 Stats、TTK、Advanced stats 表），以及任何列出 TTK 的數據站。
 - 輸出：`docs/research/apex/web/wiki-<slug>.md`（表格原樣轉成 Markdown，附抓取日期和網址）。
 - 驗證：每個檔都有網址和日期；有 TTK 表的槍至少 20 把。
