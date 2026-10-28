@@ -859,7 +859,7 @@ class App {
     const sel = (id, key, apply) => { const el = $(id); el.value = String(S[key]); el.addEventListener('change', () => { S[key] = el.value; if (apply) apply(el.value); Settings.save(); }); };
     sel('optQuality', 'quality', (q) => { if (q === 'auto') setAutoQ(this.autoCeil); this.tex.setQuality(activeQuality()); if (this.match) this.post.configure(this.match, activeQuality()); });
     { const hs = $('optHit'); for (const [k, v] of Object.entries(HIT_SOUNDS)) { const o = document.createElement('option'); o.value = k; o.textContent = v.label; hs.append(o); }
-      if (!HIT_SOUNDS[S.hitSound]) S.hitSound = 'flesh';
+      if (!HIT_SOUNDS[S.hitSound] || !S.hitSf2) { S.hitSound = 'sf2'; S.hitSf2 = true; Settings.save(); } // v64e once: everyone onto SF2's own hit / kill sounds (the list still offers the others)
       const demo = () => { this.audio.init(); AudioEngine.loadSamples(); [0, 260, 520].forEach((d, i) => setTimeout(() => this.audio.hit(['body', 'head', 'kill'][i]), d)); };
       sel('optHit', 'hitSound', demo); $('optHitPlay').addEventListener('click', demo); } // v38: preview body → head → kill on change
     sel('optAds', 'adsMode'); sel('optHip', 'hipMode'); sel('optHud', 'hudStyle', () => this.hud.applyStyle());

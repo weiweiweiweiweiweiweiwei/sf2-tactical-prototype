@@ -1251,3 +1251,10 @@
 - 士兵手上：拿掉 `GUN_3RD`（M4A1 第三人稱是 4 個零件＝每個士兵 4 次繪製、加陰影 8 次），回到合併成一個網格的程式槍模；`tools/guns/pack.mjs` 不再打包 `*_3rd.glb`。
 - 掉落的槍：`WeaponModels.dropModel` 用第一人稱模型（不含手臂），SF2 原版槍的骨架在當下姿勢烘成一般網格，每種槍只做一次、之後的掉落共用幾何（第一次 7–15 ms，之後 0.1 ms），真實大小、槍口朝 −Z、置中；做不出來時退回原本的簡易模型。
 - 驗證：`tools/out/_drops.mjs`（M4A1、AK-103、SCAR-H、K14、MP5K、P226 掉在玩家前方）截圖可辨識；`check.mjs` 倉庫和訓練場過。
+
+
+### （本機，2026-10-28）：SF2 原版的手榴彈、命中、擊殺、換槍音效
+- 使用者 10-28：手榴彈、煙霧彈、閃光彈換成 SF2 原生音效；子彈打在敵人身上、滑鼠滾輪換槍、擊殺成功的音效也套用 SF2 的。
+- 從使用者的安裝檔匯出（UModel `-export -sounds`），照 SF2 自己的 SoundCue 對應：破片 `M67_Explo_01／02`（`Cue_M67_Explo`）、閃光 `M84_Explo_01／02`、煙霧 `M18_Explo_01`、拉環 `Grenade_Pin`、投擲 `Grenade_Throw`、拿出 `Grenade_Equip`；命中 `bullet_hit_2d_03`（`HitNormal_cue`）；致命一擊 `Bullet_flesh_01–05` 降調 0.8（`HitDead_cue`）＋擊殺 `kill3_New`（`cue_kill3_new`）；換槍 `hud_switch05`（SFGame 腳本裡的名稱）。
+- `tools/sfx_sf2_fx.mjs` → `assets/sfx_sf2_fx.js`（432 KB），`src/02_audio.js` 載入後併進音效包：爆炸／煙霧改播錄音（沒有時退回原本的），`MECH_REC` 加拉環／投擲／拿出，命中音效清單新增「SF2 原版」並設為預設（舊設定一次性改過去，清單裡其他的還能選），自己換槍時多一聲 HUD 切換。
+- 驗證：`tools/out/_sfxfx.mjs` 10 組都載入、每個呼叫不報錯；`check.mjs` 過。
