@@ -1141,6 +1141,11 @@
 - 合併本機分支 `local/assets`（v62x 載入時間、v62y 碰撞縮小、H1 apex.source.gs 29 頁、H2 wiki 29 頁、H3 M16A3 調查）。
 - `tools/apex_weapon_data.py` 新增 `s30.1-full` 層（`source-gs-s30/<slug>.md`）：頭／腿倍率（精確值，例 R-301 ×1.3／×0.75）、爆頭距離、拔槍／收槍／衝刺後開火、開鏡進出時間和 FOV、開鏡移速、彈道、散布、後座倍率。`current` 的來源：S30.1-full 602 欄、S30.1 381、S14 127（原本 S14 是大宗）。
 - wiki 比對（`wiki_check`，README 有總表）：wiki 的「Shots to kill」身體列對 100–225 HP，29 把中 21 把和我們完全一樣；8 把差在每發傷害本身，採用較新的 S30.1（D9）。
-- 遊戲裡的影響：只有 30-30（M200 以外的半自動狙擊沒用到它；栓動槍不會對應到它）腿部 43.4 → 43.35，以及沒有對應槍的 Nemesis／Charge Rifle 爆頭距離；`_ttk.mjs` 的數字不變。
+- 遊戲裡的影響：只有 30-30 的腿部 43.4 → 43.35，和 Nemesis／Charge Rifle 的爆頭距離；這三把目前都沒有對應的槍，所以 `_ttk.mjs` 的數字不變。
 - 驗證：`analyze`、`build`、`_dmgmodel.mjs`、`check.mjs` 都過。
+
+### v63a（2026-10-28）：AI 除錯顯示（F4）
+- 新檔 `src/14c_aidebug.js`（`AIDebug`）：按 F4 在每個活著的 Bot 頭上顯示「名字 · 狀態（目標種類）→ 目標 👁（看得到）· 血量」，隊伍顏色；每 0.1 秒更新文字，位置每幀跟著投影。只在單機和房主（Bot 在這台電腦上跑）；連線的客人按了沒有反應。再按一次關閉。
+- 狙擊屏息：不做（D11）。
+- 驗證：無頭瀏覽器 4 對 4，按 F4 出現 6 個標籤（畫面內的 Bot，例「Falcon · PATROL · 100 HP」），再按一次隱藏；`analyze`（35 個模組）、`build`、`check.mjs` 都過。
 

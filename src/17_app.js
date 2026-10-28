@@ -813,6 +813,7 @@ class App {
       }
       const fk = /^F([1-3])$/.exec(code);
       if (fk && m && (this.state === 'playing' || this.state === 'paused')) { m.queueLoadout(parseInt(fk[1], 10) - 1); return; } // works while dead too
+      if (code === 'F4' && m && (this.state === 'playing' || this.state === 'paused')) { m.toggleAIDebug(); return; } // v63a
       if (this.state === 'playing' && m && (code === 'Enter' || code === 'NumpadEnter') && this.room && this.room.online) { this.openChat(false); return; } // v31: chat (Tab in the box: team only)
       if (this.state !== 'playing' || !m || !m.player.alive) return;
       const C = this.cmds, dg = /^Digit([1-9])$/.exec(code);

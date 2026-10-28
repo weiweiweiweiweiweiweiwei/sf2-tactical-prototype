@@ -11,6 +11,7 @@ import { NET_WEAPONS, netV3 } from './12c_netutil.js';
 import { WeaponSystem } from './11_weaponsystem.js';
 import { Player } from './12_player.js';
 import { Bot, TeamIntel } from './13_bots.js';
+import { AIDebug } from './14c_aidebug.js';
 import { createRule } from './15b_rules.js';
 /* =====================================================================
    MATCH — one game session: world, lighting/IBL, teams, combat,
@@ -614,6 +615,13 @@ class Match {
 
   emitNoise(pos, radius, team, kind = 'noise') { for (const b of this.bots) if (b.alive && b.team !== team) b.ai.hear(pos, radius, kind); }
 
+  // v63a F4: the AI debug labels (bots run on this machine only: offline or the host)
+  toggleAIDebug() {
+    if (this.isClient) return;
+    if (!this.aiDebug) this.aiDebug = new AIDebug();
+    this.app.hud.toast(this.aiDebug.toggle() ? 'AI 除錯顯示：開（F4 關閉）' : 'AI 除錯顯示：關');
+  }
+
   // F1–F3: queue a loadout for the NEXT respawn (the current kit is not touched); the three sets pop up mid-screen like SF2.
   queueLoadout(i) {
     if (i < 0 || i >= LOADOUT_KEYS.length) return;
@@ -926,6 +934,7 @@ class Match {
     hud.markers(this.rules.markers([]), this.camera);
     hud.scoreboard(input.down('Tab') ? this : null);
     hud.update(dt, this);
+    if (this.aiDebug) this.aiDebug.update(dt, this, this.camera); // v63a F4
     const t4 = performance.now(); PR.add('sim', t1 - t0); PR.add('ai', t2 - t1); PR.add('fx', t3 - t2); PR.add('hud', t4 - t3);
   }
 
@@ -950,6 +959,7 @@ class Match {
   }
 
   dispose() {
+    if (this.aiDebug) this.aiDebug.dispose();
     this.running = false;
     this.rules.dispose();
     for (const b of this.bots) if (b.tag) b.tag.material.map.dispose();
