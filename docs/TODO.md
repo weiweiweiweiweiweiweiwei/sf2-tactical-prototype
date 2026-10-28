@@ -43,10 +43,11 @@
 - 🔄 29 把槍的數值接進 Apex 扣血模式
   - ✅ 完整數值（v62t）：S30.1＋官方 patch notes＋S14 原始武器腳本（散布、後座表、彈道、拔槍、配件效果），逐欄標來源；TTK 表（`tools/apex_weapon_data.py`）
   - ✅ 扣血接線（v62u）：每把槍對應一把同類、射速最接近的 Apex 槍，用它的傷害、頭／腿倍率、爆頭生效距離（自選，見 DECISIONS D6）
-  - ⬜ 清掉 `APEX.head`／`legs`／`leg`／`scale`（v62u 起只有沒對應的槍會用到，目前一把都沒有）
+  - ✅ 清掉 `APEX.head`／`legs`／`leg`／`scale`（v62v）
   - ⬜ 新增 Apex 原版槍當成獨立武器（需要模型：HANDOFF H5 的 RSX 匯出），讓連發、蓄力、加速類（Hemlok、Nemesis、Prowler、Charge Rifle、Triple Take、Bocek、Devotion、L-STAR、Kraber）也能用
-  - ⬜ TTK 自動測試：遊戲裡實際算出的 TTK 和 `weapons-full.json` 一致；和公開 TTK 表比對差距 > 5% 的列出來（公開表要找能連上的來源：這個環境擋 wiki、apex.source.gs）
-  - ⬜ 散布、後座：照 S14 的 `spread_*`、`viewkick_*`、每發後座表
+  - ✅ 每發傷害、頭／腿倍率、爆頭距離和對應的 Apex 槍一致：`tools/_dmgmodel.mjs`（v62u）
+  - ⏸ 本機：和公開 TTK 表比對差距 > 5% 的列出來（等 HANDOFF H2 抓回 wiki 的表）
+  - ✅ 散布、後座不套 Apex 的（自選，見 DECISIONS D7）：留給「新增 Apex 原版槍」用
   - ⬜ Nemesis 的 S14 欄位（S16 才加入）：散布、後座、拔槍找其他來源
 - ⬜ 配件系統（瞄具、彈匣、槍托、槍管、Hop-up）
 - ⬜ 用 RSX 從 Apex 安裝檔匯出原版槍模和音效

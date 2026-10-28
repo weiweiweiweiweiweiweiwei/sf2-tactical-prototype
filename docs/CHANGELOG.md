@@ -1112,3 +1112,8 @@
 
 - 驗證：`analyze.mjs` MODULES_OK、`build` BUILD_OK、`_dmgmodel.mjs` DMG_MODEL_OK、`check.mjs` CHECK_OK。
 
+### v62v（2026-10-28）：清掉舊的 Apex 類別係數
+- `APEX.head`／`legs`／`leg`／`scale`（v59–v62t 的類別爆頭倍率和傷害係數）刪除：v62u 起每把槍都有對應的 Apex 槍（6 個類型都有候選），這些值已經用不到。`calcDamage` 剩下 SF2 的算法（Apex 模式下沒對應的槍也走這裡，只是沒有狙擊一槍死的規則）。
+- 散布、後座不套 Apex 的數值（自選決策 D7）。
+- 驗證：`_ttk.mjs` 61 把槍的 SF2／Apex 數字和 v62u 完全一樣；`_dmgmodel.mjs` DMG_MODEL_OK；`analyze`、`build`、`check.mjs` 都過。
+

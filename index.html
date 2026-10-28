@@ -1029,12 +1029,6 @@ var CFG = {
 var POINTS = { head: 50, body: 30, knife: 50, grenade: 40, assist: 15, capture: 75, relic: 150 };
 var PART_MULT = { head: 2.5, chest: 1, stomach: 0.9, thigh: 0.75, shin: 0.75, foot: 0.75 };
 var APEX = {
-  head: { smg: 1.25, assault: 1.75, lmg: 1.75, pistol: 1.75, sniper: 2, shotgun: 1 },
-  legs: { sniper: 0.9, pistol: 0.9 },
-  leg: 0.8,
-  // v59 per-shot damage brought to Apex's own (user: Apex fights last two or three magazines): R-301 13 vs our M4 26, R-99 12 vs
-  // MP5 25, Spitfire 18 vs M249 28, P2020 18, EVA-8 56 a blast vs 870 144, Longbow 55 / Kraber 140 vs M200 120
-  scale: { assault: 0.5, smg: 0.5, lmg: 0.62, pistol: 0.6, sniper: 0.9, shotgun: 0.42 },
   shields: [50, 75, 100],
   evo: [0, 150, 500],
   regenDelay: 4,
@@ -3182,12 +3176,10 @@ function calcDamage(def, part, dist, mult = 1, apex = false) {
     const t = def.type === "shotgun" ? clamp((dist - def.falloffStart) / Math.max(1e-3, def.falloffEnd - def.falloffStart), 0, 1) : 0;
     return a.body * a.pellets / def.pellets * (1 + (def.damageFar / def.damageNear - 1) * t) * m2 * mult;
   }
-  const m = apex ? part === "head" ? APEX.head[def.type] ?? 1.75 : legs ? APEX.legs[def.type] ?? APEX.leg : 1 : part === "head" ? def.headMult ?? PART_MULT.head : PART_MULT[part] ?? 1;
+  const m = part === "head" ? def.headMult ?? PART_MULT.head : PART_MULT[part] ?? 1;
   let base;
-  if (def.damageNear !== void 0) {
-    const t = apex && def.type !== "shotgun" ? 0 : clamp((dist - def.falloffStart) / Math.max(1e-3, def.falloffEnd - def.falloffStart), 0, 1);
-    base = (def.damageNear + (def.damageFar - def.damageNear) * t) * (apex ? APEX.scale[def.type] ?? 1 : 1);
-  } else base = def.damage * Math.pow(def.falloff ?? 1, dist / 10);
+  if (def.damageNear !== void 0) base = def.damageNear + (def.damageFar - def.damageNear) * clamp((dist - def.falloffStart) / Math.max(1e-3, def.falloffEnd - def.falloffStart), 0, 1);
+  else base = def.damage * Math.pow(def.falloff ?? 1, dist / 10);
   return base * m * mult;
 }
 __name(calcDamage, "calcDamage");

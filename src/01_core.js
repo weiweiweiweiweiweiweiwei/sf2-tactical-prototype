@@ -43,17 +43,11 @@ const PART_MULT = { head: 2.5, chest: 1, stomach: 0.9, thigh: 0.75, shin: 0.75, 
 // v58 damage models (room 設置 → 扣血機制). 'sf2': the multipliers above, range falloff, sniper headshots kill, and a helmet
 // that a headshot knocks off when it would not kill (that hit counts as a body hit; the bare head takes the full ×2.5 after).
 // 'apex' (Apex Legends, Season 24–30, 2025–26): 100 HP plus a body shield levelled by Evo — the damage you deal — to 50 / 75 /
-// 100; damage hits the shield first and the rest of that bullet carries into health; the headshot multiplier is the weapon
-// class's (helmets no longer reduce it); body ×1, legs ×0.8 (×0.9 snipers / pistols); no range falloff except shotguns; no
-// sniper one-shot rule. Health and shields come back after 4 s without damage, as in Apex's Mixtape modes (user: option 1B).
-// Evo thresholds are scaled down from Apex's 450 / 1700 for respawn matches; each soldier keeps its Evo through deaths.
-// v62u per-shot damage, head / leg multipliers and headshot range now come from each gun's Apex counterpart (APEX_WEAPONS, apexFor);
-// head / legs / leg / scale below only cover a gun with no counterpart.
+// 100; damage hits the shield first and the rest of that bullet carries into health; per-shot damage, head / leg multipliers
+// and headshot range are the gun's Apex counterpart's (v62u: APEX_WEAPONS, apexFor; helmets no longer reduce headshots); no range
+// falloff except shotguns; no sniper one-shot rule. Health and shields come back after 4 s without damage, as in Apex's Mixtape
+// modes (user: option 1B). Evo thresholds are scaled down from Apex's 450 / 1700 for respawn matches; each soldier keeps its Evo.
 const APEX = {
-  head: { smg: 1.25, assault: 1.75, lmg: 1.75, pistol: 1.75, sniper: 2, shotgun: 1 }, legs: { sniper: 0.9, pistol: 0.9 }, leg: 0.8,
-  // v59 per-shot damage brought to Apex's own (user: Apex fights last two or three magazines): R-301 13 vs our M4 26, R-99 12 vs
-  // MP5 25, Spitfire 18 vs M249 28, P2020 18, EVA-8 56 a blast vs 870 144, Longbow 55 / Kraber 140 vs M200 120
-  scale: { assault: 0.5, smg: 0.5, lmg: 0.62, pistol: 0.6, sniper: 0.9, shotgun: 0.42 },
   shields: [50, 75, 100], evo: [0, 150, 500], regenDelay: 4, regenHp: 5, regenShield: 5, // v60 user: 5 a second (health, then shield)
 };
 const APEX_STEP = 0.8; // v59 step height on the Apex maps (def.traversal): their 1 m collision columns step 0.5–0.75 m on a walkable slope
@@ -686,13 +680,9 @@ function calcDamage(def, part, dist, mult = 1, apex = false) {
     const t = def.type === 'shotgun' ? clamp((dist - def.falloffStart) / Math.max(1e-3, def.falloffEnd - def.falloffStart), 0, 1) : 0; // our shotgun falloff, as before
     return a.body * a.pellets / def.pellets * (1 + (def.damageFar / def.damageNear - 1) * t) * m * mult;
   }
-  const m = apex ? (part === 'head' ? APEX.head[def.type] ?? 1.75 : legs ? APEX.legs[def.type] ?? APEX.leg : 1)
-    : part === 'head' ? (def.headMult ?? PART_MULT.head) : PART_MULT[part] ?? 1;
+  const m = part === 'head' ? (def.headMult ?? PART_MULT.head) : PART_MULT[part] ?? 1; // SF2 (and a gun with no Apex counterpart: none now)
   let base;
-  if (def.damageNear !== undefined) {
-    const t = apex && def.type !== 'shotgun' ? 0 : clamp((dist - def.falloffStart) / Math.max(1e-3, def.falloffEnd - def.falloffStart), 0, 1);
-    base = (def.damageNear + (def.damageFar - def.damageNear) * t) * (apex ? APEX.scale[def.type] ?? 1 : 1);
-  }
+  if (def.damageNear !== undefined) base = def.damageNear + (def.damageFar - def.damageNear) * clamp((dist - def.falloffStart) / Math.max(1e-3, def.falloffEnd - def.falloffStart), 0, 1);
   else base = def.damage * Math.pow(def.falloff ?? 1, dist / 10);
   return base * m * mult;
 }
