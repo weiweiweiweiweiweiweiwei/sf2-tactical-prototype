@@ -786,15 +786,29 @@ class Match {
       const n = this.grenades[i]; n.t += h;
       // anti-tunnelling: fast grenades are swept against the level every step and bounced off whatever they would pass through
       const b = n.body, cur = TMP_V3.set(b.position.x, b.position.y, b.position.z), seg = d.subVectors(cur, n.prev), len = seg.length();
-      if (len > 0.08) {
+      const tri = this.collision.tris; // v63m triangle maps: no cannon trimesh tiles (3 grenades = ~200k triangles, 100 ms a step) — every step is swept here
+      if (len > (tri ? 0.004 : 0.08)) {
         seg.divideScalar(len);
         const h = this.collision.raycast(o.copy(n.prev), seg, len + 0.05, false);
         if (h) {
           const nrm = h.normal, v = b.velocity, vn = v.x * nrm.x + v.y * nrm.y + v.z * nrm.z;
           b.position.set(h.point.x + nrm.x * 0.07, h.point.y + nrm.y * 0.07, h.point.z + nrm.z * 0.07);
-          if (vn < 0) { v.x -= 1.38 * vn * nrm.x; v.y -= 1.38 * vn * nrm.y; v.z -= 1.38 * vn * nrm.z; v.x *= 0.75; v.y *= 0.75; v.z *= 0.75; }
-          this.audio.nadeBounce(b.position, Math.min(1, Math.abs(vn) / 8));
+          if (tri && nrm.y > 0.7 && vn > -1.5) { if (vn < 0) { v.x -= vn * nrm.x; v.y -= vn * nrm.y; v.z -= vn * nrm.z; } } // (a slow touch on a floor: it rests, no bounce)
+          else {
+            if (vn < 0) { v.x -= 1.38 * vn * nrm.x; v.y -= 1.38 * vn * nrm.y; v.z -= 1.38 * vn * nrm.z; v.x *= 0.75; v.y *= 0.75; v.z *= 0.75; }
+            this.audio.nadeBounce(b.position, Math.min(1, Math.abs(vn) / 8));
+          }
           cur.set(b.position.x, b.position.y, b.position.z);
+        }
+      }
+      if (tri) { // resting / rolling on a triangle floor: held on it, rolling friction
+        const g = tri.groundAt(cur.x, cur.y + 0.05, cur.z, 0.03, 0.16), v = b.velocity; // (centre 5 cm above the floor at rest, 7 after a swept bounce)
+        if (g !== null && cur.y - 0.05 <= g + 0.03) { // (a swept bounce leaves it 7 cm up: within 3 cm of the radius counts as touching)
+          if (cur.y - 0.05 < g) { b.position.y = g + 0.05; cur.y = b.position.y; }
+          if (v.y < 0) v.y = v.y < -1.5 ? -v.y * 0.3 : 0;
+          const k = Math.max(0, 1 - 3 * h); v.x *= k; v.z *= k; b.angularVelocity.scale(k, b.angularVelocity);
+          const ny = tri.nrm[tri.lastTri * 3 + 1] || 1; // (static friction: slow on a gentle floor → stop; a steep one still rolls it down)
+          if (ny > 0.9 && v.x * v.x + v.y * v.y + v.z * v.z < 0.6) { v.set(0, 0, 0); b.angularVelocity.set(0, 0, 0); }
         }
       }
       n.prev.copy(cur);

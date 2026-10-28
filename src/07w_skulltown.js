@@ -73,7 +73,7 @@ class TriGround {
   slopeAt(x, z, y) { const n = this.normalAt(x, z, this.n, y); return Math.hypot(n.x, n.z) / Math.max(n.y, 1e-3); }
 }
 
-// Grenade trimesh tiles (16 m, built once, in the world while a grenade is within a tile) and prop culling past 150 m.
+// Prop culling past 150 m (v63m: the grenade trimesh tiles are gone, see tick).
 class SkullStreaming {
   constructor(b, tris, meshes) {
     // how far a batch draws grows with its pieces' size: litter goes at 45 m, a house frame at 160 (draw calls halved)
@@ -82,33 +82,9 @@ class SkullStreaming {
       if (!m.geometry.boundingSphere) m.geometry.computeBoundingSphere();
       m.getMatrixAt(0, M); m.userData.far = clamp(m.geometry.boundingSphere.radius * M.getMaxScaleOnAxis() * 35, 45, 160);
     }
-    this.b = b; this.tris = tris; this.meshes = meshes; this.built = new Map(); this.active = new Map(); this.physT = 0; this.cullT = 0; }
-  _tile(key) {
-    const [x, z] = key.split(',').map(Number), T = this.tris, v = T.v, verts = [], ids = [];
-    T.each(x * 16, z * 16, x * 16 + 16, z * 16 + 16, (t) => {
-      const o = t * 6; if (T.bb[o + 3] < x * 16 || T.bb[o] > x * 16 + 16 || T.bb[o + 5] < z * 16 || T.bb[o + 2] > z * 16 + 16) return false;
-      const n = verts.length / 3; for (let k = 0; k < 9; k++) verts.push(v[t * 9 + k]); ids.push(n, n + 1, n + 2); return false;
-    });
-    if (!ids.length) return null;
-    const body = new CANNON.Body({ mass: 0, type: CANNON.Body.STATIC, material: this.b.phys.matDefault, collisionFilterGroup: 2, collisionFilterMask: 4 });
-    body.addShape(new CANNON.Trimesh(verts, ids)); return body;
-  }
-  tick(h) {
-    if ((this.physT -= h) > 0) return;
-    this.physT = 0.1;
-    const world = this.b.phys.world, want = new Set();
-    for (const gr of this.b.game.grenades) {
-      const p = gr.dyn?.body?.position; if (!p) continue;
-      const tx = Math.floor(p.x / 16), tz = Math.floor(p.z / 16);
-      for (let x = tx - 1; x <= tx + 1; x++) for (let z = tz - 1; z <= tz + 1; z++) want.add(x + ',' + z);
-    }
-    for (const [key, body] of this.active) if (!want.has(key)) { world.removeBody(body); this.active.delete(key); }
-    for (const key of want) {
-      if (this.active.has(key)) continue;
-      if (!this.built.has(key)) this.built.set(key, this._tile(key));
-      const body = this.built.get(key); if (body) { world.addBody(body); this.active.set(key, body); }
-    }
-  }
+    this.b = b; this.meshes = meshes; this.cullT = 0; }
+  tick() {} // v63m grenades on a triangle map bounce in Match.stepGrenades (swept rays + floor rest): cannon trimesh tiles of the map
+  // (16 m, 3×3 around each grenade, ~100k triangles) cost up to 100 ms a step
   render(dt) {
     if ((this.cullT -= dt) > 0) return;
     this.cullT = 0.25;

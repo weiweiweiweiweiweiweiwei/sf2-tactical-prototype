@@ -14852,52 +14852,13 @@ var SkullStreaming = class {
       m.userData.far = clamp(m.geometry.boundingSphere.radius * M.getMaxScaleOnAxis() * 35, 45, 160);
     }
     this.b = b;
-    this.tris = tris;
     this.meshes = meshes;
-    this.built = /* @__PURE__ */ new Map();
-    this.active = /* @__PURE__ */ new Map();
-    this.physT = 0;
     this.cullT = 0;
   }
-  _tile(key) {
-    const [x, z] = key.split(",").map(Number), T = this.tris, v = T.v, verts = [], ids = [];
-    T.each(x * 16, z * 16, x * 16 + 16, z * 16 + 16, (t) => {
-      const o = t * 6;
-      if (T.bb[o + 3] < x * 16 || T.bb[o] > x * 16 + 16 || T.bb[o + 5] < z * 16 || T.bb[o + 2] > z * 16 + 16) return false;
-      const n = verts.length / 3;
-      for (let k = 0; k < 9; k++) verts.push(v[t * 9 + k]);
-      ids.push(n, n + 1, n + 2);
-      return false;
-    });
-    if (!ids.length) return null;
-    const body = new CANNON.Body({ mass: 0, type: CANNON.Body.STATIC, material: this.b.phys.matDefault, collisionFilterGroup: 2, collisionFilterMask: 4 });
-    body.addShape(new CANNON.Trimesh(verts, ids));
-    return body;
+  tick() {
   }
-  tick(h) {
-    if ((this.physT -= h) > 0) return;
-    this.physT = 0.1;
-    const world = this.b.phys.world, want = /* @__PURE__ */ new Set();
-    for (const gr of this.b.game.grenades) {
-      const p = gr.dyn?.body?.position;
-      if (!p) continue;
-      const tx = Math.floor(p.x / 16), tz = Math.floor(p.z / 16);
-      for (let x = tx - 1; x <= tx + 1; x++) for (let z = tz - 1; z <= tz + 1; z++) want.add(x + "," + z);
-    }
-    for (const [key, body] of this.active) if (!want.has(key)) {
-      world.removeBody(body);
-      this.active.delete(key);
-    }
-    for (const key of want) {
-      if (this.active.has(key)) continue;
-      if (!this.built.has(key)) this.built.set(key, this._tile(key));
-      const body = this.built.get(key);
-      if (body) {
-        world.addBody(body);
-        this.active.set(key, body);
-      }
-    }
-  }
+  // v63m grenades on a triangle map bounce in Match.stepGrenades (swept rays + floor rest): cannon trimesh tiles of the map
+  // (16 m, 3×3 around each grenade, ~100k triangles) cost up to 100 ms a step
   render(dt) {
     if ((this.cullT -= dt) > 0) return;
     this.cullT = 0.25;
@@ -24882,22 +24843,50 @@ var Match = class _Match {
       const n = this.grenades[i];
       n.t += h;
       const b = n.body, cur = TMP_V3.set(b.position.x, b.position.y, b.position.z), seg = d.subVectors(cur, n.prev), len = seg.length();
-      if (len > 0.08) {
+      const tri = this.collision.tris;
+      if (len > (tri ? 4e-3 : 0.08)) {
         seg.divideScalar(len);
         const h2 = this.collision.raycast(o.copy(n.prev), seg, len + 0.05, false);
         if (h2) {
           const nrm = h2.normal, v = b.velocity, vn = v.x * nrm.x + v.y * nrm.y + v.z * nrm.z;
           b.position.set(h2.point.x + nrm.x * 0.07, h2.point.y + nrm.y * 0.07, h2.point.z + nrm.z * 0.07);
-          if (vn < 0) {
-            v.x -= 1.38 * vn * nrm.x;
-            v.y -= 1.38 * vn * nrm.y;
-            v.z -= 1.38 * vn * nrm.z;
-            v.x *= 0.75;
-            v.y *= 0.75;
-            v.z *= 0.75;
+          if (tri && nrm.y > 0.7 && vn > -1.5) {
+            if (vn < 0) {
+              v.x -= vn * nrm.x;
+              v.y -= vn * nrm.y;
+              v.z -= vn * nrm.z;
+            }
+          } else {
+            if (vn < 0) {
+              v.x -= 1.38 * vn * nrm.x;
+              v.y -= 1.38 * vn * nrm.y;
+              v.z -= 1.38 * vn * nrm.z;
+              v.x *= 0.75;
+              v.y *= 0.75;
+              v.z *= 0.75;
+            }
+            this.audio.nadeBounce(b.position, Math.min(1, Math.abs(vn) / 8));
           }
-          this.audio.nadeBounce(b.position, Math.min(1, Math.abs(vn) / 8));
           cur.set(b.position.x, b.position.y, b.position.z);
+        }
+      }
+      if (tri) {
+        const g = tri.groundAt(cur.x, cur.y + 0.05, cur.z, 0.03, 0.16), v = b.velocity;
+        if (g !== null && cur.y - 0.05 <= g + 0.03) {
+          if (cur.y - 0.05 < g) {
+            b.position.y = g + 0.05;
+            cur.y = b.position.y;
+          }
+          if (v.y < 0) v.y = v.y < -1.5 ? -v.y * 0.3 : 0;
+          const k = Math.max(0, 1 - 3 * h);
+          v.x *= k;
+          v.z *= k;
+          b.angularVelocity.scale(k, b.angularVelocity);
+          const ny = tri.nrm[tri.lastTri * 3 + 1] || 1;
+          if (ny > 0.9 && v.x * v.x + v.y * v.y + v.z * v.z < 0.6) {
+            v.set(0, 0, 0);
+            b.angularVelocity.set(0, 0, 0);
+          }
         }
       }
       n.prev.copy(cur);
