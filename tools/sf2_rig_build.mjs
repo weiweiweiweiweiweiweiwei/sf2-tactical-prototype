@@ -116,6 +116,9 @@ const G = {
   aa12: gun('aa12', { pkg: 'sho_aa12', partNames: ['body', 'barrel', 'magazine'], props: 'aa12_anim/sho_aa12/SkeletalMesh3/sho_aa12_body_a.props.txt',
     fileMap: { body: 'aa12/sho_aa12/SkeletalMesh3/sho_aa12_body_a.gltf', barrel: 'aa12/sho_aa12/SkeletalMesh3/sho_aa12_barrel_a.gltf', magazine: 'aa12/sho_aa12/SkeletalMesh3/sho_aa12_magazine_a.gltf' },
     texMap: { body: 'aa12_body_a', barrel: 'aa12_barrel_a', magazine: 'aa12_magazine_a' }, socketSights: sight('aa12/sho_aa12/SkeletalMesh3/sho_aa12_sight_up.gltf', 'aa12_dot_a') }),
+  // v65i docs/loop/GUNS.md D: pistols (body_a + magazine_a; the slide is a bone of the body)
+  p226: gun('p226', { pkg: 'pis_p226', partNames: ['body', 'magazine'], props: 'p226_anim/pis_p226/SkeletalMesh3/pis_p226_body_a.props.txt',
+    fileMap: { body: 'p226/pis_p226/SkeletalMesh3/pis_p226_body_a.gltf', magazine: 'p226/pis_p226/SkeletalMesh3/pis_p226_magazine_a.gltf' }, texMap: { body: 'p226_body_a', magazine: 'p226_magazine_a' } }),
   trg: gun('trg', { pkg: 'sni_trg', stem: 'sni_trg', tex: 'sni_trg', anim: '1st_ani_trg', optic: ZEISS_SCOPE }),
 }[GID];
 if (!G) throw new Error(`unknown gun ${GID}`);
@@ -323,7 +326,7 @@ if (G.optic && G.optic.reticle) { // SF2's reticle (dot_point's DotTexture) on a
   scene.addChild(doc.createNode('reticle').setMesh(doc.createMesh('reticle').addPrimitive(prim)).setSkin(skin));
 }
 if (!G.railSights) { // POST: the front sight's tip — the highest point on the bore's centre line (±1.2 mm: not the ears) in the front 25 cm
-  const pts = [V.barrel, V.body, ...G.socketSights.map(([n]) => V[n])].flat().filter((p) => Math.abs(p[0] - bore[0]) < 0.0012 && p[2] > bore[2] - 0.25).sort((a, b) => b[1] - a[1]);
+  const pts = [V.barrel, V.body, ...G.socketSights.map(([n]) => V[n])].filter(Boolean).flat().filter((p) => Math.abs(p[0] - bore[0]) < 0.0012 && p[2] > bore[2] - 0.25).sort((a, b) => b[1] - a[1]);
   let i = 0;
   if (G.hoodedPost) { // a ring hood over the post (G36C): its top is on the centre line too — step down through the ring, over the hole
     while (i + 1 < pts.length && pts[i][1] - pts[i + 1][1] < 0.0025) i++; // (G36C: hood 1207.8 → 1205.8 mm, a 6.6 mm hole, the tip at 1199.2)
