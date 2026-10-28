@@ -298,7 +298,7 @@ if (!G.railSights) { // POST: the front sight's tip — the highest point on the
     while (i + 1 < pts.length && pts[i][1] - pts[i + 1][1] < 0.0025) i++; // (G36C: hood 1207.8 → 1205.8 mm, a 6.6 mm hole, the tip at 1199.2)
     i++;
   }
-  marks.POST = pts[i];
+  marks.POST = pts[i] || bore; // (v64v a scoped bolt gun may have no front sight on the centre line — the CZ700: the muzzle then)
   if (G.sightMarks) Object.assign(marks, G.sightMarks); // (measured by hand where the search cannot find them)
 }
 if (G.railSights) {

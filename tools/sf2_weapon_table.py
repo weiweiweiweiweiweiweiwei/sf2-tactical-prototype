@@ -32,6 +32,8 @@ GUNS = {  # id: (SF2 class, rig, sound, [magout, magin, charge])
     # v64t SF2's other bolt guns: a 2D scope with SF2's default reticle ('mil', mic_ScopeView), zooms fZoomedFOV then 20; reload marks as the K14's
     'm40a1': ('M40A1', 'm40a1', 'm40a1', [0.31, 0.48, 0.75], {'adsType': '2d_scope_overlay', 'adsFov': 20, 'adsSpeed': 17, 'vmAdsHFov': None, 'sf2Recoil': None, 'sf2Reticle': 'mil', 'zoomHFovs': [55, 20],
                                                        'sf2ReloadSounds': [[0.14, 'boltback'], [0.31, 'magout'], [0.48, 'magin'], [0.75, 'charge']]}),
+    'cz700': ('CZ700', 'cz700', 'cz700', [0.31, 0.48, 0.75], {'adsType': '2d_scope_overlay', 'adsFov': 20, 'adsSpeed': 17, 'vmAdsHFov': None, 'sf2Recoil': None, 'sf2Reticle': 'mil', 'zoomHFovs': [55, 20],
+                                                       'sf2ReloadSounds': [[0.14, 'charge'], [0.31, 'magout'], [0.48, 'magin'], [0.75, 'charge']]}),
     'trg': ('TRG', 'trg', 'trg', [0.31, 0.48, 0.75], {'adsType': '2d_scope_overlay', 'adsFov': 20, 'adsSpeed': 17, 'vmAdsHFov': None, 'sf2Recoil': None,
                                                        'sf2ReloadSounds': [[0.14, 'boltback'], [0.31, 'magout'], [0.48, 'magin'], [0.75, 'charge']]}),
 }
