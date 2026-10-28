@@ -69,9 +69,9 @@ class NetPlayer extends Human {
     if (!ran) { this.motor.prevPos.copy(this.motor.pos); this.stalls = (this.stalls || 0) + 1; }
   }
 
+  simUpdate(h) { if (this.alive && this.spawnProtect > 0) this.spawnProtect = Math.max(0, this.spawnProtect - h); } // v63g on the fixed clock
   update(dt, alpha) {
     if (!this.alive) return;
-    if (this.spawnProtect > 0) this.spawnProtect = Math.max(0, this.spawnProtect - dt);
     const m = this.motor, M = this.model, w = this.arsenal.current;
     if (this.modelGun !== w.def.id) { this.modelGun = w.def.id; this.game.app.soldiers.setWeapon(M, w.def.model || w.def.id); }
     M.root.position.lerpVectors(m.prevPos, m.pos, alpha); M.root.rotation.y = this.yaw;

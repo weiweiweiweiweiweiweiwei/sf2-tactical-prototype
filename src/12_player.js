@@ -127,10 +127,15 @@ class Human extends Combatant {
     const ws = this.gear(), w = ws.current;
     if (this.sprintBlock > 0) this.sprintBlock -= h;
     const intent = shift && f > 0; if (!intent) this.adsSprintLock = false;
-    this.sprinting = intent && !this.adsSprintLock && !m.crouching && !w.reloading && this.sprintBlock <= 0 && !(w.kind === 'grenade' && w.state !== 'idle'); // v45: W+Shift while aimed drops the sight and sprints (any gun)
+    const canSprint = intent && !this.adsSprintLock && !m.crouching && !w.reloading && this.sprintBlock <= 0 && !(w.kind === 'grenade' && w.state !== 'idle'); // v45: W+Shift while aimed drops the sight and sprints (any gun)
+    // v63f SF2: SFPawn.IsSprintPossible needs Physics == PHYS_Walking — a jump (PHYS_Falling) ends the sprint, the weapon leaves its
+    // run pose (SetWeaponSprinting false) and the air spread is the jump's; landing with W+Shift held sprints again. The run's pace
+    // is kept through the air (sprintAir: sprinting at take-off), so the jump carries as far as before
+    if (m.grounded) this.sprintAir = canSprint;
+    this.sprinting = canSprint && m.grounded;
     m.edgeGuard = crouchKey && m.grounded; // v59 SF2: holding crouch (Ctrl / C) at a ledge keeps you on it; Shift only sprints
     let speed = w.moveSpeed * (this.carrying ? 0.88 : 1);
-    if (m.crouching) speed *= P.crouchMult; else if (this.sprinting) speed *= P.sprintMult;
+    if (m.crouching) speed *= P.crouchMult; else if (this.sprinting || (canSprint && this.sprintAir)) speed *= P.sprintMult;
     if (ws.ads) speed *= w.adsMove ?? 1;
     if (w.reloading) speed *= RELOAD_MOVE; // v34: reloading = slower walk, no sprint
     m.step(h, wx, wz, len > 0 ? speed : 0);
@@ -200,7 +205,6 @@ class Player extends Human {
     else { this.recoilPitch = damp(this.recoilPitch, this.recoilTP, 42, dt); this.recoilYaw = damp(this.recoilYaw, this.recoilTY, 42, dt); }
     this.punchV += (-this.punch * 160 - this.punchV * 16) * dt; this.punch += this.punchV * dt;
     this.fovPunch = damp(this.fovPunch, 0, 10, dt); this.shake = Math.max(0, this.shake - dt * 2.5);
-    if (this.spawnProtect > 0) this.spawnProtect = Math.max(0, this.spawnProtect - dt);
     this.eyeH = damp(this.eyeH, this.motor.crouching ? CFG.player.crouchEye - (this.slideT > 0 ? 0.12 : 0) : CFG.player.eye, 16, dt);
     this.slideK = damp(this.slideK, this.slideT > 0 ? 1 : 0, 10, dt);
     this.mantleK = damp(this.mantleK, this.mantleT > 0 ? 1 : 0, 18, dt);

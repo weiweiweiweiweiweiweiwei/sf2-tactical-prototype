@@ -146,13 +146,19 @@ class Bot extends Combatant {
     g.audio.footstep(p, surface, loud, { pitch: this.stepPitch, occluded });
   }
 
+  // v63g the bot's brain on the match's fixed 60 Hz clock (was once per drawn frame): timers, then the AI picks the next step's
+  // wish / aim. prevYaw keeps the turn for the drawn frames in between (update's alpha)
+  simUpdate(h) {
+    this.prevYaw = this.yaw;
+    if (!this.alive) return;
+    if (this.spawnProtect > 0) this.spawnProtect = Math.max(0, this.spawnProtect - h);
+    if (this.reloadT > 0) { this.reloadT -= h; if (this.reloadT <= 0) this.ammo = this.def.mag; }
+    this.ai.update(h);
+  }
   update(dt, alpha) {
     if (!this.alive) return;
-    if (this.spawnProtect > 0) this.spawnProtect = Math.max(0, this.spawnProtect - dt);
-    if (this.reloadT > 0) { this.reloadT -= dt; if (this.reloadT <= 0) this.ammo = this.def.mag; }
-    this.ai.update(dt);
-    const m = this.motor, M = this.model;
-    M.root.position.lerpVectors(m.prevPos, m.pos, alpha); M.root.rotation.y = this.yaw;
+    const m = this.motor, M = this.model, py = this.prevYaw ?? this.yaw;
+    M.root.position.lerpVectors(m.prevPos, m.pos, alpha); M.root.rotation.y = py + wrapAngle(this.yaw - py) * alpha;
     animateSoldier(this, dt, m.horizontalSpeed(), m.crouching, this.aimPitch, this.reloadT > 0 || m.climbing);
     // v34: scope glint removed (it read as a flashing white blob)
     if (this.tag) { this.tag.position.set(M.root.position.x, M.root.position.y + 2.1, M.root.position.z); this.tag.visible = !this.tag.userData.hide && this.tag.position.distanceTo(this.game.camera.position) < 70; }

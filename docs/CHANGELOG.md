@@ -1178,3 +1178,16 @@
 - `SoldierFactory.setWeapon`：有 `GUN_3RD` 的槍用原版模型（含貼圖、法線），槍口 +X 轉成 −Z，槍膛高度、機匣位置對齊原本程序槍的位置，槍口火光位置跟著 `MUZZLE` 標記。Bot、連線玩家、Killcam 的你、大廳和倉庫的士兵預覽都用同一個函式。其他槍不變（程序外形）。
 - 驗證：遊戲中 Bot 拿 M4A1，`model.gun` 是 8 個節點的原版模型；渲染截圖 `docs/testing/shots/m4a1_3rd_ingame.png`（兩名士兵相對持槍，貼圖、方向、握把位置正確）；`analyze`、`build`、`check.mjs` 都過。
 
+### v63h（2026-10-28，本機；commit 訊息寫 v63f）：衝刺中跳躍，空中槍枝回到一般姿勢（照 SF2）
+- 使用者：按住 Shift 奔跑時跳躍，空中那段槍還在甩。
+- SF2 原版（反編譯 `SFPawn.IsSprintPossible`）：衝刺必須 `Physics == PHYS_Walking`；`DoJump` 把物理設成 falling，`SetSprinting` 就把衝刺關掉、`SetWeaponSprinting(false)`——空中不是衝刺狀態，落地仍按著 W+Shift 才再衝刺。
+- `src/12_player.js`：`sprinting` 要在地面；空中的移動速度沿用起跳時的衝刺（`sprintAir`），跳的距離不變。散布也跟著 SF2：空中用跳躍的散布，不是衝刺的。
+- 驗證（`tools/out/_sprintjump.mjs`，倉庫）：空中 41 格衝刺狀態 41 → 0～1（起跳那一步）、槍的奔跑姿勢權重 1.0 → 由 0.82 降到 0，落地後回到 0.98；空中位移 0.65 m 新舊相同；`check.mjs` 過。
+
+
+### v63i（2026-10-28，本機；commit 訊息寫 v63g）：全部模擬固定 60 Hz；SF2 火光縮小、去掉槍口冒煙
+- 架構（使用者 10-27「全部模擬固定 60 Hz」）：`CFG.fixedStep` 1/120 → 1/60，`Match.tick` 的固定步長迴圈現在跑全部模擬——比賽時鐘、凍結／回合計時、排程事件、玩家／Bot／好友的移動和武器、Bot 的 AI（`Bot.simUpdate`，原本每幀跑一次）、出生保護、重生倒數、模式規則、掉出地圖。一幀最多補 8 步。畫面幀只做繪製：士兵、鏡頭、物件用 alpha 內插（Bot 的轉向也內插 `prevYaw`），特效、HUD；滑鼠視角和鏡頭後座仍每幀（它們是鏡頭，隨每個指令送出）。
+- 連線：客戶端指令包每步送一次（`NET_CMD_EVERY` 2 → 1，仍是 60 Hz）。屍體推倒改用時間計算，不再數步數。
+- 驗證：`analyze`、`build`、`check.mjs`（warehouse 59 FPS）過；`_nettest.mjs` 新／舊：停下後位置差 0.028／0.020 m、修正 20／21 次、射擊方向一致、受傷／死亡／重生正常；`_botmove.mjs` 新／舊：擊殺 26／22、加速度 p95 21.3／20.6。跳躍頂點約低 2 cm（步長變大的數值積分差）。
+- 使用者 10-28：SF2 火光再小一點、透明度 0.8 → `fromRig` 縮放 0.5 → 0.4、每個 sprite 不透明度 0.8；刪除槍口冒煙：開鏡火光的煙霧層（SF2 的 `P_WP_MF_AR_03_Zoom` 其實有一層薄煙 `M_thin_smoke_Z_06`，照使用者要求拿掉）和連射後的槍管冒煙（`_barrelSmoke`）。
+- 使用者 10-28：腰射上跳維持沒有上限、後座力維持現狀。

@@ -13,7 +13,7 @@ import { Ghost, NetPlayer } from './13b_netplayers.js';
    ===================================================================== */
 const NET_VERSION = 30;
 const NET_PHASES = ['loading', 'freeze', 'live', 'roundEnd', 'over'];
-const NET_SNAP_HZ = 30, NET_CMD_EVERY = 2, NET_INTERP = 0.1; // snapshots / s · send a cmd packet every 2nd tick (60 Hz) · ghosts drawn 100 ms behind
+const NET_SNAP_HZ = 30, NET_CMD_EVERY = 1, NET_INTERP = 0.1; // snapshots / s · send a cmd packet every tick (60 Hz, v63g) · ghosts drawn 100 ms behind
 const NET_REWIND_MAX = 0.4; // v29 lag compensation: at most 400 ms back (≈ 150 ms ping each way + 100 ms interpolation; slower links are not trusted)
 
 class LoopbackTransport {

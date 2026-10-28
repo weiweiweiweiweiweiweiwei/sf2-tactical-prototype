@@ -1,5 +1,5 @@
 /* =====================================================================
-   v25 USER COMMANDS — everything a human does in one fixed tick (1/120 s), as plain data: movement axes, view angles,
+   v25 USER COMMANDS — everything a human does in one fixed tick (1/60 s, v63g), as plain data: movement axes, view angles,
    held buttons and one-tick edges. The local player is simulated from these, and a remote player on the host from the
    same commands received over the network — so both run the exact same movement and weapon rules.
    ===================================================================== */
