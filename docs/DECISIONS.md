@@ -23,3 +23,8 @@
 ## D4 · v62t · 「main」分支 = `master`
 - **問題**：loop 規則寫的是「不要動 main」，但這個 repo 沒有 `main`，預設分支是 `master`。
 - **採用**：規則裡的 main 一律當成 `master`。
+
+## D5 · 2026-10-28 · loop 改用排程任務、雲端和本機分工
+- **問題**：v62t 之後迴圈停了。原因：下一次喚醒（ScheduleWakeup）是 session 內部的計時器，容器閒置被回收後計時器跟著消失。
+- **採用**：雲端改用每小時一次的排程任務（不受容器回收影響），一輪連續做多項、每項各自 push；本機的 Claude Code 只做雲端做不到的事，push 到 `local/assets`，透過 `docs/loop/HANDOFF.md` 交接。規則在 `docs/loop/`。
+- **改回去**：停用排程任務；刪掉 `docs/loop/`。

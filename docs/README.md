@@ -7,6 +7,7 @@
 | 每一版改了什麼、數值、怎麼驗證 | [`CHANGELOG.md`](CHANGELOG.md) |
 | 怎麼玩、操作、建置 | [`../README.md`](../README.md) |
 | 給 Claude 的工作規則 | [`../CLAUDE.md`](../CLAUDE.md) |
+| 自動迴圈：雲端／本機規則、交接、自選決策、併入清單 | [`loop/CLOUD.md`](loop/CLOUD.md)、[`loop/LOCAL.md`](loop/LOCAL.md)、[`loop/HANDOFF.md`](loop/HANDOFF.md)、[`DECISIONS.md`](DECISIONS.md)、[`REVIEW.md`](REVIEW.md) |
 
 ## 流程（照著做就能重現）
 - [`pipelines/apex-maps.md`](pipelines/apex-maps.md)：Apex 地圖（Skull Town、訓練場）從遊戲檔到遊戲裡
