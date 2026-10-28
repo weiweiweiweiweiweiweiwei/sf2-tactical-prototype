@@ -46,6 +46,8 @@ const G = {
   galil: gun('galil', { hoodedPost: true, socketSights: sight('galil/rif_galil_sight/SkeletalMesh3/rif_galil_sight_up.gltf', 'galil_barrel_frontsight') }),
   hk417: gun('hk417', { socketSights: sight('hk417/rif_hk417_sight/SkeletalMesh3/rif_hk417_sight_up.gltf', 'hk417_sight') }),
   qbz97: gun('qbz97', { hoodedPost: true }), // carry-handle sights on the body
+  // v62z (loop H3) the first SMG: the MP5K (smg_mp5k), its hooded front sight on the Sight socket (on the barrel's texture sheet), the drum rear sight on the body
+  mp5k: gun('mp5k', { pkg: 'smg_mp5k', stem: 'smg_mp5k', hoodedPost: true, socketSights: sight('mp5k/smg_mp5k/SkeletalMesh3/smg_mp5k_sight_up.gltf', 'mp5k_barrel') }),
 }[GID];
 if (!G) throw new Error(`unknown gun ${GID}`);
 const TEX = {

@@ -16,6 +16,7 @@ GUNS = {  # id: (SF2 class, rig, sound, [magout, magin, charge])
     'xm8': ('XM8', 'xm8', 'xm8', [0.12, 0.27, 0.73]),
     'galil': ('GALIL', 'galil', 'galil', [0.23, 0.72, 0.76]),  # (the mag is swung away and swapped in at frame 58)
     'hk417': ('HK417', 'hk417', 'hk417', [0.16, 0.37, 0.77]),
+    'mp5k': ('MP5K', 'mp5k', 'mp5k', [0.17, 0.48, 0.77]),  # (v62z loop H3: the first SMG; reload times from its Reload clip, 65 frames)
     # 'qbz97': ('QBZ97', 'qbz97', 'qbz97', [0.19, 0.4, 0.73]),  # (left out: its carry-handle sight line is not found yet — the eye lands on the rear sight's body)
 }
 REC = ['nextCrossVert', 'maxCrossVert', 'vertInc', 'vertDec', 'crossDecreasInc', 'incline', 'forceCorrection', 'domDefault', 'domZoomDefault',

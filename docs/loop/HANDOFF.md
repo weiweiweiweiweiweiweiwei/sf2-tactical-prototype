@@ -15,7 +15,7 @@
     - 改用 M4A1 自己的提把 `rif_m4a1_handle_a`＋A2 前準星（`railSights`，和 M4A1 一樣）：零件放得上，但 `V.handle` 的點是 **M4A1 綁定姿勢**的座標（OWNBIND），算出的 SIGHT 和 M4A1 完全一樣，開鏡錯位；要先把提把的點用 M16A3 的 `weapon_root` 綁定矩陣換算過去才行。
     - 這輪已全部還原（M16A3 仍是舊槍模），`sf2_weapon_table.py` 的 m16a3 仍註解。
 - QBZ-97：提把上的瞄準線（現在眼睛落在照門本體上），對照 `.props.txt` 的插槽。
-- MP5K：照第 7 步新增（衝鋒槍類別）。
+- ✅ MP5K（本機 2026-10-28，見「本機已完成」L3）。
 - M4A1 第三人稱槍模：`_3rd` 零件，原始匯出放在 `tools/out/sf2/m4a1_3rd/`，成品 commit 成 `tools/guns/m4a1_3rd.glb`；接到 Bot 手上的部分留給雲端（寫進「本機已完成」）。
 - 驗證：`node tools/check.mjs`、`node tools/_gunshot.mjs`（開鏡截圖存進 `docs/testing/shots/`）。
 
@@ -58,3 +58,13 @@
 - 工具：`tools/fetch-wiki-gg.py`（MediaWiki API `action=parse`，間隔 3 秒）。
 - 驗證：29／29 都有網址和日期；有 Shots to kill 表的槍 **28／29**（Bocek 是依拉弓程度的另一種表）；能直接算 TTK 的 19 把。
 - 注意：wiki 沒有叫「TTK」的表（只有 Mozambique 頁面提到），TTK 是用發數 ÷ 射速算的；栓動槍的 fire_rate 不像實際拉栓間隔，見 ttk 檔的註記。wiki 的 spread 是「半徑」（R-301 站立腰射 6.5），source.gs 寫 3°，兩邊單位不同，比對時要注意。
+
+### L3 ✅ H3 的 MP5K：SF2 原版衝鋒槍（2026-10-28）
+- 匯出（不 commit）：`tools/out/sf2/mp5k/`（`smg_mp5k` 模型、`smg_mp5k_texture`、`Sound_MP5K`）、`tools/out/sf2/mp5k_anim/`（`1st_anim_mp5k.psa`、插槽）。
+- 成品：`tools/guns/mp5k_sf2_rig.glb`（791 KB，15 段動畫；`tools/sf2_rig_build.mjs` 的 `mp5k`：`pkg/stem smg_mp5k`、`hoodedPost`、前準星 `smg_mp5k_sight_up` 掛 `Sight` 插槽、貼圖用 `mp5k_barrel`）；`assets/guns/guns.js` 重新打包；`assets/sfx_sf2.js` 加 6 組 `sf2_mp5k_*`（原有 66 組一個位元組都沒變）。
+- **改到 `src/`（照 H3 第 7 步，盡量小）**：
+  - `src/01_core.js`：`WEAPON_DATABASE.mp5k`（傷害照 MP5 的平衡：25／16，10–35 m；`sound: 'mp5'` 備用、`sf2: 'mp5k'`）、說明文字、`general`／`rifle` 兩個模式清單加在 `mp5` 後面；`SF2_WEAPONS` 由 `tools/sf2_weapon_table.py` 重新產生（新增 mp5k：射速、換彈、拔槍、FOV、`vLocZoomIN`、後座 `sf2Recoil`）。
+  - `src/09_models.js`：`mp5k(def)` → `fromRig('mp5k_sf2_rig')`，備用 `mp5`。
+- 換彈音效時間（量 Reload 片段 65 格的 `weapon_magazine`／`weapon_cartridge`）：0.17／0.48／0.77（`tools/out/_reloadtimes.py`，同方法量 AK-103 得 0.14／0.46／0.82）。
+- 驗證：`analyze.mjs` MODULES_OK、`build.sh`、`check.mjs` 過；`_gunshot.mjs mp5k`（FIRE=1）開鏡時照門鼓（刻字 HK NO.5 99051-A）和前準星護圈對齊、準星在中央，開火有 SF2 火光；截圖 `docs/testing/shots/mp5k_hip.jpg`、`mp5k_ads.jpg`。
+- 留給雲端：Bot 配槍清單、倉庫卡片排序、第三人稱 `tp` 外形（目前用預設）。

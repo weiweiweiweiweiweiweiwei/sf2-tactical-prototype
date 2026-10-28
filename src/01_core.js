@@ -114,6 +114,13 @@ const WEAPON_DATABASE = {
     hipSpread: 0.055, adsSpread: 0.003, adsFov: 58, adsType: '3d_sight', mobility: 1.02, maxAmmo: 30, reloadTime: 2.0, modelUrl: null,
     model: 'mp5', sound: 'mp5', range: 170, tracerEvery: 3, desc: '經典衝鋒槍，腰射較穩定。',
   },
+  mp5k: { // v62z (loop H3) Special Force 2's own MP5K (tools/sf2_rig_build.mjs mp5k): damage on the MP5's balance; timing, lenses and
+    // recoil from its SF2 class (SF2_WEAPONS below, tools/sf2_weapon_table.py)
+    name: 'MP5K', type: 'smg', slot: 'primary', damageNear: 25, damageFar: 16, falloffStart: 10, falloffEnd: 35, fireRate: 0.07,
+    recoilPitch: 0.008, recoilYaw: 0.008, recoilRecovery: 12,
+    hipSpread: 0.055, adsSpread: 0.003, adsFov: 55, adsType: '3d_sight', mobility: 1.04, maxAmmo: 30, reloadTime: 2.0, modelUrl: null,
+    model: 'mp5k', sound: 'mp5', sf2: 'mp5k', range: 160, tracerEvery: 3, desc: '短槍管 MP5，SF2 原版槍模與動畫。',
+  },
   p90: {
     name: 'P90', type: 'smg', slot: 'primary', damageNear: 22, damageFar: 14, falloffStart: 10, falloffEnd: 35, fireRate: 0.066,
     recoilPitch: 0.006, recoilYaw: 0.007, recoilRecovery: 14,
@@ -459,6 +466,7 @@ const SF2_WEAPONS = {
   xm8: {'fireRate': 0.106, 'reloadTime': 2.25, 'equipTime': 0.79, 'adsSpeed': 12, 'adsFov': 55, 'adsType': '3d_sight', 'vmHFov': 60.0, 'vmAdsHFov': 35.0, 'sf2Rig': 'xm8', 'sf2': 'xm8', 'sf2ZoomIn': [6.0, 0.0, 0.04], 'sf2ZoomOut': [0.0, 0.0, 0.0], 'sf2ReloadSounds': [[0.12, 'magout'], [0.27, 'magin'], [0.73, 'charge']], 'sf2Recoil': {'nextCrossVert': 2.0, 'maxCrossVert': 15.0, 'vertInc': 15000.0, 'vertDec': 12.0, 'crossDecreasInc': 9.0, 'incline': 0.35, 'forceCorrection': 50.0, 'domDefault': 0.17, 'domZoomDefault': 0.0, 'domInc': 0.22, 'domMax': 2.4, 'domMin': 0.1, 'domDec': 2.0, 'maxMovingValue': 0.7, 'mulValueRun': 0.7, 'mulValueJump': 6.0, 'zoomMod': 0.6, 'crouchMod': 0.9}}, // SFCWeaponXM8
   galil: {'fireRate': 0.112, 'reloadTime': 2.1, 'equipTime': 0.8, 'adsSpeed': 12, 'adsFov': 55, 'adsType': '3d_sight', 'vmHFov': 65.0, 'vmAdsHFov': 35.0, 'sf2Rig': 'galil', 'sf2': 'galil', 'sf2ZoomIn': [2.0, -0.01, 0.0], 'sf2ZoomOut': [0.0, 0.0, 0.0], 'sf2ReloadSounds': [[0.23, 'magout'], [0.72, 'magin'], [0.76, 'charge']], 'sf2Recoil': {'nextCrossVert': 2.3, 'maxCrossVert': 14.0, 'vertInc': 15000.0, 'vertDec': 13.0, 'crossDecreasInc': 15.0, 'incline': 0.15, 'forceCorrection': 50.0, 'domDefault': 0.05, 'domZoomDefault': 0.0, 'domInc': 0.42, 'domMax': 2.5, 'domMin': 0.0, 'domDec': 1.38, 'maxMovingValue': 1.2, 'mulValueRun': 0.1, 'mulValueJump': 6.0, 'zoomMod': 0.4, 'crouchMod': 0.7}}, // SFCWeaponGALIL
   hk417: {'fireRate': 0.102, 'reloadTime': 2.18, 'equipTime': 0.85, 'adsSpeed': 12, 'adsFov': 55, 'adsType': '3d_sight', 'vmHFov': 60.0, 'vmAdsHFov': 40.0, 'sf2Rig': 'hk417', 'sf2': 'hk417', 'sf2ZoomIn': [-4.0, -0.02, -0.2], 'sf2ZoomOut': [0.0, 0.0, 0.0], 'sf2ReloadSounds': [[0.16, 'magout'], [0.37, 'magin'], [0.77, 'charge']], 'sf2Recoil': {'nextCrossVert': 1.7, 'maxCrossVert': 9.0, 'vertInc': 15000.0, 'vertDec': 13.0, 'crossDecreasInc': 15.0, 'incline': 0.05, 'forceCorrection': 50.0, 'domDefault': 0.3, 'domZoomDefault': 0.0, 'domInc': 0.22, 'domMax': 2.1, 'domMin': 0.0, 'domDec': 1.35, 'maxMovingValue': 0.8, 'mulValueRun': 0.4, 'mulValueJump': 6.0, 'zoomMod': 0.35, 'crouchMod': 0.9}}, // SFCWeaponHK417
+  mp5k: {'fireRate': 0.076, 'reloadTime': 2.0, 'equipTime': 0.63, 'adsSpeed': 12, 'adsFov': 55, 'adsType': '3d_sight', 'vmHFov': 60.0, 'vmAdsHFov': 35.0, 'sf2Rig': 'mp5k', 'sf2': 'mp5k', 'sf2ZoomIn': [3.0, -0.03, -0.2], 'sf2ZoomOut': [0.0, 0.0, 0.0], 'sf2ReloadSounds': [[0.17, 'magout'], [0.48, 'magin'], [0.77, 'charge']], 'sf2Recoil': {'nextCrossVert': 0.94, 'maxCrossVert': 3.0, 'vertInc': 3670.0, 'vertDec': 10.0, 'crossDecreasInc': 30.0, 'incline': 0.1, 'forceCorrection': 50.0, 'domDefault': 0.6, 'domZoomDefault': 0.0, 'domInc': 0.2, 'domMax': 1.8, 'domMin': 0.05, 'domDec': 1.0, 'maxMovingValue': 1.0, 'mulValueRun': 0.35, 'mulValueJump': 2.0, 'zoomMod': 0.6, 'crouchMod': 0.8}}, // SFCWeaponMP5K
 };
 for (const [id, o] of Object.entries(SF2_WEAPONS)) { const s = WEAPON_DATABASE[id]; Object.assign(s, o); delete s.vmAdsFov; delete s.adsVertical; } // (their own sights now)
 // </sf2-weapons>
@@ -528,6 +536,7 @@ const WEAPON_BLURBS = {
   famas: '高射速的犢牛式步槍，近距離爆發力強。',
   aug: '內建基礎瞄具，適合中遠距離穩定輸出。',
   mp5: '經典衝鋒槍，腰射穩定、容錯率高。',
+  mp5k: '短槍管 MP5，射速快、近距離靈活。',
   p90: '50 發大彈匣，適合持續火力壓制與近距離掃射。',
   ump45: '衝鋒槍中單發傷害較高的一把，射速偏慢但穩定。',
   vector: '利用特殊槍機設計將後座力降至最低，近戰秒傷極高。',
@@ -613,8 +622,8 @@ const MODES = {
   knife: { name: '小刀戰', desc: '全員只能拿刀，貼身肉搏', slots: ['knife'] },
 };
 const BOT_POOLS = {
-  general: ['m4a1', 'ak47', 'g36c', 'g36c_gold', 'scarl', 'famas', 'aug', 'mp5', 'p90', 'ump45', 'vector', 'mp7', 'remington870', 'benelli_m4', 'saiga12', 'm249', 'rpk', 'negev', 'pkm', 'cheytac_m200', 'awp', 'svd', 'kar98k', 'm16a3', 'k2', 'xm8', 'galil', 'sg551', 'hk417', 'scarh', 'qbz97', 'pp2000', 'vz61', 'aa12', 'mg4', 'k3', 'm40a1', 'sr25', 'psg1', 'm14ebr', 'type89', 'l86a1', 'hk23e', 'frf2', 'cz700'],
-  rifle: ['m4a1', 'ak47', 'g36c', 'g36c_gold', 'scarl', 'famas', 'aug', 'mp5', 'p90', 'ump45', 'vector', 'mp7', 'm249', 'rpk', 'negev', 'pkm', 'mg42', 'm16a3', 'k2', 'xm8', 'galil', 'sg551', 'hk417', 'scarh', 'qbz97', 'pp2000', 'vz61', 'mg4', 'k3', 'type89', 'l86a1', 'hk23e'],
+  general: ['m4a1', 'ak47', 'g36c', 'g36c_gold', 'scarl', 'famas', 'aug', 'mp5', 'mp5k', 'p90', 'ump45', 'vector', 'mp7', 'remington870', 'benelli_m4', 'saiga12', 'm249', 'rpk', 'negev', 'pkm', 'cheytac_m200', 'awp', 'svd', 'kar98k', 'm16a3', 'k2', 'xm8', 'galil', 'sg551', 'hk417', 'scarh', 'qbz97', 'pp2000', 'vz61', 'aa12', 'mg4', 'k3', 'm40a1', 'sr25', 'psg1', 'm14ebr', 'type89', 'l86a1', 'hk23e', 'frf2', 'cz700'],
+  rifle: ['m4a1', 'ak47', 'g36c', 'g36c_gold', 'scarl', 'famas', 'aug', 'mp5', 'mp5k', 'p90', 'ump45', 'vector', 'mp7', 'm249', 'rpk', 'negev', 'pkm', 'mg42', 'm16a3', 'k2', 'xm8', 'galil', 'sg551', 'hk417', 'scarh', 'qbz97', 'pp2000', 'vz61', 'mg4', 'k3', 'type89', 'l86a1', 'hk23e'],
   sniper: ['cheytac_m200', 'awp', 'barrett', 'kar98k', 'svd', 'm40a1', 'sr25', 'psg1', 'm14ebr', 'frf2', 'cz700'], pistol: ['p226', 'deagle', 'glock18', 'usp', 'm1911', 'm92fs', 'cz75', 'jericho', 'sw60', 'infinity'], knife: ['knife'],
 };
 
