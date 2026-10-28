@@ -24,7 +24,7 @@ const gun = (id, o = {}) => {
   const pkg = o.pkg || `rif_${id}`, stem = o.stem || pkg, tex = o.tex || id, mesh = `${id}/${pkg}/SkeletalMesh3/${stem}_`;
   return Object.assign({
     dir: id, base: `${mesh}body.gltf`, props: `${id}_anim/${pkg}/SkeletalMesh3/${stem}_body.props.txt`,
-    parts: [...(o.partNames || ['body', 'barrel', 'stock', 'magazine']).map((k) => [k, `${mesh}${k}.gltf`, `${tex}_${k}`]), ...ARMS], // (v64t o.partNames: the M40A1 has no stock part)
+    parts: [...(o.partNames || ['body', 'barrel', 'stock', 'magazine']).map((k) => [k, `${mesh}${k}.gltf`, (o.texMap || {})[k] || `${tex}_${k}`]), ...ARMS], // (v65f o.texMap: a part whose sheet is named otherwise — the MP7's mp7_stock_a) // (v64t o.partNames: the M40A1 has no stock part)
     psa: `${id}_anim/${pkg}/AnimSet/${o.anim || '1st_anim_' + id}.psa`, socketSights: [],
   }, o);
 };
@@ -97,6 +97,10 @@ const G = {
   aug: gun('aug', { tex: 'rif_aug', socketSights: sight('aug/rif_aug_sight/SkeletalMesh3/rif_aug_sight_up.gltf', 'aug_sight') }),
   sg551: gun('sg551', { pkg: 'rif_sig551', tex: 'sig551', anim: '1st_anim_sig551', hoodedPost: true }), // (sights on the body)
   type89: gun('type89', { hoodedPost: true }), // (its sight package put on the Scope socket floated off the gun: the body's own sights)
+  // v65f docs/loop/GUNS.md D: SMGs (the P90's ring sight is its own two parts on the body's skeleton)
+  p90: gun('p90', { pkg: 'smg_p90', extraParts: [['dot_a', 'p90/smg_p90/SkeletalMesh3/smg_p90_dot_a.gltf', 'p90_dot_a'], ['dot_b', 'p90/smg_p90/SkeletalMesh3/smg_p90_dot_b.gltf', 'p90_dot_b']] }),
+  ump45: gun('ump45', { pkg: 'smg_ump45', hoodedPost: true, socketSights: sight('ump45/smg_ump45/SkeletalMesh3/smg_upm45_sight_up.gltf', 'ump45_sight') }),
+  mp7: gun('mp7', { pkg: 'smg_mp7', texMap: { stock: 'mp7_stock_a' }, socketSights: sight('mp7/smg_mp7_sight/SkeletalMesh3/smg_mp7_sight_up.gltf', 'mp7_sight') }),
   trg: gun('trg', { pkg: 'sni_trg', stem: 'sni_trg', tex: 'sni_trg', anim: '1st_ani_trg', optic: ZEISS_SCOPE }),
 }[GID];
 if (!G) throw new Error(`unknown gun ${GID}`);

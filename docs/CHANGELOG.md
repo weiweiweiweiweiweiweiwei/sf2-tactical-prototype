@@ -1528,3 +1528,14 @@
   - 只有第三人稱拔槍聲（`Equip_T`）時也拿來用（TRG）。
 - 還沒做好：Type 89 開鏡時，照門擋住部分視野。
 - 驗證：三把的腰射和開鏡截圖、`check.mjs`。
+
+
+### v65f（本機，2026-10-28）：SF2 原版 UMP45、MP7；P90、PP-2000、vz.61 暫停
+- UMP45：`smg_ump45` 加上照門 `smg_upm45_sight_up`（`Sight` 插槽）。
+- MP7：`smg_mp7` 加上 `smg_mp7_sight` 的照門。它的槍托貼圖叫 `mp7_stock_a`，建模腳本新增 `texMap` 可以逐零件指定貼圖。
+- 數值照 `SFCWeaponUMP45`／`MP7A1`，聲音 `Sound_UMP45`／`Sound_MP7`。
+- 暫停（⏸）：
+  - P90：環形瞄具沒有可對準的標記，開鏡時鏡頭在槍身裡。
+  - PP-2000、vz.61：在 SF2 是雙持，槍口插槽是 `flame_L`／`flame_R`。
+  - 這三把在遊戲裡維持原本的模型。
+- 驗證：UMP45、MP7 的腰射和開鏡截圖（從覘孔看出去）、`check.mjs`。

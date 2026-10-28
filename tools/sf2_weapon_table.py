@@ -51,6 +51,9 @@ GUNS = {  # id: (SF2 class, rig, sound, [magout, magin, charge])
     'aug': ('AUGA3', 'aug', 'aug', [0.15, 0.4, 0.75]),
     'sg551': ('SIG551', 'sg551', 'sg551', [0.15, 0.4, 0.75]),
     'type89': ('Type89', 'type89', 'type89', [0.15, 0.4, 0.75]),
+    # v65f docs/loop/GUNS.md D: SMGs
+    'ump45': ('UMP45', 'ump45', 'ump45', [0.15, 0.4, 0.75]),
+    'mp7': ('MP7A1', 'mp7', 'mp7', [0.15, 0.4, 0.75]),
     'trg': ('TRG', 'trg', 'trg', [0.31, 0.48, 0.75], {'adsType': '2d_scope_overlay', 'adsFov': 20, 'adsSpeed': 17, 'vmAdsHFov': None, 'sf2Recoil': None,
                                                        'sf2ReloadSounds': [[0.14, 'boltback'], [0.31, 'magout'], [0.48, 'magin'], [0.75, 'charge']]}),
 }
