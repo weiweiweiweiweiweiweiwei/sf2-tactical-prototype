@@ -1161,3 +1161,8 @@
 - `Match.pruneSpawnLOS()`：雙方出生點產生後，刪掉看得到任何敵方出生點的點（每邊最多刪一半）；`checkSpawnLOS()` 組合數 ≤ 40000 時改成檢查全部組合，不再抽樣。
 - 驗證：hangar 連續 3 次 59／59 點、互看 0；`check.mjs --map all` 16 張全部 PASS，全部組合互看都是 0（例 ruins 0/22500、ridge 0/20736）；`analyze`、`build` 過。
 
+### v63d（2026-10-28）：MP5K 的第三人稱外形；Galil 第三人稱彈匣
+- MP5K（本機 H3 做的 SF2 原版槍）加上 `tp: { len: 0.36, body: 'dark', mag: 'box' }`，別人手上看到的是短槍身加直彈匣（原本用預設長度）。Bot 清單本機已經加了。
+- Galil 的 `tp.mag` 寫成 `'curved'`，第三人稱外形只認得 `'curve'`，所以別人手上的 Galil 一直沒有彈匣；改成 `'curve'`。
+- 驗證：`analyze`、`build`、`check.mjs` 都過。
+

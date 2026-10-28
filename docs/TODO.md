@@ -21,7 +21,7 @@
 ## 1. SF2 原版槍枝素材（UModel，`D:\SpecialForce2`）
 - ✅ M4A1 原版槍模、貼圖、槍聲（v61）
 - ⬜ 材質照原版著色方式：SF2 是 Phong（`weapon_shader_base` 的 `gun_base`：高光貼圖 `_s`、SPPowerLow 100／High 30、SpecularIntensity 10、RimLight Power 3、cubemap 反射）。把 `_s` 高光貼圖換算成霧面／反光分布（roughness），再看要不要加邊緣光
-- ⏸ 本機（HANDOFF H3）：M4A1 第三人稱槍模（`_3rd` 零件，別人手上看到的）
+- 🔄 M4A1 第三人稱槍模：本機已匯出 `tools/guns/m4a1_3rd.glb`（v63c）；⬜ 接到 Bot 和其他玩家手上（雲端）
 - 🔄 流程推廣到其他槍（每把對零件、貼圖、瞄具，檢查開鏡畫面）
   - ✅ AK-103、G36C（v62h）：原版模型、手臂動畫、槍聲、射速／換彈／拔槍時間、後座力參數；瞄具照 SF2 插槽放、開鏡鏡頭和前準星尖端等高
   - ✅ 步槍第二批（v62i）：K2、SCAR-L、SCAR-H、FAMAS、XM8、GALIL、HK417 換成 SF2 原版（模型、動畫、槍聲、時間、後座力；`src/01_core.js` 的 SF2_WEAPONS 表由 `tools/sf2_weapon_table.py` 產生）
@@ -29,7 +29,7 @@
   - ⏸ 本機（HANDOFF H3）：QBZ-97：提把上的瞄準線還沒找對（眼睛落在照門本體上）
   - ⬜ 其他類別（衝鋒槍、狙擊、機槍、手槍、霰彈）照使用者指定
   - ⏸ 使用者（HANDOFF H6）：AK-103、G36C 開鏡畫面還沒有 SF2 正版截圖可以對（M4A1 有）
-- ⏸ 本機（HANDOFF H3）：補 MP5K
+- ✅ 補 MP5K（v63c 本機 H3：SF2 原版槍模、動畫、聲音、時間、後座；v63d：第三人稱外形、Bot 清單）
 
 - ✅ 槍口火光改用 SF2 正版特效（v62m）：SF2 原版槍（rig）腰射 4 層、開鏡前方火光＋煙
   - ⬜ 等使用者實際看過的意見（大小目前是 SF2 數值的一半）；其他槍和 Bot／別的玩家看到的火光還是我們遊戲目前的星芒
