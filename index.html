@@ -303,6 +303,7 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
 .btn.start.wait{background:rgba(255,255,255,.08);color:var(--dim);font-size:24px;letter-spacing:6px;opacity:1}
 .team-col li.human .rank{background:rgba(255,210,90,.22)!important;color:#ffd75a!important}
 .team-col li.human .nm em{font-style:normal;color:var(--gold);font-size:14px;margin-left:4px}
+.team-col li .st.ready{color:#5fe08a}.team-col li .st.armory{color:var(--dim)}
 .team-col li .st.loading,.team-col li .st.ended{color:var(--warn)}.team-col li .st.playing{color:var(--blue)}.team-col li .st.host{color:#ffd75a}
 .team-col li.bot .st{color:var(--faint)}
 
@@ -25216,7 +25217,7 @@ var Match = class _Match {
 };
 
 // src/18_net.js
-var NET_VERSION = 30;
+var NET_VERSION = 31;
 var NET_PHASES = ["loading", "freeze", "live", "roundEnd", "over"];
 var NET_SNAP_HZ = 30;
 var NET_CMD_EVERY = 1;
@@ -26454,7 +26455,7 @@ function chatSafe(m) {
   return { n: m.sys ? "" : safeName(m.n, "玩家"), c: m.c === "bravo" ? "bravo" : m.c === "alpha" ? "alpha" : null, t, tm: !!m.tm, sys: !!m.sys };
 }
 __name(chatSafe, "chatSafe");
-var ROOM_ST = { room: "READY", loading: "載入中", playing: "對戰中", ended: "結算中" };
+var ROOM_ST = { room: "", ready: "已準備", armory: "備戰中", loading: "載入中", playing: "對戰中", ended: "結算中" };
 function roomCfgOut() {
   const L = Settings.data.lobby;
   return { map: L.map, mode: L.mode, rule: L.rule, difficulty: L.difficulty, allies: L.allies, enemies: L.enemies, opts: L.opts, ruleCfg: { [L.rule]: L.ruleCfg[L.rule] || RULES[L.rule].def } };
@@ -26686,17 +26687,24 @@ var RoomHost = class extends RoomSession {
       if (this.pub && this.online) this._announce();
     }, 60);
   }
+  // v64c the 3-2-1 and the start go to the ready guests only; the others see the room turn 'playing' and may join it later
+  readyIds() {
+    return this.members.filter((m) => !m.host && m.st === "ready").map((m) => m.id);
+  }
   countdown() {
-    if (this.t) this.t.send("*", { k: "rcount" });
+    this.counted = this.readyIds();
+    if (this.t) for (const id of this.counted) this.t.send(id, { k: "rcount" });
   }
   cancel() {
-    if (this.t) this.t.send("*", { k: "rcancel" });
+    if (this.t) for (const id of this.counted || []) this.t.send(id, { k: "rcancel" });
+    this.counted = null;
   }
   go(cfg) {
     this.phase = "playing";
     this.mcfg = cfg;
     this.members[0].st = "loading";
-    if (this.t) this.t.send("*", { k: "rgo", cfg });
+    this.counted = null;
+    if (this.t) for (const id of this.readyIds()) this.t.send(id, { k: "rgo", cfg });
     this._changed();
   }
   status(st) {
@@ -28277,11 +28285,10 @@ var App = class {
     let txt = "開始 (F5)", off = false, msg = "";
     if (guest) {
       if (r.phase === "playing" && r.mcfg) txt = "加入對戰 (F5)";
-      else {
-        txt = "等待房主開始";
+      else if (!r.entered) {
+        txt = "連線中…";
         off = true;
-        msg = r.entered ? "地圖和模式由房主設定 · 你可以選擇隊伍和配裝" : "";
-      }
+      } else txt = r.me && r.me.st === "ready" ? "取消準備 (F5)" : "準備 (F5)";
     }
     sb.textContent = txt;
     sb.disabled = off;
@@ -28296,6 +28303,12 @@ var App = class {
         this.audio.init();
         this.audio.uiClick();
         this.startGuestMatch();
+      } else if (r.entered && r.me) {
+        this.audio.init();
+        this.audio.uiClick();
+        r.status(r.me.st === "ready" ? "room" : "ready");
+        this.renderRoomBar();
+        this.refreshLobby();
       }
       return;
     }
@@ -28889,6 +28902,7 @@ var App = class {
     $("lobby").classList.remove("on");
     $("hub").classList.remove("on");
     $("warehouse").classList.add("on");
+    if (this.whFrom === "lobby" && this.isGuest() && this.room.entered) this.room.status("armory");
     if (!this.whR) this._initPreview();
     this.renderWarehouse();
   }
@@ -28898,6 +28912,7 @@ var App = class {
     this.$(back).classList.add("on");
     Settings.save();
     this.audio.uiClick();
+    if (back === "lobby" && this.isGuest() && this.room.me && this.room.me.st === "armory") this.room.status("room");
     if (back === "lobby") this.refreshLobby();
   }
   _initPreview() {

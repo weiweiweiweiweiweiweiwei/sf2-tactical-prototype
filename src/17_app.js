@@ -631,7 +631,11 @@ class App {
     $('lbInvCode').textContent = code; $('lbInvLinkTxt').value = r ? inviteLink(r.code) : '';
     $('lbPub').checked = !!(r && r.pub); $('lbPubRow').style.display = r && r.role === 'host' ? '' : 'none';
     const sb = $('lbStart'); let txt = '開始 (F5)', off = false, msg = '';
-    if (guest) { if (r.phase === 'playing' && r.mcfg) txt = '加入對戰 (F5)'; else { txt = '等待房主開始'; off = true; msg = r.entered ? '地圖和模式由房主設定 · 你可以選擇隊伍和配裝' : ''; } }
+    if (guest) { // v64c SF2: 準備 (F5) toggles ready; the host's start takes only ready players
+      if (r.phase === 'playing' && r.mcfg) txt = '加入對戰 (F5)';
+      else if (!r.entered) { txt = '連線中…'; off = true; }
+      else txt = r.me && r.me.st === 'ready' ? '取消準備 (F5)' : '準備 (F5)';
+    }
     sb.textContent = txt; sb.disabled = off; sb.classList.toggle('wait', off); void msg;
     this.renderFriends(); // invite buttons depend on our room
   }
@@ -639,7 +643,11 @@ class App {
   beginCountdown() {
     if (this.state !== 'lobby') return;
     const r = this.room;
-    if (r && r.role === 'guest') { if (r.phase === 'playing' && r.mcfg) { this.audio.init(); this.audio.uiClick(); this.startGuestMatch(); } return; } // drop into the running match
+    if (r && r.role === 'guest') {
+      if (r.phase === 'playing' && r.mcfg) { this.audio.init(); this.audio.uiClick(); this.startGuestMatch(); } // drop into the running match
+      else if (r.entered && r.me) { this.audio.init(); this.audio.uiClick(); r.status(r.me.st === 'ready' ? 'room' : 'ready'); this.renderRoomBar(); this.refreshLobby(); } // v64c 準備 / 取消準備
+      return;
+    }
     if (this.$('lbStart').disabled) return;
     this.audio.init(); this.audio.uiClick(); this.invite(false);
     if (r && r.role === 'host') r.countdown(); // everyone in the room sees the same 3-2-1
@@ -962,12 +970,14 @@ class App {
     this.wh.slot = L.loadout; this.wh.sel = Settings.data.loadouts[this.wh.slot][this.wh.cat]; this.wh.page = -1; // -1 = the page showing the equipped gun
     this.whFrom = this.state === 'hub' ? 'hub' : 'lobby'; this.invite(false);
     $('lobby').classList.remove('on'); $('hub').classList.remove('on'); $('warehouse').classList.add('on');
+    if (this.whFrom === 'lobby' && this.isGuest() && this.room.entered) this.room.status('armory'); // v64c 備戰中: never ready while picking guns
     if (!this.whR) this._initPreview();
     this.renderWarehouse();
   }
   closeWarehouse() {
     const back = this.whFrom === 'hub' && this.state === 'hub' ? 'hub' : 'lobby';
     this.$('warehouse').classList.remove('on'); this.$(back).classList.add('on'); Settings.save(); this.audio.uiClick();
+    if (back === 'lobby' && this.isGuest() && this.room.me && this.room.me.st === 'armory') this.room.status('room'); // (back in the room, not ready: press 準備 again)
     if (back === 'lobby') this.refreshLobby();
   }
   _initPreview() {
