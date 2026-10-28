@@ -1355,3 +1355,30 @@
 - 驗證：
   - `_rigshot.mjs` 截圖：魔術迴路平時是黑底綠紋、擊殺時有黃色電光；K14 開鏡放大看紅點較小、有一圈淡暈。
   - `check.mjs` CHECK_OK。
+
+
+### v64r（本機，2026-10-28）：走路速度照 SF2 的槍重公式（使用者選 1A）
+- 公式（`SFPawn.SetGroundSpeedByWeight`、`SFInventoryManager.CalculateInventoryWeight`）：
+  - **負重** = 手上那把的裝備重量 + 另一格的收起重量。拿主武器時，另一格是副武器；拿手槍、刀或手榴彈時，另一格是主武器。SF2 的手槍、刀、手榴彈收起重量都是 0。
+  - **速度**：負重 ≤ 2 是 390 UU/s，≥ 6 是 295 UU/s，中間線性。
+- 資料：`tools/sf2_weight_table.py` 產生 `SF2_WEIGHT`（71 把，從 SFGameContent 讀；SF2 沒有對應類別的 6 把取最接近的同類，清單在註解裡）。
+- 基準：`CFG.player.sf2Speed` 6.43 m/s 對應 SF2 的 390。M4A1 單拿是 5.608 m/s，和改之前 5.9 × 0.95 相同。
+- 結果：
+
+  | 手上的槍 | 速度 |
+  |---|---|
+  | M4A1 | 5.61 m/s |
+  | M4A1 切手槍或刀 | 6.02 m/s |
+  | G36C | 5.80 m/s |
+  | AK-103 | 4.94 m/s |
+  | MP5K | 6.42 m/s |
+  | 狙擊槍（K14／M200 等） | 一律 4.83 m/s |
+  | K14 切手槍 | 5.29 m/s（被狙擊槍的收起重量 3.8 拖住） |
+
+- 程式：
+  - 玩家自己的速度每格即時算（`src/12_player.js`：`sf2Load`、`sf2Speed`）。
+  - Bot 和移動散布用 `def.moveSpeed`：主武器以單拿計算，其他以搭配收起的 M4A1 計算。
+  - 倉庫槍卡的「機動」條也改用重量算。
+- 驗證：
+  - `tools/out/_walkspeed.mjs`：各組合的負重和速度如上表；實際走路量到 AK-103 4.942、狙擊槍 4.826 m/s，和公式一致。
+  - `check.mjs` CHECK_OK。
