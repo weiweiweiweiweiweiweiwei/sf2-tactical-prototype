@@ -67,6 +67,7 @@ class Pkg:
     def _tags(self, end):
         out = []
         while self.o < end:
+            if not self._tagAt(self.o): break  # v65y stop at the first unreadable tag (keep what was read)
             nm = self.name()
             if nm == 'None': break
             typ = self.name(); size = self.i32(); idx = self.i32(); extra = None
@@ -91,6 +92,8 @@ class Pkg:
             if extra in ('Vector', 'Rotator') and size == 12:
                 return struct.unpack_from('<fff' if extra == 'Vector' else '<iii', b, o)
             if extra == 'Vector2D' and size == 8: return struct.unpack_from('<ff', b, o)
+            if extra == 'Color' and size == 4: bb, gg, rr, aa = b[o:o + 4]; return dict(R=rr, G=gg, B=bb, A=aa)  # v65y stored BGRA
+            if extra == 'LinearColor' and size == 16: return dict(zip('RGBA', (round(x, 4) for x in struct.unpack_from('<4f', b, o))))
             try:
                 sub = self._tags(o + size); return {f'{n}[{i}]' if i else n: v for n, i, t, v in sub}
             except Exception: return b[o:o + size].hex()

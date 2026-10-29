@@ -113,4 +113,8 @@ MAPS.push(sf2TriMap({
   bounds: { minX: -53, maxX: 59, minZ: -59, maxZ: 35 }, indoor: false, killY: -20,
   shot: { pos: [10, 60, -70], target: [10, 0, -12] }, thumb: { pos: [10, 70, -80], target: [10, 0, -12], fov: 55 },
   objectives: { dom: [[-4, 0, 12], [3, 0, -7], [9, 0, -26]], relic: [3, 0, -7], domRadius: 5 },
+  // v65y SF2's own light: DominantDirectionalLight_0 (Pitch −10016, Yaw −1120992 → 55° up from 322°; LightColor 251/219/199), the
+  // fill turned down and warmed (the old blue-grey sky fill washed the sand-white walls out and hid every shadow), a warm haze
+  background: 0xcdbb9c, envIntensity: 0.25, exposure: 0.85, hemi: [0xe6d6bc, 0x6a5440, 0.5],
+  sun: { pos: [-32, 57, 25], color: 0xfbdbc7, intensity: 1.4, auto: false }, fog: { color: 0xcdbb9c, near: 90, far: 420 },
 }));
