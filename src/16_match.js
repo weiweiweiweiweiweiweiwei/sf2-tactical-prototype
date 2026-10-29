@@ -889,7 +889,7 @@ class Match {
       if (!c.alive || !c.motor || (client && c !== this.player)) continue;
       const m = c.motor, p = m.pos;
       o.set(p.x, p.y + m.height - 0.05, p.z); const hit = tris.raycast(o, up, 6);
-      let under = !!(hit && hit.n[1] > 0.7);
+      let under = !!(hit && hit.n[1] > 0.7) && !(this.def.underFloorAirOnly && m.grounded); // (v65v SF2 maps: single-sided upper floors face up from below — standing on a floor is never 'under' it; only a body falling in the void)
       if (under && nav) { let near = false; nav.near(p, 2, (n) => { if (!near && n.ok && Math.abs(n.p.y - p.y) < 0.8 && Math.hypot(n.p.x - p.x, n.p.z - p.z) < 2) near = true; }); under = !near; }
       if (!under) { if (m.grounded && !m.climbing) (c._safe || (c._safe = new THREE.Vector3())).copy(p); c._underN = 0; continue; }
       if (++c._underN >= 2 && c._safe) { // (two checks in a row: half a second under the floor)

@@ -16865,6 +16865,7 @@ function sf2TriMap(def) {
     navClimb: 0.45,
     navGrid: 1,
     bodyRadius: 0.25,
+    underFloorAirOnly: true,
     acoustics: "indoor",
     ambience: "warehouse",
     background: 9214630,
@@ -27117,7 +27118,7 @@ var Match = class _Match {
       const m = c.motor, p = m.pos;
       o.set(p.x, p.y + m.height - 0.05, p.z);
       const hit = tris.raycast(o, up, 6);
-      let under = !!(hit && hit.n[1] > 0.7);
+      let under = !!(hit && hit.n[1] > 0.7) && !(this.def.underFloorAirOnly && m.grounded);
       if (under && nav) {
         let near = false;
         nav.near(p, 2, (n) => {
