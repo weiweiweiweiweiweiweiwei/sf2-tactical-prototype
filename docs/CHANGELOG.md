@@ -1634,3 +1634,7 @@
 ### （本機，2026-10-29）：SF2 新槍 StG44、T65K1、T65K2、T91、TAR-21（v65t）
 - 五把都用 `tools/sf2_add_gun.py`；T65K1、T91 沒有獨立聲音包（沿用分類預設）。
 - 截圖：T65K1、T65K2 腰射開鏡正常；StG44 準星偏近、T91 開鏡被瞄具擋住、TAR-21 開鏡鏡頭在槍身裡（TODO 1a）。
+
+### （本機，2026-10-29）：SF2 衝鋒槍 Bizon、CSLS06、CZ3A1、K1、Kriss Vector、MP40、Mx4 Storm、SIG MPX、Uzi Pro（v65u）
+- 全部用 `tools/sf2_add_gun.py`；MP40 的模型在 `rif_mp40`。MAC-10 在 SF2 是雙持（flame_L／flame_R），暫停，跟雙持槍一起做。
+- 截圖：CSLS06、K1、Kriss、MP40、Mx4 正常；Bizon、CZ3A1、SIG MPX、Uzi Pro 開鏡待量，Bizon／CZ3A1 貼圖是特殊塗裝（TODO 1a）。

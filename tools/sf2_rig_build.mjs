@@ -48,6 +48,15 @@ const ZEISS_SCOPE = { ...PART('weapon_common_part01', 'scope_zeiess'), tex: 'zei
 const SCOPE = (name, tex) => ({ ...PART('weapon_common_part', name), tex, noAim: true, roll: +(process.env.ROLL ?? 90) });
 const SIL = (k) => ({ ...PART('weapon_common_part', `silencer_ar_type_${k}`), tex: `silencer_type_${k}` });
 const GUNS = {
+  uzipro: gun('uzipro', { pkg: 'smg_uzi_pro', tex: 'smg_uzipro', anim: '1st_anim_uzi_pro' }), // v65q tools/sf2_add_gun.py
+  sigmpx: gun('sigmpx', { pkg: 'smg_sigmpx', tex: 'sigmpx_gear' }), // v65q tools/sf2_add_gun.py
+  mx4: gun('mx4', { pkg: 'smg_mx4_storm', tex: 'mx4storm', anim: '1st_anim_mx4_storm' }), // v65q tools/sf2_add_gun.py
+  mp40: gun('mp40', { pkg: 'rif_mp40' }), // v65q tools/sf2_add_gun.py
+  krissv: gun('krissv', { pkg: 'smg_ksv', tex: 'ksv', anim: '1st_anim_ksv', hoodedPost: true, socketSights: sight('krissv/smg_ksv_sight/SkeletalMesh3/smg_ksv_sight_up.gltf', 'ksv_sight') }), // v65q tools/sf2_add_gun.py
+  k1: gun('k1', { pkg: 'smg_k1', tex: 'k1_8th' }), // v65q tools/sf2_add_gun.py
+  cz3a1: gun('cz3a1', { pkg: 'smg_cz_scorpion', tex: 'cz3a1_venomous', anim: '1st_anim_cz_scorpion' }), // v65q tools/sf2_add_gun.py
+  csls06: gun('csls06', { pkg: 'smg_csls06' }), // v65q tools/sf2_add_gun.py
+  bizon: gun('bizon', { pkg: 'smg_bizon', tex: 'bizon_6th' }), // v65q tools/sf2_add_gun.py
   tar21: gun('tar21', { pkg: 'rif_tar21', hoodedPost: true, socketSights: sight('tar21/rif_tar21/SkeletalMesh3/rif_tar21_sight_up.gltf', 'tar21_sight') }), // v65q tools/sf2_add_gun.py
   t91: gun('t91', { pkg: 'rif_t91' }), // v65q tools/sf2_add_gun.py
   t65k2: gun('t65k2', { pkg: 'rif_t65k2', hoodedPost: true, socketSights: sight('t65k2/rif_t65k2_sight/SkeletalMesh3/rif_t65k2_sight_up.gltf', 'rif_t65k2_sight_up') }), // v65q tools/sf2_add_gun.py
