@@ -1638,3 +1638,7 @@
 ### （本機，2026-10-29）：SF2 衝鋒槍 Bizon、CSLS06、CZ3A1、K1、Kriss Vector、MP40、Mx4 Storm、SIG MPX、Uzi Pro（v65u）
 - 全部用 `tools/sf2_add_gun.py`；MP40 的模型在 `rif_mp40`。MAC-10 在 SF2 是雙持（flame_L／flame_R），暫停，跟雙持槍一起做。
 - 截圖：CSLS06、K1、Kriss、MP40、Mx4 正常；Bizon、CZ3A1、SIG MPX、Uzi Pro 開鏡待量，Bizon／CZ3A1 貼圖是特殊塗裝（TODO 1a）。
+
+### （本機，2026-10-29）：SF2 狙擊槍 FNAR、MSR、SVCh；XM8 Compact、XM8 AR（v65v）
+- FNAR、MSR、SVCh 用 `tools/sf2_add_gun.py`，腰射正常、狙擊鏡開鏡待接（TODO）。XM8 Compact Carbine／Automatic Rifle 安裝檔沒有獨立模型，沿用 XM8 外觀、套自己的數值，截圖正常。
+- HS50M1、Springfield 沒有模型包，暫停；P90、PP2000、Scorpion、SVD 原本就在 G2 暫停。

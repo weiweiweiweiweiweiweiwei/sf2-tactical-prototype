@@ -8,6 +8,9 @@ sound times measured on its Reload clip (magazine out / in, bolt: weapon_magazin
 import json
 
 GUNS = {
+    'svch': ('SVCh', 'svch', 'svch', [0.12, 0.4, 0.73]),  # v65q sf2_add_gun
+    'msr': ('MSR', 'msr', 'msr', [0.12, 0.4, 0.73]),  # v65q sf2_add_gun
+    'fnar': ('FNAR', 'fnar', 'fnar', [0.12, 0.4, 0.73]),  # v65q sf2_add_gun
     'uzipro': ('UziPro', 'uzipro', 'uzipro', [0.12, 0.4, 0.73]),  # v65q sf2_add_gun
     'sigmpx': ('SIGMPX', 'sigmpx', 'sigmpx', [0.12, 0.4, 0.73]),  # v65q sf2_add_gun
     'mx4': ('Mx4Storm', 'mx4', 'mx4', [0.12, 0.4, 0.73]),  # v65q sf2_add_gun
@@ -23,6 +26,8 @@ GUNS = {
     't65k1': ('T65K1', 't65k1', 't65k1', [0.12, 0.4, 0.73]),  # v65q sf2_add_gun
     'stg44': ('STG44', 'stg44', 'stg44', [0.12, 0.4, 0.73]),  # v65q sf2_add_gun
     'scarhdmr': ('SCARHDMR', 'scarh', 'scarh', [0.12, 0.4, 0.73]),  # v65s no own model: scarh's rig
+    'xm8cc': ('XM8CompactCarbine', 'xm8', 'xm8', [0.12, 0.27, 0.73]),  # v65v xm8's rig
+    'xm8ar': ('XM8AutomaticRifle', 'xm8', 'xm8', [0.12, 0.27, 0.73]),  # v65v xm8's rig
     'fs2000': ('FNFS2000', 'fnf2000', 'fnf2000', [0.12, 0.4, 0.73]),  # v65s no own model: fnf2000's rig
     'sar21': ('SAR21', 'sar21', 'sar21', [0.12, 0.4, 0.73]),  # v65q sf2_add_gun
     'mrr': ('MRR', 'mrr', 'mrr', [0.12, 0.4, 0.73]),  # v65q sf2_add_gun

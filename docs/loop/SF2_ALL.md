@@ -65,24 +65,24 @@
 - ⏸ MAC10（衝鋒槍；SF2 是雙持，跟 G2 雙持槍一起做）
 - ✅ MP40（衝鋒槍）
 - ✅ Mx4Storm（衝鋒槍）
-- ⬜ P90（衝鋒槍）
-- ⬜ PP2000（衝鋒槍）
-- ⬜ Scorpion（衝鋒槍）
+- ⏸ P90（衝鋒槍；見 G2）
+- ⏸ PP2000（衝鋒槍；見 G2）
+- ⏸ Scorpion（衝鋒槍；見 G2）
 - ✅ SIGMPX（衝鋒槍）
 - ✅ UziPro（衝鋒槍）
-- ⬜ XM8CompactCarbine（衝鋒槍）
-- ⬜ DragunovSVD（狙擊槍）
-- ⬜ FNAR（狙擊槍）
-- ⬜ HS50M1（狙擊槍）
-- ⬜ MSR（狙擊槍）
-- ⬜ Springfield（狙擊槍）
-- ⬜ SVCh（狙擊槍）
+- ✅ XM8CompactCarbine（衝鋒槍；沿用 XM8 外觀）
+- ⏸ DragunovSVD（狙擊槍；見 G2）
+- ✅ FNAR（狙擊槍；開鏡待接）
+- ⏸ HS50M1（狙擊槍；安裝檔沒有模型包）
+- ✅ MSR（狙擊槍；開鏡待接）
+- ⏸ Springfield（狙擊槍；安裝檔沒有模型包）
+- ✅ SVCh（狙擊槍；開鏡待接）
 - ⬜ FNMAG（機槍）
 - ⬜ L86A1（機槍）
 - ⬜ MinimiSPW（機槍）
 - ⬜ RPK74（機槍）
 - ⬜ Ultimax（機槍）
-- ⬜ XM8AutomaticRifle（機槍）
+- ✅ XM8AutomaticRifle（機槍；沿用 XM8 外觀）
 - ⬜ AA12（霰彈槍）
 - ⬜ USAS12（霰彈槍）
 - ⬜ 44Magnum（手槍）
@@ -252,3 +252,4 @@
 - v65o：SF2 地圖的碰撞直接用模型的三角形（含小物件）、導航在載入時取樣、出生點圍繞 SF2 的 PlayerStart；梯子先只放導航點（還不能爬）。
 - v65r：開鏡對不準的新槍照樣加進來（腰射可用），開鏡瞄準點統一記在 TODO 之後一次量。
 - 10-29 MAC-10 是雙持 → A：暫停，跟 G2 雙持槍一起做；Bizon／CZ3A1 塗裝貼圖 → A：先上、記 TODO
+- 10-29 FNAR／MSR／SVCh 狙擊鏡開鏡沒接好 → A：先上（腰射可用），開鏡記 TODO；HS50M1／Springfield 沒模型包 → A：暫停

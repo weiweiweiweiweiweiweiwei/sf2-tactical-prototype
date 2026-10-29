@@ -48,6 +48,9 @@ const ZEISS_SCOPE = { ...PART('weapon_common_part01', 'scope_zeiess'), tex: 'zei
 const SCOPE = (name, tex) => ({ ...PART('weapon_common_part', name), tex, noAim: true, roll: +(process.env.ROLL ?? 90) });
 const SIL = (k) => ({ ...PART('weapon_common_part', `silencer_ar_type_${k}`), tex: `silencer_type_${k}` });
 const GUNS = {
+  svch: gun('svch', { pkg: 'sni_svch' }), // v65q tools/sf2_add_gun.py
+  msr: gun('msr', { pkg: 'sni_msr' }), // v65q tools/sf2_add_gun.py
+  fnar: gun('fnar', { pkg: 'sni_fnar', tex: 'sni_fnar' }), // v65q tools/sf2_add_gun.py
   uzipro: gun('uzipro', { pkg: 'smg_uzi_pro', tex: 'smg_uzipro', anim: '1st_anim_uzi_pro' }), // v65q tools/sf2_add_gun.py
   sigmpx: gun('sigmpx', { pkg: 'smg_sigmpx', tex: 'sigmpx_gear' }), // v65q tools/sf2_add_gun.py
   mx4: gun('mx4', { pkg: 'smg_mx4_storm', tex: 'mx4storm', anim: '1st_anim_mx4_storm' }), // v65q tools/sf2_add_gun.py
