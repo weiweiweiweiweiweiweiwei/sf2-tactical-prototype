@@ -1586,3 +1586,8 @@
 - `src/09_models.js`：`ensureGunModels` 載入型態時連底槍一起載；`sf2Variant` 把配件依骨頭名稱綁到底槍 rig 的複本上、套上標記、藏掉被取代的零件，之後和一般 rig 一樣用。
 - G36C EOTech／HK417 Reflex／SCAR-L MK2 EOTech 改成這種方式：每個型態 1.05 MB → 0.45 MB。截圖確認腰射、開鏡的瞄具和消音器都在；標記位置和舊的整把版本完全相同。
 - ⬜ 開鏡時 EOTech 視窗佔滿畫面、紅點準心在暗處不明顯：和舊版設定相同（眼距 15 cm），待使用者試玩確認。
+
+
+### （本機，2026-10-29）：SF2 槍枝清單
+- `tools/sf2_gun_inventory.py` → `docs/research/sf2/gun-inventory.md`：SF2 的底槍是 `SFCWeapon<X>`（類別繼承到步槍／衝鋒槍／狙擊／機槍／霰彈／手槍基底），型態是道具 `SFCItem_<X>_<配件…>`（從 `SFGameContent` 9151 個道具名稱裡挑出只含配件字的：EOTech、OpenDot、Reflex、ACOG、AimPoint、Silencer、MK2–5…）；活動造型槍（貓、海豚…）和特殊模式武器排除。
+- 結果：99 把槍，遊戲裡已有 SF2 原版 46 把；要做的型態 379 個（標準＋每種瞄具＋消音＋最高 MK）。`docs/loop/SF2_ALL.md` 的 G3（53 把新槍）、G4（各槍型態，M4A1 第一）已展開。

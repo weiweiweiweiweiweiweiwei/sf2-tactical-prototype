@@ -21,22 +21,155 @@
 - ✅（v65k）變體在遊戲裡組裝：底槍的 rig＋配件零件（瞄具、消音器）各一個小 GLB，執行時掛到槍身插槽（`Scope`／`Sight`／`Silencer`），不再每個變體一個完整 rig。把現有的 `g36c_eo`、`hk417_rs`、`scarl_eo` 改成這種方式驗證。
 
 ### G1. 槍枝清單
-- ⬜ 從 `docs/research/sf2/client-data/weapons.json`、`SFCItem_*` 的 `DefaultItemClassNames`（`tools/sf2_props.py`）、SF2 的武器名稱表整理出：**每把底槍**＋**型態**（標準、EO、Reflex、ACOG、Silencer、Max／改、其他配件組合），排除塗裝（CircuitFX、Blaster、活動造型等）和特殊模式武器。輸出 `docs/research/sf2/gun-inventory.md`（底槍、型態、類別名、包名、遊戲裡有沒有）。依這份清單展開下面 G2–G4 的項目。
+- ✅（v65l）從 `docs/research/sf2/client-data/weapons.json`、`SFCItem_*` 的 `DefaultItemClassNames`（`tools/sf2_props.py`）、SF2 的武器名稱表整理出：**每把底槍**＋**型態**（標準、EO、Reflex、ACOG、Silencer、Max／改、其他配件組合），排除塗裝（CircuitFX、Blaster、活動造型等）和特殊模式武器。輸出 `docs/research/sf2/gun-inventory.md`（底槍、型態、類別名、包名、遊戲裡有沒有）。依這份清單展開下面 G2–G4 的項目。
 
 ### G2. 補完暫停的 11 把（`docs/loop/GUNS.md` 的 ⏸）
 - ⬜ SVD、P90、PP-2000／vz.61（雙持）、M249、RPK、L86A1、AA-12；沒有 SF2 包的（MP5、Vector、Negev、PKM、MG42、M1014、USP、AK-47）再找一次包名，真的沒有就維持原本的槍。
-
-### G3. 遊戲裡還沒有的 SF2 底槍（依 G1 清單）
-- ⬜（G1 完成後展開）
-
-### G4. 各槍的型態（依 G1 清單；M4A1 先做：EO、Reflex、ACOG、Silencer、Max）
-- ⬜（G1 完成後展開）
 
 ### M1. 地圖清單
 - ⬜ 列出 SF2 安裝檔裡的地圖包（`D:/SpecialForce2/SFGame/CookedPCConsole`），排除殭屍／PVE／活動等特殊模式；記下各圖的包名、主要的子關卡（streaming levels）、大小。輸出 `docs/research/sf2/map-inventory.md`。
 
 ### M2. 地圖匯出可行性
 - ⬜ 用一張小圖試：UModel 匯出靜態網格；關卡裡物件的擺放（`StaticMeshActor`／`StaticMeshComponent` 的位置、旋轉、縮放）用 `tools/sf2_props.py` 的解析器讀；BSP 牆地板（`Model`）能不能讀；光照（lightmap）先不管。做出 `tools/sf2_map_export.py` → GLB＋碰撞，照 Apex 三角碰撞地圖的方式接進遊戲（`apexTriMap`）。驗證：能走、能打、出生點、`check.mjs`。
+
+### G3. 遊戲裡還沒有的 SF2 底槍（`docs/research/sf2/gun-inventory.md`；SF2 包名用 `umodel -list` 找 `rif_`／`smg_`／`sni_`／`mg_`／`sho_`／`pis_` 開頭）
+- ⬜ ACR（突擊步槍）
+- ⬜ AK104（突擊步槍）
+- ⬜ AN94（突擊步槍）
+- ⬜ ARX160（突擊步槍）
+- ⬜ CM901（突擊步槍）
+- ⬜ FNF2000（突擊步槍）
+- ⬜ FNFS2000（突擊步槍）
+- ⬜ K2C1（突擊步槍）
+- ⬜ L85A1（突擊步槍）
+- ⬜ MadsenLar（突擊步槍）
+- ⬜ MRR（突擊步槍）
+- ⬜ SAR21（突擊步槍）
+- ⬜ SCARHDMR（突擊步槍）
+- ⬜ STG44（突擊步槍）
+- ⬜ T65K1（突擊步槍）
+- ⬜ T65K2（突擊步槍）
+- ⬜ T91（突擊步槍）
+- ⬜ TAR21（突擊步槍）
+- ⬜ Bizon（衝鋒槍）
+- ⬜ CSLS06（衝鋒槍）
+- ⬜ CZ3A1（衝鋒槍）
+- ⬜ K1（衝鋒槍）
+- ⬜ KrissV（衝鋒槍）
+- ⬜ MAC10（衝鋒槍）
+- ⬜ MP40（衝鋒槍）
+- ⬜ Mx4Storm（衝鋒槍）
+- ⬜ P90（衝鋒槍）
+- ⬜ PP2000（衝鋒槍）
+- ⬜ Scorpion（衝鋒槍）
+- ⬜ SIGMPX（衝鋒槍）
+- ⬜ UziPro（衝鋒槍）
+- ⬜ XM8CompactCarbine（衝鋒槍）
+- ⬜ DragunovSVD（狙擊槍）
+- ⬜ FNAR（狙擊槍）
+- ⬜ HS50M1（狙擊槍）
+- ⬜ MSR（狙擊槍）
+- ⬜ Springfield（狙擊槍）
+- ⬜ SVCh（狙擊槍）
+- ⬜ FNMAG（機槍）
+- ⬜ L86A1（機槍）
+- ⬜ MinimiSPW（機槍）
+- ⬜ RPK74（機槍）
+- ⬜ Ultimax（機槍）
+- ⬜ XM8AutomaticRifle（機槍）
+- ⬜ AA12（霰彈槍）
+- ⬜ USAS12（霰彈槍）
+- ⬜ 44Magnum（手槍）
+- ⬜ K5（手槍）
+- ⬜ LUGER（手槍）
+- ⬜ Maxim9（手槍）
+- ⬜ P7M13（手槍）
+- ⬜ StrikeOne（手槍）
+- ⬜ Wildey（手槍）
+
+### G4. 各槍的型態（底槍做好後才做；配件看 `SFCItem_<槍>_<型態>` 的 `DefaultItemClassNames`；型態輸出成配件檔 `<id>_sf2_ovl`；MKn＝SF2 的強化版（「Max／改」），只差數值：照該 SFCWeapon<槍>_MKn 類別的數值、外觀同底槍）
+- ⬜ M4A1（m4a1）：ACOG、AimPoint、EOTech、OpenDot、Reflex、Silencer、MK5
+- ⬜ ACR：ACOG、AimPoint、EOTech、OpenDot、Reflex、MK3
+- ⬜ AK103（ak103）：ACOG、AimPoint、EOTech、Reflex、Silencer、MK5
+- ⬜ AK104：ACOG、EOTech
+- ⬜ AN94：ACOG、AimPoint、EOTech、Reflex、MK3
+- ⬜ ARX160：ACOG、EOTech、OpenDot、Reflex、Silencer
+- ⬜ AUGA3（aug）：ACOG、AimPoint、EOTech、OpenDot、Reflex、MK5
+- ⬜ CM901：ACOG、AimPoint、EOTech、OpenDot、Reflex
+- ⬜ FAMAS（famas）：ACOG、AimPoint、EOTech、OpenDot、Reflex、Silencer、MK5
+- ⬜ FNF2000：AimPoint、Scope、Silencer
+- ⬜ FNFS2000：EOTech、OpenDot
+- ⬜ G36C（g36c）：ACOG、AimPoint、EOTech、OpenDot、Reflex、Silencer、MK4
+- ⬜ GALIL（galil）：ACOG、AimPoint、EOTech、OpenDot、Reflex、Silencer、MK2
+- ⬜ HK417（hk417）：ACOG、AimPoint、EOTech、OpenDot、Reflex、Silencer、MK5
+- ⬜ K2（k2）：ACOG、EOTech、OpenDot、Reflex、Silencer、MK5
+- ⬜ K2C1：EOTech、Reflex
+- ⬜ M14EBR（m14ebr）：ACOG、OpenDot、Reflex、Silencer、MK5
+- ⬜ M16A3（m16a3）：ACOG、EOTech、Silencer
+- ⬜ MadsenLar：EOTech、OpenDot
+- ⬜ MRR：AimPoint、EOTech、OpenDot、Silencer
+- ⬜ QBZ97（qbz97）：ACOG、AimPoint、EOTech、Reflex、MK2
+- ⬜ SAR21：AimPoint、EOTech、OpenDot、Reflex
+- ⬜ SCARH（scarh）：ACOG、EOTech、Reflex、MK5
+- ⬜ SCARHDMR：Silencer
+- ⬜ SCARL（scarl）：ACOG、AimPoint、EOTech、Reflex、MK3
+- ⬜ SIG551（sg551）：ACOG、AimPoint、EOTech、OpenDot、Reflex、Silencer、MK3
+- ⬜ STG44：EOTech、OpenDot、Reflex
+- ⬜ T65K1：EOTech、Reflex
+- ⬜ T65K2：ACOG、EOTech、OpenDot、Reflex
+- ⬜ T91：EOTech、Reflex
+- ⬜ TAR21：EOTech、OpenDot、Reflex
+- ⬜ Type89（type89）：ACOG、EOTech、Reflex、Silencer、MK2
+- ⬜ XM8（xm8）：ACOG、EOTech、OpenDot、Reflex、Silencer、MK3
+- ⬜ Bizon：EOTech、OpenDot、Reflex、Silencer、MK3
+- ⬜ CSLS06：EOTech、OpenDot、Silencer、MK3
+- ⬜ CZ3A1：EOTech、OpenDot、Reflex、Silencer
+- ⬜ K1：EOTech、OpenDot、Reflex、Silencer、MK2
+- ⬜ KrissV：ACOG、EOTech、OpenDot、Reflex、Silencer、MK5
+- ⬜ MP40：EOTech、OpenDot、Reflex、Silencer
+- ⬜ MP5K（mp5k）：ACOG、OpenDot、Silencer、MK5
+- ⬜ MP7A1（mp7）：ACOG、EOTech、OpenDot、Silencer、MK5
+- ⬜ Mx4Storm：EOTech、Reflex
+- ⬜ P90：EOTech、OpenDot、Silencer、MK5
+- ⬜ PP2000：MK5
+- ⬜ Scorpion：MK5
+- ⬜ SIGMPX：EOTech、OpenDot、Reflex、Silencer、MK2
+- ⬜ UMP45（ump45）：ACOG、AimPoint、EOTech、OpenDot、Reflex、Silencer、MK5
+- ⬜ UziPro：EOTech、OpenDot、Silencer、MK2
+- ⬜ AWP（awp）：Silencer、MK5
+- ⬜ Barret（barrett）：MK2
+- ⬜ CheyTac（cheytac_m200）：Silencer、MK5
+- ⬜ CZ700（cz700）：Silencer、MK5
+- ⬜ FNAR：Silencer
+- ⬜ FRF2（frf2）：Silencer
+- ⬜ K14（k14）：Silencer、MK2
+- ⬜ Kar98k（kar98k）：Silencer
+- ⬜ M40A1（m40a1）：Silencer、MK5
+- ⬜ MSR：Silencer
+- ⬜ PSG1（psg1）：ACOG、AimPoint、MK5
+- ⬜ SR25（sr25）：ACOG、Silencer、MK5
+- ⬜ SVCh：Silencer
+- ⬜ TRG（trg）：Silencer
+- ⬜ FNMAG：EOTech、Reflex
+- ⬜ HK23E（hk23e）：ACOG、EOTech、OpenDot、Reflex、MK5
+- ⬜ K3（k3）：EOTech、OpenDot、MK5
+- ⬜ L86A1：EOTech、OpenDot、MK5
+- ⬜ MG4（mg4）：EOTech、OpenDot、Reflex、MK2
+- ⬜ MinimiSPW：ACOG、EOTech、OpenDot、Reflex、MK3
+- ⬜ RPK74：ACOG、EOTech、OpenDot、MK5
+- ⬜ Ultimax：EOTech、OpenDot、Reflex
+- ⬜ AA12：EOTech、OpenDot、MK2
+- ⬜ BNLLI（benelli_m4）：EOTech
+- ⬜ M870（remington870）：EOTech、OpenDot、Reflex、MK5
+- ⬜ SAIGA12（saiga12）：EOTech、OpenDot
+- ⬜ USAS12：OpenDot
+- ⬜ 44Magnum：ACOG、AimPoint
+- ⬜ Colt1911（m1911）：Silencer
+- ⬜ CZ75BD（cz75）：Silencer
+- ⬜ INFINITY（infinity）：Silencer
+- ⬜ K5：Silencer
+- ⬜ M92FS（m92fs）：Silencer
+- ⬜ P226（p226）：Silencer
 
 ### M3. 逐張還原（依 M1 清單，M2 成功後展開）
 - ⬜（M2 完成後展開）
@@ -45,3 +178,5 @@
 （迴圈中替使用者做的決定，一行一個，使用者可以回頭改）
 - v65j：地上掉的槍若還沒載入，那一次先用簡易模型、背景載入，下一次才是精細模型（選 A：不讓掉槍時卡頓）。
 - v65k：型態一律輸出成「配件檔」（`<id>_sf2_ovl.glb`，`node tools/sf2_rig_build.mjs <型態>`；要整把時加 `--full`），不再另存整把 rig。
+- v65l：型態只做「標準＋每種瞄具＋消音＋最高 MK」，雷射、擴充彈匣、多配件組合不做（共 379 個）；活動造型槍（貓、海豚…）不算槍。
+- v65l：佇列順序改成 G2 → 地圖清單與匯出可行性（M1、M2）→ G3 新槍 → G4 型態（M4A1 第一）→ M3 逐張地圖：先確定地圖做不做得出來。
