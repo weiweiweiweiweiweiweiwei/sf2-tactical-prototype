@@ -25,7 +25,11 @@ function sf2TriMap(def) {
       const key = this.id, dir = `assets/maps/sf2-${key.slice(4)}/`;
       if (!(window.SF2_MAPS && window.SF2_MAPS[key])) await sf2MapScript(dir + 'map.js');
       const d = window.SF2_MAPS[key], bin = Uint8Array.from(atob(d.glb), (c) => c.charCodeAt(0)).buffer; d.glb = null;
-      const gltf = await apexGLTF(bin); gltf.scene.updateMatrixWorld(true);
+      const gltf = await apexGLTF(bin);
+      // v65w SF2's world is left-handed: the (x, z, −y) / 100 the builder and UModel share keeps the handedness, so every SF2 map came out
+      // mirrored (user 10-29: Desert Camp's hut on the wrong side). One flip of z here mirrors it back — collision winding, starts, ladders follow
+      if (this.mirror !== false) gltf.scene.scale.z = -1;
+      gltf.scene.updateMatrixWorld(true);
       // collision: every mesh's world triangles (instances share geometry), the sky dome and other huge shells out
       const pos = [], idx = [], v = new THREE.Vector3(), box = new THREE.Box3(), size = new THREE.Vector3(), all = new THREE.Box3();
       gltf.scene.traverse((o) => {
@@ -34,11 +38,17 @@ function sf2TriMap(def) {
         if (ex('colOnly')) o.userData.colOnly = true; else if (ex('nocol')) { o.userData.nocol = true; return; } // v65v SF2's collision: off where it turned it off, its blocking volumes in
         box.setFromObject(o); if (box.getSize(size).length() > 300) { o.userData.sky = true; return; }
         all.union(box);
-        const g = o.geometry, P = g.attributes.position, base = pos.length / 3;
+        const g = o.geometry, P = g.attributes.position, base = pos.length / 3, flip = o.matrixWorld.determinant() < 0; // (a mirrored node: its triangles wound the other way round)
         for (let i = 0; i < P.count; i++) { v.fromBufferAttribute(P, i).applyMatrix4(o.matrixWorld); pos.push(v.x, v.y, v.z); }
-        if (g.index) for (let i = 0; i < g.index.count; i++) idx.push(base + g.index.getX(i)); else for (let i = 0; i < P.count; i++) idx.push(base + i);
+        const I = (i) => (g.index ? g.index.getX(i) : i), n3 = g.index ? g.index.count : P.count;
+        for (let i = 0; i + 2 < n3; i += 3) if (flip) idx.push(base + I(i), base + I(i + 2), base + I(i + 1)); else idx.push(base + I(i), base + I(i + 1), base + I(i + 2));
       });
       const soup = new TriSoup(new Float32Array(pos), new Uint32Array(idx), 'concrete');
+      if (this.mirror !== false && !d.meta.mirrored) { // (once per page: the starts' z and facing, the ladders' z)
+        for (const st of d.meta.starts) { st.pos[2] = -st.pos[2]; st.yaw = Math.PI - st.yaw; }
+        for (const l of d.meta.ladders || []) l[2] = -l[2];
+        d.meta.mirrored = true;
+      }
       this._s2 = { gltf, soup, meta: d.meta };
       this.bounds = { minX: Math.floor(all.min.x) - 2, maxX: Math.ceil(all.max.x) + 2, minZ: Math.floor(all.min.z) - 2, maxZ: Math.ceil(all.max.z) + 2 };
       this.killY = all.min.y - 15;
@@ -70,7 +80,7 @@ function sf2TriMap(def) {
         if (m.userData.colOnly) { m.removeFromParent(); continue; } // (a blocking volume: in the triangle soup, not drawn)
         m.removeFromParent(); m.matrixWorld.decompose(m.position, m.quaternion, m.scale); m.matrixAutoUpdate = false; m.updateMatrix();
         m.castShadow = !m.userData.sky; m.receiveShadow = true;
-        for (const mt of Array.isArray(m.material) ? m.material : [m.material]) { mt.side = THREE.DoubleSide; if (mt.map) mt.map.anisotropy = 4; }
+        for (const mt of Array.isArray(m.material) ? m.material : [m.material]) { mt.vertexColors = false; mt.side = THREE.DoubleSide; if (mt.map) mt.map.anisotropy = 4; } // (v65w UModel writes SF2's vertex paint as COLOR_0: multiplied in, it striped crates and benches in rainbow colours)
         b.scene.add(m);
       }
     },
@@ -97,10 +107,10 @@ export { sf2TriMap };
 
 // v65v Desert Camp (user 10-29: 1:1, the SF2 map to keep) — every placed mesh incl. SFStaticMeshActor / SFKActorNoSync (archetype meshes),
 // collision as SF2 sets it (components with CollideActors / BlockActors off left out, its 29 blocking volumes in); Alpha (TDM starts)
-// south of the square, Bravo north (game metres: x −36 … 55, z −30 … 57)
+// south of the square, Bravo north (game metres, mirrored back v65w: x −36 … 55, z −57 … 30)
 MAPS.push(sf2TriMap({
   id: 'sf2_desertcamp', name: 'SF2 沙漠營地', en: 'DESERT CAMP', desc: 'Special Force 2 原版地圖 1:1 · 原版模型、擺設與碰撞', slogan: '沙漠營地 · 中央廣場與兩側巷道',
-  bounds: { minX: -38, maxX: 57, minZ: -32, maxZ: 59 }, indoor: false, killY: -20,
-  shot: { pos: [10, 60, 70], target: [10, 0, 12] }, thumb: { pos: [10, 70, 80], target: [10, 0, 12], fov: 55 },
-  objectives: { dom: [[-4, 0, -12], [3, 0, 7], [9, 0, 26]], relic: [3, 0, 7], domRadius: 5 },
+  bounds: { minX: -38, maxX: 57, minZ: -59, maxZ: 32 }, indoor: false, killY: -20,
+  shot: { pos: [10, 60, -70], target: [10, 0, -12] }, thumb: { pos: [10, 70, -80], target: [10, 0, -12], fov: 55 },
+  objectives: { dom: [[-4, 0, 12], [3, 0, -7], [9, 0, -26]], relic: [3, 0, -7], domRadius: 5 },
 }));

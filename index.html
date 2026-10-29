@@ -16882,6 +16882,7 @@ function sf2TriMap(def) {
       const d = window.SF2_MAPS[key], bin = Uint8Array.from(atob(d.glb), (c) => c.charCodeAt(0)).buffer;
       d.glb = null;
       const gltf = await apexGLTF(bin);
+      if (this.mirror !== false) gltf.scene.scale.z = -1;
       gltf.scene.updateMatrixWorld(true);
       const pos = [], idx = [], v = new THREE.Vector3(), box = new THREE.Box3(), size = new THREE.Vector3(), all = new THREE.Box3();
       gltf.scene.traverse((o) => {
@@ -16898,15 +16899,24 @@ function sf2TriMap(def) {
           return;
         }
         all.union(box);
-        const g = o.geometry, P = g.attributes.position, base = pos.length / 3;
+        const g = o.geometry, P = g.attributes.position, base = pos.length / 3, flip = o.matrixWorld.determinant() < 0;
         for (let i = 0; i < P.count; i++) {
           v.fromBufferAttribute(P, i).applyMatrix4(o.matrixWorld);
           pos.push(v.x, v.y, v.z);
         }
-        if (g.index) for (let i = 0; i < g.index.count; i++) idx.push(base + g.index.getX(i));
-        else for (let i = 0; i < P.count; i++) idx.push(base + i);
+        const I = /* @__PURE__ */ __name((i) => g.index ? g.index.getX(i) : i, "I"), n3 = g.index ? g.index.count : P.count;
+        for (let i = 0; i + 2 < n3; i += 3) if (flip) idx.push(base + I(i), base + I(i + 2), base + I(i + 1));
+        else idx.push(base + I(i), base + I(i + 1), base + I(i + 2));
       });
       const soup = new TriSoup(new Float32Array(pos), new Uint32Array(idx), "concrete");
+      if (this.mirror !== false && !d.meta.mirrored) {
+        for (const st of d.meta.starts) {
+          st.pos[2] = -st.pos[2];
+          st.yaw = Math.PI - st.yaw;
+        }
+        for (const l of d.meta.ladders || []) l[2] = -l[2];
+        d.meta.mirrored = true;
+      }
       this._s2 = { gltf, soup, meta: d.meta };
       this.bounds = { minX: Math.floor(all.min.x) - 2, maxX: Math.ceil(all.max.x) + 2, minZ: Math.floor(all.min.z) - 2, maxZ: Math.ceil(all.max.z) + 2 };
       this.killY = all.min.y - 15;
@@ -16960,6 +16970,7 @@ function sf2TriMap(def) {
         m.castShadow = !m.userData.sky;
         m.receiveShadow = true;
         for (const mt of Array.isArray(m.material) ? m.material : [m.material]) {
+          mt.vertexColors = false;
           mt.side = THREE.DoubleSide;
           if (mt.map) mt.map.anisotropy = 4;
         }
@@ -17001,12 +17012,12 @@ MAPS.push(sf2TriMap({
   en: "DESERT CAMP",
   desc: "Special Force 2 原版地圖 1:1 · 原版模型、擺設與碰撞",
   slogan: "沙漠營地 · 中央廣場與兩側巷道",
-  bounds: { minX: -38, maxX: 57, minZ: -32, maxZ: 59 },
+  bounds: { minX: -38, maxX: 57, minZ: -59, maxZ: 32 },
   indoor: false,
   killY: -20,
-  shot: { pos: [10, 60, 70], target: [10, 0, 12] },
-  thumb: { pos: [10, 70, 80], target: [10, 0, 12], fov: 55 },
-  objectives: { dom: [[-4, 0, -12], [3, 0, 7], [9, 0, 26]], relic: [3, 0, 7], domRadius: 5 }
+  shot: { pos: [10, 60, -70], target: [10, 0, -12] },
+  thumb: { pos: [10, 70, -80], target: [10, 0, -12], fov: 55 },
+  objectives: { dom: [[-4, 0, 12], [3, 0, -7], [9, 0, -26]], relic: [3, 0, -7], domRadius: 5 }
 }));
 
 // src/08_nav_input.js

@@ -26,7 +26,7 @@ def actor_matrix(pr):  # v65v UE3 FRotationMatrix rows × DrawScale(3D), Locatio
     return [round(x, 4) for x in m + loc + [1.0]]
 def collides(cp):  # v65v a component switched off for collision (grass, wires, decor) stays out of the game's triangle soup
     return not (cp.get('CollideActors') is False or cp.get('BlockActors') is False or str(cp.get('CollideActors')) == 'False' or str(cp.get('BlockActors')) == 'False')
-ACTORS = ('StaticMeshActor', 'SFStaticMeshActor', 'InterpActor', 'KActor', 'SFKActorNoSync', 'SFKActor')
+ACTORS = ('StaticMeshActor', 'SFStaticMeshActor', 'InterpActor', 'KActor', 'SFKActorNoSync', 'SFKActor', 'SFBreakableActorByDamage')  # (v65w + SF2's breakable cars: the intact mesh, not the burnt one)
 by_outer = {}
 for k, x in enumerate(p.exports, 1): by_outer.setdefault(x['outer'], []).append(x)
 for k, e in enumerate(p.exports, 1):
@@ -42,6 +42,10 @@ for k, e in enumerate(p.exports, 1):
         ce = next((x for x in by_outer.get(k, []) if p.clsname(x) == 'StaticMeshComponent'), None)
         if not ce: continue
         mesh, cp = mesh_of(ce)
+        if c == 'SFBreakableActorByDamage':
+            ce = next((x for x in by_outer.get(k, []) if p.clsname(x) == 'StaticMeshComponent' and (mesh_of(x)[0] or '').lower().find('fire') < 0 and mesh_of(x)[0] not in (None, 'None')), None)
+            if not ce: continue
+            mesh, cp = mesh_of(ce)
         if mesh and mesh != 'None': out.append({'mesh': mesh, 'm': actor_matrix(pr), 'col': collides(cp), 'actor': c})
 # v65v blocking volumes (SF2's own invisible walls): their brush Model's polygons (the BSP layout of tools/sf2_map_bsp.py), brush-local
 # minus PrePivot, then the actor's matrix → world triangles (UE cm), collision only
