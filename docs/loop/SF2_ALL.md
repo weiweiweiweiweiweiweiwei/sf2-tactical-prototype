@@ -31,7 +31,12 @@
 - ✅（v65m）列出 SF2 安裝檔裡的地圖包（`D:/SpecialForce2/SFGame/CookedPCConsole`），排除殭屍／PVE／活動等特殊模式；記下各圖的包名、主要的子關卡（streaming levels）、大小。輸出 `docs/research/sf2/map-inventory.md`。
 
 ### M2. 地圖匯出可行性
-- 🔄 用一張小圖試（Alcatraz）：**已做到**：解壓（`tools/sf2_unlzo.py <圖>`）→ UModel 匯出網格 → `tools/sf2_map_dump.py`（StaticMeshCollectionActor 屬性後每個元件 64 位元組的位置矩陣）→ `tools/sf2_map_bsp.py`（BSP 地板牆面）→ `tools/sf2_map_build.mjs` 組成一個 GLB（Alcatraz 7.5 MB），預覽 `node tools/out/_mapshot.mjs <glb> <tag>`。**還要**：接進遊戲（碰撞＝可見三角形、導航 `tools/bake-apex-nav.mjs`、出生點：地圖的 PlayerStart）。原本寫的：UModel 匯出靜態網格；關卡裡物件的擺放（`StaticMeshActor`／`StaticMeshComponent` 的位置、旋轉、縮放）用 `tools/sf2_props.py` 的解析器讀；BSP 牆地板（`Model`）能不能讀；光照（lightmap）先不管。做出 `tools/sf2_map_export.py` → GLB＋碰撞，照 Apex 三角碰撞地圖的方式接進遊戲（`apexTriMap`）。驗證：能走、能打、出生點、`check.mjs`。
+- ✅（v65o）用 Alcatraz 試成功。**每張圖的做法（M3 照這個）**：
+  1. `python tools/sf2_unlzo.py <圖>`（解壓到 `tools/out/sf2/<圖>_dec.upk`）
+  2. `tools/out/umodel_win32/umodel_64.exe -game=sf2 -path=D:/SpecialForce2/SFGame/CookedPCConsole -export -gltf -png -nooverwrite -out=tools/out/sf2/maps/<圖> <圖>`（地圖引用別的包的網格時，那些包也要匯出到同一資料夾）
+  3. `python tools/sf2_map_dump.py <圖>`、`python tools/sf2_map_bsp.py <圖>`、`node tools/sf2_map_build.mjs <圖>` → `assets/maps/sf2-<圖小寫>/map.js`
+  4. `src/07x_sf2maps.js` 加一個 `MAPS.push(sf2TriMap({ id: 'sf2_<圖小寫>', name, en, desc, slogan, indoor, shot, thumb, objectives }))`（bounds、killY、出生點、導航層自動）
+  5. `node tools/_mapthumbs.mjs sf2_<圖小寫>`；`node tools/check.mjs --map <編號>`（CHECK_OK）；`MAP=<編號> ONLY=hip node tools/out/_rigshot.mjs` 看玩家視角
 
 ### G3. 遊戲裡還沒有的 SF2 底槍（`docs/research/sf2/gun-inventory.md`；SF2 包名用 `umodel -list` 找 `rif_`／`smg_`／`sni_`／`mg_`／`sho_`／`pis_` 開頭）
 - ⬜ ACR（突擊步槍）
@@ -178,7 +183,7 @@
 - ⬜ Scrimmage（5.7 MB）
 - ⬜ turbulence（6.9 MB）
 - ⬜ FlowerBed（7.1 MB）
-- ⬜ Alcatraz（7.2 MB）
+- ✅ Alcatraz（v65o）
 - ⬜ Dam（7.2 MB）
 - ⬜ WhiteNight（7.6 MB）
 - ⬜ 13F（8.1 MB）
@@ -244,3 +249,4 @@
 - v65l：型態只做「標準＋每種瞄具＋消音＋最高 MK」，雷射、擴充彈匣、多配件組合不做（共 379 個）；活動造型槍（貓、海豚…）不算槍。
 - v65l：佇列順序改成 G2 → 地圖清單與匯出可行性（M1、M2）→ G3 新槍 → G4 型態（M4A1 第一）→ M3 逐張地圖：先確定地圖做不做得出來。
 - v65m：地圖只做 63 張常規對戰圖；節日造型版（萬聖節、聖誕、夏日、海盜）只做原版；捉迷藏、六角、殭屍、射擊、防守、教學、靶場不做。
+- v65o：SF2 地圖的碰撞直接用模型的三角形（含小物件）、導航在載入時取樣、出生點圍繞 SF2 的 PlayerStart；梯子先只放導航點（還不能爬）。

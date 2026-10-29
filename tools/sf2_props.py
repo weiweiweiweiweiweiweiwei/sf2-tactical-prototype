@@ -54,8 +54,15 @@ class Pkg:
         self.i32()  # net index
         # v65n a component (…Component class, not a template / default object) stores TemplateOwnerClass (4 bytes) before its tags
         if skip is None: skip = 4 if self.clsname(e).endswith('Component') and not e['name'].startswith('Default__') else 0
+        if skip == 'auto' or (skip == 0 and not self._tagAt(self.o)): # v65o a level actor's native state frame (length varies) before its tags
+            start = self.o; skip = next((k for k in range(0, 96, 2) if self._tagAt(start + k)), 0); self.o = start
         self.o += skip
         return self._tags(end)
+    TYPES = {'IntProperty', 'FloatProperty', 'BoolProperty', 'ByteProperty', 'NameProperty', 'StrProperty', 'ObjectProperty', 'ClassProperty', 'StructProperty', 'ArrayProperty', 'ComponentProperty', 'InterfaceProperty', 'DelegateProperty'}
+    def _tagAt(self, o):
+        if o + 16 > len(self.b): return False
+        i, n, t, tn = struct.unpack_from('<4i', self.b, o)
+        return 0 <= i < len(self.names) and n == 0 and 0 <= t < len(self.names) and tn == 0 and (self.names[t] in self.TYPES or self.names[i] == 'None')
 
     def _tags(self, end):
         out = []

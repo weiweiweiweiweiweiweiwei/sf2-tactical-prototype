@@ -25,5 +25,18 @@ for e in p.exports:
         mesh, cp = mesh_of(ce)
         loc = pr.get('Location', {}); rot = pr.get('Rotation', {}); ds = pr.get('DrawScale', 1.0); d3 = pr.get('DrawScale3D', {})
         out.append({'mesh': mesh, 'loc': loc, 'rot': rot, 'scale': ds, 'scale3d': d3, 'actor': c})
-json.dump(out, open(f'tools/out/sf2/maps/{name}.json', 'w'))
+# v65o player starts (team, UE location / yaw) and ladder volumes (location) for the game's meta
+starts, ladders = [], []
+for e in p.exports:
+    c = p.clsname(e)
+    if 'PlayerStart' in c or 'Ladder' in c and c.endswith('Volume'):
+        pr = {n: v for n, i, t, v in p.props(e)}; loc = pr.get('Location')
+        if not isinstance(loc, (list, tuple)): loc = [float(x) for x in str(loc).strip('()').split(',')] if loc else None
+        if not loc: continue
+        if 'PlayerStart' in c:
+            rot = pr.get('Rotation'); yaw = int(str(rot).strip('()').split(',')[1]) if rot else 0
+            starts.append({'cls': c, 'team': int(pr.get('TeamIndex', 0)), 'loc': loc, 'yaw': yaw})
+        else: ladders.append({'loc': loc})
+json.dump({'placed': out, 'starts': starts, 'ladders': ladders}, open(f'tools/out/sf2/maps/{name}.json', 'w'))
+print('starts', [(s['cls'], s['team']) for s in starts], 'ladders', len(ladders))
 print(name, len(out), 'placements,', len({o['mesh'] for o in out}), 'meshes')

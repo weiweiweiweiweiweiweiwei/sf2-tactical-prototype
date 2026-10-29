@@ -233,3 +233,5 @@ MAPS.push(apexTriMap({
   thumb: { pos: [72.0, 15.9, 97.9], target: [-6.6, 35.9, 39.4], fov: 43.8 },
   objectives: { dom: [[-30, 0, 0], [0, 0, 0], [30, 0, 0]], relic: [0, 0, 0], domRadius: 5 }, // replaced by the baked ones on load
 }));
+
+export { TriGround };

@@ -1604,3 +1604,10 @@
 - 地板牆面是 BSP（UModel 不匯出）：`tools/sf2_map_bsp.py` 照 v904 的格式讀 Model（Vectors、Points、Nodes 64 位元組、Surfs 60 位元組、Verts 24 位元組），每個節點一個多邊形，貼圖座標用面的基準點和 U／V 向量。Alcatraz 1972 個三角形、23 種材質。
 - `tools/sf2_map_build.mjs` 把網格（每個只存一份）、擺放、BSP 組成一個 GLB（7.5 MB）；預覽截圖：屋頂、牆、地板、牢房都在，有貼圖。
 - 下一步：接進遊戲（碰撞、導航、出生點）。
+
+
+### （本機，2026-10-29）：第一張 SF2 原版地圖進遊戲：惡魔島（Alcatraz）
+- `src/07x_sf2maps.js`：`sf2TriMap` 讀 `assets/maps/sf2-<圖>/map.js`（GLB＋出生點／梯子），碰撞＝模型自己的三角形（天空罩等 > 300 m 的不算），場地範圍、掉落高度、導航層（每 1 m 一層）從模型算出，出生點圍繞 SF2 的 PlayerStart（TeamIndex 0 → 藍隊）。
+- `tools/sf2_props.py`：關卡裡的 Actor 屬性前有長度不定的原生 state frame，現在自動找屬性開頭；`tools/sf2_map_dump.py` 一併輸出出生點和梯子。
+- 驗證：`check.mjs --map 19` PASS（59 FPS）；玩家視角站在牢房走廊，地板牆面天花板都在；選圖縮圖 `assets/maps/thumbs/sf2_alcatraz.jpg`。
+- 待辦：部分物件全黑（貼圖在別的包）、繪製呼叫約 1700、梯子還不能爬、縮圖是屋頂外觀。

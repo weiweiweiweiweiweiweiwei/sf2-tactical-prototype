@@ -10,7 +10,7 @@ import draco3d from 'draco3dgltf'; import sharp from 'sharp';
 const MAP = process.argv[2] || 'Alcatraz', DIR = `tools/out/sf2/maps/${MAP}`, OUT = process.argv[3] || `tools/out/sf2/maps/${MAP}.glb`;
 const io = new NodeIO().registerExtensions(ALL_EXTENSIONS).registerDependencies({ 'draco3d.encoder': await draco3d.createEncoderModule(), 'draco3d.decoder': await draco3d.createDecoderModule() });
 const files = {}; const walk = (d) => { for (const f of fs.readdirSync(d)) { const p = path.join(d, f); if (fs.statSync(p).isDirectory()) walk(p); else files[f.toLowerCase()] = p; } }; walk(DIR);
-const placed = JSON.parse(fs.readFileSync(`tools/out/sf2/maps/${MAP}.json`, 'utf8'));
+const dump = JSON.parse(fs.readFileSync(`tools/out/sf2/maps/${MAP}.json`, 'utf8')), placed = dump.placed || dump;
 const doc = new Document(), root = doc.getRoot(), buf = doc.createBuffer(), scene = doc.createScene(MAP), meshes = new Map(), tex = new Map(); let missing = new Set();
 const diffuseOf = (mat) => { const f = files[mat.toLowerCase() + '.mat']; if (!f) return null; const m = fs.readFileSync(f, 'utf8').match(/^Diffuse=(\S+)/m); return m ? files[m[1].toLowerCase() + '.png'] : null; };
 async function meshOf(name) {
@@ -54,4 +54,11 @@ if (fs.existsSync(bspFile)) {
 for (const b of root.listBuffers()) if (b !== buf) { for (const a of root.listAccessors()) if (a.getBuffer() === b) a.setBuffer(buf); b.dispose(); }
 await doc.transform(prune(), dedup(), textureCompress({ encoder: sharp, targetFormat: 'webp', resize: [1024, 1024] }), draco());
 await io.write(OUT, doc);
+// v65o the game's copy: assets/maps/sf2-<map>/map.js (window.SF2_MAPS[id] = { glb: base64, meta }, file:// friendly like the other maps)
+const cv = (l) => [l[0] / 100, l[2] / 100, -l[1] / 100], id = 'sf2_' + MAP.toLowerCase(), adir = `assets/maps/sf2-${MAP.toLowerCase()}`;
+const meta = { starts: (dump.starts || []).map((s) => ({ team: s.team, pos: cv(s.loc), yaw: (s.yaw / 65536) * Math.PI * 2 - Math.PI / 2 })), ladders: (dump.ladders || []).map((l) => cv(l.loc)) };
+fs.mkdirSync(adir, { recursive: true });
+fs.writeFileSync(`${adir}/map.js`, `/* Special Force 2's ${MAP} from the user's install — tools/sf2_map_build.mjs */
+(window.SF2_MAPS || (window.SF2_MAPS = {}))['${id}'] = { meta: ${JSON.stringify(meta)}, glb: '${fs.readFileSync(OUT).toString('base64')}' };
+`);
 console.log('SF2MAP', MAP, n, 'nodes', meshes.size, 'meshes', 'missing', [...missing].slice(0, 8).join(' ') || '-', (fs.statSync(OUT).size / 1048576).toFixed(1) + ' MB');
