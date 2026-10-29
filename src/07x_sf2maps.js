@@ -17,7 +17,7 @@ const SF2_LISTED = false;
 
 function sf2TriMap(def) {
   return Object.assign({
-    indoor: false, killOutside: false, traversal: false, navClimb: 0.45, navGrid: 1, acoustics: 'indoor', ambience: 'warehouse',
+    indoor: false, killOutside: false, traversal: false, navClimb: 0.45, navGrid: 1, bodyRadius: 0.25, acoustics: 'indoor', ambience: 'warehouse',
     background: 0x8c9aa6, envIntensity: 0.55, exposure: 1.0, hemi: [0xd8e2ec, 0x5a5048, 0.9],
     sun: { pos: [30, 60, 20], color: 0xfff1de, intensity: 1.6, auto: true }, fog: { color: 0x8c9aa6, near: 80, far: 400 }, shadowFollow: 40,
     async preload() {
@@ -54,7 +54,7 @@ function sf2TriMap(def) {
       const base = mine.filter((s) => Math.hypot(s.pos[0] - cx, s.pos[2] - cz) < 12), S = base.length ? base : mine.length ? mine : [all[team === 'alpha' ? 0 : all.length - 1]];
       for (const s of S) {
         const g = col.groundBelow(s.pos[0], s.pos[1] + 1.2, s.pos[2], 0.3, 3, 0);
-        if (g && col.fits(s.pos[0], g.y + 0.05, s.pos[2], 0.42, 1.8)) { const p = new THREE.Vector3(s.pos[0], g.y, s.pos[2]); p.spawnYaw = s.yaw; pts.push(p); }
+        if (g && col.fits(s.pos[0], g.y + 0.05, s.pos[2], 0.3, 1.8)) { const p = new THREE.Vector3(s.pos[0], g.y, s.pos[2]); p.spawnYaw = s.yaw; pts.push(p); }
       }
       return { pts: pts.length ? pts : [new THREE.Vector3(...S[0].pos)], yaw: S[0].yaw };
     },

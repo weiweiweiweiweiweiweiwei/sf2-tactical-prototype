@@ -16864,6 +16864,7 @@ function sf2TriMap(def) {
     traversal: false,
     navClimb: 0.45,
     navGrid: 1,
+    bodyRadius: 0.25,
     acoustics: "indoor",
     ambience: "warehouse",
     background: 9214630,
@@ -16923,7 +16924,7 @@ function sf2TriMap(def) {
       const base = mine.filter((s) => Math.hypot(s.pos[0] - cx, s.pos[2] - cz) < 12), S = base.length ? base : mine.length ? mine : [all[team === "alpha" ? 0 : all.length - 1]];
       for (const s of S) {
         const g = col.groundBelow(s.pos[0], s.pos[1] + 1.2, s.pos[2], 0.3, 3, 0);
-        if (g && col.fits(s.pos[0], g.y + 0.05, s.pos[2], 0.42, 1.8)) {
+        if (g && col.fits(s.pos[0], g.y + 0.05, s.pos[2], 0.3, 1.8)) {
           const p = new THREE.Vector3(s.pos[0], g.y, s.pos[2]);
           p.spawnYaw = s.yaw;
           pts.push(p);
@@ -17019,6 +17020,7 @@ var NavGraph = class {
     this.cellSize = 3;
     this.bounds = def.bounds;
     this.climb = def.navClimb ?? 0.2;
+    this.bodyR = def.bodyRadius ? def.bodyRadius + 0.04 : 0.38;
     this.build(builder, def);
   }
   walkable(x, y, z, tol = this.climb > 0.2 ? 0.45 : 0.25) {
@@ -17026,7 +17028,7 @@ var NavGraph = class {
     if (x < B.minX + 0.5 || x > B.maxX - 0.5 || z < B.minZ + 0.5 || z > B.maxZ - 0.5) return null;
     const g = this.col.groundBelow(x, y + 0.4, z, 0.12, 0.8, 0.02);
     if (!g || Math.abs(g.y - y) > tol || g.steep) return null;
-    if (!this.col.fits(x, g.y + this.climb, z, 0.38, 1.5)) return null;
+    if (!this.col.fits(x, g.y + this.climb, z, this.bodyR, 1.5)) return null;
     for (const rp of this.col.ramps) {
       if (x + 0.4 <= rp.minX || x - 0.4 >= rp.maxX || z + 0.4 <= rp.minZ || z - 0.4 >= rp.maxZ) continue;
       if (this.col.rampMaxUnder(rp, x, z, 0.4) > g.y + 0.5) return null;
@@ -21779,7 +21781,8 @@ var Combatant = class {
     this.name = name;
     this.isPlayer = isPlayer;
     this.motor = new CharacterMotor(game.collision, {
-      radius: CFG.player.radius,
+      radius: game.def.bodyRadius ?? CFG.player.radius,
+      // (v65v def.bodyRadius: SF2's maps are built round its 0.25 m pawn — CollisionRadiusForPawn 25)
       height: CFG.player.height,
       crouchHeight: CFG.player.crouchHeight,
       accelK: isPlayer ? 1 : 0.6,

@@ -12,7 +12,8 @@ class Combatant {
   constructor(game, team, name, isPlayer) {
     this.game = game; this.team = team; this.name = name; this.isPlayer = isPlayer;
     // v24: bots accelerate / brake at ~60 % of the player's rate — with the player's instant stops their A-D strafes and dodges looked like teleports
-    this.motor = new CharacterMotor(game.collision, { radius: CFG.player.radius, height: CFG.player.height, crouchHeight: CFG.player.crouchHeight, accelK: isPlayer ? 1 : 0.6, frictionK: isPlayer ? 1 : 0.6,
+    this.motor = new CharacterMotor(game.collision, { radius: game.def.bodyRadius ?? CFG.player.radius, // (v65v def.bodyRadius: SF2's maps are built round its 0.25 m pawn — CollisionRadiusForPawn 25)
+       height: CFG.player.height, crouchHeight: CFG.player.crouchHeight, accelK: isPlayer ? 1 : 0.6, frictionK: isPlayer ? 1 : 0.6,
       stepHeight: game.def.traversal ? APEX_STEP : undefined });
     this.alive = true; this.hp = 100; this.spawnProtect = 0; this.respawnT = 0; this.yaw = 0;
     this.helmet = true; this.shield = 0; this.maxShield = 0; this.evo = 0; this.hurtT = -99; // v58 damage models (Match.refit)

@@ -8,7 +8,7 @@ import { MAX_SLOPE } from './04_collision.js';
 class NavGraph {
   constructor(col, builder, def) {
     this.col = col; this.nodes = []; this.hash = new Map(); this.cellSize = 3;
-    this.bounds = def.bounds; this.climb = def.navClimb ?? 0.2; // (v65v def.navClimb: the rise a node / link may step over — SF2's bumpy floors 0.45, the motor's step)
+    this.bounds = def.bounds; this.climb = def.navClimb ?? 0.2; this.bodyR = def.bodyRadius ? def.bodyRadius + 0.04 : 0.38; // (v65v def.navClimb: the rise a node / link may step over — SF2's bumpy floors 0.45, the motor's step)
     this.build(builder, def);
   }
 
@@ -17,7 +17,7 @@ class NavGraph {
     if (x < B.minX + 0.5 || x > B.maxX - 0.5 || z < B.minZ + 0.5 || z > B.maxZ - 0.5) return null;
     const g = this.col.groundBelow(x, y + 0.4, z, 0.12, 0.8, 0.02);
     if (!g || Math.abs(g.y - y) > tol || g.steep) return null;
-    if (!this.col.fits(x, g.y + this.climb, z, 0.38, 1.5)) return null; // +0.2: curbs / plinth steps (≤ 0.2 m) are walkable, the motor steps 0.45
+    if (!this.col.fits(x, g.y + this.climb, z, this.bodyR, 1.5)) return null; // +0.2: curbs / plinth steps (≤ 0.2 m) are walkable, the motor steps 0.45
     for (const rp of this.col.ramps) {
       if (x + 0.4 <= rp.minX || x - 0.4 >= rp.maxX || z + 0.4 <= rp.minZ || z - 0.4 >= rp.maxZ) continue;
       if (this.col.rampMaxUnder(rp, x, z, 0.4) > g.y + 0.5) return null;
