@@ -11,6 +11,7 @@
 - 每輪結束前：`sh src/build.sh`、`node tools/esm/analyze.mjs`（MODULES_OK）、`node tools/check.mjs`（CHECK_OK）。
 
 ## 一把槍的做法（照 TRG-41，v64s）
+> v65k 型態（同一把槍加瞄具／消音器，`GUNS` 裡另一個 key、`dir` 指向底槍）會輸出成配件檔 `tools/guns/<id>_sf2_ovl.glb`，遊戲把它綁到底槍 rig 上（`sf2Variant`）。
 1. **匯出**：`sh tools/sf2_export.sh <id> <pkg> <Sound_pkg> [<pkg>_texture]`；鏡子 `sh tools/sf2_export.sh --part <包> <物件> [<貼圖包> <貼圖> …]`。新的十字：`python tools/sf2_reticle_svg.py <名> <Diffuse.png> [<dot.png>]` 直接轉成 SVG。聲音檔字首和 id 不同時寫 `<id>@<字首>`。（原始指令：`tools/out/umodel_win32/umodel_64.exe -game=sf2 -path=D:/SpecialForce2/SFGame/CookedPCConsole`，在該目錄執行）：
    - `-export -gltf -png -out=../sf2/<id> <pkg>`，有 `<pkg>_texture` 包時另外匯出到同一個資料夾；
    - `-export -psk -out=../sf2/<id>_anim <pkg>`（動畫 `.psa`、槍身 `.props.txt` 的插槽）；

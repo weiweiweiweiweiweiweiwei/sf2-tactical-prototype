@@ -1579,3 +1579,10 @@
 - `assets/guns/guns.js`（60.7 MB，開遊戲就全部解析）拆成每把槍一個檔 `assets/guns/g/<id>.js`＋索引 `assets/guns/index.js`（`tools/guns/pack.mjs`）。`src/09_models.js`：`loadGunModels()` 只讀索引，`ensureGunModels(defs)` 載入並解析需要的槍，`gunModelReady(def)`。
 - 進對戰只載入你三組配裝（F1–F3）的槍；倉庫卡片等自己的槍載好才畫；地上掉的槍沒載過時先用簡易模型、背景載入。
 - 驗證：倉庫對戰開局只抓 7 個檔（約 9 MB），倉庫 72 張卡片都畫出 SF2 模型；`check.mjs`、`_fileplay` 過。
+
+
+### （本機，2026-10-29）：槍的型態在遊戲裡組裝
+- 型態（EOTech、Reflex、消音…）不再各存一整把 rig：`tools/sf2_rig_build.mjs` 遇到型態（`GUNS` 裡另一個 key、`dir` 指向底槍、有 optic／silencer）只輸出配件、標記（DOT、MUZZLE）和要藏的底槍零件（`extras.sf2Overlay.hide`，例如原廠照門）到 `tools/guns/<id>_sf2_ovl.glb`；`--full` 照舊輸出整把。
+- `src/09_models.js`：`ensureGunModels` 載入型態時連底槍一起載；`sf2Variant` 把配件依骨頭名稱綁到底槍 rig 的複本上、套上標記、藏掉被取代的零件，之後和一般 rig 一樣用。
+- G36C EOTech／HK417 Reflex／SCAR-L MK2 EOTech 改成這種方式：每個型態 1.05 MB → 0.45 MB。截圖確認腰射、開鏡的瞄具和消音器都在；標記位置和舊的整把版本完全相同。
+- ⬜ 開鏡時 EOTech 視窗佔滿畫面、紅點準心在暗處不明顯：和舊版設定相同（眼距 15 cm），待使用者試玩確認。

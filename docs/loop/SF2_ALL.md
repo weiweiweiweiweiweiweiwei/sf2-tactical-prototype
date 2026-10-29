@@ -18,7 +18,7 @@
 
 ### G0. 先處理容量（`assets/guns/guns.js` 已 60.7 MB，再加槍會拖慢載入）
 - ✅（v65j）槍模按需載入：`tools/guns/pack.mjs` 改成每把槍一個檔（`assets/guns/<id>.js`）＋索引；遊戲只載入目前配裝、Bot 手上、倉庫正在看的槍（倉庫縮圖可用預先畫好的圖）。驗證：首次進對戰的下載量、`check.mjs`、倉庫縮圖、`_fileplay`。
-- ⬜ 變體在遊戲裡組裝：底槍的 rig＋配件零件（瞄具、消音器）各一個小 GLB，執行時掛到槍身插槽（`Scope`／`Sight`／`Silencer`），不再每個變體一個完整 rig。把現有的 `g36c_eo`、`hk417_rs`、`scarl_eo` 改成這種方式驗證。
+- ✅（v65k）變體在遊戲裡組裝：底槍的 rig＋配件零件（瞄具、消音器）各一個小 GLB，執行時掛到槍身插槽（`Scope`／`Sight`／`Silencer`），不再每個變體一個完整 rig。把現有的 `g36c_eo`、`hk417_rs`、`scarl_eo` 改成這種方式驗證。
 
 ### G1. 槍枝清單
 - ⬜ 從 `docs/research/sf2/client-data/weapons.json`、`SFCItem_*` 的 `DefaultItemClassNames`（`tools/sf2_props.py`）、SF2 的武器名稱表整理出：**每把底槍**＋**型態**（標準、EO、Reflex、ACOG、Silencer、Max／改、其他配件組合），排除塗裝（CircuitFX、Blaster、活動造型等）和特殊模式武器。輸出 `docs/research/sf2/gun-inventory.md`（底槍、型態、類別名、包名、遊戲裡有沒有）。依這份清單展開下面 G2–G4 的項目。
@@ -44,3 +44,4 @@
 ## 自動選擇紀錄
 （迴圈中替使用者做的決定，一行一個，使用者可以回頭改）
 - v65j：地上掉的槍若還沒載入，那一次先用簡易模型、背景載入，下一次才是精細模型（選 A：不讓掉槍時卡頓）。
+- v65k：型態一律輸出成「配件檔」（`<id>_sf2_ovl.glb`，`node tools/sf2_rig_build.mjs <型態>`；要整把時加 `--full`），不再另存整把 rig。

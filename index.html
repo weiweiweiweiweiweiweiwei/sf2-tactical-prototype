@@ -16192,6 +16192,7 @@ var RIG_HIP = { k14: [0.0217, -1.2026, -0.0378] };
 var RIG_RETICLE = { g36c_eo: [0.093, 82], m14ebr: [0.093, 82], hk417_rs: [0.06, 32], scarl_eo: [0.093, 82] };
 var GLB_RELOAD_POSE = { roll: -0.5, pitch: 0.32, drop: -0.09, shift: 0.08 };
 var GUN_LOAD = { parsed: /* @__PURE__ */ new Set(), pending: /* @__PURE__ */ new Map() };
+var GUN_OVL = {};
 var gunScript = /* @__PURE__ */ __name((src) => new Promise((res) => {
   const s = document.createElement("script");
   s.src = src;
@@ -16208,7 +16209,7 @@ function loadGunModels() {
 __name(loadGunModels, "loadGunModels");
 var gunGlbIds = /* @__PURE__ */ __name((def) => {
   const I = window.GUN_INDEX || [];
-  return [def.sf2Rig && def.sf2Rig + "_sf2_rig", def.model, def.id, def.id + "_sf2_rig", def.model + "_sf2_rig"].filter((k, i, a) => k && a.indexOf(k) === i && I.includes(k));
+  return [def.sf2Rig && def.sf2Rig + "_sf2_rig", def.sf2Rig && def.sf2Rig + "_sf2_ovl", def.model, def.id, def.id + "_sf2_rig", def.model + "_sf2_rig"].filter((k, i, a) => k && a.indexOf(k) === i && I.includes(k));
 }, "gunGlbIds");
 function gunModelReady(def) {
   return !!def && gunGlbIds(def).every((k) => GUN_LOAD.parsed.has(k));
@@ -16229,6 +16230,12 @@ async function parseGunGlb(id) {
     GUN_RIGS[id] = gltf;
     return;
   }
+  if (id.endsWith("_sf2_ovl")) {
+    GUN_OVL[id] = gltf;
+    const b = gltf.scene.userData.sf2Overlay;
+    if (b && b.base) await loadGunGlb(b.base + "_sf2_rig");
+    return;
+  }
   gltf.scene.updateMatrixWorld(true);
   gltf.scene.traverse((o) => {
     if (o.isMesh) {
@@ -16244,20 +16251,55 @@ __name(parseGunGlb, "parseGunGlb");
 async function ensureGunModels(defs) {
   await loadGunModels();
   const ids = [...new Set(defs.filter(Boolean).flatMap(gunGlbIds))].filter((k) => !GUN_LOAD.parsed.has(k));
-  await Promise.all(ids.map((k) => {
-    if (!GUN_LOAD.pending.has(k)) GUN_LOAD.pending.set(k, (async () => {
-      if (!(window.GUN_GLB && window.GUN_GLB[k])) await gunScript(`assets/guns/g/${k}.js`);
-      try {
-        await parseGunGlb(k);
-      } catch (e) {
-        console.warn("gun GLB unavailable, procedural fallback:", k, e && e.message);
-      }
-      GUN_LOAD.parsed.add(k);
-    })());
-    return GUN_LOAD.pending.get(k);
-  }));
+  await Promise.all(ids.map(loadGunGlb));
 }
 __name(ensureGunModels, "ensureGunModels");
+function loadGunGlb(k) {
+  if (!GUN_LOAD.pending.has(k)) GUN_LOAD.pending.set(k, (async () => {
+    if (!(window.GUN_GLB && window.GUN_GLB[k])) await gunScript(`assets/guns/g/${k}.js`);
+    try {
+      await parseGunGlb(k);
+    } catch (e) {
+      console.warn("gun GLB unavailable, procedural fallback:", k, e && e.message);
+    }
+    GUN_LOAD.parsed.add(k);
+  })());
+  return GUN_LOAD.pending.get(k);
+}
+__name(loadGunGlb, "loadGunGlb");
+function sf2Variant(rigId) {
+  const ov = GUN_OVL[rigId.replace(/_sf2_rig$/, "_sf2_ovl")], info = ov && ov.scene.userData.sf2Overlay, base = info && GUN_RIGS[info.base + "_sf2_rig"];
+  if (!base) return null;
+  const sc = SkeletonUtils.clone(base.scene), bones = {};
+  sc.traverse((o) => {
+    if (o.isBone) bones[o.name] = o;
+  });
+  for (const n of info.hide || []) {
+    const o = sc.getObjectByName(n);
+    if (o && o.parent) o.parent.remove(o);
+  }
+  ov.scene.updateMatrixWorld(true);
+  ov.scene.traverse((o) => {
+    if (!o.isSkinnedMesh) return;
+    const m = new THREE.SkinnedMesh(o.geometry, o.material);
+    m.name = o.parent && !o.parent.isScene && !o.parent.isBone ? o.parent.name : o.name;
+    sc.add(m);
+    m.bind(new THREE.Skeleton(o.skeleton.bones.map((b) => bones[b.name]), o.skeleton.boneInverses), o.bindMatrix);
+  });
+  const wr = sc.getObjectByName("weapon_root"), owr = ov.scene.getObjectByName("weapon_root");
+  for (const c of owr ? owr.children : []) {
+    if (c.isBone) continue;
+    let t = wr.children.find((x) => x.name === c.name && !x.isBone);
+    if (!t) {
+      t = new THREE.Object3D();
+      t.name = c.name;
+      wr.add(t);
+    }
+    t.position.copy(c.position);
+  }
+  return GUN_RIGS[rigId] = { scene: sc, animations: base.animations };
+}
+__name(sf2Variant, "sf2Variant");
 var GunBuilder = class {
   static {
     __name(this, "GunBuilder");
@@ -16647,7 +16689,7 @@ var WeaponModels = class {
   // The muzzle flash rides the MUZZLE mark on weapon_root; the green tritium dot sits on the sight line (x = y = 0).
   // reloadSounds: when SF2's Reload clip pulls the mag (frame 5 of 75), seats it (27) and works the charging handle (55).
   fromRig(id, o = {}) {
-    const G = GUN_RIGS[id];
+    const G = GUN_RIGS[id] || sf2Variant(id);
     if (!G) return null;
     const rig = new SF2Rig(G, Object.assign({}, o, { reloadSounds: o.reloadSounds || [[0.07, "magout"], [0.36, "magin"], [0.73, "charge"]] })), g = new THREE.Group();
     g.add(rig.model);

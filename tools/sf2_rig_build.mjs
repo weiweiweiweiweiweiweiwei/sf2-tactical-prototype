@@ -47,7 +47,7 @@ const ZEISS_SCOPE = { ...PART('weapon_common_part01', 'scope_zeiess'), tex: 'zei
 // v64t the bolt guns' own scopes (weapon_common_part; SFCItem_<gun>_Def_Scope / Cz700_Def_Scope): root binds as the Bender's
 const SCOPE = (name, tex) => ({ ...PART('weapon_common_part', name), tex, noAim: true, roll: +(process.env.ROLL ?? 90) });
 const SIL = (k) => ({ ...PART('weapon_common_part', `silencer_ar_type_${k}`), tex: `silencer_type_${k}` });
-const G = {
+const GUNS = {
   // v62o the rear sight is the A2 carry handle (rif_m4a1_handle_a, its own sheet handle_d / _n in weapon_common_part): SF2's ADS picture (user 10-27) has the aperture ring standing above the handle's ears; the detachable
   // rif_m4a1_rearsight (weapon_common_part01) used since v61b is an attachment, its ring sat level with its guards
   m4a1: gun('m4a1', { extraParts: [['handle', 'm4a1/rif_m4a1/SkeletalMesh3/rif_m4a1_handle_a.gltf', 'm4a1_handle']], railSights: { sight: ['m4a1/rif_m4a1_sight/SkeletalMesh3/rif_m4a1_sight_up.gltf', 'm4a1_sight'], rear: 'handle' } }),
@@ -128,8 +128,14 @@ const G = {
   m92fs: gun('m92fs', { pkg: 'pis_m92f', tex: 'm92f', anim: '1st_anim_m92f', partNames: ['body', 'magazine'] }),
   infinity: gun('infinity', { pkg: 'pis_infi', tex: 'infi', anim: '1st_anim_infinity', partNames: ['body', 'magazine'], texMap: { magazine: 'infi_magazine_a' } }),
   trg: gun('trg', { pkg: 'sni_trg', stem: 'sni_trg', tex: 'sni_trg', anim: '1st_ani_trg', optic: ZEISS_SCOPE }),
-}[GID];
+};
+const G = GUNS[GID];
 if (!G) throw new Error(`unknown gun ${GID}`);
+// v65k a VARIANT (another key on the same gun dir with an optic / silencer: g36c_eo …) is written as an OVERLAY — only its attachment
+// parts, the marks and the base's parts it drops (extras.hide: the iron sights) → tools/guns/<id>_sf2_ovl.glb (~0.1 MB instead of a
+// 1 MB rig per variant); the game binds it onto the base gun's rig (src/09_models.js sf2Variant). --full writes the whole rig as before.
+const BASE = G.dir !== GID && GUNS[G.dir] && (G.optic || G.silencer) && !process.argv.includes('--full') ? GUNS[G.dir] : null;
+const partNamesOf = (g) => [...g.parts, ...(g.extraParts || []), ...(g.socketSights || [])].map((p) => p[0]).concat(g.railSights ? ['sight'] : []);
 const TEX = {
   m4a1_sight: ['m4a1/rif_m4a1_sight/Texture2D/m4a1_sight'], m4a1_rearsight: ['m4a1/weapon_common_part01/Texture2D/m4a1_rearsight'], m4a1_handle: ['m4a1/weapon_common_part/Texture2D/handle'],
   sleeve: ['arms/c_delta_1st_texture/Texture2D/delm_1st_b01', 'arms/c_comm_1st_texture/Texture2D/com_1st_b01'], // the Delta Force sleeve colour, the common sleeve's normals
@@ -412,7 +418,15 @@ for (const a of psa.anims) {
   });
 }
 for (const m of root.listMaterials()) if (!m.getName().startsWith('gun:')) m.dispose();
+let out = OUT;
+if (BASE) { // the overlay: the attachments and the reticle quad only, no clips
+  const keep = new Set(['optic', 'silencer', 'reticle']), hide = partNamesOf(BASE).filter((n) => !partNamesOf(G).includes(n));
+  for (const n of root.listNodes()) if (n.getMesh() && !keep.has(n.getName())) { n.getMesh().dispose(); n.dispose(); }
+  for (const a of root.listAnimations()) a.dispose();
+  root.listScenes()[0].setExtras({ sf2Overlay: { base: G.dir, hide } });
+  out = `tools/guns/${GID}_sf2_ovl.glb`;
+}
 await doc.transform(resample({ tolerance: 1e-4 }), prune({ keepLeaves: true }), dedup(), textureCompress({ encoder: sharp, targetFormat: 'webp', resize: [1024, 1024] }), draco({ method: 'edgebreaker' }));
-await io.write(OUT, doc);
-console.log('SF2RIG', GID, OUT, (fs.statSync(OUT).size / 1024).toFixed(0) + ' KB', 'clips', root.listAnimations().map((a) => a.getName()).join(' '), 'channels', channels,
+await io.write(out, doc);
+console.log('SF2RIG', GID, out, (fs.statSync(out).size / 1024).toFixed(0) + ' KB', 'clips', root.listAnimations().map((a) => a.getName()).join(' '), 'channels', channels,
   'marks', Object.fromEntries(Object.entries(marks).map(([k, p]) => [k, p.map((x) => +x.toFixed(4))])));
