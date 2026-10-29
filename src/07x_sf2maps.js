@@ -11,6 +11,10 @@ import { TriGround } from './07w_skulltown.js';
    ===================================================================== */
 const sf2MapScript = (src) => new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.async = true; s.onload = res; s.onerror = () => rej(new Error('missing ' + src)); document.head.appendChild(s); });
 
+// v65u user 10-29: Alcatraz and Dust City taken off the map list ("almost unplayable"); the builder and their files stay for
+// the 1:1 Desert Camp attempt. true lists them again.
+const SF2_LISTED = false;
+
 function sf2TriMap(def) {
   return Object.assign({
     indoor: false, killOutside: false, traversal: false, acoustics: 'indoor', ambience: 'warehouse',
@@ -66,7 +70,7 @@ function sf2TriMap(def) {
 }
 
 // v65o the regular SF2 maps (docs/research/sf2/map-inventory.md), one push each as they are built (docs/loop/SF2_ALL.md M3)
-MAPS.push(sf2TriMap({
+SF2_LISTED && MAPS.push(sf2TriMap({
   id: 'sf2_alcatraz', name: 'SF2 惡魔島', en: 'ALCATRAZ', desc: 'Special Force 2 原版地圖 · 原版模型與擺設 · 三角形碰撞', slogan: '監獄牢房區 · 近距離交戰',
   bounds: { minX: -20, maxX: 20, minZ: -45, maxZ: 45 }, indoor: true, killY: -20,
   shot: { pos: [0, 40, 30], target: [0, 0, 0] }, thumb: { pos: [0, 30, 45], target: [0, 0, 0], fov: 50 },
@@ -74,7 +78,7 @@ MAPS.push(sf2TriMap({
 }));
 // v65t 沙漠之都 (user 10-29): SF2's DustCity — the desert town, its BSP streets and walls, 1829 placed meshes; Alpha spawns in the
 // north-west corner, Bravo in the south-east (game metres: x −44 … 76, z −38 … 43)
-MAPS.push(sf2TriMap({
+SF2_LISTED && MAPS.push(sf2TriMap({
   id: 'sf2_dustcity', name: 'SF2 沙漠之都', en: 'DUST CITY', desc: 'Special Force 2 原版地圖 · 原版模型與擺設 · 三角形碰撞', slogan: '沙漠城鎮 · 巷戰與屋頂狙擊',
   bounds: { minX: -46, maxX: 78, minZ: -46, maxZ: 46 }, indoor: false, killY: -20,
   shot: { pos: [16, 70, 60], target: [16, 0, 0] }, thumb: { pos: [16, 80, 70], target: [16, 0, 0], fov: 55 },

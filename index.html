@@ -16856,6 +16856,7 @@ var sf2MapScript = /* @__PURE__ */ __name((src) => new Promise((res, rej) => {
   s.onerror = () => rej(new Error("missing " + src));
   document.head.appendChild(s);
 }), "sf2MapScript");
+var SF2_LISTED = false;
 function sf2TriMap(def) {
   return Object.assign({
     indoor: false,
@@ -16948,7 +16949,7 @@ function sf2TriMap(def) {
   }, def);
 }
 __name(sf2TriMap, "sf2TriMap");
-MAPS.push(sf2TriMap({
+SF2_LISTED && MAPS.push(sf2TriMap({
   id: "sf2_alcatraz",
   name: "SF2 惡魔島",
   en: "ALCATRAZ",
@@ -16961,7 +16962,7 @@ MAPS.push(sf2TriMap({
   thumb: { pos: [0, 30, 45], target: [0, 0, 0], fov: 50 },
   objectives: { dom: [[0, 0, -15], [0, 0, 8], [0, 0, 30]], relic: [0, 0, 8], domRadius: 4 }
 }));
-MAPS.push(sf2TriMap({
+SF2_LISTED && MAPS.push(sf2TriMap({
   id: "sf2_dustcity",
   name: "SF2 沙漠之都",
   en: "DUST CITY",
