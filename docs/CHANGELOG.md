@@ -1630,3 +1630,7 @@
 ### （本機，2026-10-29）：SF2 新槍 K2C1、Madsen-LAR、MRR、SAR-21、FS2000、SCAR-H DMR
 - 前四把用 `tools/sf2_add_gun.py`（Madsen 的聲音包叫 `Sound_MedsenLar`）；FS2000、SCAR-H DMR 安裝檔裡沒有獨立模型，沿用 F2000／SCAR-H 外觀、套自己的 SF2 數值。L85A1 沒有模型包，暫停。
 - 截圖：MRR、SCAR-H DMR 腰射開鏡都正常；K2C1、SAR-21、FS2000 開鏡待量、Madsen 槍身貼圖待找（TODO）。
+
+### （本機，2026-10-29）：SF2 新槍 StG44、T65K1、T65K2、T91、TAR-21（v65t）
+- 五把都用 `tools/sf2_add_gun.py`；T65K1、T91 沒有獨立聲音包（沿用分類預設）。
+- 截圖：T65K1、T65K2 腰射開鏡正常；StG44 準星偏近、T91 開鏡被瞄具擋住、TAR-21 開鏡鏡頭在槍身裡（TODO 1a）。

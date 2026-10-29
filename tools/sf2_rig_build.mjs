@@ -48,6 +48,11 @@ const ZEISS_SCOPE = { ...PART('weapon_common_part01', 'scope_zeiess'), tex: 'zei
 const SCOPE = (name, tex) => ({ ...PART('weapon_common_part', name), tex, noAim: true, roll: +(process.env.ROLL ?? 90) });
 const SIL = (k) => ({ ...PART('weapon_common_part', `silencer_ar_type_${k}`), tex: `silencer_type_${k}` });
 const GUNS = {
+  tar21: gun('tar21', { pkg: 'rif_tar21', hoodedPost: true, socketSights: sight('tar21/rif_tar21/SkeletalMesh3/rif_tar21_sight_up.gltf', 'tar21_sight') }), // v65q tools/sf2_add_gun.py
+  t91: gun('t91', { pkg: 'rif_t91' }), // v65q tools/sf2_add_gun.py
+  t65k2: gun('t65k2', { pkg: 'rif_t65k2', hoodedPost: true, socketSights: sight('t65k2/rif_t65k2_sight/SkeletalMesh3/rif_t65k2_sight_up.gltf', 'rif_t65k2_sight_up') }), // v65q tools/sf2_add_gun.py
+  t65k1: gun('t65k1', { pkg: 'rif_t65k1', hoodedPost: true, socketSights: sight('t65k1/rif_t65k1/SkeletalMesh3/rif_t65k1_sight_up.gltf', 't65k1_sight_up') }), // v65q tools/sf2_add_gun.py
+  stg44: gun('stg44', { pkg: 'rif_stg44' }), // v65q tools/sf2_add_gun.py
   madsenlar: gun('madsenlar', { pkg: 'rif_madsen_lar', tex: 'rif_madsen_lar', anim: '1st_anim_madsen_lar' }), // v65q tools/sf2_add_gun.py
   sar21: gun('sar21', { pkg: 'rif_sar21', hoodedPost: true, socketSights: sight('sar21/rif_sar21_sight/SkeletalMesh3/rif_sar21_sight_up.gltf', 'sar21_sight') }), // v65q tools/sf2_add_gun.py
   mrr: gun('mrr', { pkg: 'rif_mrr', tex: 'mrr_hightech', hoodedPost: true, socketSights: sight('mrr/rif_mrr/SkeletalMesh3/rif_mrr_sight_up.gltf', 'rif_mrr_sight') }), // v65q tools/sf2_add_gun.py
