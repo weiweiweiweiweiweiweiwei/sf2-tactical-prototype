@@ -17021,6 +17021,7 @@ function sf2TriMap(def) {
         if (o.isMesh) meshes.push(o);
       });
       const stairMat = def.stairMat && meshes.map((o) => o.material).find((mt) => mt && mt.name === def.stairMat);
+      const groups = /* @__PURE__ */ new Map();
       for (const src of meshes) {
         if (src.userData.colOnly) continue;
         const m = src.clone();
@@ -17045,11 +17046,30 @@ function sf2TriMap(def) {
           mt.side = THREE.DoubleSide;
           if (mt.map) {
             mt.map.anisotropy = 4;
-            mt.color.setRGB(1, 1, 1);
+            const c = mt.color;
+            if (Math.abs(c.r - c.g) < 0.02 && Math.abs(c.g - c.b) < 0.02) c.setRGB(1, 1, 1);
           }
         }
-        b.scene.add(m);
         if (/ladder/i.test(m.name)) sf2Ladder(b, m);
+        const k = Array.isArray(m.material) || m.userData.sky ? m.uuid : m.geometry.uuid + m.material.uuid;
+        (groups.get(k) || groups.set(k, []).get(k)).push(m);
+      }
+      for (const list of groups.values()) {
+        const m0 = list[0];
+        if (list.length === 1) {
+          b.scene.add(m0);
+          continue;
+        }
+        const im = new THREE.InstancedMesh(m0.geometry, m0.material, list.length);
+        list.forEach((m, i) => im.setMatrixAt(i, m.matrix));
+        im.instanceMatrix.needsUpdate = true;
+        im.computeBoundingSphere();
+        im.computeBoundingBox && im.computeBoundingBox();
+        im.name = m0.name.replace(/_\d+$/, "") + " ×" + list.length;
+        im.castShadow = m0.castShadow;
+        im.receiveShadow = true;
+        im.matrixAutoUpdate = false;
+        b.scene.add(im);
       }
     }
   }, def);

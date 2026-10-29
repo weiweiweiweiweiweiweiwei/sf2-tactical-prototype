@@ -119,6 +119,7 @@ function sf2TriMap(def) {
       // v65y def.stairMat (user 10-29, Desert Camp: the brick stair dc_stair_002 is the right look): every other stair mesh drawn with it,
       // its iron rails (def.stairKeep materials) left as they are
       const stairMat = def.stairMat && meshes.map((o) => o.material).find((mt) => mt && mt.name === def.stairMat);
+      const groups = new Map();
       for (const src of meshes) {
         if (src.userData.colOnly) continue; // (a blocking volume: in the triangle soup, not drawn)
         // v65y a clone per match (geometry / materials shared): moving the loaded meshes themselves left the map's second match empty
@@ -127,9 +128,22 @@ function sf2TriMap(def) {
         m.matrixWorld.decompose(m.position, m.quaternion, m.scale); m.matrixAutoUpdate = false; m.updateMatrix();
         if (def.stairSides && def.stairSides.test(m.name)) { const s = stairSides(src.geometry, m.material); if (s) { s.matrix.copy(m.matrix); s.matrixAutoUpdate = false; s.castShadow = s.receiveShadow = true; b.scene.add(s); } }
         m.castShadow = !m.userData.sky; m.receiveShadow = true;
-        for (const mt of Array.isArray(m.material) ? m.material : [m.material]) { mt.vertexColors = false; mt.side = THREE.DoubleSide; if (mt.map) { mt.map.anisotropy = 4; mt.color.setRGB(1, 1, 1); } } // (v65y UModel gives every mesh material a 0.58 grey base colour SF2 does not have: the sand mound by the square came out darker than the BSP sand around it in the same texture) // (v65w UModel writes SF2's vertex paint as COLOR_0: multiplied in, it striped crates and benches in rainbow colours)
-        b.scene.add(m);
+        for (const mt of Array.isArray(m.material) ? m.material : [m.material]) { mt.vertexColors = false; mt.side = THREE.DoubleSide; if (mt.map) { mt.map.anisotropy = 4; const c = mt.color; if (Math.abs(c.r - c.g) < 0.02 && Math.abs(c.g - c.b) < 0.02) c.setRGB(1, 1, 1); } } // (v65y UModel gives a plain mesh material a 0.58 grey base colour SF2 does not have — the sand mound by the square came out darker than the BSP sand around it in the same texture; a coloured one is the material's own tint, the hangars' red frames, and stays) // (v65w UModel writes SF2's vertex paint as COLOR_0: multiplied in, it striped crates and benches in rainbow colours)
         if (/ladder/i.test(m.name)) sf2Ladder(b, m);
+        const k = Array.isArray(m.material) || m.userData.sky ? m.uuid : m.geometry.uuid + m.material.uuid;
+        (groups.get(k) || groups.set(k, []).get(k)).push(m);
+      }
+      // v65y (user 10-29: Desert Camp ran at 40 FPS on ~3700 draw calls) every placement of one mesh in one material drawn as a single
+      // InstancedMesh: SF2 repeats its props hundreds of times (2607 placements of 167 meshes); nothing raycasts the drawn map (shots and
+      // bodies use the triangle soup), so only the draw changes
+      for (const list of groups.values()) {
+        const m0 = list[0];
+        if (list.length === 1) { b.scene.add(m0); continue; }
+        const im = new THREE.InstancedMesh(m0.geometry, m0.material, list.length);
+        list.forEach((m, i) => im.setMatrixAt(i, m.matrix));
+        im.instanceMatrix.needsUpdate = true; im.computeBoundingSphere(); im.computeBoundingBox && im.computeBoundingBox();
+        im.name = m0.name.replace(/_\d+$/, '') + ' ×' + list.length; im.castShadow = m0.castShadow; im.receiveShadow = true; im.matrixAutoUpdate = false;
+        b.scene.add(im);
       }
     },
   }, def);
