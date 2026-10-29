@@ -227,7 +227,7 @@
 - ⬜ Factory（18.4 MB）
 - ⬜ Guantanamo（18.7 MB）
 - ⬜ Oldtrain（18.7 MB）
-- ⬜ DesertCamp（19.6 MB）
+- 🔄 DesertCamp（19.6 MB）：v65x 形狀修好；光照交接見 `docs/loop/SF2_DESERTCAMP_LIGHT.md`
 - ⬜ Rocket（20.0 MB）
 - ⬜ colombiana（20.5 MB）
 - ⬜ Shanghai（20.7 MB）
