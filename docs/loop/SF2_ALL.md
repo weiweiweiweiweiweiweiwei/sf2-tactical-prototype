@@ -11,7 +11,7 @@
 - 不動 `maps/`（使用者的 Blender 檔）、`music/`、`rea-cn/`；新地圖的輸出放 `assets/maps/sf2-<名>/`、工具放 `tools/`、匯出暫存放 `tools/out/`。
 - 平衡：傷害照 CLAUDE.md §4.2 和同類槍；射速、換彈、拔槍、開鏡、後座、重量用 SF2 原始資料。
 - 每輪結束：`sh src/build.sh`、`node tools/esm/analyze.mjs`（MODULES_OK）、`node tools/check.mjs`（CHECK_OK）。
-- 一把槍的做法照 `docs/loop/GUNS.md`「一把槍的做法」。
+- 一把槍的做法照 `docs/loop/GUNS.md`「一把槍的做法」。**v65q 起新槍用一行指令**：`python tools/sf2_add_gun.py <id> <SF2 類別> <包名> [--name 顯示名]`（匯出、找零件／貼圖／照門、建模、數值、重量、定義、Bot、聲音、打包、建置），之後 `GUNID=<id> ONLY=hip,ads node tools/out/_rigshot.mjs` 看一眼。貼圖白色＝找不到預設貼圖：看 `<包>_texture` 或 `wp_*_<槍>` 包。
 
 ## 佇列
 狀態：⬜ 未做 · 🔄 進行中 · ✅ 完成 · ⏸ 做不到（寫原因）
@@ -40,8 +40,8 @@
 
 ### G3. 遊戲裡還沒有的 SF2 底槍（`docs/research/sf2/gun-inventory.md`；SF2 包名用 `umodel -list` 找 `rif_`／`smg_`／`sni_`／`mg_`／`sho_`／`pis_` 開頭）
 - ✅ ACR（突擊步槍，v65p）
-- ⬜ AK104（突擊步槍）
-- ⬜ AN94（突擊步槍）
+- ✅ AK104（v65q：SF2 沒有獨立模型，用 AK-103 的模型和聲音、AK104 自己的數值）
+- ✅ AN94（v65q）
 - ⬜ ARX160（突擊步槍）
 - ⬜ CM901（突擊步槍）
 - ⬜ FNF2000（突擊步槍）

@@ -21,11 +21,11 @@
 3. **建模**：`tools/sf2_rig_build.mjs` 加 `gun('<id>', { pkg, stem, tex, anim, optic })`。動畫檔名不一定是 `1st_anim_<id>`，看 `<id>_anim/<pkg>/AnimSet/`。執行 `node tools/sf2_rig_build.mjs <id>`，再 `node tools/guns/pack.mjs`。
 4. **數值**：`tools/sf2_weapon_table.py` 的 GUNS 加一行（換彈音效時間點看 Reload 片段：PSA 的 ANIMINFO 格數）；跑 `PYTHONPATH=tools python tools/sf2_weapon_table.py`。`tools/sf2_weight_table.py` 的 MAP 確認有這把，跑一次。
 5. **聲音**：`node tools/sfx_sf2.mjs <下面「聲音清單」全部> <新的>`，再把新 id 加進清單。
-6. **遊戲端**：`WEAPON_DATABASE acr` 已有這把就只靠 SF2_WEAPONS 接上（`sf2Rig`）；沒有就新增定義和 `WEAPON_DESC`、倉庫清單。狙擊槍：`zoomHFovs: [fZoomedFOV, 20]`、`sf2Reticle`（新的十字要在 `src/00_head.html` 的 `#scope` 加一個 `svg.ret.<名>`，CSS 加對應選擇器；十字照 `common_sight` 的貼圖量，見 `docs/research/sf2/sniper-reticles.md`）。
+6. **遊戲端**：`WEAPON_DATABASE` 已有這把就只靠 SF2_WEAPONS 接上（`sf2Rig`）；沒有就新增定義和 `WEAPON_DESC`、倉庫清單。狙擊槍：`zoomHFovs: [fZoomedFOV, 20]`、`sf2Reticle`（新的十字要在 `src/00_head.html` 的 `#scope` 加一個 `svg.ret.<名>`，CSS 加對應選擇器；十字照 `common_sight` 的貼圖量，見 `docs/research/sf2/sniper-reticles.md`）。
 7. **驗證**：`GUNID=<id> ONLY=hip,ads,ads2,fire TAG=<id> node tools/out/_rigshot.mjs`（看截圖：鏡子在槍正上方、手握得住、開鏡十字對）、`GUNID=<id> node tools/out/_reloadtime.mjs`、`node tools/check.mjs`。（`_rigshot` 的 reload 步驟把彈藥設 5，狙擊槍彈匣 5 會卡住，狙擊槍不要用 reload。）
 
 聲音清單（`tools/sfx_sf2.mjs` 參數，每加一把就更新）：
-`m4a1 ak103 g36c m16a3 k2 scarh famas xm8 galil hk417 qbz97 mp5k k14 trg m40a1 cz700 cheytac awp barrett@Barret kar98k@Kar98k_new sr25 psg1 frf2 m14ebr aug@AUGA3 sg551@SIG551 type89 ump45 mp7 mg4 k3 hk23e remington870@M870 benelli_m4@Bnlli ksg saiga12 p226@SIGP226 deagle@DesertEagle glock18@Glock17 m1911@Colt911 cz75@CZ75 jericho@Jericho914 sw60@SW60 infinity@Infi g36c_eo=g36c+silence hk417_rs=hk417+silence scarl_eo=scarh+silence`
+`m4a1 ak103 g36c m16a3 k2 scarh famas xm8 galil hk417 qbz97 mp5k k14 trg m40a1 cz700 cheytac awp barrett@Barret kar98k@Kar98k_new sr25 psg1 frf2 m14ebr aug@AUGA3 sg551@SIG551 type89 ump45 mp7 mg4 k3 hk23e remington870@M870 benelli_m4@Bnlli ksg saiga12 p226@SIGP226 deagle@DesertEagle glock18@Glock17 m1911@Colt911 cz75@CZ75 jericho@Jericho914 sw60@SW60 infinity@Infi g36c_eo=g36c+silence hk417_rs=hk417+silence scarl_eo=scarh+silence acr an94`
 
 ## 佇列（由上往下做）
 狀態：⬜ 未做 · 🔄 進行中 · ✅ 完成 · ⏸ 做不到（寫原因）

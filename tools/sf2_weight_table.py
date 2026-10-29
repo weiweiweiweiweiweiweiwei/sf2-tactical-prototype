@@ -16,7 +16,7 @@ MAP = {  # our id: SF2 class (~ = no class of its own in SF2, the nearest kind)
     'xm8': 'XM8', 'galil': 'GALIL', 'sg551': 'SIG551', 'hk417': 'HK417', 'scarh': 'SCARH', 'hk417_rs': 'HK417_mod2A', 'qbz97': 'QBZ97',
     'pp2000': 'PP2000', 'vz61': 'Scorpion', 'm40a1': 'M40A1', 'k14': 'K14', 'sr25': 'SR25', 'psg1': 'PSG1', 'mg4': 'MG4', 'k3': 'K3',
     'aa12': 'AA12', 'm92fs': 'M92FS', 'cz75': 'CZ75BD', 'jericho': 'JERICHO941', 'sw60': 'RevolverSW60', 'm14ebr': 'M14EBR',
-    'type89': 'Type89', 'l86a1': 'L86A1', 'hk23e': 'HK23E', 'frf2': 'FRF2', 'cz700': 'CZ700', 'trg': 'TRG', 'acr': 'ACR', 'awp_circuit': 'AWP', 'cheytac_m200_circuit': 'CheyTac', 'cz700_circuit': 'CZ700', 'k14_circuit': 'K14', 'infinity': 'INFINITY',
+    'type89': 'Type89', 'l86a1': 'L86A1', 'hk23e': 'HK23E', 'frf2': 'FRF2', 'cz700': 'CZ700', 'trg': 'TRG', 'ak104': 'AK104', 'an94': 'AN94', 'acr': 'ACR', 'awp_circuit': 'AWP', 'cheytac_m200_circuit': 'CheyTac', 'cz700_circuit': 'CZ700', 'k14_circuit': 'K14', 'infinity': 'INFINITY',
     'knife': 'BowieKnife', 'he': 'M67FRAG', 'flash': 'M84FLASHBANG', 'smoke': 'M18SMOKE',
 }
 p = S.Pkg(S.PKG_DIR + 'SFGameContent.upk'); W = {}

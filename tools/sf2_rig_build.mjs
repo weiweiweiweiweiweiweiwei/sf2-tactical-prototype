@@ -48,6 +48,7 @@ const ZEISS_SCOPE = { ...PART('weapon_common_part01', 'scope_zeiess'), tex: 'zei
 const SCOPE = (name, tex) => ({ ...PART('weapon_common_part', name), tex, noAim: true, roll: +(process.env.ROLL ?? 90) });
 const SIL = (k) => ({ ...PART('weapon_common_part', `silencer_ar_type_${k}`), tex: `silencer_type_${k}` });
 const GUNS = {
+  an94: gun('an94', { pkg: 'rif_an94', hoodedPost: true, socketSights: sight('an94/rif_an94_sight/SkeletalMesh3/rif_an94_sight_up.gltf', 'an94_ironsight') }), // v65q tools/sf2_add_gun.py
   // v62o the rear sight is the A2 carry handle (rif_m4a1_handle_a, its own sheet handle_d / _n in weapon_common_part): SF2's ADS picture (user 10-27) has the aperture ring standing above the handle's ears; the detachable
   // rif_m4a1_rearsight (weapon_common_part01) used since v61b is an attachment, its ring sat level with its guards
   m4a1: gun('m4a1', { extraParts: [['handle', 'm4a1/rif_m4a1/SkeletalMesh3/rif_m4a1_handle_a.gltf', 'm4a1_handle']], railSights: { sight: ['m4a1/rif_m4a1_sight/SkeletalMesh3/rif_m4a1_sight_up.gltf', 'm4a1_sight'], rear: 'handle' } }),
@@ -143,7 +144,7 @@ const TEX = {
   glove: ['arms/c_comm_1sthand_texture/Texture2D/com_1st_glove_b01'],
 };
 const PNG = {}; // every exported texture of this gun by file name
-function walk(d) { for (const f of fs.readdirSync(d, { withFileTypes: true })) { const q = `${d}/${f.name}`; if (f.isDirectory()) walk(q); else if (f.name.endsWith('.png')) PNG[f.name.toLowerCase()] ??= q.slice(SRC.length, -4).replace(/_[dns]$/, ''); } }
+function walk(d) { for (const f of fs.readdirSync(d, { withFileTypes: true })) { const q = `${d}/${f.name}`; if (f.isDirectory()) walk(q); else if (f.name.endsWith('.png')) PNG[f.name.toLowerCase()] ??= q.slice(SRC.length, -4).replace(/_[dns]$/i, ''); } }
 walk(SRC + G.dir); if (G.optic || G.silencer) walk(SRC + 'parts'); // (v64 a variant reads its gun's folder and the attachments')
 const texDirs = (stem) => TEX[stem] || [PNG[`${stem}_d.png`.toLowerCase()] || `${GID}/missing/${stem}`];
 const ROUGH = { barrel: 0.78, stock: 0.8, magazine: 0.72, sight: 0.66, body: 0.68, sleeve: 0.9, glove: 0.82 }; // matte, dielectric (as sf2_gun_build.py)

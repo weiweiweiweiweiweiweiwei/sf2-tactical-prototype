@@ -7,7 +7,9 @@ sound times measured on its Reload clip (magazine out / in, bolt: weapon_magazin
 """
 import json
 
-GUNS = {  # id: (SF2 class, rig, sound, [magout, magin, charge])
+GUNS = {
+    'ak104': ('AK104', 'ak103', 'ak103', [0.14, 0.46, 0.82]),  # v65q no own model: the AK-103's rig and sounds
+    'an94': ('AN94', 'an94', 'an94', [0.12, 0.4, 0.73]),  # v65q sf2_add_gun  # id: (SF2 class, rig, sound, [magout, magin, charge])
     'm16a3': ('M16A3', 'm16a3', 'm16a3', [0.07, 0.35, 0.72]),  # (v62z loop H3: the M4A1's carry handle + A2 front sight on the flat-top, tools/sf2_rig_build.mjs)
     'k2': ('K2', 'k2', 'k2', [0.12, 0.35, 0.75]),
     'acr': ('ACR', 'acr', 'acr', [0.12, 0.4, 0.73]),  # v65p

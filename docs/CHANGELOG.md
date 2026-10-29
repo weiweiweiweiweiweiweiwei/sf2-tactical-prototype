@@ -1615,3 +1615,9 @@
 
 ### （本機，2026-10-29）：SF2 新槍 ACR
 - `rif_acr`＋照門 `rif_acr_sight`（`rif_acr_sight_up`，掛 Sight 插槽、hooded post）、`Sound_ACR`；`SFCWeaponACR` 的射速／換彈／拔槍／後座／重量；傷害照 SCAR-L。倉庫和 Bot（一般模式）都有。驗證：腰射、開鏡（綠點在照門正中）、開火截圖；`check.mjs` 過。
+
+
+### （本機，2026-10-29）：新槍自動化工具、AN-94、AK-104
+- `tools/sf2_add_gun.py`：一行指令做完一把 SF2 新槍（匯出 → 自動找槍身、貼圖前綴、動畫、照門 → 建模 → 數值表、重量、`WEAPON_DATABASE`（照類別範本，傷害照 CLAUDE.md §4.2）、Bot 清單、聲音 → 打包、建置）；Windows 上剛寫完的檔案偶爾被鎖，失敗會自動重試。
+- 建模工具：貼圖索引不分大小寫（AN-94 的檔名是 `_D.png`，之前找不到、槍身變白）。
+- AN-94（`rif_an94`＋`rif_an94_sight`、`Sound_AN94`）；AK-104：SF2 沒有獨立模型，用 AK-103 的 rig 和聲音、`SFCWeaponAK104` 的數值。
