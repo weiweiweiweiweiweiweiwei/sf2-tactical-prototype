@@ -72,5 +72,13 @@ MAPS.push(sf2TriMap({
   shot: { pos: [0, 40, 30], target: [0, 0, 0] }, thumb: { pos: [0, 30, 45], target: [0, 0, 0], fov: 50 },
   objectives: { dom: [[0, 0, -15], [0, 0, 8], [0, 0, 30]], relic: [0, 0, 8], domRadius: 4 },
 }));
+// v65t 沙漠之都 (user 10-29): SF2's DustCity — the desert town, its BSP streets and walls, 1829 placed meshes; Alpha spawns in the
+// north-west corner, Bravo in the south-east (game metres: x −44 … 76, z −38 … 43)
+MAPS.push(sf2TriMap({
+  id: 'sf2_dustcity', name: 'SF2 沙漠之都', en: 'DUST CITY', desc: 'Special Force 2 原版地圖 · 原版模型與擺設 · 三角形碰撞', slogan: '沙漠城鎮 · 巷戰與屋頂狙擊',
+  bounds: { minX: -46, maxX: 78, minZ: -46, maxZ: 46 }, indoor: false, killY: -20,
+  shot: { pos: [16, 70, 60], target: [16, 0, 0] }, thumb: { pos: [16, 80, 70], target: [16, 0, 0], fov: 55 },
+  objectives: { dom: [[-12, 0, -22], [8, 0, 0], [28, 0, 22]], relic: [8, 0, 0], domRadius: 5 },
+}));
 
 export { sf2TriMap };

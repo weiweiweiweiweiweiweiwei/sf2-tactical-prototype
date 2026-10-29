@@ -1646,3 +1646,22 @@
 ### （本機，2026-10-29）：SF2 機槍 FN MAG、Minimi SPW、Ultimax；霰彈槍 USAS-12；手槍 K5、Luger、Maxim 9、Strike One、Wildey、.44 Magnum（v65w）
 - 全部用 `tools/sf2_add_gun.py`（.44 Magnum 的模型包叫 `pis_blackhawk`）。P7M13 在 SF2 是雙持，暫停。
 - 截圖：Ultimax、USAS-12、六把手槍正常；FN MAG 持槍角度與開鏡、Minimi SPW 開鏡待量（TODO）。
+
+
+### v65t（本機，2026-10-29）：SF2 地圖「沙漠之都」（DustCity）
+- 使用者 10-29 指定。照 `docs/loop/SF2_ALL.md` 的地圖做法：
+  1. 解壓 `DustCity.upk`（13.8 → 31.9 MB）。
+  2. UModel 匯出 145 個靜態模型、511 張貼圖。
+  3. `sf2_map_dump.py`：1829 個擺放、48 個出生點、2 個梯子。
+  4. `sf2_map_bsp.py`：BSP 21971 個三角形、33 種材質。
+  5. `sf2_map_build.mjs` → `assets/maps/sf2-dustcity/map.js`（GLB 16.3 MB）。
+- 地圖清單新增「SF2 沙漠之都」（`sf2_dustcity`）：
+  - 範圍 x −46…78、z −46…46。
+  - Alpha 從西北角出生，Bravo 從東南角出生。
+  - 佔領點三個（兩邊各一，加上中間），奪取目標在中間。
+- 還沒做好（⏸）：
+  - 遠景有幾棟大樓浮空或傾斜。
+  - 中央高塔沒有貼圖（`DefaultMaterial`）。
+  - 沒有 SF2 的烘焙光照，所以牆面偏白。
+- 效能：`check.mjs --map 20` CHECK_OK。每格中位數 16.7 ms，但渲染 CPU 平均 16.5 ms，有 14 格超過 33 ms（1829 個物件，繪製次數多）。
+- 驗證：縮圖 `assets/maps/thumbs/sf2_dustcity.jpg`、遊戲中截圖。
