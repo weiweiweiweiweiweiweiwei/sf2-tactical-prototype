@@ -67,7 +67,8 @@ class Pkg:
     def _tags(self, end):
         out = []
         while self.o < end:
-            if not self._tagAt(self.o): break  # v65y stop at the first unreadable tag (keep what was read)
+            i0 = struct.unpack_from('<i', self.b, self.o)[0]
+            if not (0 <= i0 < len(self.names) and self.names[i0] == 'None') and not self._tagAt(self.o): break  # v65y stop at the first unreadable tag (keep what was read)
             nm = self.name()
             if nm == 'None': break
             typ = self.name(); size = self.i32(); idx = self.i32(); extra = None

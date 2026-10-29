@@ -16857,6 +16857,43 @@ var sf2MapScript = /* @__PURE__ */ __name((src) => new Promise((res, rej) => {
   document.head.appendChild(s);
 }), "sf2MapScript");
 var SF2_LISTED = false;
+function stairSides(g, mat) {
+  const P = g.attributes.position;
+  if (!P) return null;
+  g.computeBoundingBox();
+  const bb = g.boundingBox, lo = [bb.min.x, bb.min.z], hi = [bb.max.x, bb.max.z], y0 = bb.min.y, NB = 16;
+  const prof = /* @__PURE__ */ __name((ax2) => {
+    const t = new Array(NB).fill(-Infinity);
+    for (let i = 0; i < P.count; i++) {
+      const a = ax2 ? P.getZ(i) : P.getX(i), k = Math.min(NB - 1, Math.floor((a - lo[ax2]) / (hi[ax2] - lo[ax2] + 1e-6) * NB));
+      t[k] = Math.max(t[k], P.getY(i));
+    }
+    return t;
+  }, "prof");
+  const spread = /* @__PURE__ */ __name((t) => {
+    const f = t.filter(Number.isFinite);
+    return Math.max(...f) - Math.min(...f);
+  }, "spread");
+  const px = prof(0), pz = prof(1), ax = spread(px) >= spread(pz) ? 0 : 1, top = ax ? pz : px, lat = 1 - ax;
+  for (let k = 1; k < NB; k++) if (!Number.isFinite(top[k])) top[k] = top[k - 1];
+  const pos = [], uv = [], at = /* @__PURE__ */ __name((a, y, l) => ax === 0 ? [a, y, l] : [l, y, a], "at");
+  for (const l of [lo[lat], hi[lat]]) for (let k = 0; k < NB; k++) {
+    const h = top[k];
+    if (!Number.isFinite(h) || h <= y0 + 0.02) continue;
+    const a0 = lo[ax] + (hi[ax] - lo[ax]) * k / NB, a1 = lo[ax] + (hi[ax] - lo[ax]) * (k + 1) / NB, q = [at(a0, y0, l), at(a1, y0, l), at(a1, h, l), at(a0, h, l)];
+    for (const j of [0, 1, 2, 0, 2, 3]) {
+      pos.push(...q[j]);
+      uv.push((j === 1 || j === 2 ? a1 : a0) * 0.5, (j >= 2 ? h : y0) * 0.5);
+    }
+  }
+  if (!pos.length) return null;
+  const sg = new THREE.BufferGeometry();
+  sg.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+  sg.setAttribute("uv", new THREE.Float32BufferAttribute(uv, 2));
+  sg.computeVertexNormals();
+  return new THREE.Mesh(sg, mat);
+}
+__name(stairSides, "stairSides");
 function sf2TriMap(def) {
   return Object.assign({
     indoor: false,
@@ -16958,10 +16995,21 @@ function sf2TriMap(def) {
       gltf.scene.traverse((o) => {
         if (o.isMesh) meshes.push(o);
       });
+      const stairMat = def.stairMat && meshes.map((o) => o.material).find((mt) => mt && mt.name === def.stairMat);
       for (const src of meshes) {
         if (src.userData.colOnly) continue;
         const m = src.clone();
         m.matrixWorld.copy(src.matrixWorld);
+        if (stairMat && /^dc_stair_/i.test(m.name) && !Array.isArray(m.material) && !(def.stairKeep || []).includes(m.material.name)) m.material = stairMat;
+        if (def.stairSides && def.stairSides.test(m.name)) {
+          const s = stairSides(src.geometry, m.material);
+          if (s) {
+            s.matrix.copy(m.matrix);
+            s.matrixAutoUpdate = false;
+            s.castShadow = s.receiveShadow = true;
+            b.scene.add(s);
+          }
+        }
         m.matrixWorld.decompose(m.position, m.quaternion, m.scale);
         m.matrixAutoUpdate = false;
         m.updateMatrix();
@@ -17023,7 +17071,10 @@ MAPS.push(sf2TriMap({
   exposure: 0.85,
   hemi: [15128252, 6968384, 0.5],
   sun: { pos: [-32, 57, 25], color: 16505799, intensity: 1.4, auto: false },
-  fog: { color: 13482908, near: 90, far: 420 }
+  fog: { color: 13482908, near: 90, far: 420 },
+  stairMat: "dc_stair_002_INST",
+  stairKeep: ["dcnew_stair_001_INST"],
+  stairSides: /^dc_stair_003/i
 }));
 
 // src/08_nav_input.js
@@ -23786,6 +23837,9 @@ var AIDebug = class {
     this.el = document.createElement("div");
     this.el.style.cssText = "position:fixed;inset:0;pointer-events:none;z-index:40;display:none;font:600 11px/1.25 Rajdhani,system-ui,sans-serif";
     document.body.appendChild(this.el);
+    this.posEl = document.createElement("div");
+    this.posEl.style.cssText = "position:absolute;left:50%;top:92px;transform:translateX(-50%);padding:2px 8px;border-radius:3px;background:rgba(0,0,0,.6);color:#ffe28a;font-size:14px";
+    this.el.appendChild(this.posEl);
   }
   toggle() {
     this.on = !this.on;
@@ -23808,6 +23862,11 @@ var AIDebug = class {
     if (text) this.t = 0.1;
     const w = innerWidth, h = innerHeight;
     let n = 0;
+    const pl = match.player;
+    if (text && pl && pl.motor) {
+      const q = pl.motor.pos, deg = (-pl.yaw * 180 / Math.PI % 360 + 360) % 360;
+      this.posEl.textContent = `座標 x ${q.x.toFixed(1)}  y ${q.y.toFixed(1)}  z ${q.z.toFixed(1)} · 朝向 ${deg.toFixed(0)}°`;
+    }
     for (const b of match.bots) {
       if (!b.alive) continue;
       _v.copy(b.motor.pos);

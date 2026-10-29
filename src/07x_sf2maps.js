@@ -15,6 +15,26 @@ const sf2MapScript = (src) => new Promise((res, rej) => { const s = document.cre
 // the 1:1 Desert Camp attempt. true lists them again.
 const SF2_LISTED = false;
 
+// v65y side walls for an SF2 step mesh that has none (user 10-29, Desert Camp: dc_stair_003 open on both sides): the steps' top
+// outline along the rise axis (the horizontal axis the height follows), stepped, filled down to the mesh's foot at both lateral ends
+function stairSides(g, mat) {
+  const P = g.attributes.position; if (!P) return null;
+  g.computeBoundingBox(); const bb = g.boundingBox, lo = [bb.min.x, bb.min.z], hi = [bb.max.x, bb.max.z], y0 = bb.min.y, NB = 16;
+  const prof = (ax) => { const t = new Array(NB).fill(-Infinity); for (let i = 0; i < P.count; i++) { const a = ax ? P.getZ(i) : P.getX(i), k = Math.min(NB - 1, Math.floor((a - lo[ax]) / (hi[ax] - lo[ax] + 1e-6) * NB)); t[k] = Math.max(t[k], P.getY(i)); } return t; };
+  const spread = (t) => { const f = t.filter(Number.isFinite); return Math.max(...f) - Math.min(...f); };
+  const px = prof(0), pz = prof(1), ax = spread(px) >= spread(pz) ? 0 : 1, top = ax ? pz : px, lat = 1 - ax;
+  for (let k = 1; k < NB; k++) if (!Number.isFinite(top[k])) top[k] = top[k - 1]; // (an empty bin keeps its neighbour's height)
+  const pos = [], uv = [], at = (a, y, l) => (ax === 0 ? [a, y, l] : [l, y, a]);
+  for (const l of [lo[lat], hi[lat]]) for (let k = 0; k < NB; k++) {
+    const h = top[k]; if (!Number.isFinite(h) || h <= y0 + 0.02) continue;
+    const a0 = lo[ax] + (hi[ax] - lo[ax]) * k / NB, a1 = lo[ax] + (hi[ax] - lo[ax]) * (k + 1) / NB, q = [at(a0, y0, l), at(a1, y0, l), at(a1, h, l), at(a0, h, l)];
+    for (const j of [0, 1, 2, 0, 2, 3]) { pos.push(...q[j]); uv.push((j === 1 || j === 2 ? a1 : a0) * 0.5, (j >= 2 ? h : y0) * 0.5); }
+  }
+  if (!pos.length) return null;
+  const sg = new THREE.BufferGeometry(); sg.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); sg.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); sg.computeVertexNormals();
+  return new THREE.Mesh(sg, mat);
+}
+
 function sf2TriMap(def) {
   return Object.assign({
     indoor: false, killOutside: false, traversal: false, navClimb: 0.45, navGrid: 1, bodyRadius: 0.25, underFloorAirOnly: true, acoustics: 'indoor', ambience: 'warehouse',
@@ -76,10 +96,15 @@ function sf2TriMap(def) {
       b.col.useTris(soup); b.phys.triGround = new TriGround(soup);
       for (const l of this._s2.meta.ladders || []) b.navExtra.push(new THREE.Vector3(l[0], l[1], l[2])); // (SF2's ladder volumes: climbing is a follow-up)
       const meshes = []; gltf.scene.traverse((o) => { if (o.isMesh) meshes.push(o); });
+      // v65y def.stairMat (user 10-29, Desert Camp: the brick stair dc_stair_002 is the right look): every other stair mesh drawn with it,
+      // its iron rails (def.stairKeep materials) left as they are
+      const stairMat = def.stairMat && meshes.map((o) => o.material).find((mt) => mt && mt.name === def.stairMat);
       for (const src of meshes) {
         if (src.userData.colOnly) continue; // (a blocking volume: in the triangle soup, not drawn)
         // v65y a clone per match (geometry / materials shared): moving the loaded meshes themselves left the map's second match empty
-        const m = src.clone(); m.matrixWorld.copy(src.matrixWorld); m.matrixWorld.decompose(m.position, m.quaternion, m.scale); m.matrixAutoUpdate = false; m.updateMatrix();
+        const m = src.clone(); m.matrixWorld.copy(src.matrixWorld);
+        if (stairMat && /^dc_stair_/i.test(m.name) && !Array.isArray(m.material) && !(def.stairKeep || []).includes(m.material.name)) m.material = stairMat;
+        if (def.stairSides && def.stairSides.test(m.name)) { const s = stairSides(src.geometry, m.material); if (s) { s.matrix.copy(m.matrix); s.matrixAutoUpdate = false; s.castShadow = s.receiveShadow = true; b.scene.add(s); } } m.matrixWorld.decompose(m.position, m.quaternion, m.scale); m.matrixAutoUpdate = false; m.updateMatrix();
         m.castShadow = !m.userData.sky; m.receiveShadow = true;
         for (const mt of Array.isArray(m.material) ? m.material : [m.material]) { mt.vertexColors = false; mt.side = THREE.DoubleSide; if (mt.map) mt.map.anisotropy = 4; } // (v65w UModel writes SF2's vertex paint as COLOR_0: multiplied in, it striped crates and benches in rainbow colours)
         b.scene.add(m);
@@ -118,4 +143,5 @@ MAPS.push(sf2TriMap({
   // fill turned down and warmed (the old blue-grey sky fill washed the sand-white walls out and hid every shadow), a warm haze
   background: 0xcdbb9c, envIntensity: 0.25, exposure: 0.85, hemi: [0xe6d6bc, 0x6a5440, 0.5],
   sun: { pos: [-32, 57, 25], color: 0xfbdbc7, intensity: 1.4, auto: false }, fog: { color: 0xcdbb9c, near: 90, far: 420 },
+  stairMat: 'dc_stair_002_INST', stairKeep: ['dcnew_stair_001_INST'], stairSides: /^dc_stair_003/i,
 }));

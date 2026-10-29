@@ -38,6 +38,7 @@ for k, e in enumerate(p.exports, 1):
             m = list(struct.unpack_from('<16f', p.b, at + 64 * j)); mesh, cp = mesh_of(p.exports[ci - 1])
             if mesh and mesh != 'None': out.append({'mesh': mesh, 'm': [round(x, 4) for x in m], 'col': collides(cp)})
     elif c in ACTORS or (c.endswith('Actor') and 'KActor' in c):
+        if e['flags'] & 0x400000000: continue  # v65y RF_ArchetypeObject: a prefab's template (humvee_01_Arc0 …) at the origin, not placed
         pr = {n: v for n, i, t, v in p.props(e)}
         ce = next((x for x in by_outer.get(k, []) if p.clsname(x) == 'StaticMeshComponent'), None)
         if not ce: continue
