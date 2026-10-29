@@ -24,10 +24,11 @@
 - ✅（v65l）從 `docs/research/sf2/client-data/weapons.json`、`SFCItem_*` 的 `DefaultItemClassNames`（`tools/sf2_props.py`）、SF2 的武器名稱表整理出：**每把底槍**＋**型態**（標準、EO、Reflex、ACOG、Silencer、Max／改、其他配件組合），排除塗裝（CircuitFX、Blaster、活動造型等）和特殊模式武器。輸出 `docs/research/sf2/gun-inventory.md`（底槍、型態、類別名、包名、遊戲裡有沒有）。依這份清單展開下面 G2–G4 的項目。
 
 ### G2. 補完暫停的 11 把（`docs/loop/GUNS.md` 的 ⏸）
-- ⬜ SVD、P90、PP-2000／vz.61（雙持）、M249、RPK、L86A1、AA-12；沒有 SF2 包的（MP5、Vector、Negev、PKM、MG42、M1014、USP、AK-47）再找一次包名，真的沒有就維持原本的槍。
+- ⏸ SVD、P90、PP-2000／vz.61（雙持）、M249、RPK、L86A1、AA-12：都要手動量瞄準點／做雙持，上一輪各試過，等 G4 做完再回頭（規則：細節最多 2 次）。
+- ✅ 再找包名（v65m）：Vector＝`smg_ksv`（併入 G3 的 KrissV）；MP5（完整版）、Negev、PKM、MG42、M1014、USP、AK-47 在安裝檔裡沒有包，維持原本的槍。
 
 ### M1. 地圖清單
-- ⬜ 列出 SF2 安裝檔裡的地圖包（`D:/SpecialForce2/SFGame/CookedPCConsole`），排除殭屍／PVE／活動等特殊模式；記下各圖的包名、主要的子關卡（streaming levels）、大小。輸出 `docs/research/sf2/map-inventory.md`。
+- ✅（v65m）列出 SF2 安裝檔裡的地圖包（`D:/SpecialForce2/SFGame/CookedPCConsole`），排除殭屍／PVE／活動等特殊模式；記下各圖的包名、主要的子關卡（streaming levels）、大小。輸出 `docs/research/sf2/map-inventory.md`。
 
 ### M2. 地圖匯出可行性
 - ⬜ 用一張小圖試：UModel 匯出靜態網格；關卡裡物件的擺放（`StaticMeshActor`／`StaticMeshComponent` 的位置、旋轉、縮放）用 `tools/sf2_props.py` 的解析器讀；BSP 牆地板（`Model`）能不能讀；光照（lightmap）先不管。做出 `tools/sf2_map_export.py` → GLB＋碰撞，照 Apex 三角碰撞地圖的方式接進遊戲（`apexTriMap`）。驗證：能走、能打、出生點、`check.mjs`。
@@ -171,8 +172,70 @@
 - ⬜ M92FS（m92fs）：Silencer
 - ⬜ P226（p226）：Silencer
 
-### M3. 逐張還原（依 M1 清單，M2 成功後展開）
-- ⬜（M2 完成後展開）
+### M3. 逐張還原（`docs/research/sf2/map-inventory.md`，由小到大；M2 成功後照它的做法）
+- ⬜ Fog（2.5 MB）
+- ⬜ island（5.5 MB）
+- ⬜ Scrimmage（5.7 MB）
+- ⬜ turbulence（6.9 MB）
+- ⬜ FlowerBed（7.1 MB）
+- ⬜ Alcatraz（7.2 MB）
+- ⬜ Dam（7.2 MB）
+- ⬜ WhiteNight（7.6 MB）
+- ⬜ 13F（8.1 MB）
+- ⬜ SupplyBase（8.1 MB）
+- ⬜ ryokan（9.5 MB）
+- ⬜ Bazaar（9.8 MB）
+- ⬜ Burrow（9.9 MB）
+- ⬜ Sunrise（10.2 MB）
+- ⬜ Luxor（10.4 MB）
+- ⬜ armory（10.6 MB）
+- ⬜ cargoship（11.1 MB）
+- ⬜ temple（11.1 MB）
+- ⬜ WatersideVillage（11.3 MB）
+- ⬜ SubmarineBase（11.6 MB）
+- ⬜ Plaza（12.2 MB）
+- ⬜ Village（12.3 MB）
+- ⬜ Mansion（12.6 MB）
+- ⬜ Embassy（13.1 MB）
+- ⬜ SunYatSenHall（13.1 MB）
+- ⬜ DustCity（13.2 MB）
+- ⬜ Mangrove（13.2 MB）
+- ⬜ Satellite（13.7 MB）
+- ⬜ tower（13.8 MB）
+- ⬜ everland（14.1 MB）
+- ⬜ Harbor（14.1 MB）
+- ⬜ Base_camp（14.6 MB）
+- ⬜ valley（15.4 MB）
+- ⬜ BlackHawkDown（15.6 MB）
+- ⬜ Pokhran（15.6 MB）
+- ⬜ Strassebahn（15.8 MB）
+- ⬜ greenhouse（15.9 MB）
+- ⬜ Khalistan（16.0 MB）
+- ⬜ RussianFactory（16.1 MB）
+- ⬜ GhostTown（16.8 MB）
+- ⬜ PalaceMuseum（16.9 MB）
+- ⬜ Uhlan（17.9 MB）
+- ⬜ hometown（18.0 MB）
+- ⬜ MStreet（18.1 MB）
+- ⬜ Sugarcane（18.1 MB）
+- ⬜ SafeHouse（18.3 MB）
+- ⬜ Factory（18.4 MB）
+- ⬜ Guantanamo（18.7 MB）
+- ⬜ Oldtrain（18.7 MB）
+- ⬜ DesertCamp（19.6 MB）
+- ⬜ Rocket（20.0 MB）
+- ⬜ colombiana（20.5 MB）
+- ⬜ Shanghai（20.7 MB）
+- ⬜ Bank（21.3 MB）
+- ⬜ Vitoria（22.0 MB）
+- ⬜ Mosque（22.2 MB）
+- ⬜ Prison（22.4 MB）
+- ⬜ Peacehawk（22.5 MB）
+- ⬜ RepairCenter（22.6 MB）
+- ⬜ NerveGas（22.7 MB）
+- ⬜ Missile（22.9 MB）
+- ⬜ solartower（24.1 MB）
+- ⬜ Riverside（45.0 MB）
 
 ## 自動選擇紀錄
 （迴圈中替使用者做的決定，一行一個，使用者可以回頭改）
@@ -180,3 +243,4 @@
 - v65k：型態一律輸出成「配件檔」（`<id>_sf2_ovl.glb`，`node tools/sf2_rig_build.mjs <型態>`；要整把時加 `--full`），不再另存整把 rig。
 - v65l：型態只做「標準＋每種瞄具＋消音＋最高 MK」，雷射、擴充彈匣、多配件組合不做（共 379 個）；活動造型槍（貓、海豚…）不算槍。
 - v65l：佇列順序改成 G2 → 地圖清單與匯出可行性（M1、M2）→ G3 新槍 → G4 型態（M4A1 第一）→ M3 逐張地圖：先確定地圖做不做得出來。
+- v65m：地圖只做 63 張常規對戰圖；節日造型版（萬聖節、聖誕、夏日、海盜）只做原版；捉迷藏、六角、殭屍、射擊、防守、教學、靶場不做。

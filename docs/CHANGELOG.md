@@ -1591,3 +1591,8 @@
 ### （本機，2026-10-29）：SF2 槍枝清單
 - `tools/sf2_gun_inventory.py` → `docs/research/sf2/gun-inventory.md`：SF2 的底槍是 `SFCWeapon<X>`（類別繼承到步槍／衝鋒槍／狙擊／機槍／霰彈／手槍基底），型態是道具 `SFCItem_<X>_<配件…>`（從 `SFGameContent` 9151 個道具名稱裡挑出只含配件字的：EOTech、OpenDot、Reflex、ACOG、AimPoint、Silencer、MK2–5…）；活動造型槍（貓、海豚…）和特殊模式武器排除。
 - 結果：99 把槍，遊戲裡已有 SF2 原版 46 把；要做的型態 379 個（標準＋每種瞄具＋消音＋最高 MK）。`docs/loop/SF2_ALL.md` 的 G3（53 把新槍）、G4（各槍型態，M4A1 第一）已展開。
+
+
+### （本機，2026-10-29）：SF2 地圖清單、暫停的槍重查
+- `tools/sf2_map_inventory.py` → `docs/research/sf2/map-inventory.md`：一張圖＝有自己光照檔 `Lighting_<圖>.tfc` 的包。125 個，常規對戰圖 63 張（觀戰／逃脫／停電／跳躍／節日造型／殭屍／PVE／射擊／防守／捉迷藏／六角／教學／靶場 排除）。佇列 M3 已依大小展開。
+- 暫停的槍：Vector 的包是 `smg_ksv`（併入新槍）；MP5 完整版、Negev、PKM、MG42、M1014、USP、AK-47 在安裝檔裡沒有包。SVD、P90、雙持、M249、RPK、L86A1、AA-12 維持暫停（要手動量瞄準點）。
