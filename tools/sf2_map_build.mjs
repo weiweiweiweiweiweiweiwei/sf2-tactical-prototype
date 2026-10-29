@@ -12,7 +12,12 @@ const io = new NodeIO().registerExtensions(ALL_EXTENSIONS).registerDependencies(
 const files = {}; const walk = (d) => { for (const f of fs.readdirSync(d)) { const p = path.join(d, f); if (fs.statSync(p).isDirectory()) walk(p); else files[f.toLowerCase()] = p; } }; walk(DIR);
 const dump = JSON.parse(fs.readFileSync(`tools/out/sf2/maps/${MAP}.json`, 'utf8')), placed = dump.placed || dump;
 const doc = new Document(), root = doc.getRoot(), buf = doc.createBuffer(), scene = doc.createScene(MAP), meshes = new Map(), tex = new Map(); let missing = new Set();
-const diffuseOf = (mat) => { const f = files[mat.toLowerCase() + '.mat']; if (!f) return null; const m = fs.readFileSync(f, 'utf8').match(/^Diffuse=(\S+)/m); return m ? files[m[1].toLowerCase() + '.png'] : null; };
+const diffuseOf = (mat) => { // (v65v a Material whose sheet is only an 'Other[n]' — terrain_001_Mat, door_005_Mat: the first that is no normal / spec / mask)
+  const f = files[mat.toLowerCase() + '.mat']; if (!f) return null; const t = fs.readFileSync(f, 'utf8'), m = t.match(/^Diffuse=(\S+)/m);
+  if (m) return files[m[1].toLowerCase() + '.png'] || null;
+  for (const o of t.matchAll(/^Other\[\d+\]=(\S+)/gm)) if (!/(_n|_s|_nm|normal|nomal|_mask|_spec|cube)$/i.test(o[1]) && files[o[1].toLowerCase() + '.png']) return files[o[1].toLowerCase() + '.png'];
+  return null;
+};
 async function meshOf(name) {
   if (meshes.has(name)) return meshes.get(name);
   const f = files[name.toLowerCase() + '.gltf']; if (!f) { missing.add(name); meshes.set(name, null); return null; }
@@ -35,7 +40,8 @@ for (const o of placed) {
   const N = CA.map((row) => [0, 1, 2].map((c) => row.reduce((s, v, k) => s + v * C[c][k], 0))); // C⁻¹ = Cᵀ
   const t = [m[12], m[13], m[14]], tg = C.map((row) => row.reduce((s, v, k) => s + v * t[k], 0) / 100);
   const mat = [N[0][0], N[1][0], N[2][0], 0, N[0][1], N[1][1], N[2][1], 0, N[0][2], N[1][2], N[2][2], 0, tg[0], tg[1], tg[2], 1];
-  scene.addChild(doc.createNode(o.mesh + '_' + n++).setMesh(mesh).setMatrix(mat));
+  const nd = doc.createNode(o.mesh + '_' + n++).setMesh(mesh).setMatrix(mat); if (o.col === false) nd.setExtras({ nocol: true }); // (v65v SF2 turned its collision off: grass, wires, decor)
+  scene.addChild(nd);
 }
 // v65n the BSP floors and walls (tools/sf2_map_bsp.py): one primitive per material, UVs in texels ÷ the diffuse sheet's size
 const bspFile = `tools/out/sf2/maps/${MAP}_bsp.json`;
@@ -51,12 +57,20 @@ if (fs.existsSync(bspFile)) {
   }
   scene.addChild(doc.createNode('bsp').setMesh(mesh));
 }
+// v65v SF2's blocking volumes (tools/sf2_map_dump.py 'blocks', world triangles in UE cm): collision only, never drawn
+if ((dump.blocks || []).length) {
+  const all = dump.blocks.flat(), P = new Float32Array(all.length);
+  for (let i = 0; i < all.length; i += 3) { P[i] = all[i] / 100; P[i + 1] = all[i + 2] / 100; P[i + 2] = -all[i + 1] / 100; }
+  const bm = doc.createMesh('blocking').addPrimitive(doc.createPrimitive().setAttribute('POSITION', doc.createAccessor().setType('VEC3').setArray(P).setBuffer(buf)));
+  scene.addChild(doc.createNode('BLOCKING').setMesh(bm).setExtras({ colOnly: true }));
+}
 for (const b of root.listBuffers()) if (b !== buf) { for (const a of root.listAccessors()) if (a.getBuffer() === b) a.setBuffer(buf); b.dispose(); }
 await doc.transform(prune(), dedup(), textureCompress({ encoder: sharp, targetFormat: 'webp', resize: [1024, 1024] }), draco());
 await io.write(OUT, doc);
 // v65o the game's copy: assets/maps/sf2-<map>/map.js (window.SF2_MAPS[id] = { glb: base64, meta }, file:// friendly like the other maps)
 const cv = (l) => [l[0] / 100, l[2] / 100, -l[1] / 100], id = 'sf2_' + MAP.toLowerCase(), adir = `assets/maps/sf2-${MAP.toLowerCase()}`;
-const meta = { starts: (dump.starts || []).map((s) => ({ team: s.team, pos: cv(s.loc), yaw: (s.yaw / 65536) * Math.PI * 2 - Math.PI / 2 })), ladders: (dump.ladders || []).map((l) => cv(l.loc)) };
+const S0 = dump.starts || [], tdm = S0.filter((s) => /PlayerStart_TDM$/.test(s.cls)); // v65v the TDM starts when the map has them (FrontLine / mission starts sit elsewhere)
+const meta = { starts: (tdm.length ? tdm : S0).map((s) => ({ team: s.team, pos: cv(s.loc), yaw: (s.yaw / 65536) * Math.PI * 2 - Math.PI / 2 })), ladders: (dump.ladders || []).map((l) => cv(l.loc)) };
 fs.mkdirSync(adir, { recursive: true });
 fs.writeFileSync(`${adir}/map.js`, `/* Special Force 2's ${MAP} from the user's install — tools/sf2_map_build.mjs */
 (window.SF2_MAPS || (window.SF2_MAPS = {}))['${id}'] = { meta: ${JSON.stringify(meta)}, glb: '${fs.readFileSync(OUT).toString('base64')}' };

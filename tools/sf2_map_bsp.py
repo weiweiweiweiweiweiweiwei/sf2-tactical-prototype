@@ -35,8 +35,15 @@ for e in models:
         g = groups[chain(mat)]
         cv = lambda q: [q[0] / 100, q[2] / 100, -q[1] / 100]
         uv = lambda q: [sum((q[i] - base[i]) * U[i] for i in range(3)), sum((q[i] - base[i]) * Vv[i] for i in range(3))]
-        for j in range(1, nv - 1):  # fan; UE3 polys wind clockwise seen from the front → reverse for glTF
-            for q in (pts[0], pts[j + 1], pts[j]): g['pos'] += cv(q); g['nrm'] += [N[0], N[2], -N[1]]; g['uv'] += uv(q)
+        # v65v wind each polygon by its node's plane (bytes 0–15: X, Y, Z, W), not one fixed order: some nodes are stored the other way
+        # round, and a reversed floor read as a ceiling (Desert Camp: the Bravo base's floor blocked bots, a soldier fell through it)
+        pl = struct.unpack_from('<3f', B, a); g3 = [cv(q) for q in pts]; ngl = [pl[0], pl[2], -pl[1]]
+        nw = [0.0, 0.0, 0.0]
+        for j in range(nv):
+            c0, c1 = g3[j], g3[(j + 1) % nv]; nw[0] += (c0[1] - c1[1]) * (c0[2] + c1[2]); nw[1] += (c0[2] - c1[2]) * (c0[0] + c1[0]); nw[2] += (c0[0] - c1[0]) * (c0[1] + c1[1])
+        if nw[0] * ngl[0] + nw[1] * ngl[1] + nw[2] * ngl[2] < 0: pts = pts[::-1]
+        for j in range(1, nv - 1):  # fan, counter-clockwise about the plane's normal (glTF front face)
+            for q in (pts[0], pts[j], pts[j + 1]): g['pos'] += cv(q); g['nrm'] += [pl[0], pl[2], -pl[1]]; g['uv'] += uv(q)
             tris += 1
 json.dump({k: v for k, v in groups.items()}, open(f'tools/out/sf2/maps/{name}_bsp.json', 'w'))
 print(name, 'BSP', len(models), 'models,', tris, 'triangles,', len(groups), 'materials:', ', '.join(list(groups)[:6]))

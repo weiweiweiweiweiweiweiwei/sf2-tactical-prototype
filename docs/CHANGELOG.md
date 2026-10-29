@@ -1665,3 +1665,30 @@
   - 沒有 SF2 的烘焙光照，所以牆面偏白。
 - 效能：`check.mjs --map 20` CHECK_OK。每格中位數 16.7 ms，但渲染 CPU 平均 16.5 ms，有 14 格超過 33 ms（1829 個物件，繪製次數多）。
 - 驗證：縮圖 `assets/maps/thumbs/sf2_dustcity.jpg`、遊戲中截圖。
+
+
+### v65v（本機，2026-10-29）：SF2 沙漠營地（Desert Camp）第一輪——補資料與可玩性
+- 使用者 10-29：惡魔島、沙漠之都撤下（`SF2_LISTED = false`，檔案保留）；要 1:1 還原 Desert Camp，兩張舊圖的問題是「全部都有」（移動、外觀、效能）。
+- 匯出：
+  - UModel 整包匯出時會在立方體貼圖（`CTSFSceneCubeMapActor_0`）崩潰。改用 `-obj=` 指定物件、每批 120 個，第一批逐一重試。
+  - 地圖用到的 166 個模型全數到齊。
+- `tools/sf2_map_dump.py`：
+  - 新增 `SFStaticMeshActor`、`SFKActorNoSync`。它們的模型在原型（archetype）上，所以沿 `arch` 往上找。
+  - 舊版只讀 StaticMeshActor 等，而且建模腳本根本沒放這些。現在一律算成矩陣：2613 個擺放，原本是 2410 個。
+  - 每個擺放記錄是否有碰撞：`CollideActors`／`BlockActors` 關掉的，例如 181 叢大草和電線，不進碰撞。
+  - SF2 的 29 個阻擋體積（BlockingVolume）讀出成世界座標三角形，只做碰撞、不顯示。
+- `tools/sf2_map_bsp.py`：每個多邊形依它節點的平面法線決定繞向。原本一律反轉，結果部分地板被當成天花板，會擋住人或讓人穿過去。
+- `tools/sf2_map_build.mjs`：
+  - 材質沒有 `Diffuse=` 時，改用第一個 `Other[n]` 貼圖（地面 `terrain_001_Mat`、門、窗）。
+  - 出生點優先用 TDM 出生點。
+- `src/07x_sf2maps.js`：
+  - 每隊用自己 TDM 出生點最密集的一群當基地（Alpha 13 個在 (−15, −30)，Bravo 12 個在 (30, 45)）。原本兩隊都出生在同一個角落。
+  - 導航取樣改成每 0.5 m 一層、1 m 網格，可跨 0.45 m 的高低差，樓梯和斜坡可連到 0.7 倍的距離（`navClimb`、`navGrid`，在 `src/08_nav_input.js`）。
+- 結果（`tools/out/_sf2walk.mjs`，4 對 4 打 40 秒）：
+  - 出生點都在地面上。
+  - Bot 移動距離：之前 4–17 m；現在 Bravo 79–86 m，Alpha 16–27 m。對照組：倉庫地圖 38–140 m。
+- 還沒做好：
+  - 導航圖仍然分成好幾塊：西側地面（y 0）、東側（y −2）、Bravo 基地（y −2）。
+  - 玩家走不上 Bravo 基地邊緣那排樓梯：它的碰撞是 26° 的斜面，人卻從底下走過去（`tools/out/_sf2stairs2.mjs`）。
+  - 光照、貼花、粒子還沒做。
+- `check.mjs` CHECK_OK。

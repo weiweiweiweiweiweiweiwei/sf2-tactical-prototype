@@ -8,16 +8,16 @@ import { MAX_SLOPE } from './04_collision.js';
 class NavGraph {
   constructor(col, builder, def) {
     this.col = col; this.nodes = []; this.hash = new Map(); this.cellSize = 3;
-    this.bounds = def.bounds;
+    this.bounds = def.bounds; this.climb = def.navClimb ?? 0.2; // (v65v def.navClimb: the rise a node / link may step over — SF2's bumpy floors 0.45, the motor's step)
     this.build(builder, def);
   }
 
-  walkable(x, y, z, tol = 0.25) {
+  walkable(x, y, z, tol = this.climb > 0.2 ? 0.45 : 0.25) {
     const B = this.bounds;
     if (x < B.minX + 0.5 || x > B.maxX - 0.5 || z < B.minZ + 0.5 || z > B.maxZ - 0.5) return null;
     const g = this.col.groundBelow(x, y + 0.4, z, 0.12, 0.8, 0.02);
     if (!g || Math.abs(g.y - y) > tol || g.steep) return null;
-    if (!this.col.fits(x, g.y + 0.2, z, 0.38, 1.5)) return null; // +0.2: curbs / plinth steps (≤ 0.2 m) are walkable, the motor steps 0.45
+    if (!this.col.fits(x, g.y + this.climb, z, 0.38, 1.5)) return null; // +0.2: curbs / plinth steps (≤ 0.2 m) are walkable, the motor steps 0.45
     for (const rp of this.col.ramps) {
       if (x + 0.4 <= rp.minX || x - 0.4 >= rp.maxX || z + 0.4 <= rp.minZ || z - 0.4 >= rp.maxZ) continue;
       if (this.col.rampMaxUnder(rp, x, z, 0.4) > g.y + 0.5) return null;
@@ -62,7 +62,7 @@ class NavGraph {
 
   build(builder, def) {
     if (builder.navBaked) { this._baked(builder.navBaked); return; }
-    const B = def.bounds, step = 2, T = this.col.terrain;
+    const B = def.bounds, step = def.navGrid || 2, T = this.col.terrain; // (v65v def.navGrid: SF2 maps sample every 1 m — their doorways and alleys are narrower than a 2 m grid)
     for (const lvl of def.navLevels || []) {
       for (let x = B.minX + 1; x <= B.maxX - 1; x += step) for (let z = B.minZ + 1; z <= B.maxZ - 1; z += step) {
         const y = this.walkable(x, lvl, z); if (y !== null) this._add(new THREE.Vector3(x, y, z));
@@ -84,7 +84,7 @@ class NavGraph {
     for (const a of base) this.near(a.p, 3.6, (b) => {
       if (b.id <= a.id) return;
       const tt = a.p.terr && b.p.terr, d = Math.hypot(a.p.x - b.p.x, a.p.z - b.p.z);
-      if (d > (tt ? 3.6 : 2.95) || Math.abs(a.p.y - b.p.y) > (tt ? Math.max(0.5, d * 0.95) : 0.5)) return;
+      if (d > (tt ? 3.6 : 2.95) || Math.abs(a.p.y - b.p.y) > (tt ? Math.max(0.5, d * 0.95) : this.climb > 0.2 ? Math.max(0.5, d * 0.7) : 0.5)) return; // (v65v SF2 maps: their stairs and ramps are geometry — a rise up to 0.7 × the run, the segment check still walks it)
       if (tt ? this.terrainLink(a.p, b.p) : this.segmentWalkable(a.p, b.p)) this._link(a, b);
     });
     for (const chain of builder.navChains) {

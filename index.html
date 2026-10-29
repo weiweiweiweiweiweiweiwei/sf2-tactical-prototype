@@ -16862,6 +16862,8 @@ function sf2TriMap(def) {
     indoor: false,
     killOutside: false,
     traversal: false,
+    navClimb: 0.45,
+    navGrid: 1,
     acoustics: "indoor",
     ambience: "warehouse",
     background: 9214630,
@@ -16882,6 +16884,12 @@ function sf2TriMap(def) {
       const pos = [], idx = [], v = new THREE.Vector3(), box = new THREE.Box3(), size = new THREE.Vector3(), all = new THREE.Box3();
       gltf.scene.traverse((o) => {
         if (!o.isMesh) return;
+        const ex = /* @__PURE__ */ __name((k) => o.userData[k] || o.parent && o.parent.userData[k], "ex");
+        if (ex("colOnly")) o.userData.colOnly = true;
+        else if (ex("nocol")) {
+          o.userData.nocol = true;
+          return;
+        }
         box.setFromObject(o);
         if (box.getSize(size).length() > 300) {
           o.userData.sky = true;
@@ -16901,21 +16909,27 @@ function sf2TriMap(def) {
       this.bounds = { minX: Math.floor(all.min.x) - 2, maxX: Math.ceil(all.max.x) + 2, minZ: Math.floor(all.min.z) - 2, maxZ: Math.ceil(all.max.z) + 2 };
       this.killY = all.min.y - 15;
       const levels = [];
-      for (let y = Math.floor(all.min.y); y <= Math.ceil(all.max.y); y += 1) levels.push(y + 0.9);
+      for (let y = Math.floor(all.min.y); y <= Math.ceil(all.max.y); y += 0.5) levels.push(y + 0.2);
       this.navLevels = levels;
     },
-    // each team rings its SF2 player start (team 0 → alpha); the points stand on the floor and fit a soldier
+    // v65v every SF2 start of the team (TDM ones, tools/sf2_map_build.mjs) is a spawn point, on the floor and fitting a soldier
     spawnPoints(team, game) {
-      const S = this._s2.meta.starts, s = S.find((x) => (x.team === 0 ? "alpha" : "bravo") === team) || S[team === "alpha" ? 0 : S.length - 1], pts = [], col = game.collision;
-      for (let r = 0; r <= 5; r += 1.2) for (let a = 0; a < Math.PI * 2; a += r ? 1.2 / r : 7) {
-        const x = s.pos[0] + Math.cos(a) * r, z = s.pos[2] + Math.sin(a) * r, g = col.groundBelow(x, s.pos[1] + 1.2, z, 0.3, 3, 0);
-        if (g && !g.steep && col.fits(x, g.y + 0.05, z, 0.42, 1.8)) {
-          const p = new THREE.Vector3(x, g.y, z);
+      const all = this._s2.meta.starts, mine = all.filter((x) => (x.team === 0 ? "alpha" : "bravo") === team), pts = [], col = game.collision, cells = /* @__PURE__ */ new Map();
+      for (const s of mine) {
+        const k = Math.round(s.pos[0] / 15) + "," + Math.round(s.pos[2] / 15);
+        cells.set(k, (cells.get(k) || []).concat([s]));
+      }
+      const best = [...cells.values()].sort((a, c) => c.length - a.length)[0] || [], cx = best.reduce((t, s) => t + s.pos[0], 0) / (best.length || 1), cz = best.reduce((t, s) => t + s.pos[2], 0) / (best.length || 1);
+      const base = mine.filter((s) => Math.hypot(s.pos[0] - cx, s.pos[2] - cz) < 12), S = base.length ? base : mine.length ? mine : [all[team === "alpha" ? 0 : all.length - 1]];
+      for (const s of S) {
+        const g = col.groundBelow(s.pos[0], s.pos[1] + 1.2, s.pos[2], 0.3, 3, 0);
+        if (g && col.fits(s.pos[0], g.y + 0.05, s.pos[2], 0.42, 1.8)) {
+          const p = new THREE.Vector3(s.pos[0], g.y, s.pos[2]);
           p.spawnYaw = s.yaw;
           pts.push(p);
         }
       }
-      return { pts: pts.length ? pts : [new THREE.Vector3(...s.pos)], yaw: s.yaw };
+      return { pts: pts.length ? pts : [new THREE.Vector3(...S[0].pos)], yaw: S[0].yaw };
     },
     build(b) {
       const S = this._s2 && this._s2.meta.starts;
@@ -16933,6 +16947,10 @@ function sf2TriMap(def) {
         if (o.isMesh) meshes.push(o);
       });
       for (const m of meshes) {
+        if (m.userData.colOnly) {
+          m.removeFromParent();
+          continue;
+        }
         m.removeFromParent();
         m.matrixWorld.decompose(m.position, m.quaternion, m.scale);
         m.matrixAutoUpdate = false;
@@ -16975,6 +16993,19 @@ SF2_LISTED && MAPS.push(sf2TriMap({
   thumb: { pos: [16, 80, 70], target: [16, 0, 0], fov: 55 },
   objectives: { dom: [[-12, 0, -22], [8, 0, 0], [28, 0, 22]], relic: [8, 0, 0], domRadius: 5 }
 }));
+MAPS.push(sf2TriMap({
+  id: "sf2_desertcamp",
+  name: "SF2 沙漠營地",
+  en: "DESERT CAMP",
+  desc: "Special Force 2 原版地圖 1:1 · 原版模型、擺設與碰撞",
+  slogan: "沙漠營地 · 中央廣場與兩側巷道",
+  bounds: { minX: -38, maxX: 57, minZ: -32, maxZ: 59 },
+  indoor: false,
+  killY: -20,
+  shot: { pos: [10, 60, 70], target: [10, 0, 12] },
+  thumb: { pos: [10, 70, 80], target: [10, 0, 12], fov: 55 },
+  objectives: { dom: [[-4, 0, -12], [3, 0, 7], [9, 0, 26]], relic: [3, 0, 7], domRadius: 5 }
+}));
 
 // src/08_nav_input.js
 var NavGraph = class {
@@ -16987,14 +17018,15 @@ var NavGraph = class {
     this.hash = /* @__PURE__ */ new Map();
     this.cellSize = 3;
     this.bounds = def.bounds;
+    this.climb = def.navClimb ?? 0.2;
     this.build(builder, def);
   }
-  walkable(x, y, z, tol = 0.25) {
+  walkable(x, y, z, tol = this.climb > 0.2 ? 0.45 : 0.25) {
     const B = this.bounds;
     if (x < B.minX + 0.5 || x > B.maxX - 0.5 || z < B.minZ + 0.5 || z > B.maxZ - 0.5) return null;
     const g = this.col.groundBelow(x, y + 0.4, z, 0.12, 0.8, 0.02);
     if (!g || Math.abs(g.y - y) > tol || g.steep) return null;
-    if (!this.col.fits(x, g.y + 0.2, z, 0.38, 1.5)) return null;
+    if (!this.col.fits(x, g.y + this.climb, z, 0.38, 1.5)) return null;
     for (const rp of this.col.ramps) {
       if (x + 0.4 <= rp.minX || x - 0.4 >= rp.maxX || z + 0.4 <= rp.minZ || z - 0.4 >= rp.maxZ) continue;
       if (this.col.rampMaxUnder(rp, x, z, 0.4) > g.y + 0.5) return null;
@@ -17051,7 +17083,7 @@ var NavGraph = class {
       this._baked(builder.navBaked);
       return;
     }
-    const B = def.bounds, step = 2, T = this.col.terrain;
+    const B = def.bounds, step = def.navGrid || 2, T = this.col.terrain;
     for (const lvl of def.navLevels || []) {
       for (let x = B.minX + 1; x <= B.maxX - 1; x += step) for (let z2 = B.minZ + 1; z2 <= B.maxZ - 1; z2 += step) {
         const y = this.walkable(x, lvl, z2);
@@ -17081,7 +17113,7 @@ var NavGraph = class {
     for (const a of base) this.near(a.p, 3.6, (b) => {
       if (b.id <= a.id) return;
       const tt = a.p.terr && b.p.terr, d = Math.hypot(a.p.x - b.p.x, a.p.z - b.p.z);
-      if (d > (tt ? 3.6 : 2.95) || Math.abs(a.p.y - b.p.y) > (tt ? Math.max(0.5, d * 0.95) : 0.5)) return;
+      if (d > (tt ? 3.6 : 2.95) || Math.abs(a.p.y - b.p.y) > (tt ? Math.max(0.5, d * 0.95) : this.climb > 0.2 ? Math.max(0.5, d * 0.7) : 0.5)) return;
       if (tt ? this.terrainLink(a.p, b.p) : this.segmentWalkable(a.p, b.p)) this._link(a, b);
     });
     for (const chain of builder.navChains) {

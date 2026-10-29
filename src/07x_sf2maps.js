@@ -17,7 +17,7 @@ const SF2_LISTED = false;
 
 function sf2TriMap(def) {
   return Object.assign({
-    indoor: false, killOutside: false, traversal: false, acoustics: 'indoor', ambience: 'warehouse',
+    indoor: false, killOutside: false, traversal: false, navClimb: 0.45, navGrid: 1, acoustics: 'indoor', ambience: 'warehouse',
     background: 0x8c9aa6, envIntensity: 0.55, exposure: 1.0, hemi: [0xd8e2ec, 0x5a5048, 0.9],
     sun: { pos: [30, 60, 20], color: 0xfff1de, intensity: 1.6, auto: true }, fog: { color: 0x8c9aa6, near: 80, far: 400 }, shadowFollow: 40,
     async preload() {
@@ -30,6 +30,8 @@ function sf2TriMap(def) {
       const pos = [], idx = [], v = new THREE.Vector3(), box = new THREE.Box3(), size = new THREE.Vector3(), all = new THREE.Box3();
       gltf.scene.traverse((o) => {
         if (!o.isMesh) return;
+        const ex = (k) => o.userData[k] || (o.parent && o.parent.userData[k]); // (glTF node extras: on the node, or its group)
+        if (ex('colOnly')) o.userData.colOnly = true; else if (ex('nocol')) { o.userData.nocol = true; return; } // v65v SF2's collision: off where it turned it off, its blocking volumes in
         box.setFromObject(o); if (box.getSize(size).length() > 300) { o.userData.sky = true; return; }
         all.union(box);
         const g = o.geometry, P = g.attributes.position, base = pos.length / 3;
@@ -40,16 +42,21 @@ function sf2TriMap(def) {
       this._s2 = { gltf, soup, meta: d.meta };
       this.bounds = { minX: Math.floor(all.min.x) - 2, maxX: Math.ceil(all.max.x) + 2, minZ: Math.floor(all.min.z) - 2, maxZ: Math.ceil(all.max.z) + 2 };
       this.killY = all.min.y - 15;
-      const levels = []; for (let y = Math.floor(all.min.y); y <= Math.ceil(all.max.y); y += 1) levels.push(y + 0.9); this.navLevels = levels; // (each 1 m slab: walkable() snaps to the floor under it)
+      const levels = []; for (let y = Math.floor(all.min.y); y <= Math.ceil(all.max.y); y += 0.5) levels.push(y + 0.2); this.navLevels = levels; // v65v slabs every 0.5 m: NavGraph.walkable() takes a floor within ±0.25 m of the slab, so 1 m slabs missed every floor between (SF2's uneven ground: Desert Camp's graph fell into 155 pieces, no path between the bases)
     },
-    // each team rings its SF2 player start (team 0 → alpha); the points stand on the floor and fit a soldier
+    // v65v every SF2 start of the team (TDM ones, tools/sf2_map_build.mjs) is a spawn point, on the floor and fitting a soldier
     spawnPoints(team, game) {
-      const S = this._s2.meta.starts, s = S.find((x) => (x.team === 0 ? 'alpha' : 'bravo') === team) || S[team === 'alpha' ? 0 : S.length - 1], pts = [], col = game.collision;
-      for (let r = 0; r <= 5; r += 1.2) for (let a = 0; a < Math.PI * 2; a += r ? 1.2 / r : 7) {
-        const x = s.pos[0] + Math.cos(a) * r, z = s.pos[2] + Math.sin(a) * r, g = col.groundBelow(x, s.pos[1] + 1.2, z, 0.3, 3, 0);
-        if (g && !g.steep && col.fits(x, g.y + 0.05, z, 0.42, 1.8)) { const p = new THREE.Vector3(x, g.y, z); p.spawnYaw = s.yaw; pts.push(p); }
+      // (SF2's TDM starts are spread over the map for respawns; a team's base is its densest cluster — 15 m cells, the starts within 12 m of
+      // the densest cell's mean: Desert Camp Alpha 13 at (−15, −30), Bravo 12 at (30, 45) — v65v both teams had spawned in one corner)
+      const all = this._s2.meta.starts, mine = all.filter((x) => (x.team === 0 ? 'alpha' : 'bravo') === team), pts = [], col = game.collision, cells = new Map();
+      for (const s of mine) { const k = Math.round(s.pos[0] / 15) + ',' + Math.round(s.pos[2] / 15); cells.set(k, (cells.get(k) || []).concat([s])); }
+      const best = [...cells.values()].sort((a, c) => c.length - a.length)[0] || [], cx = best.reduce((t, s) => t + s.pos[0], 0) / (best.length || 1), cz = best.reduce((t, s) => t + s.pos[2], 0) / (best.length || 1);
+      const base = mine.filter((s) => Math.hypot(s.pos[0] - cx, s.pos[2] - cz) < 12), S = base.length ? base : mine.length ? mine : [all[team === 'alpha' ? 0 : all.length - 1]];
+      for (const s of S) {
+        const g = col.groundBelow(s.pos[0], s.pos[1] + 1.2, s.pos[2], 0.3, 3, 0);
+        if (g && col.fits(s.pos[0], g.y + 0.05, s.pos[2], 0.42, 1.8)) { const p = new THREE.Vector3(s.pos[0], g.y, s.pos[2]); p.spawnYaw = s.yaw; pts.push(p); }
       }
-      return { pts: pts.length ? pts : [new THREE.Vector3(...s.pos)], yaw: s.yaw };
+      return { pts: pts.length ? pts : [new THREE.Vector3(...S[0].pos)], yaw: S[0].yaw };
     },
     build(b) {
       const S = this._s2 && this._s2.meta.starts;
@@ -60,6 +67,7 @@ function sf2TriMap(def) {
       for (const l of this._s2.meta.ladders || []) b.navExtra.push(new THREE.Vector3(l[0], l[1], l[2])); // (SF2's ladder volumes: climbing is a follow-up)
       const meshes = []; gltf.scene.traverse((o) => { if (o.isMesh) meshes.push(o); });
       for (const m of meshes) {
+        if (m.userData.colOnly) { m.removeFromParent(); continue; } // (a blocking volume: in the triangle soup, not drawn)
         m.removeFromParent(); m.matrixWorld.decompose(m.position, m.quaternion, m.scale); m.matrixAutoUpdate = false; m.updateMatrix();
         m.castShadow = !m.userData.sky; m.receiveShadow = true;
         for (const mt of Array.isArray(m.material) ? m.material : [m.material]) { mt.side = THREE.DoubleSide; if (mt.map) mt.map.anisotropy = 4; }
@@ -86,3 +94,13 @@ SF2_LISTED && MAPS.push(sf2TriMap({
 }));
 
 export { sf2TriMap };
+
+// v65v Desert Camp (user 10-29: 1:1, the SF2 map to keep) — every placed mesh incl. SFStaticMeshActor / SFKActorNoSync (archetype meshes),
+// collision as SF2 sets it (components with CollideActors / BlockActors off left out, its 29 blocking volumes in); Alpha (TDM starts)
+// south of the square, Bravo north (game metres: x −36 … 55, z −30 … 57)
+MAPS.push(sf2TriMap({
+  id: 'sf2_desertcamp', name: 'SF2 沙漠營地', en: 'DESERT CAMP', desc: 'Special Force 2 原版地圖 1:1 · 原版模型、擺設與碰撞', slogan: '沙漠營地 · 中央廣場與兩側巷道',
+  bounds: { minX: -38, maxX: 57, minZ: -32, maxZ: 59 }, indoor: false, killY: -20,
+  shot: { pos: [10, 60, 70], target: [10, 0, 12] }, thumb: { pos: [10, 70, 80], target: [10, 0, 12], fov: 55 },
+  objectives: { dom: [[-4, 0, -12], [3, 0, 7], [9, 0, 26]], relic: [3, 0, 7], domRadius: 5 },
+}));
