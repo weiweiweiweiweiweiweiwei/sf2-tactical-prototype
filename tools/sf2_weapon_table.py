@@ -8,6 +8,12 @@ sound times measured on its Reload clip (magazine out / in, bolt: weapon_magazin
 import json
 
 GUNS = {
+    'scarhdmr': ('SCARHDMR', 'scarh', 'scarh', [0.12, 0.4, 0.73]),  # v65s no own model: scarh's rig
+    'fs2000': ('FNFS2000', 'fnf2000', 'fnf2000', [0.12, 0.4, 0.73]),  # v65s no own model: fnf2000's rig
+    'sar21': ('SAR21', 'sar21', 'sar21', [0.12, 0.4, 0.73]),  # v65q sf2_add_gun
+    'mrr': ('MRR', 'mrr', 'mrr', [0.12, 0.4, 0.73]),  # v65q sf2_add_gun
+    'madsenlar': ('MadsenLar', 'madsenlar', 'madsenlar', [0.12, 0.4, 0.73]),  # v65q sf2_add_gun
+    'k2c1': ('K2C1', 'k2c1', 'k2c1', [0.12, 0.4, 0.73]),  # v65q sf2_add_gun
     'fnf2000': ('FNF2000', 'fnf2000', 'fnf2000', [0.12, 0.4, 0.73]),  # v65q sf2_add_gun
     'cm901': ('CM901', 'cm901', 'cm901', [0.12, 0.4, 0.73]),  # v65q sf2_add_gun
     'arx160': ('ARX160', 'arx160', 'arx160', [0.12, 0.4, 0.73]),  # v65q sf2_add_gun

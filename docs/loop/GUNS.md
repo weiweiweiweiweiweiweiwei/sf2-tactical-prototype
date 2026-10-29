@@ -25,7 +25,7 @@
 7. **驗證**：`GUNID=<id> ONLY=hip,ads,ads2,fire TAG=<id> node tools/out/_rigshot.mjs`（看截圖：鏡子在槍正上方、手握得住、開鏡十字對）、`GUNID=<id> node tools/out/_reloadtime.mjs`、`node tools/check.mjs`。（`_rigshot` 的 reload 步驟把彈藥設 5，狙擊槍彈匣 5 會卡住，狙擊槍不要用 reload。）
 
 聲音清單（`tools/sfx_sf2.mjs` 參數，每加一把就更新）：
-`m4a1 ak103 g36c m16a3 k2 scarh famas xm8 galil hk417 qbz97 mp5k k14 trg m40a1 cz700 cheytac awp barrett@Barret kar98k@Kar98k_new sr25 psg1 frf2 m14ebr aug@AUGA3 sg551@SIG551 type89 ump45 mp7 mg4 k3 hk23e remington870@M870 benelli_m4@Bnlli ksg saiga12 p226@SIGP226 deagle@DesertEagle glock18@Glock17 m1911@Colt911 cz75@CZ75 jericho@Jericho914 sw60@SW60 infinity@Infi g36c_eo=g36c+silence hk417_rs=hk417+silence scarl_eo=scarh+silence acr an94 arx160 fnf2000`
+`m4a1 ak103 g36c m16a3 k2 scarh famas xm8 galil hk417 qbz97 mp5k k14 trg m40a1 cz700 cheytac awp barrett@Barret kar98k@Kar98k_new sr25 psg1 frf2 m14ebr aug@AUGA3 sg551@SIG551 type89 ump45 mp7 mg4 k3 hk23e remington870@M870 benelli_m4@Bnlli ksg saiga12 p226@SIGP226 deagle@DesertEagle glock18@Glock17 m1911@Colt911 cz75@CZ75 jericho@Jericho914 sw60@SW60 infinity@Infi g36c_eo=g36c+silence hk417_rs=hk417+silence scarl_eo=scarh+silence acr an94 arx160 fnf2000 k2c1 mrr sar21 madsenlar@MedsenLar`
 
 ## 佇列（由上往下做）
 狀態：⬜ 未做 · 🔄 進行中 · ✅ 完成 · ⏸ 做不到（寫原因）

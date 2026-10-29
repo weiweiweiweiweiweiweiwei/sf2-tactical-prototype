@@ -48,6 +48,10 @@ const ZEISS_SCOPE = { ...PART('weapon_common_part01', 'scope_zeiess'), tex: 'zei
 const SCOPE = (name, tex) => ({ ...PART('weapon_common_part', name), tex, noAim: true, roll: +(process.env.ROLL ?? 90) });
 const SIL = (k) => ({ ...PART('weapon_common_part', `silencer_ar_type_${k}`), tex: `silencer_type_${k}` });
 const GUNS = {
+  madsenlar: gun('madsenlar', { pkg: 'rif_madsen_lar', tex: 'rif_madsen_lar', anim: '1st_anim_madsen_lar' }), // v65q tools/sf2_add_gun.py
+  sar21: gun('sar21', { pkg: 'rif_sar21', hoodedPost: true, socketSights: sight('sar21/rif_sar21_sight/SkeletalMesh3/rif_sar21_sight_up.gltf', 'sar21_sight') }), // v65q tools/sf2_add_gun.py
+  mrr: gun('mrr', { pkg: 'rif_mrr', tex: 'mrr_hightech', hoodedPost: true, socketSights: sight('mrr/rif_mrr/SkeletalMesh3/rif_mrr_sight_up.gltf', 'rif_mrr_sight') }), // v65q tools/sf2_add_gun.py
+  k2c1: gun('k2c1', { pkg: 'rif_K2C1', stem: 'rif_k2c1', anim: '1st_anim_K2C1' }), // v65q tools/sf2_add_gun.py
   fnf2000: gun('fnf2000', { pkg: 'rif_fnf2000', hoodedPost: true, socketSights: sight('fnf2000/rif_fnf2000/SkeletalMesh3/rif_fnf2000_sight_up.gltf', 'fnf2000_sight') }), // v65q tools/sf2_add_gun.py
   cm901: gun('cm901', { pkg: 'rif_cm901', tex: 'rif_cm901' }), // v65q tools/sf2_add_gun.py
   arx160: gun('arx160', { pkg: 'rif_arx160', tex: 'rif_arx160' }), // v65q tools/sf2_add_gun.py

@@ -1625,3 +1625,8 @@
 
 ### （本機，2026-10-29）：SF2 新槍 ARX160、CM901、F2000
 - `tools/sf2_add_gun.py` 各一行：模型、動畫、聲音、數值、重量都是 SF2 原版；腰射截圖正常。開鏡瞄準點待量（ARX160 照門擋住、CM901／F2000 鏡頭在槍身裡），記在 TODO。
+
+
+### （本機，2026-10-29）：SF2 新槍 K2C1、Madsen-LAR、MRR、SAR-21、FS2000、SCAR-H DMR
+- 前四把用 `tools/sf2_add_gun.py`（Madsen 的聲音包叫 `Sound_MedsenLar`）；FS2000、SCAR-H DMR 安裝檔裡沒有獨立模型，沿用 F2000／SCAR-H 外觀、套自己的 SF2 數值。L85A1 沒有模型包，暫停。
+- 截圖：MRR、SCAR-H DMR 腰射開鏡都正常；K2C1、SAR-21、FS2000 開鏡待量、Madsen 槍身貼圖待找（TODO）。
