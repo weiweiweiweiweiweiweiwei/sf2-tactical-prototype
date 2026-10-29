@@ -16894,6 +16894,31 @@ function stairSides(g, mat) {
   return new THREE.Mesh(sg, mat);
 }
 __name(stairSides, "stairSides");
+var _lb = new THREE.Box3();
+var _lc = new THREE.Vector3();
+function sf2Ladder(b, m) {
+  m.updateMatrixWorld(true);
+  _lb.setFromObject(m);
+  _lb.getCenter(_lc);
+  const sx = _lb.max.x - _lb.min.x, sz = _lb.max.z - _lb.min.z, col = b.col;
+  const y0 = _lb.min.y, hw = Math.max(sx, sz) / 2;
+  const top = /* @__PURE__ */ __name((nx2, nz2) => {
+    const g2 = col.groundBelow(_lc.x - nx2 * 0.8, _lb.max.y + 1.5, _lc.z - nz2 * 0.8, 0.15, _lb.max.y - y0 + 2, 0);
+    return g2 ? g2.y : -Infinity;
+  }, "top");
+  const cand = sx < sz ? [[1, 0], [-1, 0]] : [[0, 1], [0, -1]], [nx, nz] = top(...cand[0]) >= top(...cand[1]) ? cand[0] : cand[1];
+  const g = col.groundBelow(_lc.x - nx * 0.8, _lb.max.y + 1.5, _lc.z - nz * 0.8, 0.15, _lb.max.y - y0 + 2, 0);
+  const y1 = g && g.y > y0 + 1 ? g.y : _lb.max.y - 0.2, x = _lc.x - nx * 0.15, z = _lc.z - nz * 0.15, tx = -nz, tz = nx;
+  const P = /* @__PURE__ */ __name((a, y, d) => new THREE.Vector3(x + tx * a + nx * d, y, z + tz * a + nz * d), "P");
+  const chain = [P(0, y0, 0.95), P(0, y1, -0.95)];
+  chain.ladder = true;
+  chain.cost = 1.8;
+  b.navChains.push(chain);
+  b.ladders.push({ x, z, y0, y1, nx, nz });
+  const vx0 = Math.min(x + nx * 0.8, x - nx * 0.15), vx1 = Math.max(x + nx * 0.8, x - nx * 0.15), vz0 = Math.min(z + nz * 0.8, z - nz * 0.15), vz1 = Math.max(z + nz * 0.8, z - nz * 0.15);
+  col.addLadder({ minX: nx ? vx0 : x - hw, maxX: nx ? vx1 : x + hw, minZ: nz ? vz0 : z - hw, maxZ: nz ? vz1 : z + hw, y0: y0 - 0.1, y1: y1 + 0.35, top: y1, nx, nz });
+}
+__name(sf2Ladder, "sf2Ladder");
 function sf2TriMap(def) {
   return Object.assign({
     indoor: false,
@@ -17001,6 +17026,9 @@ function sf2TriMap(def) {
         const m = src.clone();
         m.matrixWorld.copy(src.matrixWorld);
         if (stairMat && /^dc_stair_/i.test(m.name) && !Array.isArray(m.material) && !(def.stairKeep || []).includes(m.material.name)) m.material = stairMat;
+        m.matrixWorld.decompose(m.position, m.quaternion, m.scale);
+        m.matrixAutoUpdate = false;
+        m.updateMatrix();
         if (def.stairSides && def.stairSides.test(m.name)) {
           const s = stairSides(src.geometry, m.material);
           if (s) {
@@ -17010,17 +17038,18 @@ function sf2TriMap(def) {
             b.scene.add(s);
           }
         }
-        m.matrixWorld.decompose(m.position, m.quaternion, m.scale);
-        m.matrixAutoUpdate = false;
-        m.updateMatrix();
         m.castShadow = !m.userData.sky;
         m.receiveShadow = true;
         for (const mt of Array.isArray(m.material) ? m.material : [m.material]) {
           mt.vertexColors = false;
           mt.side = THREE.DoubleSide;
-          if (mt.map) mt.map.anisotropy = 4;
+          if (mt.map) {
+            mt.map.anisotropy = 4;
+            mt.color.setRGB(1, 1, 1);
+          }
         }
         b.scene.add(m);
+        if (/ladder/i.test(m.name)) sf2Ladder(b, m);
       }
     }
   }, def);

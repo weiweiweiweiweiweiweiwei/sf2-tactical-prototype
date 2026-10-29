@@ -35,6 +35,26 @@ function stairSides(g, mat) {
   return new THREE.Mesh(sg, mat);
 }
 
+// v65y an SF2 ladder mesh made climbable (user 10-29, Desert Camp: DC_ladder_001 / S_ladder_004 were scenery): the thin horizontal
+// axis of its box is the climb direction, the side that is blocked at mid height is the wall, the floor found on top of the wall
+// is the platform; a climb volume and a nav link as MapBuilder.ladder() makes them, without its own rungs
+const _lb = new THREE.Box3(), _lc = new THREE.Vector3();
+function sf2Ladder(b, m) {
+  m.updateMatrixWorld(true); _lb.setFromObject(m); _lb.getCenter(_lc); const sx = _lb.max.x - _lb.min.x, sz = _lb.max.z - _lb.min.z, col = b.col;
+  const y0 = _lb.min.y, hw = Math.max(sx, sz) / 2;
+  // (the platform lies behind the ladder, −normal: the side whose floor, looked for from above the ladder's top, is the higher one —
+  // the triangle collision has no inside, so a 'blocked' test says nothing)
+  const top = (nx, nz) => { const g = col.groundBelow(_lc.x - nx * 0.8, _lb.max.y + 1.5, _lc.z - nz * 0.8, 0.15, _lb.max.y - y0 + 2, 0); return g ? g.y : -Infinity; };
+  const cand = sx < sz ? [[1, 0], [-1, 0]] : [[0, 1], [0, -1]], [nx, nz] = top(...cand[0]) >= top(...cand[1]) ? cand[0] : cand[1];
+  const g = col.groundBelow(_lc.x - nx * 0.8, _lb.max.y + 1.5, _lc.z - nz * 0.8, 0.15, _lb.max.y - y0 + 2, 0);
+  const y1 = g && g.y > y0 + 1 ? g.y : _lb.max.y - 0.2, x = _lc.x - nx * 0.15, z = _lc.z - nz * 0.15, tx = -nz, tz = nx;
+  const P = (a, y, d) => new THREE.Vector3(x + tx * a + nx * d, y, z + tz * a + nz * d);
+  const chain = [P(0, y0, 0.95), P(0, y1, -0.95)]; chain.ladder = true; chain.cost = 1.8; b.navChains.push(chain);
+  b.ladders.push({ x, z, y0, y1, nx, nz });
+  const vx0 = Math.min(x + nx * 0.8, x - nx * 0.15), vx1 = Math.max(x + nx * 0.8, x - nx * 0.15), vz0 = Math.min(z + nz * 0.8, z - nz * 0.15), vz1 = Math.max(z + nz * 0.8, z - nz * 0.15);
+  col.addLadder({ minX: nx ? vx0 : x - hw, maxX: nx ? vx1 : x + hw, minZ: nz ? vz0 : z - hw, maxZ: nz ? vz1 : z + hw, y0: y0 - 0.1, y1: y1 + 0.35, top: y1, nx, nz });
+}
+
 function sf2TriMap(def) {
   return Object.assign({
     indoor: false, killOutside: false, traversal: false, navClimb: 0.45, navGrid: 1, bodyRadius: 0.25, underFloorAirOnly: true, acoustics: 'indoor', ambience: 'warehouse',
@@ -104,10 +124,12 @@ function sf2TriMap(def) {
         // v65y a clone per match (geometry / materials shared): moving the loaded meshes themselves left the map's second match empty
         const m = src.clone(); m.matrixWorld.copy(src.matrixWorld);
         if (stairMat && /^dc_stair_/i.test(m.name) && !Array.isArray(m.material) && !(def.stairKeep || []).includes(m.material.name)) m.material = stairMat;
-        if (def.stairSides && def.stairSides.test(m.name)) { const s = stairSides(src.geometry, m.material); if (s) { s.matrix.copy(m.matrix); s.matrixAutoUpdate = false; s.castShadow = s.receiveShadow = true; b.scene.add(s); } } m.matrixWorld.decompose(m.position, m.quaternion, m.scale); m.matrixAutoUpdate = false; m.updateMatrix();
+        m.matrixWorld.decompose(m.position, m.quaternion, m.scale); m.matrixAutoUpdate = false; m.updateMatrix();
+        if (def.stairSides && def.stairSides.test(m.name)) { const s = stairSides(src.geometry, m.material); if (s) { s.matrix.copy(m.matrix); s.matrixAutoUpdate = false; s.castShadow = s.receiveShadow = true; b.scene.add(s); } }
         m.castShadow = !m.userData.sky; m.receiveShadow = true;
-        for (const mt of Array.isArray(m.material) ? m.material : [m.material]) { mt.vertexColors = false; mt.side = THREE.DoubleSide; if (mt.map) mt.map.anisotropy = 4; } // (v65w UModel writes SF2's vertex paint as COLOR_0: multiplied in, it striped crates and benches in rainbow colours)
+        for (const mt of Array.isArray(m.material) ? m.material : [m.material]) { mt.vertexColors = false; mt.side = THREE.DoubleSide; if (mt.map) { mt.map.anisotropy = 4; mt.color.setRGB(1, 1, 1); } } // (v65y UModel gives every mesh material a 0.58 grey base colour SF2 does not have: the sand mound by the square came out darker than the BSP sand around it in the same texture) // (v65w UModel writes SF2's vertex paint as COLOR_0: multiplied in, it striped crates and benches in rainbow colours)
         b.scene.add(m);
+        if (/ladder/i.test(m.name)) sf2Ladder(b, m);
       }
     },
   }, def);

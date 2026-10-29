@@ -27,27 +27,43 @@ def actor_matrix(pr):  # v65v UE3 FRotationMatrix rows × DrawScale(3D), Locatio
 def collides(cp):  # v65v a component switched off for collision (grass, wires, decor) stays out of the game's triangle soup
     return not (cp.get('CollideActors') is False or cp.get('BlockActors') is False or str(cp.get('CollideActors')) == 'False' or str(cp.get('BlockActors')) == 'False')
 ACTORS = ('StaticMeshActor', 'SFStaticMeshActor', 'InterpActor', 'KActor', 'SFKActorNoSync', 'SFKActor', 'SFBreakableActorByDamage')  # (v65w + SF2's breakable cars: the intact mesh, not the burnt one)
-by_outer = {}
-for k, x in enumerate(p.exports, 1): by_outer.setdefault(x['outer'], []).append(x)
-for k, e in enumerate(p.exports, 1):
-    c = p.clsname(e)
-    if c == 'StaticMeshCollectionActor':
-        pr = {n: v for n, i, t, v in p.props(e)}; at = p.o; comps = pr.get('StaticMeshComponents') or {'i': []}
-        for j, ci in enumerate(comps['i']):
-            if ci <= 0: continue
-            m = list(struct.unpack_from('<16f', p.b, at + 64 * j)); mesh, cp = mesh_of(p.exports[ci - 1])
-            if mesh and mesh != 'None': out.append({'mesh': mesh, 'm': [round(x, 4) for x in m], 'col': collides(cp)})
-    elif c in ACTORS or (c.endswith('Actor') and 'KActor' in c):
-        if e['flags'] & 0x400000000: continue  # v65y RF_ArchetypeObject: a prefab's template (humvee_01_Arc0 …) at the origin, not placed
-        pr = {n: v for n, i, t, v in p.props(e)}
-        ce = next((x for x in by_outer.get(k, []) if p.clsname(x) == 'StaticMeshComponent'), None)
-        if not ce: continue
-        mesh, cp = mesh_of(ce)
-        if c == 'SFBreakableActorByDamage':
-            ce = next((x for x in by_outer.get(k, []) if p.clsname(x) == 'StaticMeshComponent' and (mesh_of(x)[0] or '').lower().find('fire') < 0 and mesh_of(x)[0] not in (None, 'None')), None)
+def place(out):  # v65y one package's placed meshes (the global p), appended to out
+    by_outer = {}
+    for k, x in enumerate(p.exports, 1): by_outer.setdefault(x['outer'], []).append(x)
+    for k, e in enumerate(p.exports, 1):
+        c = p.clsname(e)
+        if c == 'StaticMeshCollectionActor':
+            pr = {n: v for n, i, t, v in p.props(e)}; at = p.o; comps = pr.get('StaticMeshComponents') or {'i': []}
+            for j, ci in enumerate(comps['i']):
+                if ci <= 0: continue
+                m = list(struct.unpack_from('<16f', p.b, at + 64 * j)); mesh, cp = mesh_of(p.exports[ci - 1])
+                if mesh and mesh != 'None': out.append({'mesh': mesh, 'm': [round(x, 4) for x in m], 'col': collides(cp)})
+        elif c in ACTORS or (c.endswith('Actor') and 'KActor' in c):
+            if e['flags'] & 0x400000000: continue  # v65y RF_ArchetypeObject: a prefab's template (humvee_01_Arc0 …) at the origin, not placed
+            pr = {n: v for n, i, t, v in p.props(e)}
+            ce = next((x for x in by_outer.get(k, []) if p.clsname(x) == 'StaticMeshComponent'), None)
             if not ce: continue
             mesh, cp = mesh_of(ce)
-        if mesh and mesh != 'None': out.append({'mesh': mesh, 'm': actor_matrix(pr), 'col': collides(cp), 'actor': c})
+            if c == 'SFBreakableActorByDamage':
+                ce = next((x for x in by_outer.get(k, []) if p.clsname(x) == 'StaticMeshComponent' and (mesh_of(x)[0] or '').lower().find('fire') < 0 and mesh_of(x)[0] not in (None, 'None')), None)
+                if not ce: continue
+                mesh, cp = mesh_of(ce)
+            if mesh and mesh != 'None': out.append({'mesh': mesh, 'm': actor_matrix(pr), 'col': collides(cp), 'actor': c})
+    return by_outer
+by_outer = place(out)
+# v65y --with <sublevel>…: the sublevels SF2 streams in for play (Desert Camp: Desertcamp_ob — the tank hull, the scaled-up hangar, door
+# frames and stairs); a sublevel's mesh replaces the persistent level's copy of the same mesh within 1 m (the redone placement)
+main_p = p
+for sub in (sys.argv[sys.argv.index('--with') + 1:] if '--with' in sys.argv else []):
+    p = Pkg(f'tools/out/sf2/{sub}_dec.upk'); extra = []; place(extra)
+    for x in extra:
+        t = x['m'][12:15]
+        same = [o for o in out if o['mesh'] == x['mesh'] and sum((a - b) ** 2 for a, b in zip(o['m'][12:15], t)) < 100 ** 2]
+        if any(o['col'] for o in same): x['col'] = True  # (the sublevel's copies have collision off: the one they replace had it)
+        out[:] = [o for o in out if not any(o is q for q in same)]
+    out += extra; print(sub, len(extra), 'placements merged')
+p = main_p; by_outer = {}
+for k, x in enumerate(p.exports, 1): by_outer.setdefault(x['outer'], []).append(x)
 # v65v blocking volumes (SF2's own invisible walls): their brush Model's polygons (the BSP layout of tools/sf2_map_bsp.py), brush-local
 # minus PrePivot, then the actor's matrix → world triangles (UE cm), collision only
 blocks = []
