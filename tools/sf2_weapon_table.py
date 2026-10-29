@@ -10,6 +10,7 @@ import json
 GUNS = {  # id: (SF2 class, rig, sound, [magout, magin, charge])
     'm16a3': ('M16A3', 'm16a3', 'm16a3', [0.07, 0.35, 0.72]),  # (v62z loop H3: the M4A1's carry handle + A2 front sight on the flat-top, tools/sf2_rig_build.mjs)
     'k2': ('K2', 'k2', 'k2', [0.12, 0.35, 0.75]),
+    'acr': ('ACR', 'acr', 'acr', [0.12, 0.4, 0.73]),  # v65p
     'scarl': ('SCARL', 'scarl', 'scarh', [0.12, 0.44, 0.72]),  # (SF2 plays the SCAR-H's sounds)
     'scarh': ('SCARH', 'scarh', 'scarh', [0.12, 0.44, 0.72]),
     'famas': ('FAMAS', 'famas', 'famas', [0.2, 0.4, 0.73]),

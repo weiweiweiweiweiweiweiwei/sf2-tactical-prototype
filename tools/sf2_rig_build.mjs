@@ -94,6 +94,7 @@ const GUNS = {
   frf2: gun('frf2', { pkg: 'sni_frf2', stem: 'sni_frf2', tex: 'frf2', optic: SCOPE('scope_pm2', 'scope_pm2') }), // (SFCItem_FRF2_Def_Scope: Common_Scope_PM2, reticle mic_ScopeView_01)
   m14ebr: gun('m14ebr', { optic: EOTECH }), // (SFCItem_M14EBR: SFCItem_Common_DotSight_EOTECH on its Scope socket)
   // v65e docs/loop/GUNS.md D: rifles
+  acr: gun('acr', { hoodedPost: true, socketSights: sight('acr/rif_acr_sight/SkeletalMesh3/rif_acr_sight_up.gltf', 'acr_sight') }), // v65p
   aug: gun('aug', { tex: 'rif_aug', socketSights: sight('aug/rif_aug_sight/SkeletalMesh3/rif_aug_sight_up.gltf', 'aug_sight') }),
   sg551: gun('sg551', { pkg: 'rif_sig551', tex: 'sig551', anim: '1st_anim_sig551', hoodedPost: true }), // (sights on the body)
   type89: gun('type89', { hoodedPost: true }), // (its sight package put on the Scope socket floated off the gun: the body's own sights)

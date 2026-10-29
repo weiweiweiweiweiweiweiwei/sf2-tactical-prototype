@@ -39,7 +39,7 @@
   5. `node tools/_mapthumbs.mjs sf2_<圖小寫>`；`node tools/check.mjs --map <編號>`（CHECK_OK）；`MAP=<編號> ONLY=hip node tools/out/_rigshot.mjs` 看玩家視角
 
 ### G3. 遊戲裡還沒有的 SF2 底槍（`docs/research/sf2/gun-inventory.md`；SF2 包名用 `umodel -list` 找 `rif_`／`smg_`／`sni_`／`mg_`／`sho_`／`pis_` 開頭）
-- ⬜ ACR（突擊步槍）
+- ✅ ACR（突擊步槍，v65p）
 - ⬜ AK104（突擊步槍）
 - ⬜ AN94（突擊步槍）
 - ⬜ ARX160（突擊步槍）

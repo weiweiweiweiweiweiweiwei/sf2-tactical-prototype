@@ -1611,3 +1611,7 @@
 - `tools/sf2_props.py`：關卡裡的 Actor 屬性前有長度不定的原生 state frame，現在自動找屬性開頭；`tools/sf2_map_dump.py` 一併輸出出生點和梯子。
 - 驗證：`check.mjs --map 19` PASS（59 FPS）；玩家視角站在牢房走廊，地板牆面天花板都在；選圖縮圖 `assets/maps/thumbs/sf2_alcatraz.jpg`。
 - 待辦：部分物件全黑（貼圖在別的包）、繪製呼叫約 1700、梯子還不能爬、縮圖是屋頂外觀。
+
+
+### （本機，2026-10-29）：SF2 新槍 ACR
+- `rif_acr`＋照門 `rif_acr_sight`（`rif_acr_sight_up`，掛 Sight 插槽、hooded post）、`Sound_ACR`；`SFCWeaponACR` 的射速／換彈／拔槍／後座／重量；傷害照 SCAR-L。倉庫和 Bot（一般模式）都有。驗證：腰射、開鏡（綠點在照門正中）、開火截圖；`check.mjs` 過。
