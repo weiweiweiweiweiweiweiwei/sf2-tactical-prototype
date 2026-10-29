@@ -1596,3 +1596,11 @@
 ### （本機，2026-10-29）：SF2 地圖清單、暫停的槍重查
 - `tools/sf2_map_inventory.py` → `docs/research/sf2/map-inventory.md`：一張圖＝有自己光照檔 `Lighting_<圖>.tfc` 的包。125 個，常規對戰圖 63 張（觀戰／逃脫／停電／跳躍／節日造型／殭屍／PVE／射擊／防守／捉迷藏／六角／教學／靶場 排除）。佇列 M3 已依大小展開。
 - 暫停的槍：Vector 的包是 `smg_ksv`（併入新槍）；MP5 完整版、Negev、PKM、MG42、M1014、USP、AK-47 在安裝檔裡沒有包。SVD、P90、雙持、M249、RPK、L86A1、AA-12 維持暫停（要手動量瞄準點）。
+
+
+### （本機，2026-10-29）：SF2 地圖匯出可行（Alcatraz）
+- 地圖包是 LZO 壓縮的一般 `.upk`：`tools/sf2_unlzo.py <圖>` 解壓。UModel 匯出它的靜態網格和貼圖（Alcatraz：68 個網格、264 張貼圖）。
+- 擺放：烘焙過的關卡把物件收在 `StaticMeshCollectionActor`，每個元件的世界矩陣（64 位元組）存在屬性後面；元件自己的屬性前面多一個欄位（`tools/sf2_props.py` 現在會跳過）。`tools/sf2_map_dump.py` 讀出 876 個擺放。
+- 地板牆面是 BSP（UModel 不匯出）：`tools/sf2_map_bsp.py` 照 v904 的格式讀 Model（Vectors、Points、Nodes 64 位元組、Surfs 60 位元組、Verts 24 位元組），每個節點一個多邊形，貼圖座標用面的基準點和 U／V 向量。Alcatraz 1972 個三角形、23 種材質。
+- `tools/sf2_map_build.mjs` 把網格（每個只存一份）、擺放、BSP 組成一個 GLB（7.5 MB）；預覽截圖：屋頂、牆、地板、牢房都在，有貼圖。
+- 下一步：接進遊戲（碰撞、導航、出生點）。

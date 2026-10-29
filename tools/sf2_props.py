@@ -49,9 +49,12 @@ class Pkg:
     def clsname(self, e): return self.objname(e['cls']) if e['cls'] else 'Class'
 
     # tagged properties of one export; structs are read as nested tags, unknown ones as raw hex
-    def props(self, e):
+    def props(self, e, skip=None):
         self.o = e['off']; end = e['off'] + e['size']
         self.i32()  # net index
+        # v65n a component (…Component class, not a template / default object) stores TemplateOwnerClass (4 bytes) before its tags
+        if skip is None: skip = 4 if self.clsname(e).endswith('Component') and not e['name'].startswith('Default__') else 0
+        self.o += skip
         return self._tags(end)
 
     def _tags(self, end):

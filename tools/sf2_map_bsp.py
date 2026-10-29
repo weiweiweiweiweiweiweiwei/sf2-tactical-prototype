@@ -1,0 +1,42 @@
+"""v65n An SF2 map's BSP geometry (floors, walls: the level's Model — UModel does not export it). UE3 v904 / licensee 14 layout,
+found on Alcatraz: after the tags, Bounds (28 bytes), Vectors and Points (bulk: elem 12), Nodes (bulk: elem 64), an int, Surfs
+(count + 60 bytes each: Material, PolyFlags, pBase, vNormal, vTextureU, vTextureV, iBrushPoly, Actor, Plane[4], ShadowMapScale,
+LightingChannels, iLightmassIndex), Verts (bulk: elem 24, pVertex first). A node is a polygon: Points[Verts[iVertPool + k].pVertex]
+(k < NumVertices, byte 54 of the node; iVertPool at 16, iSurf at 20). UVs in texels from the surface's base point and U / V vectors.
+-> tools/out/sf2/maps/<map>_bsp.json (glTF metres, Y up: (x, z, −y) / 100; triangles grouped by material).
+  python tools/sf2_map_bsp.py <map>"""
+import sys, struct, json, collections
+sys.path.insert(0, 'tools')
+from sf2_props import Pkg
+name = sys.argv[1]; p = Pkg(f'tools/out/sf2/{name}_dec.upk'); B = p.b
+def chain(i):
+    out = []
+    while i:
+        m = p.imports[-i - 1] if i < 0 else p.exports[i - 1]; out.append(m['name']); i = m['outer']
+    return out[0] if out else 'None'
+models = [e for e in p.exports if p.clsname(e) == 'Model' and p.objname(e['outer']) == 'PersistentLevel']
+groups = collections.defaultdict(lambda: {'pos': [], 'nrm': [], 'uv': []}); tris = 0
+for e in models:
+    p.props(e); o = p.o + 28
+    def bulk(o, es_exp):
+        es, n = struct.unpack_from('<ii', B, o); assert es == es_exp, (es, es_exp); return o + 8 + es * n, o + 8, n
+    o, vec0, nvec = bulk(o, 12); o, pt0, npt = bulk(o, 12); o, nd0, nnd = bulk(o, 64)
+    o += 4; nsurf = struct.unpack_from('<i', B, o)[0]; sf0 = o + 4; o = sf0 + 60 * nsurf
+    es, nvert = struct.unpack_from('<ii', B, o); vt0 = o + 8; assert es == 24
+    V = lambda i: struct.unpack_from('<3f', B, vec0 + 12 * i); P = lambda i: struct.unpack_from('<3f', B, pt0 + 12 * i)
+    for k in range(nnd):
+        a = nd0 + 64 * k; pool, isurf = struct.unpack_from('<ii', B, a + 16); nv = B[a + 54]
+        if nv < 3 or not (0 <= isurf < nsurf) or pool + nv > nvert: continue
+        s = struct.unpack_from('<8i', B, sf0 + 60 * isurf); mat, flags, pbase, vnorm, vu, vv = s[0], s[1], s[2], s[3], s[4], s[5]
+        if flags & 1: continue  # PF_Invisible
+        if chain(mat) == 'RemoveSurfaceMaterial': continue  # (the never-drawn outer faces of subtracted brushes)
+        pts = [P(struct.unpack_from('<i', B, vt0 + 24 * (pool + j))[0]) for j in range(nv)]
+        base, U, Vv, N = P(pbase), V(vu), V(vv), V(vnorm)
+        g = groups[chain(mat)]
+        cv = lambda q: [q[0] / 100, q[2] / 100, -q[1] / 100]
+        uv = lambda q: [sum((q[i] - base[i]) * U[i] for i in range(3)), sum((q[i] - base[i]) * Vv[i] for i in range(3))]
+        for j in range(1, nv - 1):  # fan; UE3 polys wind clockwise seen from the front → reverse for glTF
+            for q in (pts[0], pts[j + 1], pts[j]): g['pos'] += cv(q); g['nrm'] += [N[0], N[2], -N[1]]; g['uv'] += uv(q)
+            tris += 1
+json.dump({k: v for k, v in groups.items()}, open(f'tools/out/sf2/maps/{name}_bsp.json', 'w'))
+print(name, 'BSP', len(models), 'models,', tris, 'triangles,', len(groups), 'materials:', ', '.join(list(groups)[:6]))

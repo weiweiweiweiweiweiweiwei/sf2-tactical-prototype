@@ -31,7 +31,7 @@
 - ✅（v65m）列出 SF2 安裝檔裡的地圖包（`D:/SpecialForce2/SFGame/CookedPCConsole`），排除殭屍／PVE／活動等特殊模式；記下各圖的包名、主要的子關卡（streaming levels）、大小。輸出 `docs/research/sf2/map-inventory.md`。
 
 ### M2. 地圖匯出可行性
-- ⬜ 用一張小圖試：UModel 匯出靜態網格；關卡裡物件的擺放（`StaticMeshActor`／`StaticMeshComponent` 的位置、旋轉、縮放）用 `tools/sf2_props.py` 的解析器讀；BSP 牆地板（`Model`）能不能讀；光照（lightmap）先不管。做出 `tools/sf2_map_export.py` → GLB＋碰撞，照 Apex 三角碰撞地圖的方式接進遊戲（`apexTriMap`）。驗證：能走、能打、出生點、`check.mjs`。
+- 🔄 用一張小圖試（Alcatraz）：**已做到**：解壓（`tools/sf2_unlzo.py <圖>`）→ UModel 匯出網格 → `tools/sf2_map_dump.py`（StaticMeshCollectionActor 屬性後每個元件 64 位元組的位置矩陣）→ `tools/sf2_map_bsp.py`（BSP 地板牆面）→ `tools/sf2_map_build.mjs` 組成一個 GLB（Alcatraz 7.5 MB），預覽 `node tools/out/_mapshot.mjs <glb> <tag>`。**還要**：接進遊戲（碰撞＝可見三角形、導航 `tools/bake-apex-nav.mjs`、出生點：地圖的 PlayerStart）。原本寫的：UModel 匯出靜態網格；關卡裡物件的擺放（`StaticMeshActor`／`StaticMeshComponent` 的位置、旋轉、縮放）用 `tools/sf2_props.py` 的解析器讀；BSP 牆地板（`Model`）能不能讀；光照（lightmap）先不管。做出 `tools/sf2_map_export.py` → GLB＋碰撞，照 Apex 三角碰撞地圖的方式接進遊戲（`apexTriMap`）。驗證：能走、能打、出生點、`check.mjs`。
 
 ### G3. 遊戲裡還沒有的 SF2 底槍（`docs/research/sf2/gun-inventory.md`；SF2 包名用 `umodel -list` 找 `rif_`／`smg_`／`sni_`／`mg_`／`sho_`／`pis_` 開頭）
 - ⬜ ACR（突擊步槍）

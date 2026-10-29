@@ -1,0 +1,57 @@
+// v65n An SF2 map as one GLB: the static meshes UModel exported (`-export -gltf -png <map>` → tools/out/sf2/maps/<map>/) placed by
+// tools/sf2_map_dump.py's matrices (UE3 row-vector, cm, Z up → glTF column-major, m, Y up: p_gl = (x, z, −y) / 100, the axes UModel
+// writes its meshes in), each mesh stored once and shared by every node that places it; materials get their diffuse sheet from
+// UModel's .mat files (Diffuse=…).   node tools/sf2_map_build.mjs <map>  → tools/out/sf2/maps/<map>.glb
+import fs from 'node:fs'; import path from 'node:path';
+import { Document, NodeIO } from '@gltf-transform/core';
+import { ALL_EXTENSIONS } from '@gltf-transform/extensions';
+import { mergeDocuments, prune, dedup, textureCompress, draco } from '@gltf-transform/functions';
+import draco3d from 'draco3dgltf'; import sharp from 'sharp';
+const MAP = process.argv[2] || 'Alcatraz', DIR = `tools/out/sf2/maps/${MAP}`, OUT = process.argv[3] || `tools/out/sf2/maps/${MAP}.glb`;
+const io = new NodeIO().registerExtensions(ALL_EXTENSIONS).registerDependencies({ 'draco3d.encoder': await draco3d.createEncoderModule(), 'draco3d.decoder': await draco3d.createDecoderModule() });
+const files = {}; const walk = (d) => { for (const f of fs.readdirSync(d)) { const p = path.join(d, f); if (fs.statSync(p).isDirectory()) walk(p); else files[f.toLowerCase()] = p; } }; walk(DIR);
+const placed = JSON.parse(fs.readFileSync(`tools/out/sf2/maps/${MAP}.json`, 'utf8'));
+const doc = new Document(), root = doc.getRoot(), buf = doc.createBuffer(), scene = doc.createScene(MAP), meshes = new Map(), tex = new Map(); let missing = new Set();
+const diffuseOf = (mat) => { const f = files[mat.toLowerCase() + '.mat']; if (!f) return null; const m = fs.readFileSync(f, 'utf8').match(/^Diffuse=(\S+)/m); return m ? files[m[1].toLowerCase() + '.png'] : null; };
+async function meshOf(name) {
+  if (meshes.has(name)) return meshes.get(name);
+  const f = files[name.toLowerCase() + '.gltf']; if (!f) { missing.add(name); meshes.set(name, null); return null; }
+  const src = await io.read(f), map = mergeDocuments(doc, src), m = map.get(src.getRoot().listMeshes()[0]);
+  for (const s of src.getRoot().listScenes()) map.get(s).dispose();
+  for (const pr of m.listPrimitives()) {
+    const mat = pr.getMaterial(); if (!mat || mat.getBaseColorTexture()) continue;
+    const png = diffuseOf(mat.getName()); mat.setMetallicFactor(0).setRoughnessFactor(0.85);
+    if (png) { if (!tex.has(png)) tex.set(png, doc.createTexture(path.basename(png)).setImage(fs.readFileSync(png)).setMimeType('image/png')); mat.setBaseColorTexture(tex.get(png)); }
+  }
+  meshes.set(name, m); return m;
+}
+let n = 0;
+for (const o of placed) {
+  if (!o.m) continue; const mesh = await meshOf(o.mesh); if (!mesh) continue;
+  const m = o.m, L = (j, i) => m[i * 4 + j]; // column form of the row-vector matrix: L(row j, col i)
+  // C = (x, z, −y): N = C·L·C⁻¹, t = C·t / 100
+  const C = [[1, 0, 0], [0, 0, 1], [0, -1, 0]], A = [0, 1, 2].map((r) => [0, 1, 2].map((c) => L(r, c)));
+  const CA = C.map((row) => [0, 1, 2].map((c) => row.reduce((s, v, k) => s + v * A[k][c], 0)));
+  const N = CA.map((row) => [0, 1, 2].map((c) => row.reduce((s, v, k) => s + v * C[c][k], 0))); // C⁻¹ = Cᵀ
+  const t = [m[12], m[13], m[14]], tg = C.map((row) => row.reduce((s, v, k) => s + v * t[k], 0) / 100);
+  const mat = [N[0][0], N[1][0], N[2][0], 0, N[0][1], N[1][1], N[2][1], 0, N[0][2], N[1][2], N[2][2], 0, tg[0], tg[1], tg[2], 1];
+  scene.addChild(doc.createNode(o.mesh + '_' + n++).setMesh(mesh).setMatrix(mat));
+}
+// v65n the BSP floors and walls (tools/sf2_map_bsp.py): one primitive per material, UVs in texels ÷ the diffuse sheet's size
+const bspFile = `tools/out/sf2/maps/${MAP}_bsp.json`;
+if (fs.existsSync(bspFile)) {
+  const bsp = JSON.parse(fs.readFileSync(bspFile, 'utf8')), mesh = doc.createMesh('bsp'), acc = (type, arr) => doc.createAccessor().setType(type).setArray(arr).setBuffer(buf);
+  for (const [mname, g] of Object.entries(bsp)) {
+    const png = diffuseOf(mname), mat = doc.createMaterial(mname).setMetallicFactor(0).setRoughnessFactor(0.85);
+    let W = 256, H = 256;
+    if (png) { const md = await sharp(png).metadata(); W = md.width; H = md.height; if (!tex.has(png)) tex.set(png, doc.createTexture(path.basename(png)).setImage(fs.readFileSync(png)).setMimeType('image/png')); mat.setBaseColorTexture(tex.get(png)); }
+    else { mat.setBaseColorFactor([0.55, 0.55, 0.55, 1]); missing.add(mname); }
+    const uv = new Float32Array(g.uv.length); for (let i = 0; i < uv.length; i += 2) { uv[i] = g.uv[i] / W; uv[i + 1] = g.uv[i + 1] / H; }
+    mesh.addPrimitive(doc.createPrimitive().setMaterial(mat).setAttribute('POSITION', acc('VEC3', new Float32Array(g.pos))).setAttribute('NORMAL', acc('VEC3', new Float32Array(g.nrm))).setAttribute('TEXCOORD_0', acc('VEC2', uv)));
+  }
+  scene.addChild(doc.createNode('bsp').setMesh(mesh));
+}
+for (const b of root.listBuffers()) if (b !== buf) { for (const a of root.listAccessors()) if (a.getBuffer() === b) a.setBuffer(buf); b.dispose(); }
+await doc.transform(prune(), dedup(), textureCompress({ encoder: sharp, targetFormat: 'webp', resize: [1024, 1024] }), draco());
+await io.write(OUT, doc);
+console.log('SF2MAP', MAP, n, 'nodes', meshes.size, 'meshes', 'missing', [...missing].slice(0, 8).join(' ') || '-', (fs.statSync(OUT).size / 1048576).toFixed(1) + ' MB');
