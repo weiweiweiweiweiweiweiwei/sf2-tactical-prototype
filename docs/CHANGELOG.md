@@ -1642,3 +1642,7 @@
 ### （本機，2026-10-29）：SF2 狙擊槍 FNAR、MSR、SVCh；XM8 Compact、XM8 AR（v65v）
 - FNAR、MSR、SVCh 用 `tools/sf2_add_gun.py`，腰射正常、狙擊鏡開鏡待接（TODO）。XM8 Compact Carbine／Automatic Rifle 安裝檔沒有獨立模型，沿用 XM8 外觀、套自己的數值，截圖正常。
 - HS50M1、Springfield 沒有模型包，暫停；P90、PP2000、Scorpion、SVD 原本就在 G2 暫停。
+
+### （本機，2026-10-29）：SF2 機槍 FN MAG、Minimi SPW、Ultimax；霰彈槍 USAS-12；手槍 K5、Luger、Maxim 9、Strike One、Wildey、.44 Magnum（v65w）
+- 全部用 `tools/sf2_add_gun.py`（.44 Magnum 的模型包叫 `pis_blackhawk`）。P7M13 在 SF2 是雙持，暫停。
+- 截圖：Ultimax、USAS-12、六把手槍正常；FN MAG 持槍角度與開鏡、Minimi SPW 開鏡待量（TODO）。

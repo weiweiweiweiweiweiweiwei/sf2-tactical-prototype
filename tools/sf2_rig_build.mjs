@@ -48,6 +48,16 @@ const ZEISS_SCOPE = { ...PART('weapon_common_part01', 'scope_zeiess'), tex: 'zei
 const SCOPE = (name, tex) => ({ ...PART('weapon_common_part', name), tex, noAim: true, roll: +(process.env.ROLL ?? 90) });
 const SIL = (k) => ({ ...PART('weapon_common_part', `silencer_ar_type_${k}`), tex: `silencer_type_${k}` });
 const GUNS = {
+  usas12: gun('usas12', { pkg: 'sho_usas12' }), // v65q tools/sf2_add_gun.py
+  magnum44: gun('magnum44', { pkg: 'pis_blackhawk', tex: 'blackhawk', anim: '1st_anim_blackhawk', partNames: ['body', 'magazine'] }), // v65q tools/sf2_add_gun.py
+  wildey: gun('wildey', { pkg: 'pis_wildey', partNames: ['body', 'magazine'] }), // v65q tools/sf2_add_gun.py
+  strikeone: gun('strikeone', { pkg: 'pis_strike_one', tex: 'strike_one', anim: '1st_anim_strike_one', partNames: ['body', 'magazine'] }), // v65q tools/sf2_add_gun.py
+  maxim9: gun('maxim9', { pkg: 'pis_maxim9', partNames: ['body', 'magazine'] }), // v65q tools/sf2_add_gun.py
+  luger: gun('luger', { pkg: 'pis_luger', partNames: ['body', 'magazine'] }), // v65q tools/sf2_add_gun.py
+  k5: gun('k5', { pkg: 'pis_k5', partNames: ['body', 'magazine'] }), // v65q tools/sf2_add_gun.py
+  ultimax: gun('ultimax', { pkg: 'mg_ultimax' }), // v65q tools/sf2_add_gun.py
+  minimispw: gun('minimispw', { pkg: 'mg_spw', tex: 'spw', anim: '1st_anim_spw' }), // v65q tools/sf2_add_gun.py
+  fnmag: gun('fnmag', { pkg: 'mg_fn_mag', tex: 'fn_mag', anim: '1st_anim_fn_mag' }), // v65q tools/sf2_add_gun.py
   svch: gun('svch', { pkg: 'sni_svch' }), // v65q tools/sf2_add_gun.py
   msr: gun('msr', { pkg: 'sni_msr' }), // v65q tools/sf2_add_gun.py
   fnar: gun('fnar', { pkg: 'sni_fnar', tex: 'sni_fnar' }), // v65q tools/sf2_add_gun.py

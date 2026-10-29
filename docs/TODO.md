@@ -54,6 +54,7 @@
 ## 1a. SF2 新槍開鏡瞄準點待量（v65r 起）
 - ⬜ ARX160、K2C1（照門擋住視野）、CM901、FNF2000、FS2000、SAR21、TAR21（鏡頭在槍身裡）、T91（瞄具擋住）、StG44（準星偏近）、Bizon、CZ3A1、SIG MPX、Uzi Pro
 - ⬜ Madsen-LAR 槍身貼圖白色（預設貼圖在別的包）
+- ⬜ FN MAG 腰射持槍角度歪、開鏡錯位；Minimi SPW 開鏡被擋
 - ⬜ FNAR、MSR、SVCh 狙擊鏡開鏡（K14 那套 K14_SCOPE／瞄準鏡畫面還沒接，跟 SVD 一起做）
 - ⬜ Bizon（白紅）、CZ3A1（紫金）抓到特殊塗裝貼圖，要改成預設貼圖
 

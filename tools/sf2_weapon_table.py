@@ -8,6 +8,16 @@ sound times measured on its Reload clip (magazine out / in, bolt: weapon_magazin
 import json
 
 GUNS = {
+    'usas12': ('USAS12', 'usas12', 'usas12', [0.12, 0.4, 0.73]),  # v65q sf2_add_gun
+    'magnum44': ('44Magnum', 'magnum44', 'magnum44', [0.12, 0.4, 0.73]),  # v65q sf2_add_gun
+    'wildey': ('Wildey', 'wildey', 'wildey', [0.12, 0.4, 0.73]),  # v65q sf2_add_gun
+    'strikeone': ('StrikeOne', 'strikeone', 'strikeone', [0.12, 0.4, 0.73]),  # v65q sf2_add_gun
+    'maxim9': ('Maxim9', 'maxim9', 'maxim9', [0.12, 0.4, 0.73]),  # v65q sf2_add_gun
+    'luger': ('LUGER', 'luger', 'luger', [0.12, 0.4, 0.73]),  # v65q sf2_add_gun
+    'k5': ('K5', 'k5', 'k5', [0.12, 0.4, 0.73]),  # v65q sf2_add_gun
+    'ultimax': ('Ultimax', 'ultimax', 'ultimax', [0.12, 0.4, 0.73]),  # v65q sf2_add_gun
+    'minimispw': ('MinimiSPW', 'minimispw', 'minimispw', [0.12, 0.4, 0.73]),  # v65q sf2_add_gun
+    'fnmag': ('FNMAG', 'fnmag', 'fnmag', [0.12, 0.4, 0.73]),  # v65q sf2_add_gun
     'svch': ('SVCh', 'svch', 'svch', [0.12, 0.4, 0.73]),  # v65q sf2_add_gun
     'msr': ('MSR', 'msr', 'msr', [0.12, 0.4, 0.73]),  # v65q sf2_add_gun
     'fnar': ('FNAR', 'fnar', 'fnar', [0.12, 0.4, 0.73]),  # v65q sf2_add_gun

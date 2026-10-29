@@ -77,21 +77,21 @@
 - ✅ MSR（狙擊槍；開鏡待接）
 - ⏸ Springfield（狙擊槍；安裝檔沒有模型包）
 - ✅ SVCh（狙擊槍；開鏡待接）
-- ⬜ FNMAG（機槍）
-- ⬜ L86A1（機槍）
-- ⬜ MinimiSPW（機槍）
-- ⬜ RPK74（機槍）
-- ⬜ Ultimax（機槍）
+- ✅ FNMAG（機槍；持槍／開鏡待量）
+- ⏸ L86A1（機槍；見 G2）
+- ✅ MinimiSPW（機槍；持槍／開鏡待量）
+- ⏸ RPK74（機槍；見 G2）
+- ✅ Ultimax（機槍）
 - ✅ XM8AutomaticRifle（機槍；沿用 XM8 外觀）
-- ⬜ AA12（霰彈槍）
-- ⬜ USAS12（霰彈槍）
-- ⬜ 44Magnum（手槍）
-- ⬜ K5（手槍）
-- ⬜ LUGER（手槍）
-- ⬜ Maxim9（手槍）
-- ⬜ P7M13（手槍）
-- ⬜ StrikeOne（手槍）
-- ⬜ Wildey（手槍）
+- ⏸ AA12（霰彈槍；見 G2）
+- ✅ USAS12（霰彈槍）
+- ✅ 44Magnum（手槍）
+- ✅ K5（手槍）
+- ✅ LUGER（手槍）
+- ✅ Maxim9（手槍）
+- ⏸ P7M13（手槍；SF2 是雙持）
+- ✅ StrikeOne（手槍）
+- ✅ Wildey（手槍）
 
 ### G4. 各槍的型態（底槍做好後才做；配件看 `SFCItem_<槍>_<型態>` 的 `DefaultItemClassNames`；型態輸出成配件檔 `<id>_sf2_ovl`；MKn＝SF2 的強化版（「Max／改」），只差數值：照該 SFCWeapon<槍>_MKn 類別的數值、外觀同底槍）
 - ⬜ M4A1（m4a1）：ACOG、AimPoint、EOTech、OpenDot、Reflex、Silencer、MK5
@@ -253,3 +253,4 @@
 - v65r：開鏡對不準的新槍照樣加進來（腰射可用），開鏡瞄準點統一記在 TODO 之後一次量。
 - 10-29 MAC-10 是雙持 → A：暫停，跟 G2 雙持槍一起做；Bizon／CZ3A1 塗裝貼圖 → A：先上、記 TODO
 - 10-29 FNAR／MSR／SVCh 狙擊鏡開鏡沒接好 → A：先上（腰射可用），開鏡記 TODO；HS50M1／Springfield 沒模型包 → A：暫停
+- 10-29 P7M13 是雙持 → A：暫停；FN MAG／Minimi SPW 持槍開鏡歪 → A：先上、記 TODO；44Magnum 用 pis_blackhawk 模型
