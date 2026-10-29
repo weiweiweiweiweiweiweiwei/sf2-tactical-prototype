@@ -110,7 +110,7 @@ export { sf2TriMap };
 // south of the square, Bravo north (game metres, mirrored back v65w: x −36 … 55, z −57 … 30)
 MAPS.push(sf2TriMap({
   id: 'sf2_desertcamp', name: 'SF2 沙漠營地', en: 'DESERT CAMP', desc: 'Special Force 2 原版地圖 1:1 · 原版模型、擺設與碰撞', slogan: '沙漠營地 · 中央廣場與兩側巷道',
-  bounds: { minX: -38, maxX: 57, minZ: -59, maxZ: 32 }, indoor: false, killY: -20,
+  bounds: { minX: -53, maxX: 59, minZ: -59, maxZ: 35 }, indoor: false, killY: -20,
   shot: { pos: [10, 60, -70], target: [10, 0, -12] }, thumb: { pos: [10, 70, -80], target: [10, 0, -12], fov: 55 },
   objectives: { dom: [[-4, 0, 12], [3, 0, -7], [9, 0, -26]], relic: [3, 0, -7], domRadius: 5 },
 }));
