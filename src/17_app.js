@@ -5,7 +5,7 @@ import { triBox, triHeight } from './04_collision.js';
 import { MapBuilder } from './06_mapbuilder.js';
 import { HDRI_BASE, MAPS, drawMapPreview } from './07_maps.js';
 import { InputManager } from './08_nav_input.js';
-import { SoldierFactory, WeaponModels, loadGunModels } from './09_models.js';
+import { SoldierFactory, WeaponModels, ensureGunModels, gunModelReady, loadGunModels } from './09_models.js';
 import { BTN, CmdBuilder } from './12b_cmd.js';
 import { esc, safeName } from './12c_netutil.js';
 import { BOT_NAMES } from './13_bots.js';
@@ -43,11 +43,7 @@ class App {
     this.tex = new TextureFactory(r); this.tex.setQuality(activeQuality());
     this.mats = new MaterialLib(this.tex);
     this.models = new WeaponModels(this.tex);
-    loadGunModels().then(() => { // armory previews rebuild with the Blender guns once parsed
-      this.models.previews.clear();
-      // v62 card pictures drawn before that showed the procedural stand-in: draw them again (each card swaps in place)
-      const drawn = Object.keys(this.thumbs || {}); this.thumbs = {}; this._queueThumbs(drawn);
-    });
+    loadGunModels(); // v65j the gun index; each gun's model loads when shown (_pumpThumb, Match.load)
     this.soldiers = new SoldierFactory(this.tex, this.models);
     this.audio = new AudioEngine(); this.input = new InputManager(this.canvas); this.cmds = new CmdBuilder(this.input); this.hud = new HUD(this); this.post = new PostFX(r);
     this.hdrCache = new Map(); this.match = null; this.room = null; this.state = 'hub';
@@ -1024,7 +1020,10 @@ class App {
   }
   _pumpThumb() {
     if (!this.whR) this._initPreview();
-    const id = this.thumbQ.shift(); if (!id || !this.whR) return;
+    const id = this.thumbQ[0]; if (!id || !this.whR) return;
+    const def = WEAPON_DEFS[id]; // v65j the card waits for its gun's model (fetched once), the queue goes on meanwhile
+    if (def && !gunModelReady(def)) { if (!def._ld) { def._ld = 1; ensureGunModels([def]).then(() => { this.models.previews.delete(id); }); } this.thumbQ.push(this.thumbQ.shift()); return; }
+    this.thumbQ.shift();
     this._makeThumbs([id]);
     const img = document.querySelector(`#whList .whGun[data-id="${id}"] .th img`);
     if (img && this.thumbs[id]) { img.src = this.thumbs[id]; img.classList.remove('ln'); }
@@ -1187,7 +1186,7 @@ class App {
 try {
   const app = new App();
   window.app = app;
-  window.SF2 = { THREE, Settings, MAPS, WEAPON_DEFS, WEAPON_DATABASE, CFG, MODES, RULES, calcDamage, loadoutDefs, LOOK_DEFAULT, resolveLook, CAO, AudioEngine, GUN_PROFILES, triHeight, triBox }; // debug handle for the console
+  window.SF2 = { ensureGunModels, THREE, Settings, MAPS, WEAPON_DEFS, WEAPON_DATABASE, CFG, MODES, RULES, calcDamage, loadoutDefs, LOOK_DEFAULT, resolveLook, CAO, AudioEngine, GUN_PROFILES, triHeight, triBox }; // debug handle for the console
   window.SF2net = { Friends, NetHost, NetClient, LoopbackTransport, NetCodec, RoomDirectory, RtcHostTransport, RtcClientTransport, BackgroundTicker, RoomHost, RoomGuest, RoomLink, inviteLink, parseCode, fmtCode, roomCode, roomCfgSafe, ONLINE, host: (room, o = {}) => new NetHost(app, app.match, new LoopbackTransport(room, o)), join: (room, o = {}) => app.netJoin(room, o) }; // v25 tests
   window.__gameReady = true;
   document.getElementById('boot').classList.add('done');

@@ -1573,3 +1573,9 @@
 - M92FS 沒有 SF2 聲音包，維持原本的聲音。
 - 槍模檔案 `assets/guns/guns.js` 現在 59.3 MB。
 - 驗證：九把的腰射和開鏡截圖、P226 `_reloadtime.mjs`（1.3 s）、`check.mjs`。
+
+
+### （本機，2026-10-29）：槍模按需載入
+- `assets/guns/guns.js`（60.7 MB，開遊戲就全部解析）拆成每把槍一個檔 `assets/guns/g/<id>.js`＋索引 `assets/guns/index.js`（`tools/guns/pack.mjs`）。`src/09_models.js`：`loadGunModels()` 只讀索引，`ensureGunModels(defs)` 載入並解析需要的槍，`gunModelReady(def)`。
+- 進對戰只載入你三組配裝（F1–F3）的槍；倉庫卡片等自己的槍載好才畫；地上掉的槍沒載過時先用簡易模型、背景載入。
+- 驗證：倉庫對戰開局只抓 7 個檔（約 9 MB），倉庫 72 張卡片都畫出 SF2 模型；`check.mjs`、`_fileplay` 過。
