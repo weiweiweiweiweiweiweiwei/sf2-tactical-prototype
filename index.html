@@ -16958,12 +16958,10 @@ function sf2TriMap(def) {
       gltf.scene.traverse((o) => {
         if (o.isMesh) meshes.push(o);
       });
-      for (const m of meshes) {
-        if (m.userData.colOnly) {
-          m.removeFromParent();
-          continue;
-        }
-        m.removeFromParent();
+      for (const src of meshes) {
+        if (src.userData.colOnly) continue;
+        const m = src.clone();
+        m.matrixWorld.copy(src.matrixWorld);
         m.matrixWorld.decompose(m.position, m.quaternion, m.scale);
         m.matrixAutoUpdate = false;
         m.updateMatrix();

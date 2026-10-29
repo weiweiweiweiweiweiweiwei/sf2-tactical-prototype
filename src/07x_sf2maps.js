@@ -76,9 +76,10 @@ function sf2TriMap(def) {
       b.col.useTris(soup); b.phys.triGround = new TriGround(soup);
       for (const l of this._s2.meta.ladders || []) b.navExtra.push(new THREE.Vector3(l[0], l[1], l[2])); // (SF2's ladder volumes: climbing is a follow-up)
       const meshes = []; gltf.scene.traverse((o) => { if (o.isMesh) meshes.push(o); });
-      for (const m of meshes) {
-        if (m.userData.colOnly) { m.removeFromParent(); continue; } // (a blocking volume: in the triangle soup, not drawn)
-        m.removeFromParent(); m.matrixWorld.decompose(m.position, m.quaternion, m.scale); m.matrixAutoUpdate = false; m.updateMatrix();
+      for (const src of meshes) {
+        if (src.userData.colOnly) continue; // (a blocking volume: in the triangle soup, not drawn)
+        // v65y a clone per match (geometry / materials shared): moving the loaded meshes themselves left the map's second match empty
+        const m = src.clone(); m.matrixWorld.copy(src.matrixWorld); m.matrixWorld.decompose(m.position, m.quaternion, m.scale); m.matrixAutoUpdate = false; m.updateMatrix();
         m.castShadow = !m.userData.sky; m.receiveShadow = true;
         for (const mt of Array.isArray(m.material) ? m.material : [m.material]) { mt.vertexColors = false; mt.side = THREE.DoubleSide; if (mt.map) mt.map.anisotropy = 4; } // (v65w UModel writes SF2's vertex paint as COLOR_0: multiplied in, it striped crates and benches in rainbow colours)
         b.scene.add(m);
