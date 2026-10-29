@@ -48,6 +48,9 @@ const ZEISS_SCOPE = { ...PART('weapon_common_part01', 'scope_zeiess'), tex: 'zei
 const SCOPE = (name, tex) => ({ ...PART('weapon_common_part', name), tex, noAim: true, roll: +(process.env.ROLL ?? 90) });
 const SIL = (k) => ({ ...PART('weapon_common_part', `silencer_ar_type_${k}`), tex: `silencer_type_${k}` });
 const GUNS = {
+  fnf2000: gun('fnf2000', { pkg: 'rif_fnf2000', hoodedPost: true, socketSights: sight('fnf2000/rif_fnf2000/SkeletalMesh3/rif_fnf2000_sight_up.gltf', 'fnf2000_sight') }), // v65q tools/sf2_add_gun.py
+  cm901: gun('cm901', { pkg: 'rif_cm901', tex: 'rif_cm901' }), // v65q tools/sf2_add_gun.py
+  arx160: gun('arx160', { pkg: 'rif_arx160', tex: 'rif_arx160' }), // v65q tools/sf2_add_gun.py
   an94: gun('an94', { pkg: 'rif_an94', hoodedPost: true, socketSights: sight('an94/rif_an94_sight/SkeletalMesh3/rif_an94_sight_up.gltf', 'an94_ironsight') }), // v65q tools/sf2_add_gun.py
   // v62o the rear sight is the A2 carry handle (rif_m4a1_handle_a, its own sheet handle_d / _n in weapon_common_part): SF2's ADS picture (user 10-27) has the aperture ring standing above the handle's ears; the detachable
   // rif_m4a1_rearsight (weapon_common_part01) used since v61b is an attachment, its ring sat level with its guards
