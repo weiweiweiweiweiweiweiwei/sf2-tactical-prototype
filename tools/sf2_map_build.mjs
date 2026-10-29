@@ -30,6 +30,7 @@ async function meshOf(name) {
   }
   meshes.set(name, m); return m;
 }
+const NOFLIP = { Desertcamp: ['wood_003'] }; // v65y meshes that face the other way about their own axis (see below)
 let n = 0;
 for (const o of placed) {
   if (!o.m) continue; const mesh = await meshOf(o.mesh); if (!mesh) continue;
@@ -41,7 +42,10 @@ for (const o of placed) {
   const t = [m[12], m[13], m[14]], tg = C.map((row) => row.reduce((s, v, k) => s + v * t[k], 0) / 100);
   // v65x UModel writes mesh vertices as (x, z, +y) (it mirrors UE's left-handed axes), not C's (x, z, −y): C·U⁻¹ = diag(1, 1, −1) on
   // the mesh's own axes, else every mesh lay mirrored about its pivot (Desert Camp: stairs outside their stairwells, hangars off)
-  const mat = [N[0][0], N[1][0], N[2][0], 0, N[0][1], N[1][1], N[2][1], 0, -N[0][2], -N[1][2], -N[2][2], 0, tg[0], tg[1], tg[2], 1];
+  // v65y …except where the user's eye says otherwise (Desert Camp's wood_003 door frames sat their 0.24 m thickness inside the wall,
+  // behind the corner they frame — user 10-29): those keep C's own axes
+  const f = (NOFLIP[MAP] || []).includes(o.mesh) ? 1 : -1;
+  const mat = [N[0][0], N[1][0], N[2][0], 0, N[0][1], N[1][1], N[2][1], 0, f * N[0][2], f * N[1][2], f * N[2][2], 0, tg[0], tg[1], tg[2], 1];
   const nd = doc.createNode(o.mesh + '_' + n++).setMesh(mesh).setMatrix(mat); if (o.col === false) nd.setExtras({ nocol: true }); // (v65v SF2 turned its collision off: grass, wires, decor)
   scene.addChild(nd);
 }
