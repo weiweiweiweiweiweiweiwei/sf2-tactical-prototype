@@ -8,6 +8,8 @@
 //   sf2_switch  hud_switch05          (the HUD's weapon switch, named in SFGame)
 //   kfb_default / _normal / _special / _rare / _continuous  hud_kill_*  (SFKillMessage.GetKillFeedBackSound: the kill's own sound, by
 //               the tier of its kill message — plain kill / 瞬間秒殺 遠射 / 爆頭 背後 復仇 刀 雷 / 最後一擊 首殺 / 連殺)
+//   step_ladder footstep_metal_01–04 (Sound_FootSteps; v65y user 10-30: SF2's climb anims Up_ladder / Down_ladder fire AnimNotify_Footstep
+//               at 0.33 and 0.82 of the cycle — its ladders are metal, so a climb is the metal footstep, there is no ladder wave)
 //   node tools/sfx_sf2_fx.mjs
 import fs from 'node:fs';
 const D = 'tools/out/sf2/fx_sounds', W = (pkg, n) => fs.readFileSync(`${D}/${pkg}/SoundNodeWave/${n}.ogg`).toString('base64');
@@ -17,6 +19,7 @@ const MAP = {
   sf2_hit: ['Sound_common', 'bullet_hit_2d_03'], sf2_hitdead: ['Sound_Impacts', 'Bullet_flesh_01', 'Bullet_flesh_02', 'Bullet_flesh_03', 'Bullet_flesh_04', 'Bullet_flesh_05'],
   sf2_kill: ['Sound_common', 'kill3_New'], sf2_switch: ['SoundUX', 'hud_switch05'],
   kfb_default: ['SoundUX', 'hud_kill_default'], kfb_normal: ['SoundUX', 'hud_kill_normal'], kfb_special: ['SoundUX', 'hud_kill_special'],
+  step_ladder: ['Sound_FootSteps', 'footstep_metal_01', 'footstep_metal_02', 'footstep_metal_03', 'footstep_metal_04'],
   kfb_rare: ['SoundUX', 'hud_kill_rare'], kfb_continuous: ['SoundUX', 'hud_kill_continuous'],
 };
 const out = Object.fromEntries(Object.entries(MAP).map(([k, [pkg, ...ns]]) => [k, ns.map((n) => W(pkg, n))]));

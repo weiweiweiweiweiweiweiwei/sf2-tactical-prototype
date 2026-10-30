@@ -141,7 +141,8 @@ class Human extends Combatant {
     if (ws.ads) speed *= w.adsMove ?? 1;
     if (w.reloading) speed *= RELOAD_MOVE; // v34: reloading = slower walk, no sprint
     m.step(h, wx, wz, len > 0 ? speed : 0);
-    if (m.climbing) { if (m.climbDist > 0.6) { m.climbDist = 0; this._sfx('step', 'ladder', 0.6); g.emitNoise(m.pos, 9, this.team); } return; }
+    if (m.climbing) { if (m.climbDist > 0.45) { // (v65y SF2: two metal footsteps a climb cycle)
+      m.climbDist = 0; this._sfx('step', 'ladder', 0.6); g.emitNoise(m.pos, 9, this.team); } return; }
     const hs = m.horizontalSpeed();
     if (m.grounded && hs > 3.0 && !m.crouching) {
       this.stepDist += hs * h;

@@ -22120,7 +22120,7 @@ var Human = class extends Combatant {
     if (w.reloading) speed *= RELOAD_MOVE;
     m.step(h, wx, wz, len > 0 ? speed : 0);
     if (m.climbing) {
-      if (m.climbDist > 0.6) {
+      if (m.climbDist > 0.45) {
         m.climbDist = 0;
         this._sfx("step", "ladder", 0.6);
         g.emitNoise(m.pos, 9, this.team);
