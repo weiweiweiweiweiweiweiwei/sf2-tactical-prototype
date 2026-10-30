@@ -308,8 +308,8 @@ function sf2TriMap(def) {
       for (const q of this._s2.ramps || []) {
         const lo = q[0].clone().add(q[1]).multiplyScalar(0.5), hi = q[2].clone().add(q[3]).multiplyScalar(0.5), [a, c] = lo.y < hi.y ? [lo, hi] : [hi, lo], dir = c.clone().sub(a).setY(0).normalize();
         const foot = a.clone().addScaledVector(dir, -1.2), head = c.clone().addScaledVector(dir, 1.4);
-        for (const [e, y0] of [[foot, a.y], [head, c.y]]) { const g = b.col.groundBelow(e.x, y0 + 0.8, e.z, 0.2, 1.6, 0); e.y = g ? g.y : y0; } // (on the floor the flight lands on)
-        b.navChains.push([foot, a.clone().lerp(c, 0.33), a.clone().lerp(c, 0.66), head]);
+        for (const [e, y0] of [[foot, a.y], [head, c.y]]) { const g = b.col.groundBelow(e.x, y0 + 0.4, e.z, 0.2, 2.2, 0); e.y = g ? g.y : y0; } // (on the floor the flight lands on — Cannon's flights rise 1 m past it)
+        const ch = [foot, a.clone().lerp(c, 0.33), a.clone().lerp(c, 0.66), head]; ch.force = true; b.navChains.push(ch);
       }
       // v65z hand-set links (walked by a player first): one starting at a flight's head carries that flight's chain on
       for (const ch of def.navChains || []) {
@@ -389,7 +389,4 @@ MAPS.push(sf2TriMap({
   background: 0xc9c2b4, envIntensity: 0, exposure: 0.95, hemi: [0xe6dcc8, 0x6a5a48, 0.35], lmFallback: [0.5, 0.48, 0.45], // (v65z brighter: its terrain has no bake, the mean light carries it)
   sun: { pos: [-40, 43, -38], color: 0xfff0d8, intensity: 1.75, auto: false }, fog: { color: 0xc9c2b4, near: 90, far: 420 },
   lmEnv: 0, lmK: 3.14, rampStairs: /^ms_stair/i, ladderNav: false, // (its tower ladders: bots stuck at their heads)
-  // (its inner flights rise 4 m to a 3 m storey: their head steps down 1 m onto the capture room's floor — walked by a player, not
-  // something the nav grid links; one chain each from the flight's head across the room to the point)
-  navChains: [[[-7.3, 6.0, 4.2], [-7.8, 6.24, 1.6], [-3, 6.24, 1.8], [-3.2, 6.22, 6.6]], [[1.6, 6.0, 11.2], [1.6, 6.24, 13.6], [-3, 6.24, 13.4], [-3.2, 6.22, 8.8]]],
 }));

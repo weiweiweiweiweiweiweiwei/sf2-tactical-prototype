@@ -96,7 +96,7 @@ class NavGraph {
         this.near(end.p, 3.4, (n) => { if (!chain.includes(n.p) && cn.indexOf(n) < 0 && Math.abs(n.p.y - end.p.y) < 0.6 && n.p.distanceTo(end.p) < 3.4) cand.push(n); });
         cand.sort((a, b) => a.p.distanceTo(end.p) - b.p.distanceTo(end.p));
         let linked = 0;
-        for (const n of cand) { if (linked >= 4) break; if (this.segmentWalkable(end.p, n.p)) { this._link(end, n); linked++; } }
+        for (const n of cand) { if (linked >= 4) break; if (chain.force ? end.p.distanceTo(n.p) < 2.5 : this.segmentWalkable(end.p, n.p)) { this._link(end, n); linked++; } } // (v65z chain.force: a stair flight's ends join the floor it lands on — the walk check fails at a flight's railings)
       }
     }
     // keep only the component that contains the Alpha spawn (unreachable roofs/islands are dropped)

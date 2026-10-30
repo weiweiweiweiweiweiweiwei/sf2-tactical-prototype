@@ -17332,10 +17332,12 @@ function sf2TriMap(def) {
         const lo = q[0].clone().add(q[1]).multiplyScalar(0.5), hi = q[2].clone().add(q[3]).multiplyScalar(0.5), [a, c] = lo.y < hi.y ? [lo, hi] : [hi, lo], dir = c.clone().sub(a).setY(0).normalize();
         const foot = a.clone().addScaledVector(dir, -1.2), head = c.clone().addScaledVector(dir, 1.4);
         for (const [e, y0] of [[foot, a.y], [head, c.y]]) {
-          const g = b.col.groundBelow(e.x, y0 + 0.8, e.z, 0.2, 1.6, 0);
+          const g = b.col.groundBelow(e.x, y0 + 0.4, e.z, 0.2, 2.2, 0);
           e.y = g ? g.y : y0;
         }
-        b.navChains.push([foot, a.clone().lerp(c, 0.33), a.clone().lerp(c, 0.66), head]);
+        const ch = [foot, a.clone().lerp(c, 0.33), a.clone().lerp(c, 0.66), head];
+        ch.force = true;
+        b.navChains.push(ch);
       }
       for (const ch of def.navChains || []) {
         const pts = ch.map((q) => new THREE.Vector3(q[0], q[1], q[2])), on = b.navChains.find((c2) => c2[c2.length - 1].distanceTo(pts[0]) < 0.8);
@@ -17465,11 +17467,8 @@ MAPS.push(sf2TriMap({
   lmEnv: 0,
   lmK: 3.14,
   rampStairs: /^ms_stair/i,
-  ladderNav: false,
+  ladderNav: false
   // (its tower ladders: bots stuck at their heads)
-  // (its inner flights rise 4 m to a 3 m storey: their head steps down 1 m onto the capture room's floor — walked by a player, not
-  // something the nav grid links; one chain each from the flight's head across the room to the point)
-  navChains: [[[-7.3, 6, 4.2], [-7.8, 6.24, 1.6], [-3, 6.24, 1.8], [-3.2, 6.22, 6.6]], [[1.6, 6, 11.2], [1.6, 6.24, 13.6], [-3, 6.24, 13.4], [-3.2, 6.22, 8.8]]]
 }));
 
 // src/08_nav_input.js
@@ -17595,7 +17594,7 @@ var NavGraph = class {
         let linked = 0;
         for (const n of cand) {
           if (linked >= 4) break;
-          if (this.segmentWalkable(end.p, n.p)) {
+          if (chain.force ? end.p.distanceTo(n.p) < 2.5 : this.segmentWalkable(end.p, n.p)) {
             this._link(end, n);
             linked++;
           }

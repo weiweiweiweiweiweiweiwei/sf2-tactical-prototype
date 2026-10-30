@@ -206,7 +206,7 @@
 - ✅ DustCity（13.2 MB；v65t 沙漠之都，使用者 10-29 指定；⏸ 遠景大樓有幾棟浮空／傾斜、中央黑塔沒貼圖；渲染 CPU 平均 16.5 ms）
 - ⬜ Mangrove（13.2 MB）
 - ⬜ Satellite（13.7 MB）
-- 🔄 tower（13.8 MB）＝邊境要塞 Cannon：v65z 場景、地形、烘焙光照、佔領模式；機器人上二樓待修
+- ✅ tower（13.8 MB）＝邊境要塞 Cannon：v65z 場景、地形、烘焙光照、佔領模式、機器人搶點
 - ⬜ everland（14.1 MB）
 - ⬜ Harbor（14.1 MB）
 - ⬜ Base_camp（14.6 MB）
