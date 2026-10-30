@@ -31,7 +31,7 @@ async function meshOf(name) {
   meshes.set(name, m); return m;
 }
 const NOFLIP = { Desertcamp: ['wood_003'] }; // v65y meshes that face the other way about their own axis (see below)
-let n = 0;
+let n = 0; const usedLm = new Set();
 for (const o of placed) {
   if (!o.m) continue; const mesh = await meshOf(o.mesh); if (!mesh) continue;
   const m = o.m, L = (j, i) => m[i * 4 + j]; // column form of the row-vector matrix: L(row j, col i)
@@ -46,7 +46,12 @@ for (const o of placed) {
   // behind the corner they frame — user 10-29): those keep C's own axes
   const f = (NOFLIP[MAP] || []).includes(o.mesh) ? 1 : -1;
   const mat = [N[0][0], N[1][0], N[2][0], 0, N[0][1], N[1][1], N[2][1], 0, f * N[0][2], f * N[1][2], f * N[2][2], 0, tg[0], tg[1], tg[2], 1];
-  const nd = doc.createNode(o.mesh + '_' + n++).setMesh(mesh).setMatrix(mat); if (o.col === false) nd.setExtras({ nocol: true }); // (v65v SF2 turned its collision off: grass, wires, decor)
+  const nd = doc.createNode(o.mesh + '_' + n++).setMesh(mesh).setMatrix(mat), ex = {}; if (o.col === false) ex.nocol = true;
+  // v65z SF2's baked light on this placement (tools/sf2_lightmap.py): a SimpleLightmap rect (tex, scale, uv1 × cs + cb), or one RGB
+  // irradiance per vertex in the mesh's own vertex order (primitives one after another), 0…3.2 in bytes (× 80)
+  if (o.lm && o.lm.t === 2) { ex.lm = { tex: o.lm.tex, s: o.lm.s, cs: o.lm.cs, cb: o.lm.cb }; usedLm.add(o.lm.tex); }
+  else if (o.lm && o.lm.t === 1) ex.lmv = Buffer.from(Uint8Array.from(o.lm.v, (x) => Math.min(255, Math.round(x * 80)))).toString('base64');
+  if (Object.keys(ex).length) nd.setExtras(ex); // (v65v SF2 turned its collision off: grass, wires, decor)
   scene.addChild(nd);
 }
 // v65n the BSP floors and walls (tools/sf2_map_bsp.py): one primitive per material, UVs in texels ÷ the diffuse sheet's size
@@ -54,12 +59,15 @@ const bspFile = `tools/out/sf2/maps/${MAP}_bsp.json`;
 if (fs.existsSync(bspFile)) {
   const bsp = JSON.parse(fs.readFileSync(bspFile, 'utf8')), mesh = doc.createMesh('bsp'), acc = (type, arr) => doc.createAccessor().setType(type).setArray(arr).setBuffer(buf);
   for (const [mname, g] of Object.entries(bsp)) {
-    const png = diffuseOf(mname), mat = doc.createMaterial(mname).setMetallicFactor(0).setRoughnessFactor(0.85);
+    const [base, lmTex, lmS] = mname.split('|'); // (v65z 'material|lightmap|scale': one primitive per material and baked-light sheet)
+    const png = diffuseOf(base), mat = doc.createMaterial(base).setMetallicFactor(0).setRoughnessFactor(0.85);
     let W = 256, H = 256;
     if (png) { const md = await sharp(png).metadata(); W = md.width; H = md.height; if (!tex.has(png)) tex.set(png, doc.createTexture(path.basename(png)).setImage(fs.readFileSync(png)).setMimeType('image/png')); mat.setBaseColorTexture(tex.get(png)); }
-    else { mat.setBaseColorFactor([0.55, 0.55, 0.55, 1]); missing.add(mname); }
+    else { mat.setBaseColorFactor([0.55, 0.55, 0.55, 1]); missing.add(base); }
     const uv = new Float32Array(g.uv.length); for (let i = 0; i < uv.length; i += 2) { uv[i] = g.uv[i] / W; uv[i + 1] = g.uv[i + 1] / H; }
-    mesh.addPrimitive(doc.createPrimitive().setMaterial(mat).setAttribute('POSITION', acc('VEC3', new Float32Array(g.pos))).setAttribute('NORMAL', acc('VEC3', new Float32Array(g.nrm))).setAttribute('TEXCOORD_0', acc('VEC2', uv)));
+    const prim = doc.createPrimitive().setMaterial(mat).setAttribute('POSITION', acc('VEC3', new Float32Array(g.pos))).setAttribute('NORMAL', acc('VEC3', new Float32Array(g.nrm))).setAttribute('TEXCOORD_0', acc('VEC2', uv));
+    if (lmTex && g.uv1 && g.uv1.length) { prim.setAttribute('TEXCOORD_1', acc('VEC2', new Float32Array(g.uv1))).setExtras({ lm: { tex: lmTex, s: lmS.split(',').map(Number) } }); usedLm.add(lmTex); }
+    mesh.addPrimitive(prim);
   }
   scene.addChild(doc.createNode('bsp').setMesh(mesh));
 }
@@ -71,12 +79,17 @@ if ((dump.blocks || []).length) {
   scene.addChild(doc.createNode('BLOCKING').setMesh(bm).setExtras({ colOnly: true }));
 }
 for (const b of root.listBuffers()) if (b !== buf) { for (const a of root.listAccessors()) if (a.getBuffer() === b) a.setBuffer(buf); b.dispose(); }
-await doc.transform(prune(), dedup(), textureCompress({ encoder: sharp, targetFormat: 'webp', resize: [1024, 1024] }), draco());
+await doc.transform(prune({ keepAttributes: true }), dedup(), // (v65z keep TEXCOORD_1: no glTF material reads it, the baked light does)
+   textureCompress({ encoder: sharp, targetFormat: 'webp', resize: [1024, 1024] }), draco());
 await io.write(OUT, doc);
 // v65o the game's copy: assets/maps/sf2-<map>/map.js (window.SF2_MAPS[id] = { glb: base64, meta }, file:// friendly like the other maps)
 const cv = (l) => [l[0] / 100, l[2] / 100, -l[1] / 100], id = 'sf2_' + MAP.toLowerCase(), adir = `assets/maps/sf2-${MAP.toLowerCase()}`;
 const S0 = dump.starts || [], tdm = S0.filter((s) => /PlayerStart_TDM$/.test(s.cls)); // v65v the TDM starts when the map has them (FrontLine / mission starts sit elsewhere)
-const meta = { starts: (tdm.length ? tdm : S0).map((s) => ({ team: s.team, pos: cv(s.loc), yaw: (s.yaw / 65536) * Math.PI * 2 - Math.PI / 2 })), ladders: (dump.ladders || []).map((l) => cv(l.loc)) };
+// v65z the SimpleLightmap sheets the map uses (UModel `-export -png <map> <SimpleLightmap_…> LightMapTexture2D` → tools/out/sf2/lm/), as JPEG
+const lightmaps = {};
+for (const t of usedLm) { const [pkg, nm] = t.split('/'), f = `tools/out/sf2/lm/${pkg}/LightMapTexture2D/${nm}.png`;
+  if (fs.existsSync(f)) lightmaps[t] = 'data:image/jpeg;base64,' + (await sharp(f).jpeg({ quality: 92 }).toBuffer()).toString('base64'); else missing.add(t); }
+const meta = { lightmaps, starts: (tdm.length ? tdm : S0).map((s) => ({ team: s.team, pos: cv(s.loc), yaw: (s.yaw / 65536) * Math.PI * 2 - Math.PI / 2 })), ladders: (dump.ladders || []).map((l) => cv(l.loc)) };
 fs.mkdirSync(adir, { recursive: true });
 fs.writeFileSync(`${adir}/map.js`, `/* Special Force 2's ${MAP} from the user's install — tools/sf2_map_build.mjs */
 (window.SF2_MAPS || (window.SF2_MAPS = {}))['${id}'] = { meta: ${JSON.stringify(meta)}, glb: '${fs.readFileSync(OUT).toString('base64')}' };

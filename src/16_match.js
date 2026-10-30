@@ -175,7 +175,7 @@ class Match {
     const set = (m, mul, env) => {
       if (!m || seen.has(m) || !('envMapIntensity' in m)) return; seen.add(m);
       if (!m.envMap || m.userData.sceneEnv) { m.envMap = env || null; m.userData.sceneEnv = true; }
-      if (m.userData.env === undefined) m.userData.env = m.envMapIntensity || 1; m.envMapIntensity = m.userData.env * k * mul;
+      if (m.userData.env === undefined) m.userData.env = m.envMapIntensity ?? 1; // (v65z ?? not ||: a material set to 0 — SF2's baked light carries its ambient — keeps 0) m.envMapIntensity = m.userData.env * k * mul;
     };
     this.scene.traverse((o) => { const ms = Array.isArray(o.material) ? o.material : [o.material]; ms.forEach((m) => set(m, 1, this.scene.environment)); });
     // viewmodel: reflections normalised to the same average brightness on every map (v19) — dark gun metal still reads as metal on dim maps

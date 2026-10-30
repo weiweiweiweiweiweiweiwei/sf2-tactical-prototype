@@ -55,6 +55,62 @@ function sf2Ladder(b, m) {
   col.addLadder({ minX: nx ? vx0 : x - hw, maxX: nx ? vx1 : x + hw, minZ: nz ? vz0 : z - hw, maxZ: nz ? vz1 : z + hw, y0: y0 - 0.1, y1: y1 + 0.35, top: y1, nx, nz });
 }
 
+// v65z SF2's baked light on one drawn primitive (tools/sf2_map_build.mjs extras): a BSP primitive's sheet (uv1 already in it), a
+// placement's sheet rect (uv1 × cs + cb), or its per-vertex irradiance (bytes × 1/80, the primitives' vertices one after another)
+function sf2LightOf(src) {
+  const gl = src.geometry.userData.lm; if (gl) return { tex: gl.tex, s: gl.s };
+  const node = src.userData.lm || src.userData.lmv ? src : src.parent, ud = (node && node.userData) || {};
+  if (ud.lm) return { tex: ud.lm.tex, s: ud.lm.s, cs: ud.lm.cs, cb: ud.lm.cb };
+  if (!ud.lmv) return {};
+  const v = ud._lmv || (ud._lmv = Uint8Array.from(atob(ud.lmv), (c) => c.charCodeAt(0)));
+  let off = 0; if (node !== src) for (const c of node.children) { if (c === src) break; if (c.isMesh) off += c.geometry.attributes.position.count; }
+  return { v, off };
+}
+const SF2_BLACK = new THREE.DataTexture(new Uint8Array([0, 0, 0, 255]), 1, 1); SF2_BLACK.needsUpdate = true;
+// v65z one draw for a material on one light sheet: the placements in world space, plus three attributes the material reads — lmUv / lms
+// (the sheet's uv and ScaleVector) and lmc (per-vertex irradiance) — added to the indirect light, × π (UE multiplies the texel straight
+// into the albedo, three divides by π); the map's sun stays the dynamic dominant light it is in SF2
+function sf2Merge(list, sheets, def) {
+  const lit = Object.keys(sheets).length > 0, m0 = list[0].m, tex = list[0].L.tex;
+  let nv = 0, ni = 0; for (const { src } of list) { const g = src.geometry; nv += g.attributes.position.count; ni += g.index ? g.index.count : g.attributes.position.count; }
+  const P = new Float32Array(nv * 3), N = new Float32Array(nv * 3), U = new Float32Array(nv * 2), LU = new Float32Array(nv * 2), LC = new Float32Array(nv * 3), LS = new Float32Array(nv * 3), I = new Uint32Array(ni);
+  const v = new THREE.Vector3(), nm = new THREE.Matrix3(), fb = def.lmFallback || [0.3, 0.3, 0.3];
+  let vo = 0, io = 0;
+  for (const { m, src, L } of list) {
+    const g = src.geometry, gp = g.attributes.position, gn = g.attributes.normal, gu = g.attributes.uv, g1 = g.attributes.uv1, n = gp.count, flip = m.matrix.determinant() < 0;
+    nm.getNormalMatrix(m.matrix);
+    for (let i = 0; i < n; i++) {
+      const j = vo + i;
+      v.fromBufferAttribute(gp, i).applyMatrix4(m.matrix); P[j * 3] = v.x; P[j * 3 + 1] = v.y; P[j * 3 + 2] = v.z;
+      if (gn) { v.fromBufferAttribute(gn, i).applyMatrix3(nm).normalize(); N[j * 3] = v.x; N[j * 3 + 1] = v.y; N[j * 3 + 2] = v.z; }
+      if (gu) { U[j * 2] = gu.getX(i); U[j * 2 + 1] = gu.getY(i); }
+      if (L.tex && g1) { const x = g1.getX(i), y = g1.getY(i); LU[j * 2] = L.cs ? x * L.cs[0] + L.cb[0] : x; LU[j * 2 + 1] = L.cs ? y * L.cs[1] + L.cb[1] : y; LS[j * 3] = L.s[0]; LS[j * 3 + 1] = L.s[1]; LS[j * 3 + 2] = L.s[2]; }
+      else if (L.v) for (let c = 0; c < 3; c++) LC[j * 3 + c] = (L.v[(L.off + i) * 3 + c] || 0) / 80;
+      else if (!L.tex) for (let c = 0; c < 3; c++) LC[j * 3 + c] = fb[c];
+    }
+    const gi = g.index, cnt = gi ? gi.count : n, at = (k) => vo + (gi ? gi.getX(k) : k);
+    for (let k = 0; k + 2 < cnt; k += 3) { I[io++] = at(k); I[io++] = at(flip ? k + 2 : k + 1); I[io++] = at(flip ? k + 1 : k + 2); } // (a mirrored placement wound back, so its faces front the right way)
+    vo += n;
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(P, 3)); geo.setAttribute('normal', new THREE.BufferAttribute(N, 3)); geo.setAttribute('uv', new THREE.BufferAttribute(U, 2));
+  geo.setAttribute('lmUv', new THREE.BufferAttribute(LU, 2)); geo.setAttribute('lmc', new THREE.BufferAttribute(LC, 3)); geo.setAttribute('lms', new THREE.BufferAttribute(LS, 3));
+  geo.setIndex(new THREE.BufferAttribute(I, 1)); geo.computeBoundingSphere(); geo.computeBoundingBox();
+  let mat = m0.material;
+  if (lit) {
+    mat = mat.clone(); const sheet = (tex && sheets[tex]) || SF2_BLACK, k = def.lmK ?? Math.PI; mat.envMapIntensity = def.lmEnv ?? 0.1; // (the bake is the ambient: the sky probe on top washed it blue)
+    mat.onBeforeCompile = (sh) => {
+      sh.uniforms.sf2Lm = { value: sheet }; sh.uniforms.sf2LmK = { value: k };
+      sh.vertexShader = 'attribute vec2 lmUv;\nattribute vec3 lmc;\nattribute vec3 lms;\nvarying vec2 vLmUv;\nvarying vec3 vLmc;\nvarying vec3 vLms;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n\tvLmUv = lmUv; vLmc = lmc; vLms = lms;');
+      sh.fragmentShader = 'uniform sampler2D sf2Lm;\nuniform float sf2LmK;\nvarying vec2 vLmUv;\nvarying vec3 vLmc;\nvarying vec3 vLms;\n' + sh.fragmentShader.replace('#include <lights_fragment_maps>', '#include <lights_fragment_maps>\n\tirradiance += ( vLmc + texture2D( sf2Lm, vLmUv ).rgb * vLms ) * sf2LmK;');
+    };
+    mat.customProgramCacheKey = () => 'sf2lm';
+  }
+  const out = new THREE.Mesh(geo, mat); out.name = m0.name.replace(/_\d+$/, '') + ' ×' + list.length + (tex ? ' @' + tex.split('/')[1] : '');
+  out.castShadow = true; out.receiveShadow = true; out.matrixAutoUpdate = false;
+  return out;
+}
+
 function sf2TriMap(def) {
   return Object.assign({
     indoor: false, killOutside: false, traversal: false, navClimb: 0.45, navGrid: 1, bodyRadius: 0.25, underFloorAirOnly: true, acoustics: 'indoor', ambience: 'warehouse',
@@ -89,7 +145,12 @@ function sf2TriMap(def) {
         for (const l of d.meta.ladders || []) l[2] = -l[2];
         d.meta.mirrored = true;
       }
-      this._s2 = { gltf, soup, meta: d.meta };
+      // v65z SF2's baked light (tools/sf2_lightmap.py): its SimpleLightmap sheets, linear, uv as UE stores it (no flip)
+      const lm = {};
+      await Promise.all(Object.entries(d.meta.lightmaps || {}).map(async ([k, url]) => {
+        const t = await new THREE.TextureLoader().loadAsync(url); t.flipY = false; t.colorSpace = THREE.NoColorSpace; t.anisotropy = 4; lm[k] = t;
+      }));
+      this._s2 = { gltf, soup, meta: d.meta, lm };
       this.bounds = { minX: Math.floor(all.min.x) - 2, maxX: Math.ceil(all.max.x) + 2, minZ: Math.floor(all.min.z) - 2, maxZ: Math.ceil(all.max.z) + 2 };
       this.killY = all.min.y - 15;
       const levels = []; for (let y = Math.floor(all.min.y); y <= Math.ceil(all.max.y); y += 0.5) levels.push(y + 0.2); this.navLevels = levels; // v65v slabs every 0.5 m: NavGraph.walkable() takes a floor within ±0.25 m of the slab, so 1 m slabs missed every floor between (SF2's uneven ground: Desert Camp's graph fell into 155 pieces, no path between the bases)
@@ -130,21 +191,14 @@ function sf2TriMap(def) {
         m.castShadow = !m.userData.sky; m.receiveShadow = true;
         for (const mt of Array.isArray(m.material) ? m.material : [m.material]) { mt.vertexColors = false; mt.side = THREE.DoubleSide; if (mt.map) { mt.map.anisotropy = 4; const c = mt.color; if (Math.abs(c.r - c.g) < 0.02 && Math.abs(c.g - c.b) < 0.02) c.setRGB(1, 1, 1); } } // (v65y UModel gives a plain mesh material a 0.58 grey base colour SF2 does not have — the sand mound by the square came out darker than the BSP sand around it in the same texture; a coloured one is the material's own tint, the hangars' red frames, and stays) // (v65w UModel writes SF2's vertex paint as COLOR_0: multiplied in, it striped crates and benches in rainbow colours)
         if (/ladder/i.test(m.name)) sf2Ladder(b, m);
-        const k = Array.isArray(m.material) || m.userData.sky ? m.uuid : m.geometry.uuid + m.material.uuid;
-        (groups.get(k) || groups.set(k, []).get(k)).push(m);
+        if (Array.isArray(m.material) || m.userData.sky) { b.scene.add(m); continue; }
+        const L = sf2LightOf(src), k = m.material.uuid + '|' + (L.tex || '');
+        (groups.get(k) || groups.set(k, []).get(k)).push({ m, src, L });
       }
-      // v65y (user 10-29: Desert Camp ran at 40 FPS on ~3700 draw calls) every placement of one mesh in one material drawn as a single
-      // InstancedMesh: SF2 repeats its props hundreds of times (2607 placements of 167 meshes); nothing raycasts the drawn map (shots and
-      // bodies use the triangle soup), so only the draw changes
-      for (const list of groups.values()) {
-        const m0 = list[0];
-        if (list.length === 1) { b.scene.add(m0); continue; }
-        const im = new THREE.InstancedMesh(m0.geometry, m0.material, list.length);
-        list.forEach((m, i) => im.setMatrixAt(i, m.matrix));
-        im.instanceMatrix.needsUpdate = true; im.computeBoundingSphere(); im.computeBoundingBox && im.computeBoundingBox();
-        im.name = m0.name.replace(/_\d+$/, '') + ' ×' + list.length; im.castShadow = m0.castShadow; im.receiveShadow = true; im.matrixAutoUpdate = false;
-        b.scene.add(im);
-      }
+      // v65z every placement of one material on one baked-light sheet merged into one mesh carrying SF2's own light (user 10-30: Desert
+      // Camp in SF2's look): each placement lights differently, so the v65y instancing gives way to merging — still one draw per
+      // material and sheet (nothing raycasts the drawn map: shots and bodies use the triangle soup)
+      for (const list of groups.values()) b.scene.add(sf2Merge(list, this._s2.lm, def));
     },
   }, def);
 }
@@ -177,7 +231,7 @@ MAPS.push(sf2TriMap({
   objectives: { dom: [[-4, 0, 12], [3, 0, -7], [9, 0, -26]], relic: [3, 0, -7], domRadius: 5 },
   // v65y SF2's own light: DominantDirectionalLight_0 (Pitch −10016, Yaw −1120992 → 55° up from 322°; LightColor 251/219/199), the
   // fill turned down and warmed (the old blue-grey sky fill washed the sand-white walls out and hid every shadow), a warm haze
-  background: 0xcdbb9c, envIntensity: 0.25, exposure: 0.85, hemi: [0xe6d6bc, 0x6a5440, 0.5],
-  sun: { pos: [-32, 57, 25], color: 0xfbdbc7, intensity: 1.4, auto: false }, fog: { color: 0xcdbb9c, near: 90, far: 420 },
-  stairMat: 'dc_stair_002_INST', stairKeep: ['dcnew_stair_001_INST'], stairSides: /^dc_stair_003/i,
+  background: 0xcdbb9c, envIntensity: 0, exposure: 0.8, hemi: [0xe6d6bc, 0x6a5440, 0],
+  sun: { pos: [-32, 57, 25], color: 0xfbdbc7, intensity: 2.5, auto: false }, fog: { color: 0xcdbb9c, near: 90, far: 420 },
+  lmEnv: 0, lmK: 3.14, stairMat: 'dc_stair_002_INST', stairKeep: ['dcnew_stair_001_INST'], stairSides: /^dc_stair_003/i,
 }));

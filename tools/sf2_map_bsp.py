@@ -8,6 +8,7 @@ LightingChannels, iLightmassIndex), Verts (bulk: elem 24, pVertex first). A node
 import sys, struct, json, collections
 sys.path.insert(0, 'tools')
 from sf2_props import Pkg
+from sf2_lightmap import model_elements
 name = sys.argv[1]; p = Pkg(f'tools/out/sf2/{name}_dec.upk'); B = p.b
 def chain(i):
     out = []
@@ -15,7 +16,14 @@ def chain(i):
         m = p.imports[-i - 1] if i < 0 else p.exports[i - 1]; out.append(m['name']); i = m['outer']
     return out[0] if out else 'None'
 models = [e for e in p.exports if p.clsname(e) == 'Model' and p.objname(e['outer']) == 'PersistentLevel']
-groups = collections.defaultdict(lambda: {'pos': [], 'nrm': [], 'uv': []}); tris = 0
+groups = collections.defaultdict(lambda: {'pos': [], 'nrm': [], 'uv': [], 'uv1': []}); tris = 0
+# v65z each node's baked light (tools/sf2_lightmap.py): the ModelComponent element that lists it — its SimpleLightmap, scale, rect
+node_lm = {}
+for e in p.exports:
+    if p.clsname(e) == 'ModelComponent' and p.objname(e['outer']) == 'PersistentLevel':
+        for el in model_elements(p, e):
+            if el['lm'] and el['lm']['t'] == 2:
+                for nd in el['nodes']: node_lm[nd] = el['lm']
 for e in models:
     p.props(e); o = p.o + 28
     def bulk(o, es_exp):
@@ -30,9 +38,10 @@ for e in models:
         s = struct.unpack_from('<8i', B, sf0 + 60 * isurf); mat, flags, pbase, vnorm, vu, vv = s[0], s[1], s[2], s[3], s[4], s[5]
         if flags & 1: continue  # PF_Invisible
         if chain(mat) == 'RemoveSurfaceMaterial': continue  # (the never-drawn outer faces of subtracted brushes)
-        pts = [P(struct.unpack_from('<i', B, vt0 + 24 * (pool + j))[0]) for j in range(nv)]
+        pts = [P(struct.unpack_from('<i', B, vt0 + 24 * (pool + j))[0]) for j in range(nv)]; ids = list(range(nv))
         base, U, Vv, N = P(pbase), V(vu), V(vv), V(vnorm)
-        g = groups[chain(mat)]
+        lm = node_lm.get(k); g = groups[chain(mat) + ('|' + name + '/' + lm['tex'] + '|' + ','.join(map(str, lm['s'])) if lm else '')]
+        stc = lambda j: struct.unpack_from('<2f', B, vt0 + 24 * (pool + j) + 8)
         cv = lambda q: [q[0] / 100, q[2] / 100, -q[1] / 100]
         uv = lambda q: [sum((q[i] - base[i]) * U[i] for i in range(3)), sum((q[i] - base[i]) * Vv[i] for i in range(3))]
         # v65v wind each polygon by its node's plane (bytes 0–15: X, Y, Z, W), not one fixed order: some nodes are stored the other way
@@ -41,9 +50,11 @@ for e in models:
         nw = [0.0, 0.0, 0.0]
         for j in range(nv):
             c0, c1 = g3[j], g3[(j + 1) % nv]; nw[0] += (c0[1] - c1[1]) * (c0[2] + c1[2]); nw[1] += (c0[2] - c1[2]) * (c0[0] + c1[0]); nw[2] += (c0[0] - c1[0]) * (c0[1] + c1[1])
-        if nw[0] * ngl[0] + nw[1] * ngl[1] + nw[2] * ngl[2] < 0: pts = pts[::-1]
+        if nw[0] * ngl[0] + nw[1] * ngl[1] + nw[2] * ngl[2] < 0: pts = pts[::-1]; ids = ids[::-1]
         for j in range(1, nv - 1):  # fan, counter-clockwise about the plane's normal (glTF front face)
-            for q in (pts[0], pts[j], pts[j + 1]): g['pos'] += cv(q); g['nrm'] += [pl[0], pl[2], -pl[1]]; g['uv'] += uv(q)
+            for q, qi in ((pts[0], ids[0]), (pts[j], ids[j]), (pts[j + 1], ids[j + 1])):
+                g['pos'] += cv(q); g['nrm'] += [pl[0], pl[2], -pl[1]]; g['uv'] += uv(q)
+                if lm: t = stc(qi); g['uv1'] += [t[0] * lm['cs'][0] + lm['cb'][0], t[1] * lm['cs'][1] + lm['cb'][1]]
             tris += 1
 json.dump({k: v for k, v in groups.items()}, open(f'tools/out/sf2/maps/{name}_bsp.json', 'w'))
 print(name, 'BSP', len(models), 'models,', tris, 'triangles,', len(groups), 'materials:', ', '.join(list(groups)[:6]))

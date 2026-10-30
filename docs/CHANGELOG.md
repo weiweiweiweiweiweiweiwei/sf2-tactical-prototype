@@ -1763,3 +1763,13 @@
 - 使用者更正：二段跳屬於「Apex 扣血模式」，不是 Apex 地圖。玩家與機器人的二段跳改看 `match.apex`（房間設置的扣血機制），任何地圖選 Apex 模式都能二段跳，Apex 地圖選 SF2 模式則不能。摔落傷害本來就跟著扣血模式（SF2 模式有、Apex 模式沒有），沒改。
 - 實測：沙漠營地／骷髏鎮 × Apex 模式最高升 2.33 m（二段），× SF2 模式 1.17 m（一段）。
 - 地圖本身的設定仍跟著地圖：Apex 地圖的台階高度 0.8 m、攀上 2.3 m 高的邊緣（它們的碰撞是 1 m 高的柱狀格子）。
+
+### （本機，2026-10-30）：沙漠營地用 SF2 原版烘焙光照（v65z）
+- 使用者選「用 SF2 原版」：`tools/sf2_lightmap.py` 讀 SF2（UE3 v904）每個 StaticMeshComponent 的 LODData 光照，以及 BSP 的 ModelComponent 元素。
+  - 154 個物件用光照貼圖（LightMap2D：平均色／方向最大值／SimpleLightmap 三張＋縮放、CoordinateScale/Bias）。
+  - 1749 個物件用逐頂點光照（LightMap1D，每頂點 8 bytes：NormalizedAverageColor＋DirectionalMax；頂點順序與 UModel 匯出的一一對應）。
+  - BSP 17392 個三角形全部有光照（FVert 的 ShadowTexCoord）。
+- 匯出：21 張 `SimpleLightmap`（UModel `-export -png Desertcamp <名稱> LightMapTexture2D`）以 JPEG 寫進 map.js 的 meta.lightmaps。`sf2_map_dump.py` 每個擺放帶 `lm`（`_ob` 修正層沿用被取代版本的光照），`sf2_map_bsp.py` 依「材質｜光照圖」分組並輸出 uv1，`sf2_map_build.mjs` 寫成節點／primitive 的 extras，prune 保留 TEXCOORD_1。
+- 遊戲：同材質、同光照圖的擺放合併成一個網格（光照每件不同，取代 v65y 的實例化），著色器把 `(逐頂點光照 + 光照圖 × 縮放) × π` 加進間接光。SF2 的光照圖只含間接光，太陽在 SF2 是即時的主光源，所以太陽保留（強度 2.5、曝光 0.8），天空補光與環境貼圖關掉。
+- 修正：`applyEnvIntensity` 用 `||` 把材質的 0 改成 1，環境貼圖（偏藍）蓋過烘焙光照；改成 `??`。
+- 沙漠營地 59 FPS、繪製呼叫 529、約 97 萬三角形。色調查找表 `lut_desercamp` 還沒套（TODO）。

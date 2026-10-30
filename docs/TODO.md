@@ -60,7 +60,7 @@
 
 ## 1b. SF2 原版地圖（`docs/loop/SF2_ALL.md` M3）
 - ⬜ 沙漠營地畫面（10-30 分析，依效果排序）：
-  1. SF2 自己的光照貼圖：主包 63 張 `LightMapTexture2D`（方向性光照，內容在 `Lighting_DesertCamp.tfc`，UModel 匯得出來），要逐元件解 LightMap2D 的位置／縮放、配模型第二組 UV；BSP 的 505 個 ModelComponent 各有自己的光照貼圖
+  1. ✅ SF2 自己的光照貼圖（v65z）
   2. 色調查找表 `lut_desercamp`（256×16）套進後製
   3. 78 張法線貼圖（`_n`）還沒接
   4. 外圍沙丘地形（2 個 Terrain）、143 個牆面貼花（DecalActor）
