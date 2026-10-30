@@ -1823,3 +1823,8 @@
 
 - 驗證：`analyze`、`build`、`_dmgmodel.mjs` DMG_MODEL_OK、`check.mjs` CHECK_OK。
 
+### v66c3（雲端，2026-10-30）：彈匣容量照 SF2 原版（決策 D15）
+- 87 把有 SF2 類別的槍，彈匣改成 SF2 的 `AmmoCountInMgz`（44 把原本不同）。例：AWP／CZ 700／PSG1／FR-F2／SR-25／Barrett 5、M200 7、M14 EBR 10、HK417 30、SCAR-H 25、FAMAS 30、GALIL 30、MG4 60、K3／HK23E／Minimi／FN MAG／Ultimax 75、P226 13、Glock 18 15、.44 Magnum 6、Bizon 53、CS/LS06 50、Kriss 20。
+- 備彈照原本的類型規則（彈匣 × 4，狙擊 × 5），不改。
+- `tools/sf2_damage_table.py` 一起產生 `SF2_MAG`。驗證：遊戲裡的定義 SR-25 5、AWP 5、HK417 30、MG4 60、P226 13；`check.mjs` 過。
+

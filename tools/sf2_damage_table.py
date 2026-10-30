@@ -1,4 +1,4 @@
-"""SF2 relative damage → the marked block in src/01_core.js (SF2_DAMAGE, applied onto WEAPON_DATABASE after SF2_WEAPONS).
+"""SF2 relative damage and magazines → the marked block in src/01_core.js (SF2_DAMAGE, applied onto WEAPON_DATABASE after SF2_WEAPONS).
 Every gun with an SF2 class (tools/sf2_weapon_table.py GUNS) takes SF2's own InstantHitDamage / InstantHitDamageMin and its
 falloff range (WeaponRangeDamageMax → Min, 1 m = 39.37 units), scaled by its weapon type's factor K: the median of
 (our damageNear / SF2 damage) over that type, taken once from the v65 table (decision D14) and fixed here, so each class keeps its
@@ -27,9 +27,10 @@ def types():
 def main():
     W = json.load(open('docs/research/sf2/client-data/weapons.json', encoding='utf-8'))
     T = types()
-    rows = []
+    rows, mags = [], []
     for gid, cls in guns():
         w, t = W.get('SFCWeapon' + cls), T.get(gid)
+        if w and w.get('AmmoCountInMgz'): mags.append(f"{gid}: {w['AmmoCountInMgz']}")  # v66c3 SF2's magazine (decision D15), every type
         if not w or not t or t not in K or not w.get('InstantHitDamage'):
             continue
         k = K[t]
@@ -42,6 +43,9 @@ def main():
              '   [damageNear, damageFar, falloffStart m, falloffEnd m] = SF2\'s InstantHitDamage / Min and range × the type\'s factor (sf2_damage_table.K). */\n'
              'const SF2_DAMAGE = {\n' + '\n'.join(rows) + '\n};\n'
              'for (const [id, [n, f, a, b]] of Object.entries(SF2_DAMAGE)) Object.assign(WEAPON_DATABASE[id], { damageNear: n, damageFar: f, falloffStart: a, falloffEnd: b });\n'
+             '// v66c3 SF2\'s own magazine sizes (AmmoCountInMgz, decision D15); the reserve stays on the type rule (compileWeapon)\n'
+             'const SF2_MAG = { ' + ', '.join(mags) + ' };\n'
+             'for (const [id, n] of Object.entries(SF2_MAG)) WEAPON_DATABASE[id].maxAmmo = n;\n'
              '// </sf2-damage>')
     src = open(CORE, encoding='utf-8').read()
     if '// <sf2-damage>' in src:
@@ -49,7 +53,7 @@ def main():
     else:
         src = src.replace('// </sf2-weapons>\n', '// </sf2-weapons>\n' + block + '\n', 1)
     open(CORE, 'w', encoding='utf-8').write(src)
-    print(f'{CORE}: {len(rows)} guns')
+    print(f'{CORE}: {len(rows)} guns, {len(mags)} magazines')
 
 
 if __name__ == '__main__':

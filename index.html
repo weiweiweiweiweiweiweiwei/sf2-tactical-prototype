@@ -4912,6 +4912,8 @@ var SF2_DAMAGE = {
   // SFCWeaponTRG 150 → 120
 };
 for (const [id, [n, f, a, b]] of Object.entries(SF2_DAMAGE)) Object.assign(WEAPON_DATABASE[id], { damageNear: n, damageFar: f, falloffStart: a, falloffEnd: b });
+var SF2_MAG = { usas12: 10, magnum44: 6, wildey: 8, strikeone: 15, maxim9: 15, luger: 8, k5: 13, ultimax: 75, minimispw: 75, fnmag: 75, svch: 10, msr: 5, fnar: 5, uzipro: 25, sigmpx: 30, mx4: 30, mp40: 32, krissv: 20, k1: 25, cz3a1: 30, csls06: 50, bizon: 53, tar21: 30, t91: 30, t65k2: 30, t65k1: 30, stg44: 30, scarhdmr: 13, xm8cc: 30, xm8ar: 100, fs2000: 30, sar21: 30, mrr: 30, madsenlar: 20, k2c1: 30, fnf2000: 30, cm901: 30, arx160: 30, ak104: 30, an94: 30, m16a3: 30, k2: 30, acr: 30, scarl: 30, scarh: 25, famas: 30, xm8: 30, galil: 30, hk417: 30, mp5k: 30, qbz97: 30, g36c_eo: 30, hk417_rs: 30, scarl_eo: 30, k14: 5, m40a1: 5, cz700: 5, cheytac_m200: 7, awp: 5, barrett: 5, kar98k: 5, sr25: 5, psg1: 5, frf2: 5, m14ebr: 10, aug: 30, sg551: 30, type89: 30, ump45: 30, mp7: 40, mg4: 60, k3: 75, hk23e: 75, remington870: 7, benelli_m4: 7, ksg: 14, saiga12: 10, p226: 13, deagle: 7, glock18: 15, m1911: 7, cz75: 15, jericho: 10, sw60: 6, m92fs: 15, infinity: 15, trg: 5 };
+for (const [id, n] of Object.entries(SF2_MAG)) WEAPON_DATABASE[id].maxAmmo = n;
 var APEX_WEAPONS = {
   havoc: { "name": "HAVOC Rifle", "body": 20, "head": 26, "leg": 15, "pellets": 1, "rpm": 672, "headMax": 300.4 },
   hemlok: { "name": "Hemlok Burst AR", "body": 21, "head": 29.4, "leg": 15.75, "pellets": 1, "rpm": 930, "headMax": 300.4 },
