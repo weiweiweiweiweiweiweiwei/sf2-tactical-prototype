@@ -110,11 +110,14 @@ function sf2Variant(rigId) {
   sc.traverse((o) => { if (o.isBone) bones[o.name] = o; });
   for (const n of info.hide || []) { const o = sc.getObjectByName(n); if (o && o.parent) o.parent.remove(o); }
   ov.scene.updateMatrixWorld(true);
+  const rigid = [];
   ov.scene.traverse((o) => {
+    if (o.isMesh && !o.isSkinnedMesh) { rigid.push(o); return; } // (v65z a part held by one bone — the optic's reticle quad: skipping it lost SF2's red dot / ring)
     if (!o.isSkinnedMesh) return;
-    const m = new THREE.SkinnedMesh(o.geometry, o.material); m.name = o.parent && !o.parent.isScene && !o.parent.isBone ? o.parent.name : o.name; sc.add(m);
+    const m = new THREE.SkinnedMesh(o.geometry, o.material); m.name = o.parent && o.parent !== ov.scene && !o.parent.isScene && !o.parent.isBone ? o.parent.name : o.name; sc.add(m); // (v65z a mesh straight under the glTF's root Group keeps its own name — the reticle quad had become '')
     m.bind(new THREE.Skeleton(o.skeleton.bones.map((b) => bones[b.name]), o.skeleton.boneInverses), o.bindMatrix);
   });
+  for (const o of rigid) { const p = o.parent, t = (p && (bones[p.name] || sc.getObjectByName(p.name))) || sc, c = o.clone(); c.name = o.name; t.add(c); } // (same local transform, under the base rig's bone of that name)
   const wr = sc.getObjectByName('weapon_root'), owr = ov.scene.getObjectByName('weapon_root');
   for (const c of owr ? owr.children : []) {
     if (c.isBone) continue;

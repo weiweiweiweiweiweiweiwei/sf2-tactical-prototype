@@ -17097,20 +17097,21 @@ function sf2StairRamp(o) {
 }
 __name(sf2StairRamp, "sf2StairRamp");
 function sf2TerrainGeo(T) {
-  const nx = T.nx, ny = T.ny, H = new Float32Array(Uint8Array.from(atob(T.h), (c) => c.charCodeAt(0)).buffer), W = Uint8Array.from(atob(T.w), (c) => c.charCodeAt(0));
+  const nx = T.nx, ny = T.ny, H = new Float32Array(Uint8Array.from(atob(T.h), (c2) => c2.charCodeAt(0)).buffer), W = Uint8Array.from(atob(T.w), (c2) => c2.charCodeAt(0));
   const P = new Float32Array(nx * ny * 3), G = new Float32Array(nx * ny * 2), hole = new Set(T.holes || []), I = [];
+  const c = Math.cos(T.yaw || 0), sn = Math.sin(T.yaw || 0);
   for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
-    const k = i + j * nx;
-    P[k * 3] = T.x0 + i * T.dx;
+    const k = i + j * nx, u = i * T.dx, w = j * T.dz;
+    P[k * 3] = T.x0 + u * c - w * sn;
     P[k * 3 + 1] = H[k];
-    P[k * 3 + 2] = T.z0 + j * T.dz;
+    P[k * 3 + 2] = T.z0 + u * sn + w * c;
     G[k * 2] = i;
     G[k * 2 + 1] = j;
   }
   for (let j = 0; j + 1 < ny; j++) for (let i = 0; i + 1 < nx; i++) {
-    const a = i + j * nx, b = a + nx, c = a + 1, d = b + 1;
-    if (hole.has(a) || hole.has(b) || hole.has(c) || hole.has(d)) continue;
-    I.push(a, b, c, c, b, d);
+    const a = i + j * nx, b = a + nx, c2 = a + 1, d = b + 1;
+    if (hole.has(a) || hole.has(b) || hole.has(c2) || hole.has(d)) continue;
+    I.push(a, b, c2, c2, b, d);
   }
   const geo = new THREE.BufferGeometry();
   geo.setAttribute("position", new THREE.BufferAttribute(P, 3));
@@ -18361,13 +18362,23 @@ function sf2Variant(rigId) {
     if (o && o.parent) o.parent.remove(o);
   }
   ov.scene.updateMatrixWorld(true);
+  const rigid = [];
   ov.scene.traverse((o) => {
+    if (o.isMesh && !o.isSkinnedMesh) {
+      rigid.push(o);
+      return;
+    }
     if (!o.isSkinnedMesh) return;
     const m = new THREE.SkinnedMesh(o.geometry, o.material);
-    m.name = o.parent && !o.parent.isScene && !o.parent.isBone ? o.parent.name : o.name;
+    m.name = o.parent && o.parent !== ov.scene && !o.parent.isScene && !o.parent.isBone ? o.parent.name : o.name;
     sc.add(m);
     m.bind(new THREE.Skeleton(o.skeleton.bones.map((b) => bones[b.name]), o.skeleton.boneInverses), o.bindMatrix);
   });
+  for (const o of rigid) {
+    const p = o.parent, t = p && (bones[p.name] || sc.getObjectByName(p.name)) || sc, c = o.clone();
+    c.name = o.name;
+    t.add(c);
+  }
   const wr = sc.getObjectByName("weapon_root"), owr = ov.scene.getObjectByName("weapon_root");
   for (const c of owr ? owr.children : []) {
     if (c.isBone) continue;

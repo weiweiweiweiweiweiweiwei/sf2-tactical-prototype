@@ -114,7 +114,7 @@ for e in p.exports:
 # v65z UE3 Terrain (tower / Cannon's ground): after its tags Heights<WORD>[NumVerticesX × NumVerticesY], InfoData<BYTE> (bit 0: a hole),
 # AlphaMaps[]<BYTE> (one per layer, Layers[i].AlphaMapIndex); vertex (i, j) at Location + (i × DrawScale3D.X, j × DrawScale3D.Y) cm,
 # height (h − 32768) / 128 × DrawScale3D.Z cm. A layer's look: TerrainLayerSetup → TerrainMaterial (Material, MappingScale 4, MappingRotation)
-terrains = []  # (v65z every Terrain actor: Desert Camp has two, its outer dunes)
+terrains = []  # (v65z every Terrain actor: Desert Camp has two, its outer dunes; 'yaw' its Rotation — the south pair is turned 180°)
 for e in p.exports:
     if p.clsname(e) != 'Terrain': continue
     pr = {n: v for n, i, t, v in p.props(e)}; o = p.o; B = p.b
@@ -131,7 +131,7 @@ for e in p.exports:
             if tmn and tmn in byname: tm = {n2: v for n2, i, t, v in p.props(byname[tmn])}
         ai = L.get('AlphaMapIndex', -1)
         layers.append({'mat': tm.get('Material'), 'scale': float(tm.get('MappingScale', 4.0)), 'rot': float(tm.get('MappingRotation', 0.0)), 'alpha': alphas[ai] if 0 <= ai < len(alphas) else None})
-    terrains.append({'nx': nx, 'ny': ny, 'loc': vec(pr.get('Location')), 'scale': vec(pr.get('DrawScale3D'), (1.0, 1.0, 1.0)), 'h': hs, 'holes': holes, 'layers': layers})
+    terrains.append({'nx': nx, 'ny': ny, 'loc': vec(pr.get('Location')), 'yaw': vec(pr.get('Rotation'))[1] * 3.141592653589793 / 32768, 'scale': vec(pr.get('DrawScale3D'), (1.0, 1.0, 1.0)), 'h': hs, 'holes': holes, 'layers': layers})
     print('terrain', nx, 'x', ny, 'layers', [(L['mat'], L['scale'], L['rot'], bool(L['alpha'])) for L in layers], 'holes', len(holes))
 # v65z the level's colour grading table (WorldInfo DefaultPostProcessSettings.ColorGrading_LookupTable, a 256 × 16 strip)
 lut = None

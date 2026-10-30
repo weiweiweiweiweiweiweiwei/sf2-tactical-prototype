@@ -110,7 +110,7 @@ for (const T0 of dump.terrains || (dump.terrain ? [dump.terrain] : [])) {
   const layers = [];
   for (const L of T.layers.slice(0, 4)) { const png = L.mat && diffuseOf(L.mat);
     layers.push({ tex: png ? 'data:image/jpeg;base64,' + (await sharp(png).resize(1024, 1024, { fit: 'inside' }).jpeg({ quality: 88 }).toBuffer()).toString('base64') : null, scale: L.scale, rot: L.rot, used: !!(L.alpha && L.alpha.some((a) => a)) }); }
-  terrains.push({ nx: T.nx, ny: T.ny, x0: T.loc[0] / 100, z0: T.loc[1] / 100, dx: T.scale[0] / 100, dz: T.scale[1] / 100, h: Buffer.from(H.buffer).toString('base64'), w: Buffer.from(W).toString('base64'), holes: T.holes, layers });
+  terrains.push({ nx: T.nx, ny: T.ny, yaw: T.yaw || 0, x0: T.loc[0] / 100, z0: T.loc[1] / 100, dx: T.scale[0] / 100, dz: T.scale[1] / 100, h: Buffer.from(H.buffer).toString('base64'), w: Buffer.from(W).toString('base64'), holes: T.holes, layers });
 }
 const lutPng = dump.lut && files[dump.lut.toLowerCase() + '.png']; // (v65z SF2's colour grading strip, lossless)
 // v66a SF2's projected decals (tools/sf2_map_dump.py 'decals'): each sheet once (WebP, ≤ 512, a separate '_Alpha' sheet joined as its

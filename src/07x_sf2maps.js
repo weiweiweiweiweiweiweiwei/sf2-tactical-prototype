@@ -168,7 +168,8 @@ function sf2StairRamp(o) {
 function sf2TerrainGeo(T) {
   const nx = T.nx, ny = T.ny, H = new Float32Array(Uint8Array.from(atob(T.h), (c) => c.charCodeAt(0)).buffer), W = Uint8Array.from(atob(T.w), (c) => c.charCodeAt(0));
   const P = new Float32Array(nx * ny * 3), G = new Float32Array(nx * ny * 2), hole = new Set(T.holes || []), I = [];
-  for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) { const k = i + j * nx; P[k * 3] = T.x0 + i * T.dx; P[k * 3 + 1] = H[k]; P[k * 3 + 2] = T.z0 + j * T.dz; G[k * 2] = i; G[k * 2 + 1] = j; }
+  const c = Math.cos(T.yaw || 0), sn = Math.sin(T.yaw || 0); // (v65z the actor's yaw about its Location, UE x / y = game x / z here)
+  for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) { const k = i + j * nx, u = i * T.dx, w = j * T.dz; P[k * 3] = T.x0 + u * c - w * sn; P[k * 3 + 1] = H[k]; P[k * 3 + 2] = T.z0 + u * sn + w * c; G[k * 2] = i; G[k * 2 + 1] = j; }
   for (let j = 0; j + 1 < ny; j++) for (let i = 0; i + 1 < nx; i++) {
     const a = i + j * nx, b = a + nx, c = a + 1, d = b + 1;
     if (hole.has(a) || hole.has(b) || hole.has(c) || hole.has(d)) continue;
