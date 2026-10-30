@@ -9,6 +9,7 @@ import { SoldierFactory, WeaponModels, ensureGunModels, gunModelReady, loadGunMo
 import { BTN, CmdBuilder } from './12b_cmd.js';
 import { esc, safeName } from './12c_netutil.js';
 import { BOT_NAMES } from './13_bots.js';
+import { NetPlayer } from './13b_netplayers.js';
 import { HUD } from './14_hud.js';
 import { LOOK_DEFAULT, PostFX, resolveLook } from './15_postfx.js';
 import { Match } from './16_match.js';
@@ -1188,7 +1189,7 @@ try {
   const app = new App();
   window.app = app;
   window.SF2 = { ensureGunModels, THREE, Settings, MAPS, WEAPON_DEFS, WEAPON_DATABASE, CFG, MODES, RULES, calcDamage, loadoutDefs, LOOK_DEFAULT, resolveLook, CAO, AudioEngine, GUN_PROFILES, triHeight, triBox }; // debug handle for the console
-  window.SF2net = { Friends, NetHost, NetClient, LoopbackTransport, NetCodec, RoomDirectory, RtcHostTransport, RtcClientTransport, BackgroundTicker, RoomHost, RoomGuest, RoomLink, inviteLink, parseCode, fmtCode, roomCode, roomCfgSafe, ONLINE, host: (room, o = {}) => new NetHost(app, app.match, new LoopbackTransport(room, o)), join: (room, o = {}) => app.netJoin(room, o) }; // v25 tests
+  window.SF2net = { NetPlayer, Friends, NetHost, NetClient, LoopbackTransport, NetCodec, RoomDirectory, RtcHostTransport, RtcClientTransport, BackgroundTicker, RoomHost, RoomGuest, RoomLink, inviteLink, parseCode, fmtCode, roomCode, roomCfgSafe, ONLINE, host: (room, o = {}) => new NetHost(app, app.match, new LoopbackTransport(room, o)), join: (room, o = {}) => app.netJoin(room, o) }; // v25 tests
   window.__gameReady = true;
   document.getElementById('boot').classList.add('done');
 } catch (e) {

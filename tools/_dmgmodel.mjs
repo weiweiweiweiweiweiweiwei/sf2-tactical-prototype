@@ -7,7 +7,7 @@ await new Promise((r) => srv.listen(0, '127.0.0.1', r));
 const b = await launchBrowser(), page = await b.newPage(), errs = [];
 await routeCdn(page, ROOT);
 page.on('pageerror', (e) => errs.push(e.message)); page.on('console', (m) => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) errs.push(m.text()); });
-await page.goto(`http://127.0.0.1:${srv.address().port}/index.html`); await page.waitForFunction(() => window.app && window.SF2);
+await page.goto(`http://127.0.0.1:${srv.address().port}/index.html`, { waitUntil: 'domcontentloaded', timeout: 90000 }); await page.waitForFunction(() => window.app && window.SF2);
 const out = [];
 for (const dmg of ['sf2', 'apex']) {
   out.push(...await page.evaluate(async (dmg) => {

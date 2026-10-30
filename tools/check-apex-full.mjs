@@ -13,7 +13,7 @@ const browser = await launchBrowser({ args: ['--use-angle=d3d11', '--enable-gpu'
 try {
   const page = await browser.newPage({ viewport: { width: 1280, height: 720 } }), errors = []; page.setDefaultTimeout(0);
   page.on('pageerror', (e) => errors.push(e.message)); await routeCdn(page, root);
-  await page.goto(`http://127.0.0.1:${server.address().port}/index.html`);
+  await page.goto(`http://127.0.0.1:${server.address().port}/index.html`, { waitUntil: 'domcontentloaded', timeout: 90000 });
   await page.waitForFunction(() => window.app && window.SF2, null, { timeout: 60000 });
   const report = await page.evaluate(async (MAP) => {
     Object.assign(SF2.Settings.data.lobby, { map: SF2.MAPS.findIndex((m) => m.id === MAP), rule: 'tdm', allies: 1, enemies: 1 });

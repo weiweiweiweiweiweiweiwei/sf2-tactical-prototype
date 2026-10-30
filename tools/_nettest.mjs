@@ -2,31 +2,31 @@
 // latency / jitter / loss, then the test drives both and checks movement agreement, hit registration and death / respawn.
 // usage: node tools/_nettest.mjs [lag=40] [jitter=10] [loss=0.02]   (DMG=apex: the Apex damage model, v58; MAP=<map id>, v60: any map,
 // and on a map with doors the host opens one and the friend must see it swing)
-import { chromium } from 'playwright'; import http from 'node:http'; import fs from 'node:fs'; import path from 'node:path';
+import { chromium } from 'playwright'; import { launchBrowser, routeCdn } from './pw.mjs'; import http from 'node:http'; import fs from 'node:fs'; import path from 'node:path';
 const ROOT = process.cwd(), T = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript' };
 const srv = http.createServer((q, s) => { const p = path.join(ROOT, decodeURIComponent(new URL(q.url, 'http://x').pathname)); if (!fs.existsSync(p) || fs.statSync(p).isDirectory()) { s.writeHead(404); s.end(); return; } s.writeHead(200, { 'Content-Type': T[path.extname(p)] || 'application/octet-stream' }); fs.createReadStream(p).pipe(s); });
 await new Promise((r) => srv.listen(0, '127.0.0.1', r));
 const RTC = process.argv[2] === 'rtc', [lag = '40', jitter = '10', loss = '0.02'] = process.argv.slice(RTC ? 3 : 2), base = `http://127.0.0.1:${srv.address().port}/index.html`, net = `&lag=${lag}&jitter=${jitter}&loss=${loss}`;
-const b = await chromium.launch({ channel: 'chrome', args: ['--use-angle=d3d11', '--enable-gpu', '--autoplay-policy=no-user-gesture-required', '--disable-renderer-backgrounding', '--disable-background-timer-throttling', '--disable-backgrounding-occluded-windows'] });
+const b = await launchBrowser({ args: ['--use-angle=d3d11', '--enable-gpu', '--autoplay-policy=no-user-gesture-required', '--disable-renderer-backgrounding', '--disable-background-timer-throttling', '--disable-backgrounding-occluded-windows'] });
 // rtc: two separate browser PROCESSES (like two computers) linked through Supabase signalling + WebRTC; loop: two tabs,
 // BroadcastChannel. (v48: rtc used to open two contexts of one browser; the one not in front got throttled frames, so the
 // friend ran at a third of real time and his hits / movement numbers were skewed — see _hostload.mjs.)
 const b2 = RTC ? await chromium.launch({ channel: 'chrome', args: ['--use-angle=d3d11', '--enable-gpu', '--autoplay-policy=no-user-gesture-required', '--disable-renderer-backgrounding', '--disable-background-timer-throttling', '--disable-backgrounding-occluded-windows'] }) : null;
 const ctx = await b.newContext({ viewport: { width: 800, height: 450 } }), ctx2 = RTC ? await b2.newContext({ viewport: { width: 800, height: 450 } }) : ctx, errs = { host: [], client: [] };
-const H = await ctx.newPage(), C = await ctx2.newPage();
+const H = await ctx.newPage(), C = await ctx2.newPage(); await routeCdn(H, ROOT); await routeCdn(C, ROOT); // v66c1 pw.mjs: the cloud box too
 for (const [pg, k] of [[H, 'host'], [C, 'client']]) { pg.on('pageerror', (e) => errs[k].push('uncaught: ' + e.message)); pg.on('console', (m) => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) errs[k].push(m.text()); }); }
 const log = (...a) => console.log(...a);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // 1. host starts a 3v3 warehouse TDM in a tab opened with ?host=
-await H.goto(RTC ? `${base}?x=1` : `${base}?host=t1${net}`); await H.waitForFunction(() => window.app && window.SF2);
+await H.goto(RTC ? `${base}?x=1` : `${base}?host=t1${net}`, { waitUntil: 'domcontentloaded', timeout: 90000 }); await H.waitForFunction(() => window.app && window.SF2);
 const setup = ([nick, dmg, MAP]) => { const S = SF2.Settings.data; S.nick = nick; S.quality = 'low'; Object.assign(S.lobby, { map: Math.max(0, SF2.MAPS.findIndex((m) => m.id === MAP)), rule: 'tdm', mode: 'general', allies: 3, enemies: 3, loadout: 0 }); S.lobby.opts = Object.assign({}, S.lobby.opts, { dmg }); S.loadouts[0] = { name: 'A', primary: 'm4a1', secondary: 'p226' }; };
 await H.evaluate(setup, ['HostWei', process.env.DMG || 'sf2', process.env.MAP || '']);
 let code = null;
 if (RTC) { // v27: the host opens a room, the friend joins the room (team bravo), then the host starts the match for both
   await H.evaluate(() => app.createRoom()); await H.waitForFunction(() => app.room && app.room.online, null, { timeout: 30000 }).catch(() => {});
   code = await H.evaluate(() => app.room.code); log('room code', code);
-  await C.goto(`${base}?x=2${process.env.RELAY ? '&relay=1' : ''}`); await C.waitForFunction(() => window.app && window.SF2 && app.dir); await C.evaluate(setup, ['Tester', 'sf2', process.env.MAP || '']); // (the friend's own setting must not matter: the room's wins)
+  await C.goto(`${base}?x=2${process.env.RELAY ? '&relay=1' : ''}`, { waitUntil: 'domcontentloaded', timeout: 90000 }); await C.waitForFunction(() => window.app && window.SF2 && app.dir); await C.evaluate(setup, ['Tester', 'sf2', process.env.MAP || '']); // (the friend's own setting must not matter: the room's wins)
   const t0 = Date.now(); await C.evaluate((code) => app.joinRoom(code), code);
   await C.waitForFunction(() => app.room && app.room.entered, null, { timeout: 30000 }).catch(() => {}); log('in the room after', Date.now() - t0, 'ms');
   await C.evaluate(() => app.room.setTeam('bravo')); await sleep(600);
@@ -35,7 +35,7 @@ await H.evaluate(async () => { await app.startMatch(); app.state = 'playing'; ap
 log('host match running:', await H.evaluate(() => ({ combatants: app.match.combatants.length, net: app.match.net && app.match.net.role })));
 
 // 2. client joins from a second tab
-if (!RTC) await C.goto(`${base}?join=t1&name=Tester&team=bravo${net}`);
+if (!RTC) await C.goto(`${base}?join=t1&name=Tester&team=bravo${net}`, { waitUntil: 'domcontentloaded', timeout: 90000 });
 await C.waitForFunction(() => window.app && app.state === 'playing' && app.match && app.match.net && app.match.net.ready, null, { timeout: 60000 }).catch(() => {});
 await C.evaluate(() => { app.state = 'playing'; app.input.locked = true; });
 await sleep(1500);

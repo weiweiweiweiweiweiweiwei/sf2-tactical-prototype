@@ -23878,6 +23878,9 @@ var TeamIntel = class {
 };
 
 // src/13b_netplayers.js
+var NET_CMD_BURST = 30;
+var NET_CMD_RATE = 1.02;
+var NET_PENDING_MAX = 120;
 var NetPlayer = class _NetPlayer extends Human {
   static {
     __name(this, "NetPlayer");
@@ -23938,15 +23941,20 @@ var NetPlayer = class _NetPlayer extends Human {
   }
   // Commands arrive in packets (each carries the last few, so one lost packet costs nothing), possibly out of order:
   // they are kept by sequence number and replayed strictly in order.
+  // v66c1 at most NET_PENDING_MAX waiting (a flood is dropped from the newest end — they would be refused by the budget anyway)
   pushCmds(list) {
-    for (const c of list) if (c.seq > this.ackSeq && !this.pending.has(c.seq)) this.pending.set(c.seq, c);
+    for (const c of list) if (c.seq > this.ackSeq && !this.pending.has(c.seq) && this.pending.size < NET_PENDING_MAX) this.pending.set(c.seq, c);
   }
   // Every command is simulated exactly once, in order, with the same fixed step the client used — never invented. None
   // arrived yet (jitter): the soldier waits this tick (his own client already predicted it). A backlog is worked off two
   // per tick. So the host replays the client's input stream exactly: same position, same shots, same spread.
   // A missing number (packet lost or still in flight) is waited for up to 4 ticks (~33 ms), then skipped.
+  // v66c1 anti speed / fire-rate hack: a client sending more than one command per tick (a sped-up clock) used to be run two per
+  // tick for as long as its backlog stayed over 4 — twice the speed and the rate of fire. Each tick now earns NET_CMD_RATE commands
+  // and a stall saves up to NET_CMD_BURST for the catch-up after it, so over any stretch a client gets no more commands than ticks.
   step(h) {
-    const n = this.pending.size > 4 ? 2 : 1;
+    this.budget = Math.min((this.budget ?? NET_CMD_BURST) + NET_CMD_RATE, NET_CMD_BURST + 1);
+    const n = Math.min(this.pending.size > 4 ? 2 : 1, Math.floor(this.budget));
     let ran = 0;
     for (let i = 0; i < n; i++) {
       let cmd = this.pending.get(this.ackSeq + 1);
@@ -23958,6 +23966,7 @@ var NetPlayer = class _NetPlayer extends Human {
       this.holeT = 0;
       this.pending.delete(cmd.seq);
       ran++;
+      this.budget--;
       if (this.alive) {
         this.yaw = cmd.yaw;
         this.pitch = cmd.pitch;
@@ -32053,7 +32062,7 @@ try {
   const app = new App();
   window.app = app;
   window.SF2 = { ensureGunModels, THREE, Settings, MAPS, WEAPON_DEFS, WEAPON_DATABASE, CFG, MODES, RULES, calcDamage, loadoutDefs, LOOK_DEFAULT, resolveLook, CAO, AudioEngine, GUN_PROFILES, triHeight, triBox };
-  window.SF2net = { Friends, NetHost, NetClient, LoopbackTransport, NetCodec, RoomDirectory, RtcHostTransport, RtcClientTransport, BackgroundTicker, RoomHost, RoomGuest, RoomLink, inviteLink, parseCode, fmtCode, roomCode, roomCfgSafe, ONLINE, host: /* @__PURE__ */ __name((room, o = {}) => new NetHost(app, app.match, new LoopbackTransport(room, o)), "host"), join: /* @__PURE__ */ __name((room, o = {}) => app.netJoin(room, o), "join") };
+  window.SF2net = { NetPlayer, Friends, NetHost, NetClient, LoopbackTransport, NetCodec, RoomDirectory, RtcHostTransport, RtcClientTransport, BackgroundTicker, RoomHost, RoomGuest, RoomLink, inviteLink, parseCode, fmtCode, roomCode, roomCfgSafe, ONLINE, host: /* @__PURE__ */ __name((room, o = {}) => new NetHost(app, app.match, new LoopbackTransport(room, o)), "host"), join: /* @__PURE__ */ __name((room, o = {}) => app.netJoin(room, o), "join") };
   window.__gameReady = true;
   document.getElementById("boot").classList.add("done");
 } catch (e) {

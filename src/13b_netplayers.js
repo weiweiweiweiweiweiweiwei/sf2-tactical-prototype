@@ -12,6 +12,7 @@ import { Bot, animateSoldier } from './13_bots.js';
    Ghost     — anyone else as seen on a CLIENT: the host's player, bots, other friends. Pure display, drawn ~100 ms in
                the past between two snapshots so movement stays smooth whatever the packet timing.
    ===================================================================== */
+const NET_CMD_BURST = 30, NET_CMD_RATE = 1.02, NET_PENDING_MAX = 120; // v66c1 (half a second of catch-up; 2 % for a client clock running a little fast)
 class NetPlayer extends Human {
   constructor(game, team, name, peer, opts = {}) {
     super(game, team, name, false);
@@ -43,13 +44,18 @@ class NetPlayer extends Human {
 
   // Commands arrive in packets (each carries the last few, so one lost packet costs nothing), possibly out of order:
   // they are kept by sequence number and replayed strictly in order.
-  pushCmds(list) { for (const c of list) if (c.seq > this.ackSeq && !this.pending.has(c.seq)) this.pending.set(c.seq, c); }
+  // v66c1 at most NET_PENDING_MAX waiting (a flood is dropped from the newest end — they would be refused by the budget anyway)
+  pushCmds(list) { for (const c of list) if (c.seq > this.ackSeq && !this.pending.has(c.seq) && this.pending.size < NET_PENDING_MAX) this.pending.set(c.seq, c); }
   // Every command is simulated exactly once, in order, with the same fixed step the client used — never invented. None
   // arrived yet (jitter): the soldier waits this tick (his own client already predicted it). A backlog is worked off two
   // per tick. So the host replays the client's input stream exactly: same position, same shots, same spread.
   // A missing number (packet lost or still in flight) is waited for up to 4 ticks (~33 ms), then skipped.
+  // v66c1 anti speed / fire-rate hack: a client sending more than one command per tick (a sped-up clock) used to be run two per
+  // tick for as long as its backlog stayed over 4 — twice the speed and the rate of fire. Each tick now earns NET_CMD_RATE commands
+  // and a stall saves up to NET_CMD_BURST for the catch-up after it, so over any stretch a client gets no more commands than ticks.
   step(h) {
-    const n = this.pending.size > 4 ? 2 : 1;
+    this.budget = Math.min((this.budget ?? NET_CMD_BURST) + NET_CMD_RATE, NET_CMD_BURST + 1);
+    const n = Math.min(this.pending.size > 4 ? 2 : 1, Math.floor(this.budget));
     let ran = 0;
     for (let i = 0; i < n; i++) {
       let cmd = this.pending.get(this.ackSeq + 1);
@@ -58,7 +64,7 @@ class NetPlayer extends Human {
         if (this.ackSeq && ++this.holeT < 4) break; // (first commands of a session: start from the oldest one at once)
         cmd = this.pending.get(Math.min(...this.pending.keys()));
       }
-      this.holeT = 0; this.pending.delete(cmd.seq); ran++;
+      this.holeT = 0; this.pending.delete(cmd.seq); ran++; this.budget--;
       if (this.alive) { this.yaw = cmd.yaw; this.pitch = cmd.pitch; this.aimPitch = cmd.pitch; this.aimDY = cmd.ay; this.aimDP = cmd.ap; }
       this.curSeq = cmd.seq; this.viewT = cmd.vt; // the command being simulated (tests compare it with the client's) · v29: its view time
       this.fixedUpdate(h, cmd);

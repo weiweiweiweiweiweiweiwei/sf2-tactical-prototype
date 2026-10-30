@@ -55,7 +55,7 @@ let failed = false;
 const rows = [], prof = [];
 if (MAP_ALL) {
   const pg = await browser.newPage(); await routeCdn(pg, ROOT);
-  await pg.goto(base + encodeURI(FILE) + '?count=' + Date.now(), { waitUntil: 'load', timeout: 60000 }); await pg.waitForFunction(() => window.SF2 && window.SF2.MAPS, null, { timeout: 60000 });
+  await pg.goto(base + encodeURI(FILE) + '?count=' + Date.now(), { waitUntil: 'domcontentloaded', timeout: 90000 }); await pg.waitForFunction(() => window.SF2 && window.SF2.MAPS, null, { timeout: 60000 });
   MAPS = [...Array(await pg.evaluate(() => window.SF2.MAPS.length)).keys()]; await pg.close();
 }
 for (const map of MAPS) {
@@ -67,7 +67,7 @@ for (const map of MAPS) {
   await routeCdn(page, ROOT);
   let r = null;
   try {
-    await page.goto(base + encodeURI(FILE) + '?check=' + Date.now(), { waitUntil: 'load', timeout: 60000 });
+    await page.goto(base + encodeURI(FILE) + '?check=' + Date.now(), { waitUntil: 'domcontentloaded', timeout: 90000 });
     await page.waitForFunction(() => window.app && window.SF2, null, { timeout: 60000 });
     await page.evaluate(async ({ map, quality, bots, audio, nopace }) => {
       const S = window.SF2.Settings.data; S.quality = quality; S.showFps = true;

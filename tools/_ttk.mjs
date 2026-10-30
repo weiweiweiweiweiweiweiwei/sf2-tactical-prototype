@@ -6,7 +6,7 @@ const srv = http.createServer((q, s) => { const p = path.join(ROOT, decodeURICom
 await new Promise((r) => srv.listen(0, '127.0.0.1', r));
 const b = await launchBrowser(), page = await b.newPage();
 await routeCdn(page, ROOT);
-await page.goto(`http://127.0.0.1:${srv.address().port}/index.html`); await page.waitForFunction(() => window.app && window.SF2, null, { timeout: 90000 });
+await page.goto(`http://127.0.0.1:${srv.address().port}/index.html`, { waitUntil: 'domcontentloaded', timeout: 90000 }); await page.waitForFunction(() => window.app && window.SF2, null, { timeout: 90000 });
 const rows = await page.evaluate(() => {
   const rows = [], W = SF2.WEAPON_DEFS;
   for (const d of Object.values(W)) {
