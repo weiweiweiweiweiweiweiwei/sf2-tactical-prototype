@@ -31,8 +31,9 @@ ACTORS = ('StaticMeshActor', 'SFStaticMeshActor', 'InterpActor', 'KActor', 'SFKA
 def lm_of(ce):  # v65z SF2's baked light on this placement (tools/sf2_lightmap.py): a SimpleLightmap rect, or one irradiance per vertex
     lm = mesh_lightmap(p, ce)
     if not lm: return None
-    if lm['t'] == 2: return {'t': 2, 'tex': PKGNAME + '/' + lm['tex'], 's': lm['s'], 'cs': lm['cs'], 'cb': lm['cb']}
-    return {'t': 1, 'v': vertex_irradiance(lm)}
+    if lm['t'] == 2: return {'t': 2, 'tex': PKGNAME + '/' + lm['tex'], 's': lm['s'], 'nac': PKGNAME + '/' + lm['nac'], 'ns': lm['ns'], 'max': PKGNAME + '/' + lm['max'], 'ms': lm['ms'], 'cs': lm['cs'], 'cb': lm['cb']}
+    import base64  # (v65z per vertex: the raw samples — NormalizedAverageColor, DirectionalMax as BGRA bytes — and their scales)
+    return {'t': 1, 'v': vertex_irradiance(lm), 'raw': base64.b64encode(lm['raw']).decode(), 'ns': [round(x, 4) for x in lm['s'][0]], 'ms': [round(x, 4) for x in lm['s'][1]]}
 PKGNAME = name
 def place(out):  # v65y one package's placed meshes (the global p), appended to out
     by_outer = {}
@@ -132,6 +133,12 @@ for e in p.exports:
         layers.append({'mat': tm.get('Material'), 'scale': float(tm.get('MappingScale', 4.0)), 'rot': float(tm.get('MappingRotation', 0.0)), 'alpha': alphas[ai] if 0 <= ai < len(alphas) else None})
     terrains.append({'nx': nx, 'ny': ny, 'loc': vec(pr.get('Location')), 'scale': vec(pr.get('DrawScale3D'), (1.0, 1.0, 1.0)), 'h': hs, 'holes': holes, 'layers': layers})
     print('terrain', nx, 'x', ny, 'layers', [(L['mat'], L['scale'], L['rot'], bool(L['alpha'])) for L in layers], 'holes', len(holes))
-json.dump({'placed': out, 'starts': starts, 'ladders': ladders, 'blocks': blocks, 'terrains': terrains}, open(f'tools/out/sf2/maps/{name}.json', 'w'))
+# v65z the level's colour grading table (WorldInfo DefaultPostProcessSettings.ColorGrading_LookupTable, a 256 × 16 strip)
+lut = None
+for e in p.exports:
+    if p.clsname(e) == 'WorldInfo' and not e['name'].startswith('Default__'):
+        pp = {n: v for n, i, t, v in p.props(e)}.get('DefaultPostProcessSettings') or {}
+        if isinstance(pp, dict) and pp.get('ColorGrading_LookupTable') not in (None, 'None'): lut = pp['ColorGrading_LookupTable']; print('lut', lut)
+json.dump({'placed': out, 'starts': starts, 'ladders': ladders, 'blocks': blocks, 'terrains': terrains, 'lut': lut}, open(f'tools/out/sf2/maps/{name}.json', 'w'))
 print('starts', [(s['cls'], s['team']) for s in starts], 'ladders', len(ladders))
 print(name, len(out), 'placements,', len({o['mesh'] for o in out}), 'meshes,', sum(not o['col'] for o in out), 'without collision,', len(blocks), 'blocking volumes;', __import__('collections').Counter(o.get('actor', 'collection') for o in out))

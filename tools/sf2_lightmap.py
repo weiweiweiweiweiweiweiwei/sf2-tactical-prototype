@@ -6,8 +6,8 @@
         NormalizedAverageColor, DirectionalMaxComponent, SimpleLightmap — then CoordinateScale, CoordinateBias (2 floats each)
   * a ModelComponent (BSP): Model, ZoneIndex, an int, Elements[]{FLightMapRef, Component, Material, Nodes<WORD>, ShadowMaps[],
     IrrelevantLights<Guid>}, ComponentIndex, Nodes<WORD>; a BSP vertex (FVert, 24 bytes) carries its ShadowTexCoord at byte 8
-The game uses the SimpleLightmap (the non-directional bake: texel × ScaleVector) and, per vertex, NormalizedAverageColor × the
-mean DirectionalMax; the lightmap uv is the mesh's TEXCOORD_1 (BSP: ShadowTexCoord) × CoordinateScale + CoordinateBias."""
+v65z the game lights directionally: NormalizedAverageColor × Σ DirectionalMax_i · max(0, n·B_i)² over the HL2 basis B_i in the
+surface's tangent space (n from its normal map), × 1.2 — at a flat normal that is the SimpleLightmap (measured: 1.02–1.31, median 1.2); the lightmap uv is the mesh's TEXCOORD_1 (BSP: ShadowTexCoord) × CoordinateScale + CoordinateBias."""
 import struct
 
 
@@ -19,7 +19,8 @@ def _ref(p, b, o):
         co = []
         for _ in range(3): co.append((p.objname(struct.unpack_from('<i', b, o)[0]), struct.unpack_from('<3f', b, o + 4))); o += 16
         cs, cb = struct.unpack_from('<2f', b, o), struct.unpack_from('<2f', b, o + 8); o += 16
-        return {'t': 2, 'tex': co[2][0], 's': [round(x, 4) for x in co[2][1]], 'cs': list(cs), 'cb': list(cb)}, o
+        r4 = lambda v: [round(x, 4) for x in v]  # (v65z the directional pair too: NormalizedAverageColor, DirectionalMaxComponent)
+        return {'t': 2, 'tex': co[2][0], 's': r4(co[2][1]), 'nac': co[0][0], 'ns': r4(co[0][1]), 'max': co[1][0], 'ms': r4(co[1][1]), 'cs': list(cs), 'cb': list(cb)}, o
     if typ == 1:
         o += 4  # Owner
         flags, cnt, size, _ = struct.unpack_from('<4i', b, o); o += 16

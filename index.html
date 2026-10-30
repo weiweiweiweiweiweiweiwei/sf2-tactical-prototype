@@ -16923,31 +16923,42 @@ function sf2Ladder(b, m, nav = true) {
 __name(sf2Ladder, "sf2Ladder");
 function sf2LightOf(src) {
   const gl = src.geometry.userData.lm;
-  if (gl) return { tex: gl.tex, s: gl.s };
-  const node = src.userData.lm || src.userData.lmv ? src : src.parent, ud = node && node.userData || {};
-  if (ud.lm) return { tex: ud.lm.tex, s: ud.lm.s, cs: ud.lm.cs, cb: ud.lm.cb };
-  if (!ud.lmv) return {};
-  const v = ud._lmv || (ud._lmv = Uint8Array.from(atob(ud.lmv), (c) => c.charCodeAt(0)));
+  if (gl) return { tex: gl.nac, max: gl.max, ns: gl.ns, ms: gl.ms };
+  const node = src.userData.lm || src.userData.lmr ? src : src.parent, ud = node && node.userData || {};
+  if (ud.lm) return { tex: ud.lm.nac, max: ud.lm.max, ns: ud.lm.ns, ms: ud.lm.ms, cs: ud.lm.cs, cb: ud.lm.cb };
+  if (!ud.lmr) return {};
+  const v = ud._lmr || (ud._lmr = Uint8Array.from(atob(ud.lmr.raw), (c) => c.charCodeAt(0)));
   let off = 0;
   if (node !== src) for (const c of node.children) {
     if (c === src) break;
     if (c.isMesh) off += c.geometry.attributes.position.count;
   }
-  return { v, off };
+  return { v, off, ns: ud.lmr.ns, ms: ud.lmr.ms };
 }
 __name(sf2LightOf, "sf2LightOf");
 var SF2_BLACK = new THREE.DataTexture(new Uint8Array([0, 0, 0, 255]), 1, 1);
 SF2_BLACK.needsUpdate = true;
+var SF2_WHITE = new THREE.DataTexture(new Uint8Array([255, 255, 255, 255]), 1, 1);
+SF2_WHITE.needsUpdate = true;
+var SF2_LMD = `#include <lights_fragment_maps>
+	vec3 sf2n = vec3( 0.0, 0.0, 1.0 );
+	#ifdef USE_NORMALMAP_TANGENTSPACE
+		sf2n = normalize( vec3( mapN.x, - mapN.y, mapN.z ) );
+	#endif
+	vec3 sf2nac = vLmN, sf2mx = vLmM;
+	if ( vLmT > 0.5 ) { sf2nac *= texture2D( sf2Nac, vLmUv ).rgb; sf2mx *= texture2D( sf2Max, vLmUv ).rgb; }
+	vec3 sf2d = max( vec3( dot( sf2n, vec3( -0.408248, 0.707107, 0.577350 ) ), dot( sf2n, vec3( -0.408248, -0.707107, 0.577350 ) ), dot( sf2n, vec3( 0.816497, 0.0, 0.577350 ) ) ), 0.0 );
+	irradiance += sf2nac * dot( sf2mx, sf2d * sf2d ) * sf2LmK;`;
 function sf2Merge(list, sheets, def) {
-  const lit = Object.keys(sheets).length > 0, m0 = list[0].m, tex = list[0].L.tex;
+  const lit = Object.keys(sheets).length > 0, m0 = list[0].m, tex = list[0].L.tex, tmax = list[0].L.max;
   let nv = 0, ni = 0;
   for (const { src } of list) {
     const g = src.geometry;
     nv += g.attributes.position.count;
     ni += g.index ? g.index.count : g.attributes.position.count;
   }
-  const P = new Float32Array(nv * 3), N = new Float32Array(nv * 3), U = new Float32Array(nv * 2), LU = new Float32Array(nv * 2), LC = new Float32Array(nv * 3), LS = new Float32Array(nv * 3), I = new Uint32Array(ni);
-  const v = new THREE.Vector3(), nm = new THREE.Matrix3(), fb = def.lmFallback || [0.3, 0.3, 0.3];
+  const P = new Float32Array(nv * 3), N = new Float32Array(nv * 3), U = new Float32Array(nv * 2), LU = new Float32Array(nv * 2), LN = new Float32Array(nv * 3), LM = new Float32Array(nv * 3), LT = new Float32Array(nv), I = new Uint32Array(ni);
+  const v = new THREE.Vector3(), nm = new THREE.Matrix3(), fb = def.lmFallback || [0.25, 0.25, 0.25];
   let vo = 0, io = 0;
   for (const { m, src, L } of list) {
     const g = src.geometry, gp = g.attributes.position, gn = g.attributes.normal, gu = g.attributes.uv, g1 = g.attributes.uv1, n = gp.count, flip = m.matrix.determinant() < 0;
@@ -16972,11 +16983,23 @@ function sf2Merge(list, sheets, def) {
         const x = g1.getX(i), y = g1.getY(i);
         LU[j * 2] = L.cs ? x * L.cs[0] + L.cb[0] : x;
         LU[j * 2 + 1] = L.cs ? y * L.cs[1] + L.cb[1] : y;
-        LS[j * 3] = L.s[0];
-        LS[j * 3 + 1] = L.s[1];
-        LS[j * 3 + 2] = L.s[2];
-      } else if (L.v) for (let c = 0; c < 3; c++) LC[j * 3 + c] = (L.v[(L.off + i) * 3 + c] || 0) / 80;
-      else if (!L.tex) for (let c = 0; c < 3; c++) LC[j * 3 + c] = fb[c];
+        LT[j] = 1;
+        for (let c = 0; c < 3; c++) {
+          LN[j * 3 + c] = L.ns[c];
+          LM[j * 3 + c] = L.ms[c];
+        }
+      } else if (L.v) {
+        const q = (L.off + i) * 8, V = L.v;
+        LN[j * 3] = V[q + 2] / 255 * L.ns[0];
+        LN[j * 3 + 1] = V[q + 1] / 255 * L.ns[1];
+        LN[j * 3 + 2] = V[q] / 255 * L.ns[2];
+        LM[j * 3] = V[q + 6] / 255 * L.ms[0];
+        LM[j * 3 + 1] = V[q + 5] / 255 * L.ms[1];
+        LM[j * 3 + 2] = V[q + 4] / 255 * L.ms[2];
+      } else for (let c = 0; c < 3; c++) {
+        LN[j * 3 + c] = fb[c];
+        LM[j * 3 + c] = 1;
+      }
     }
     const gi = g.index, cnt = gi ? gi.count : n, at = /* @__PURE__ */ __name((k) => vo + (gi ? gi.getX(k) : k), "at");
     for (let k = 0; k + 2 < cnt; k += 3) {
@@ -16991,8 +17014,9 @@ function sf2Merge(list, sheets, def) {
   geo.setAttribute("normal", new THREE.BufferAttribute(N, 3));
   geo.setAttribute("uv", new THREE.BufferAttribute(U, 2));
   geo.setAttribute("lmUv", new THREE.BufferAttribute(LU, 2));
-  geo.setAttribute("lmc", new THREE.BufferAttribute(LC, 3));
-  geo.setAttribute("lms", new THREE.BufferAttribute(LS, 3));
+  geo.setAttribute("lmN", new THREE.BufferAttribute(LN, 3));
+  geo.setAttribute("lmM", new THREE.BufferAttribute(LM, 3));
+  geo.setAttribute("lmT", new THREE.BufferAttribute(LT, 1));
   geo.setIndex(new THREE.BufferAttribute(I, 1));
   geo.computeBoundingSphere();
   geo.computeBoundingBox();
@@ -17003,15 +17027,16 @@ function sf2Merge(list, sheets, def) {
       mat.normalScale.y = -mat.normalScale.y;
       mat.userData.dxFlip = true;
     }
-    const sheet = tex && sheets[tex] || SF2_BLACK, k = def.lmK ?? Math.PI;
+    const sN = tex && sheets[tex] || SF2_WHITE, sM = tmax && sheets[tmax] || SF2_WHITE, k = (def.lmK ?? Math.PI) * 1.2;
     mat.envMapIntensity = def.lmEnv ?? 0.1;
     mat.onBeforeCompile = (sh) => {
-      sh.uniforms.sf2Lm = { value: sheet };
+      sh.uniforms.sf2Nac = { value: sN };
+      sh.uniforms.sf2Max = { value: sM };
       sh.uniforms.sf2LmK = { value: k };
-      sh.vertexShader = "attribute vec2 lmUv;\nattribute vec3 lmc;\nattribute vec3 lms;\nvarying vec2 vLmUv;\nvarying vec3 vLmc;\nvarying vec3 vLms;\n" + sh.vertexShader.replace("#include <begin_vertex>", "#include <begin_vertex>\n	vLmUv = lmUv; vLmc = lmc; vLms = lms;");
-      sh.fragmentShader = "uniform sampler2D sf2Lm;\nuniform float sf2LmK;\nvarying vec2 vLmUv;\nvarying vec3 vLmc;\nvarying vec3 vLms;\n" + sh.fragmentShader.replace("#include <lights_fragment_maps>", "#include <lights_fragment_maps>\n	irradiance += ( vLmc + texture2D( sf2Lm, vLmUv ).rgb * vLms ) * sf2LmK;");
+      sh.vertexShader = "attribute vec2 lmUv;\nattribute vec3 lmN;\nattribute vec3 lmM;\nattribute float lmT;\nvarying vec2 vLmUv;\nvarying vec3 vLmN;\nvarying vec3 vLmM;\nvarying float vLmT;\n" + sh.vertexShader.replace("#include <begin_vertex>", "#include <begin_vertex>\n	vLmUv = lmUv; vLmN = lmN; vLmM = lmM; vLmT = lmT;");
+      sh.fragmentShader = "uniform sampler2D sf2Nac;\nuniform sampler2D sf2Max;\nuniform float sf2LmK;\nvarying vec2 vLmUv;\nvarying vec3 vLmN;\nvarying vec3 vLmM;\nvarying float vLmT;\n" + sh.fragmentShader.replace("#include <lights_fragment_maps>", SF2_LMD);
     };
-    mat.customProgramCacheKey = () => "sf2lm";
+    mat.customProgramCacheKey = () => "sf2lmd";
   }
   const out = new THREE.Mesh(geo, mat);
   out.name = m0.name.replace(/_\d+$/, "") + " ×" + list.length + (tex ? " @" + tex.split("/")[1] : "");
@@ -17214,6 +17239,14 @@ function sf2TriMap(def) {
         t.anisotropy = 4;
         lm[k] = t;
       }));
+      if (d.meta.lut && !this.lutTex) {
+        const t = await new THREE.TextureLoader().loadAsync(d.meta.lut);
+        t.flipY = false;
+        t.colorSpace = THREE.NoColorSpace;
+        t.generateMipmaps = false;
+        t.minFilter = t.magFilter = THREE.LinearFilter;
+        this.lutTex = t;
+      }
       this._s2 = { gltf, soup, ramps, meta: d.meta, lm, terrains: await Promise.all(TS.map((T, i) => sf2TerrainMesh(T, tgeos[i], this))) };
       this.bounds = { minX: Math.floor(all.min.x) - 2, maxX: Math.ceil(all.max.x) + 2, minZ: Math.floor(all.min.z) - 2, maxZ: Math.ceil(all.max.z) + 2 };
       this.killY = all.min.y - 15;
@@ -17302,7 +17335,7 @@ function sf2TriMap(def) {
           b.scene.add(m);
           continue;
         }
-        const L = sf2LightOf(src), k = m.material.uuid + "|" + (L.tex || "");
+        const L = sf2LightOf(src), k = m.material.uuid + "|" + (L.tex || "") + "|" + (L.max || "");
         (groups.get(k) || groups.set(k, []).get(k)).push({ m, src, L });
       }
       for (const list of groups.values()) b.scene.add(sf2Merge(list, this._s2.lm, def));
@@ -17378,8 +17411,10 @@ MAPS.push(sf2TriMap({
   objectives: { cap: [-3.2, 6.3, 7.68], capRadius: 2.4, dom: [[-3, 0, -20], [-3.2, 6.3, 7.68], [-6, 0, 36]], relic: [-3.2, 6.3, 7.68], domRadius: 4 },
   background: 13222580,
   envIntensity: 0,
-  exposure: 0.8,
-  hemi: [15129800, 6969928, 0],
+  exposure: 0.95,
+  hemi: [15129800, 6969928, 0.35],
+  lmFallback: [0.5, 0.48, 0.45],
+  // (v65z brighter: its terrain has no bake, the mean light carries it)
   sun: { pos: [-40, 43, -38], color: 16773336, intensity: 1.75, auto: false },
   fog: { color: 13222580, near: 90, far: 420 },
   lmEnv: 0,
@@ -25325,15 +25360,20 @@ var LevelsPass = class extends Pass {
   constructor() {
     super();
     this.mat = new THREE.ShaderMaterial({
-      uniforms: { tDiffuse: { value: null }, uTime: { value: 0 }, uShadows: { value: 0 }, uHigh: { value: new THREE.Vector3(1, 1, 1) }, uMid: { value: 1 }, uContrast: { value: 1 }, uPivot: { value: 0.435 }, uDesat: { value: 0 } },
+      uniforms: { tDiffuse: { value: null }, uLut: { value: null }, uLutOn: { value: 0 }, uTime: { value: 0 }, uShadows: { value: 0 }, uHigh: { value: new THREE.Vector3(1, 1, 1) }, uMid: { value: 1 }, uContrast: { value: 1 }, uPivot: { value: 0.435 }, uDesat: { value: 0 } },
       vertexShader: GradeShader.vertexShader,
-      fragmentShader: `uniform sampler2D tDiffuse; uniform float uTime, uShadows, uMid, uContrast, uPivot, uDesat; uniform vec3 uHigh; varying vec2 vUv;
+      fragmentShader: `uniform sampler2D tDiffuse, uLut; uniform float uTime, uShadows, uMid, uContrast, uPivot, uDesat, uLutOn; uniform vec3 uHigh; varying vec2 vUv;
         void main(){
           vec3 c = clamp(texture2D(tDiffuse, vUv).rgb, 0.0, 1.0);
           c = clamp(max(c - uShadows, 0.0) / (1.0 - uShadows) * uHigh, 0.0, 1.0); // SceneShadows / SceneHighLights
           c = pow(c, vec3(uMid));                                                  // SceneMidTones
           c = mix(uPivot * pow(c / uPivot, vec3(uContrast)), 1.0 - (1.0 - uPivot) * pow((1.0 - c) / (1.0 - uPivot), vec3(uContrast)), step(uPivot, c));
           c = mix(c, vec3(dot(c, vec3(0.2126, 0.7152, 0.0722))), uDesat);          // SceneDesaturation
+          if (uLutOn > 0.5) { // v65z an SF2 map's own grading table (256 × 16: 16 blue slices of red × green), on the display colour as UE3 does
+            float b = c.b * 15.0, b0 = floor(b), b1 = min(b0 + 1.0, 15.0);
+            vec2 q = vec2((c.r * 15.0 + 0.5) / 256.0, (c.g * 15.0 + 0.5) / 16.0);
+            c = mix(texture2D(uLut, q + vec2(b0 / 16.0, 0.0)).rgb, texture2D(uLut, q + vec2(b1 / 16.0, 0.0)).rgb, b - b0);
+          }
           c += (fract(sin(dot(vUv * (uTime * 0.13 + 1.0), vec2(12.9898, 78.233))) * 43758.5453) - 0.5) / 255.0; // dither: no banding
           gl_FragColor = vec4(c, 1.0);
         }`,
@@ -25459,6 +25499,10 @@ var PostFX = class {
     c.addPass(new OutputPass());
     this.film = new LevelsPass();
     c.addPass(this.film);
+    if (match.def.lutTex) {
+      this.film.mat.uniforms.uLut.value = match.def.lutTex;
+      this.film.mat.uniforms.uLutOn.value = 1;
+    }
     if (q.smaa) c.addPass(new SMAAPass(size.x, size.y));
     c.setPixelRatio(r.getPixelRatio());
     c.setSize(innerWidth, innerHeight);

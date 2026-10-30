@@ -40,7 +40,7 @@ for e in models:
         if chain(mat) in ('RemoveSurfaceMaterial', 'None'): continue  # (v65z 'None': a volume's brush faces — tower has 10 level models, its volumes among them)  # (the never-drawn outer faces of subtracted brushes)
         pts = [P(struct.unpack_from('<i', B, vt0 + 24 * (pool + j))[0]) for j in range(nv)]; ids = list(range(nv))
         base, U, Vv, N = P(pbase), V(vu), V(vv), V(vnorm)
-        lm = node_lm.get(k); g = groups[chain(mat) + ('|' + name + '/' + lm['tex'] + '|' + ','.join(map(str, lm['s'])) if lm else '')]
+        lm = node_lm.get(k); g = groups[chain(mat) + ('|' + name + '/' + lm['nac'] + '|' + ','.join(map(str, lm['ns'])) + '|' + name + '/' + lm['max'] + '|' + ','.join(map(str, lm['ms'])) if lm else '')]  # (v65z the directional pair)
         stc = lambda j: struct.unpack_from('<2f', B, vt0 + 24 * (pool + j) + 8)
         cv = lambda q: [q[0] / 100, q[2] / 100, -q[1] / 100]
         uv = lambda q: [sum((q[i] - base[i]) * U[i] for i in range(3)), sum((q[i] - base[i]) * Vv[i] for i in range(3))]

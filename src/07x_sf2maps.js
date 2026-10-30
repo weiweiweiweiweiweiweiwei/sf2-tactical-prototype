@@ -55,26 +55,39 @@ function sf2Ladder(b, m, nav = true) {
   col.addLadder({ minX: nx ? vx0 : x - hw, maxX: nx ? vx1 : x + hw, minZ: nz ? vz0 : z - hw, maxZ: nz ? vz1 : z + hw, y0: y0 - 0.1, y1: y1 + 0.35, top: y1, nx, nz });
 }
 
-// v65z SF2's baked light on one drawn primitive (tools/sf2_map_build.mjs extras): a BSP primitive's sheet (uv1 already in it), a
-// placement's sheet rect (uv1 × cs + cb), or its per-vertex irradiance (bytes × 1/80, the primitives' vertices one after another)
+// v65z SF2's baked light on one drawn primitive (tools/sf2_map_build.mjs extras), directional: a BSP primitive's NormalizedAverageColor /
+// DirectionalMax sheets (uv1 already in them), a placement's rect on its sheets (uv1 × cs + cb), or its per-vertex sample pairs
+// (8 bytes a vertex, BGRA twice, the primitives' vertices one after another) — each with the pair's ScaleVectors
 function sf2LightOf(src) {
-  const gl = src.geometry.userData.lm; if (gl) return { tex: gl.tex, s: gl.s };
-  const node = src.userData.lm || src.userData.lmv ? src : src.parent, ud = (node && node.userData) || {};
-  if (ud.lm) return { tex: ud.lm.tex, s: ud.lm.s, cs: ud.lm.cs, cb: ud.lm.cb };
-  if (!ud.lmv) return {};
-  const v = ud._lmv || (ud._lmv = Uint8Array.from(atob(ud.lmv), (c) => c.charCodeAt(0)));
+  const gl = src.geometry.userData.lm; if (gl) return { tex: gl.nac, max: gl.max, ns: gl.ns, ms: gl.ms };
+  const node = src.userData.lm || src.userData.lmr ? src : src.parent, ud = (node && node.userData) || {};
+  if (ud.lm) return { tex: ud.lm.nac, max: ud.lm.max, ns: ud.lm.ns, ms: ud.lm.ms, cs: ud.lm.cs, cb: ud.lm.cb };
+  if (!ud.lmr) return {};
+  const v = ud._lmr || (ud._lmr = Uint8Array.from(atob(ud.lmr.raw), (c) => c.charCodeAt(0)));
   let off = 0; if (node !== src) for (const c of node.children) { if (c === src) break; if (c.isMesh) off += c.geometry.attributes.position.count; }
-  return { v, off };
+  return { v, off, ns: ud.lmr.ns, ms: ud.lmr.ms };
 }
 const SF2_BLACK = new THREE.DataTexture(new Uint8Array([0, 0, 0, 255]), 1, 1); SF2_BLACK.needsUpdate = true;
-// v65z one draw for a material on one light sheet: the placements in world space, plus three attributes the material reads — lmUv / lms
-// (the sheet's uv and ScaleVector) and lmc (per-vertex irradiance) — added to the indirect light, × π (UE multiplies the texel straight
-// into the albedo, three divides by π); the map's sun stays the dynamic dominant light it is in SF2
+const SF2_WHITE = new THREE.DataTexture(new Uint8Array([255, 255, 255, 255]), 1, 1); SF2_WHITE.needsUpdate = true;
+// v65z one draw for a material on one light-sheet pair: the placements in world space, plus what the material reads — lmUv (the sheets'
+// uv), lmN / lmM (NormalizedAverageColor and DirectionalMax: the ScaleVectors, × the sheets when lmT is 1; the per-vertex samples
+// when 0) — lit as UE3 does its directional bake: NormalizedAverageColor × Σ DirectionalMax_i · max(0, n·B_i)² over the HL2 basis B_i,
+// n the normal map's tangent-space normal (UE's DirectX green), × 1.2 (= the SimpleLightmap at a flat normal, measured), × π (UE
+// multiplies it straight into the albedo, three divides by π); the map's sun stays the dynamic dominant light it is in SF2
+const SF2_LMD = `#include <lights_fragment_maps>
+	vec3 sf2n = vec3( 0.0, 0.0, 1.0 );
+	#ifdef USE_NORMALMAP_TANGENTSPACE
+		sf2n = normalize( vec3( mapN.x, - mapN.y, mapN.z ) );
+	#endif
+	vec3 sf2nac = vLmN, sf2mx = vLmM;
+	if ( vLmT > 0.5 ) { sf2nac *= texture2D( sf2Nac, vLmUv ).rgb; sf2mx *= texture2D( sf2Max, vLmUv ).rgb; }
+	vec3 sf2d = max( vec3( dot( sf2n, vec3( -0.408248, 0.707107, 0.577350 ) ), dot( sf2n, vec3( -0.408248, -0.707107, 0.577350 ) ), dot( sf2n, vec3( 0.816497, 0.0, 0.577350 ) ) ), 0.0 );
+	irradiance += sf2nac * dot( sf2mx, sf2d * sf2d ) * sf2LmK;`;
 function sf2Merge(list, sheets, def) {
-  const lit = Object.keys(sheets).length > 0, m0 = list[0].m, tex = list[0].L.tex;
+  const lit = Object.keys(sheets).length > 0, m0 = list[0].m, tex = list[0].L.tex, tmax = list[0].L.max;
   let nv = 0, ni = 0; for (const { src } of list) { const g = src.geometry; nv += g.attributes.position.count; ni += g.index ? g.index.count : g.attributes.position.count; }
-  const P = new Float32Array(nv * 3), N = new Float32Array(nv * 3), U = new Float32Array(nv * 2), LU = new Float32Array(nv * 2), LC = new Float32Array(nv * 3), LS = new Float32Array(nv * 3), I = new Uint32Array(ni);
-  const v = new THREE.Vector3(), nm = new THREE.Matrix3(), fb = def.lmFallback || [0.3, 0.3, 0.3];
+  const P = new Float32Array(nv * 3), N = new Float32Array(nv * 3), U = new Float32Array(nv * 2), LU = new Float32Array(nv * 2), LN = new Float32Array(nv * 3), LM = new Float32Array(nv * 3), LT = new Float32Array(nv), I = new Uint32Array(ni);
+  const v = new THREE.Vector3(), nm = new THREE.Matrix3(), fb = def.lmFallback || [0.25, 0.25, 0.25];
   let vo = 0, io = 0;
   for (const { m, src, L } of list) {
     const g = src.geometry, gp = g.attributes.position, gn = g.attributes.normal, gu = g.attributes.uv, g1 = g.attributes.uv1, n = gp.count, flip = m.matrix.determinant() < 0;
@@ -84,9 +97,13 @@ function sf2Merge(list, sheets, def) {
       v.fromBufferAttribute(gp, i).applyMatrix4(m.matrix); P[j * 3] = v.x; P[j * 3 + 1] = v.y; P[j * 3 + 2] = v.z;
       if (gn) { v.fromBufferAttribute(gn, i).applyMatrix3(nm).normalize(); N[j * 3] = v.x; N[j * 3 + 1] = v.y; N[j * 3 + 2] = v.z; }
       if (gu) { U[j * 2] = gu.getX(i); U[j * 2 + 1] = gu.getY(i); }
-      if (L.tex && g1) { const x = g1.getX(i), y = g1.getY(i); LU[j * 2] = L.cs ? x * L.cs[0] + L.cb[0] : x; LU[j * 2 + 1] = L.cs ? y * L.cs[1] + L.cb[1] : y; LS[j * 3] = L.s[0]; LS[j * 3 + 1] = L.s[1]; LS[j * 3 + 2] = L.s[2]; }
-      else if (L.v) for (let c = 0; c < 3; c++) LC[j * 3 + c] = (L.v[(L.off + i) * 3 + c] || 0) / 80;
-      else if (!L.tex) for (let c = 0; c < 3; c++) LC[j * 3 + c] = fb[c];
+      if (L.tex && g1) {
+        const x = g1.getX(i), y = g1.getY(i); LU[j * 2] = L.cs ? x * L.cs[0] + L.cb[0] : x; LU[j * 2 + 1] = L.cs ? y * L.cs[1] + L.cb[1] : y; LT[j] = 1;
+        for (let c = 0; c < 3; c++) { LN[j * 3 + c] = L.ns[c]; LM[j * 3 + c] = L.ms[c]; }
+      } else if (L.v) { const q = (L.off + i) * 8, V = L.v; // (B, G, R, A ×2)
+        LN[j * 3] = V[q + 2] / 255 * L.ns[0]; LN[j * 3 + 1] = V[q + 1] / 255 * L.ns[1]; LN[j * 3 + 2] = V[q] / 255 * L.ns[2];
+        LM[j * 3] = V[q + 6] / 255 * L.ms[0]; LM[j * 3 + 1] = V[q + 5] / 255 * L.ms[1]; LM[j * 3 + 2] = V[q + 4] / 255 * L.ms[2];
+      } else for (let c = 0; c < 3; c++) { LN[j * 3 + c] = fb[c]; LM[j * 3 + c] = 1; } // (no bake: a flat mean light)
     }
     const gi = g.index, cnt = gi ? gi.count : n, at = (k) => vo + (gi ? gi.getX(k) : k);
     for (let k = 0; k + 2 < cnt; k += 3) { I[io++] = at(k); I[io++] = at(flip ? k + 2 : k + 1); I[io++] = at(flip ? k + 1 : k + 2); } // (a mirrored placement wound back, so its faces front the right way)
@@ -94,18 +111,20 @@ function sf2Merge(list, sheets, def) {
   }
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.BufferAttribute(P, 3)); geo.setAttribute('normal', new THREE.BufferAttribute(N, 3)); geo.setAttribute('uv', new THREE.BufferAttribute(U, 2));
-  geo.setAttribute('lmUv', new THREE.BufferAttribute(LU, 2)); geo.setAttribute('lmc', new THREE.BufferAttribute(LC, 3)); geo.setAttribute('lms', new THREE.BufferAttribute(LS, 3));
+  geo.setAttribute('lmUv', new THREE.BufferAttribute(LU, 2)); geo.setAttribute('lmN', new THREE.BufferAttribute(LN, 3)); geo.setAttribute('lmM', new THREE.BufferAttribute(LM, 3)); geo.setAttribute('lmT', new THREE.BufferAttribute(LT, 1));
   geo.setIndex(new THREE.BufferAttribute(I, 1)); geo.computeBoundingSphere(); geo.computeBoundingBox();
   let mat = m0.material;
   if (lit) {
     mat = mat.clone(); if (mat.normalMap && !mat.userData.dxFlip) { mat.normalScale.y = -mat.normalScale.y; mat.userData.dxFlip = true; } // (v65z UE3's normal maps are DirectX-style: green points down)
-    const sheet = (tex && sheets[tex]) || SF2_BLACK, k = def.lmK ?? Math.PI; mat.envMapIntensity = def.lmEnv ?? 0.1; // (the bake is the ambient: the sky probe on top washed it blue)
+    const sN = (tex && sheets[tex]) || SF2_WHITE, sM = (tmax && sheets[tmax]) || SF2_WHITE, k = (def.lmK ?? Math.PI) * 1.2; mat.envMapIntensity = def.lmEnv ?? 0.1; // (the bake is the ambient: the sky probe on top washed it blue)
     mat.onBeforeCompile = (sh) => {
-      sh.uniforms.sf2Lm = { value: sheet }; sh.uniforms.sf2LmK = { value: k };
-      sh.vertexShader = 'attribute vec2 lmUv;\nattribute vec3 lmc;\nattribute vec3 lms;\nvarying vec2 vLmUv;\nvarying vec3 vLmc;\nvarying vec3 vLms;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n\tvLmUv = lmUv; vLmc = lmc; vLms = lms;');
-      sh.fragmentShader = 'uniform sampler2D sf2Lm;\nuniform float sf2LmK;\nvarying vec2 vLmUv;\nvarying vec3 vLmc;\nvarying vec3 vLms;\n' + sh.fragmentShader.replace('#include <lights_fragment_maps>', '#include <lights_fragment_maps>\n\tirradiance += ( vLmc + texture2D( sf2Lm, vLmUv ).rgb * vLms ) * sf2LmK;');
+      sh.uniforms.sf2Nac = { value: sN }; sh.uniforms.sf2Max = { value: sM }; sh.uniforms.sf2LmK = { value: k };
+      sh.vertexShader = 'attribute vec2 lmUv;\nattribute vec3 lmN;\nattribute vec3 lmM;\nattribute float lmT;\nvarying vec2 vLmUv;\nvarying vec3 vLmN;\nvarying vec3 vLmM;\nvarying float vLmT;\n'
+        + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n\tvLmUv = lmUv; vLmN = lmN; vLmM = lmM; vLmT = lmT;');
+      sh.fragmentShader = 'uniform sampler2D sf2Nac;\nuniform sampler2D sf2Max;\nuniform float sf2LmK;\nvarying vec2 vLmUv;\nvarying vec3 vLmN;\nvarying vec3 vLmM;\nvarying float vLmT;\n'
+        + sh.fragmentShader.replace('#include <lights_fragment_maps>', SF2_LMD);
     };
-    mat.customProgramCacheKey = () => 'sf2lm';
+    mat.customProgramCacheKey = () => 'sf2lmd';
   }
   const out = new THREE.Mesh(geo, mat); out.name = m0.name.replace(/_\d+$/, '') + ' ×' + list.length + (tex ? ' @' + tex.split('/')[1] : '');
   out.castShadow = true; out.receiveShadow = true; out.matrixAutoUpdate = false;
@@ -231,6 +250,7 @@ function sf2TriMap(def) {
       await Promise.all(Object.entries(d.meta.lightmaps || {}).map(async ([k, url]) => {
         const t = await new THREE.TextureLoader().loadAsync(url); t.flipY = false; t.colorSpace = THREE.NoColorSpace; t.anisotropy = 4; lm[k] = t;
       }));
+      if (d.meta.lut && !this.lutTex) { const t = await new THREE.TextureLoader().loadAsync(d.meta.lut); t.flipY = false; t.colorSpace = THREE.NoColorSpace; t.generateMipmaps = false; t.minFilter = t.magFilter = THREE.LinearFilter; this.lutTex = t; } // (v65z read by the post pass)
       this._s2 = { gltf, soup, ramps, meta: d.meta, lm, terrains: await Promise.all(TS.map((T, i) => sf2TerrainMesh(T, tgeos[i], this))) };
       this.bounds = { minX: Math.floor(all.min.x) - 2, maxX: Math.ceil(all.max.x) + 2, minZ: Math.floor(all.min.z) - 2, maxZ: Math.ceil(all.max.z) + 2 };
       this.killY = all.min.y - 15;
@@ -285,7 +305,7 @@ function sf2TriMap(def) {
         for (const mt of Array.isArray(m.material) ? m.material : [m.material]) { mt.vertexColors = false; mt.side = THREE.DoubleSide; if (mt.map) { mt.map.anisotropy = 4; const c = mt.color; if (Math.abs(c.r - c.g) < 0.02 && Math.abs(c.g - c.b) < 0.02) c.setRGB(1, 1, 1); } } // (v65y UModel gives a plain mesh material a 0.58 grey base colour SF2 does not have — the sand mound by the square came out darker than the BSP sand around it in the same texture; a coloured one is the material's own tint, the hangars' red frames, and stays) // (v65w UModel writes SF2's vertex paint as COLOR_0: multiplied in, it striped crates and benches in rainbow colours)
         if (/ladder/i.test(m.name)) sf2Ladder(b, m, def.ladderNav);
         if (Array.isArray(m.material) || m.userData.sky) { b.scene.add(m); continue; }
-        const L = sf2LightOf(src), k = m.material.uuid + '|' + (L.tex || '');
+        const L = sf2LightOf(src), k = m.material.uuid + '|' + (L.tex || '') + '|' + (L.max || '');
         (groups.get(k) || groups.set(k, []).get(k)).push({ m, src, L });
       }
       // v65z every placement of one material on one baked-light sheet merged into one mesh carrying SF2's own light (user 10-30: Desert
@@ -338,7 +358,7 @@ MAPS.push(sf2TriMap({
   bounds: { minX: -34, maxX: 27, minZ: -35, maxZ: 51 }, indoor: false, killY: -20,
   shot: { pos: [-3, 45, -50], target: [-3, 0, 8] }, thumb: { pos: [-3, 55, -60], target: [-3, 0, 8], fov: 55 },
   objectives: { cap: [-3.2, 6.3, 7.68], capRadius: 2.4, dom: [[-3, 0, -20], [-3.2, 6.3, 7.68], [-6, 0, 36]], relic: [-3.2, 6.3, 7.68], domRadius: 4 },
-  background: 0xc9c2b4, envIntensity: 0, exposure: 0.8, hemi: [0xe6dcc8, 0x6a5a48, 0],
+  background: 0xc9c2b4, envIntensity: 0, exposure: 0.95, hemi: [0xe6dcc8, 0x6a5a48, 0.35], lmFallback: [0.5, 0.48, 0.45], // (v65z brighter: its terrain has no bake, the mean light carries it)
   sun: { pos: [-40, 43, -38], color: 0xfff0d8, intensity: 1.75, auto: false }, fog: { color: 0xc9c2b4, near: 90, far: 420 },
   lmEnv: 0, lmK: 3.14, rampStairs: /^ms_stair/i, ladderNav: false, // (its tower ladders: bots stuck at their heads)
   // (its inner flights rise 4 m to a 3 m storey: their head steps down 1 m onto the capture room's floor — walked by a player, not
