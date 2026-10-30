@@ -531,8 +531,9 @@ class App {
     // the six SF2 room settings: map · win condition · weapon mode | game mode · N vs N · 設置
     const host = () => !this.isGuest();
     this._dd('ddMap', '地圖', def.name, null, () => { if (host()) { $('lbMapModal').classList.add('on'); this.audio.uiClick(); } });
-    this._dd('ddTarget', roundsLike ? '勝負局數' : '勝利分數', roundsLike ? `${rc.target}先勝` : `${rc.target} 分`,
-      R.targets.map((v) => [v, roundsLike ? `${v}先勝` : `${v} 分`]), (v) => { if (host()) { rc.target = +v; this.refreshLobby(); } }, rc.target);
+    const tl = (v) => R.targetText || (roundsLike ? `${v}先勝` : `${v} 分`); // (v65z a rule that wins otherwise names it: 佔領模式)
+    this._dd('ddTarget', R.targetText ? '勝利條件' : roundsLike ? '勝負局數' : '勝利分數', tl(rc.target),
+      R.targets.map((v) => [v, tl(v)]), (v) => { if (host()) { rc.target = +v; this.refreshLobby(); } }, rc.target);
     this._dd('ddMode', '武器限制', MODES[L.mode].name, Object.entries(MODES).map(([k, m]) => [k, m.name]), (v) => { if (host()) { L.mode = v; this.refreshLobby(); } }, L.mode);
     this._dd('ddRule', '模式', R.name, Object.entries(RULES).map(([k, r]) => [k, r.name]), (v) => {
       if (!host()) return; L.rule = v; if (!L.ruleCfg[v]) L.ruleCfg[v] = Object.assign({}, RULES[v].def); this.refreshLobby();

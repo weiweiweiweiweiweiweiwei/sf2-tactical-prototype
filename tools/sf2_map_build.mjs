@@ -30,7 +30,7 @@ async function meshOf(name) {
   }
   meshes.set(name, m); return m;
 }
-const NOFLIP = { Desertcamp: ['wood_003'] }; // v65y meshes that face the other way about their own axis (see below)
+const NOFLIP = { Desertcamp: ['wood_003'], tower: ['tw_build_007'] }; // v65y meshes that face the other way about their own axis (see below)
 let n = 0; const usedLm = new Set();
 for (const o of placed) {
   if (!o.m) continue; const mesh = await meshOf(o.mesh); if (!mesh) continue;
@@ -89,7 +89,19 @@ const S0 = dump.starts || [], tdm = S0.filter((s) => /PlayerStart_TDM$/.test(s.c
 const lightmaps = {};
 for (const t of usedLm) { const [pkg, nm] = t.split('/'), f = `tools/out/sf2/lm/${pkg}/LightMapTexture2D/${nm}.png`;
   if (fs.existsSync(f)) lightmaps[t] = 'data:image/jpeg;base64,' + (await sharp(f).jpeg({ quality: 92 }).toBuffer()).toString('base64'); else missing.add(t); }
-const meta = { lightmaps, starts: (tdm.length ? tdm : S0).map((s) => ({ team: s.team, pos: cv(s.loc), yaw: (s.yaw / 65536) * Math.PI * 2 - Math.PI / 2 })), ladders: (dump.ladders || []).map((l) => cv(l.loc)) };
+// v65z the UE3 Terrain (tools/sf2_map_dump.py 'terrain'), built by the game: heights in game metres (row-major i + j·nx), each vertex's
+// layer weights (alpha 0–255, RGBA = layers 0–3), its holes, each layer's diffuse (JPEG) and tiling (MappingScale quads, rotation)
+let terrain = null;
+if (dump.terrain) {
+  const T = dump.terrain, H = new Float32Array(T.h.length), W = new Uint8Array(T.h.length * 4);
+  T.h.forEach((h, k) => { H[k] = (T.loc[2] + (h - 32768) / 128 * T.scale[2]) / 100; });
+  T.layers.forEach((L, li) => { if (li < 4 && L.alpha) L.alpha.forEach((a, k) => { W[k * 4 + li] = a; }); });
+  const layers = [];
+  for (const L of T.layers.slice(0, 4)) { const png = L.mat && diffuseOf(L.mat);
+    layers.push({ tex: png ? 'data:image/jpeg;base64,' + (await sharp(png).resize(1024, 1024, { fit: 'inside' }).jpeg({ quality: 88 }).toBuffer()).toString('base64') : null, scale: L.scale, rot: L.rot, used: !!(L.alpha && L.alpha.some((a) => a)) }); }
+  terrain = { nx: T.nx, ny: T.ny, x0: T.loc[0] / 100, z0: T.loc[1] / 100, dx: T.scale[0] / 100, dz: T.scale[1] / 100, h: Buffer.from(H.buffer).toString('base64'), w: Buffer.from(W).toString('base64'), holes: T.holes, layers };
+}
+const meta = { lightmaps, terrain, starts: (tdm.length ? tdm : S0).map((s) => ({ team: s.team, pos: cv(s.loc), yaw: (s.yaw / 65536) * Math.PI * 2 - Math.PI / 2 })), ladders: (dump.ladders || []).map((l) => cv(l.loc)) };
 fs.mkdirSync(adir, { recursive: true });
 fs.writeFileSync(`${adir}/map.js`, `/* Special Force 2's ${MAP} from the user's install — tools/sf2_map_build.mjs */
 (window.SF2_MAPS || (window.SF2_MAPS = {}))['${id}'] = { meta: ${JSON.stringify(meta)}, glb: '${fs.readFileSync(OUT).toString('base64')}' };

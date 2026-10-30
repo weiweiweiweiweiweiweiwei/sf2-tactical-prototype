@@ -37,7 +37,7 @@ for e in models:
         if nv < 3 or not (0 <= isurf < nsurf) or pool + nv > nvert: continue
         s = struct.unpack_from('<8i', B, sf0 + 60 * isurf); mat, flags, pbase, vnorm, vu, vv = s[0], s[1], s[2], s[3], s[4], s[5]
         if flags & 1: continue  # PF_Invisible
-        if chain(mat) == 'RemoveSurfaceMaterial': continue  # (the never-drawn outer faces of subtracted brushes)
+        if chain(mat) in ('RemoveSurfaceMaterial', 'None'): continue  # (v65z 'None': a volume's brush faces — tower has 10 level models, its volumes among them)  # (the never-drawn outer faces of subtracted brushes)
         pts = [P(struct.unpack_from('<i', B, vt0 + 24 * (pool + j))[0]) for j in range(nv)]; ids = list(range(nv))
         base, U, Vv, N = P(pbase), V(vu), V(vv), V(vnorm)
         lm = node_lm.get(k); g = groups[chain(mat) + ('|' + name + '/' + lm['tex'] + '|' + ','.join(map(str, lm['s'])) if lm else '')]

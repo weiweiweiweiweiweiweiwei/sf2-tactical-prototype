@@ -4948,6 +4948,8 @@ var RULES = {
   rounds: { name: "回合殲滅", desc: "陣亡本回合不復活 · 先贏得指定回合數", unit: "勝", targets: [5, 6, 7, 8, 9], times: [600], timeUnit: "sec", def: { target: 6, time: 600 } },
   // v45: SF2 先勝 rounds, 10 min a round
   relic: { name: "奪取戰", desc: "藍隊進攻奪取山丘聖物並運回撤離點 · 紅隊防守 · 回合制", unit: "勝", targets: [5, 6, 7, 8, 9], times: [600], timeUnit: "sec", def: { target: 6, time: 600 } },
+  tower: { name: "佔領模式", desc: "SF2 原版 · 單一據點，開局 2 分鐘後開放 · 站上據點即佔領，佔領方 60 秒倒數，易手重新計時 · 倒數結束時佔領的一方獲勝 · 10 分鐘時限到看誰佔領", unit: "分", targets: [0], targetText: "倒數結束時佔領", times: [600], timeUnit: "sec", def: { target: 0, time: 600 } },
+  // v65z SFCaptureGame
   dom: { name: "佔領戰", desc: "按住 E 6 秒佔領 A/B/C · 佔點隨時間得分 · 全佔封鎖對手得分", unit: "分", targets: [150, 250, 400], times: [0], timeUnit: "min", def: { target: 250, time: 0 } }
 };
 var FREEZE_TIME = 5;
@@ -16896,7 +16898,7 @@ function stairSides(g, mat) {
 __name(stairSides, "stairSides");
 var _lb = new THREE.Box3();
 var _lc = new THREE.Vector3();
-function sf2Ladder(b, m) {
+function sf2Ladder(b, m, nav = true) {
   m.updateMatrixWorld(true);
   _lb.setFromObject(m);
   _lb.getCenter(_lc);
@@ -16913,7 +16915,7 @@ function sf2Ladder(b, m) {
   const chain = [P(0, y0, 0.95), P(0, y1, -0.95)];
   chain.ladder = true;
   chain.cost = 1.8;
-  b.navChains.push(chain);
+  if (nav !== false) b.navChains.push(chain);
   b.ladders.push({ x, z, y0, y1, nx, nz });
   const vx0 = Math.min(x + nx * 0.8, x - nx * 0.15), vx1 = Math.max(x + nx * 0.8, x - nx * 0.15), vz0 = Math.min(z + nz * 0.8, z - nz * 0.15), vz1 = Math.max(z + nz * 0.8, z - nz * 0.15);
   col.addLadder({ minX: nx ? vx0 : x - hw, maxX: nx ? vx1 : x + hw, minZ: nz ? vz0 : z - hw, maxZ: nz ? vz1 : z + hw, y0: y0 - 0.1, y1: y1 + 0.35, top: y1, nx, nz });
@@ -17015,6 +17017,114 @@ function sf2Merge(list, sheets, def) {
   return out;
 }
 __name(sf2Merge, "sf2Merge");
+function sf2StairRamp(o) {
+  const g = o.geometry, P = g.attributes.position, I = g.index, n3 = I ? I.count : P.count, at = /* @__PURE__ */ __name((k) => I ? I.getX(k) : k, "at");
+  const a = new THREE.Vector3(), b = new THREE.Vector3(), c = new THREE.Vector3(), nrm = new THREE.Vector3(), up = [];
+  for (let k = 0; k + 2 < n3; k += 3) {
+    a.fromBufferAttribute(P, at(k));
+    b.fromBufferAttribute(P, at(k + 1));
+    c.fromBufferAttribute(P, at(k + 2));
+    nrm.subVectors(b, a).cross(c.clone().sub(a));
+    const area = nrm.length() / 2;
+    if (area < 1e-5) continue;
+    nrm.normalize();
+    if (Math.abs(nrm.y) > 0.8) up.push({ x: (a.x + b.x + c.x) / 3, y: (a.y + b.y + c.y) / 3, z: (a.z + b.z + c.z) / 3, area });
+  }
+  if (up.length < 4) return null;
+  const ext = /* @__PURE__ */ __name((k) => [Math.min(...up.map((f) => f[k])), Math.max(...up.map((f) => f[k]))], "ext"), ex = ext("x"), ez = ext("z"), latK = ex[1] - ex[0] < ez[1] - ez[0] ? "x" : "z", le = latK === "x" ? ex : ez;
+  const mid = up.filter((f) => f[latK] > le[0] + 0.2 * (le[1] - le[0]) && f[latK] < le[1] - 0.2 * (le[1] - le[0]));
+  if (mid.length >= 4) up.splice(0, up.length, ...mid);
+  const sx = Math.max(...up.map((f) => f.x)) - Math.min(...up.map((f) => f.x)), sz = Math.max(...up.map((f) => f.z)) - Math.min(...up.map((f) => f.z));
+  const fit = /* @__PURE__ */ __name((ax2) => {
+    let W = 0, T = 0, Y = 0, TT = 0, TY = 0;
+    for (const f of up) {
+      const t = f[ax2], w = f.area;
+      W += w;
+      T += w * t;
+      Y += w * f.y;
+      TT += w * t * t;
+      TY += w * t * f.y;
+    }
+    const q = (W * TY - T * Y) / (W * TT - T * T || 1), p = (Y - q * T) / W;
+    let err = 0;
+    for (const f of up) err += f.area * Math.abs(f.y - (p + q * f[ax2]));
+    return { p, q, err };
+  }, "fit");
+  const fx = fit("x"), fz = fit("z"), ax = Math.abs(fx.q) * sx > Math.abs(fz.q) * sz ? "x" : "z", L = ax === "x" ? fx : fz, lat = ax === "x" ? "z" : "x";
+  const on = up.filter((f) => Math.abs(f.y - (L.p + L.q * f[ax])) < 0.3);
+  if (on.length < 3) return null;
+  const t0 = Math.min(...on.map((f) => f[ax])) - 0.12, t1 = Math.max(...on.map((f) => f[ax])) + 0.12, l0 = (lat === latK ? le[0] : Math.min(...on.map((f) => f[lat]))) + 0.05, l1 = (lat === latK ? le[1] : Math.max(...on.map((f) => f[lat]))) - 0.05;
+  on.sort((f, g2) => f.y - g2.y);
+  const lo = on[0], hi = on[on.length - 1], q2 = (hi.y - lo.y) / (hi[ax] - lo[ax] || 1), y = /* @__PURE__ */ __name((t) => lo.y + q2 * (t - lo[ax]), "y");
+  const ta = lo[ax] - Math.sign(hi[ax] - lo[ax]) * 0.15, tb = hi[ax] + Math.sign(hi[ax] - lo[ax]) * 0.15;
+  const pt = /* @__PURE__ */ __name((t, l) => {
+    const v = new THREE.Vector3();
+    v[ax] = t;
+    v[lat] = l;
+    v.y = y(t) + 0.03;
+    return v.applyMatrix4(o.matrixWorld);
+  }, "pt");
+  return t0 < t1 ? [pt(ta, l0), pt(ta, l1), pt(tb, l0), pt(tb, l1)] : null;
+}
+__name(sf2StairRamp, "sf2StairRamp");
+function sf2TerrainGeo(T) {
+  const nx = T.nx, ny = T.ny, H = new Float32Array(Uint8Array.from(atob(T.h), (c) => c.charCodeAt(0)).buffer), W = Uint8Array.from(atob(T.w), (c) => c.charCodeAt(0));
+  const P = new Float32Array(nx * ny * 3), G = new Float32Array(nx * ny * 2), hole = new Set(T.holes || []), I = [];
+  for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
+    const k = i + j * nx;
+    P[k * 3] = T.x0 + i * T.dx;
+    P[k * 3 + 1] = H[k];
+    P[k * 3 + 2] = T.z0 + j * T.dz;
+    G[k * 2] = i;
+    G[k * 2 + 1] = j;
+  }
+  for (let j = 0; j + 1 < ny; j++) for (let i = 0; i + 1 < nx; i++) {
+    const a = i + j * nx, b = a + nx, c = a + 1, d = b + 1;
+    if (hole.has(a) || hole.has(b) || hole.has(c) || hole.has(d)) continue;
+    I.push(a, b, c, c, b, d);
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute("position", new THREE.BufferAttribute(P, 3));
+  geo.setAttribute("tgrid", new THREE.BufferAttribute(G, 2));
+  geo.setAttribute("tw", new THREE.BufferAttribute(W, 4, true));
+  geo.setIndex(I);
+  geo.computeVertexNormals();
+  geo.computeBoundingSphere();
+  geo.computeBoundingBox();
+  return geo;
+}
+__name(sf2TerrainGeo, "sf2TerrainGeo");
+async function sf2TerrainMesh(T, geo, def) {
+  const tex = await Promise.all(T.layers.map((L2) => L2.tex ? new THREE.TextureLoader().loadAsync(L2.tex) : null));
+  for (const t of tex) if (t) {
+    t.colorSpace = THREE.SRGBColorSpace;
+    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    t.anisotropy = 8;
+  }
+  const black = SF2_BLACK, L = T.layers, mat = new THREE.MeshStandardMaterial({ map: tex[0] || black, roughness: 0.95, metalness: 0 });
+  const fb = def.lmFallback || [0.3, 0.3, 0.3], k = def.lmK ?? Math.PI;
+  mat.envMapIntensity = def.lmEnv ?? 0.1;
+  mat.onBeforeCompile = (sh) => {
+    for (let i = 1; i < 4; i++) sh.uniforms["tL" + i] = { value: tex[i] || black };
+    sh.uniforms.tS = { value: new THREE.Vector4(...[0, 1, 2, 3].map((i) => L[i] ? L[i].scale : 4)) };
+    sh.uniforms.tR = { value: new THREE.Vector4(...[0, 1, 2, 3].map((i) => L[i] && Math.abs(L[i].rot - 90) < 1 ? 1 : 0)) };
+    sh.uniforms.sf2Fb = { value: new THREE.Vector3(fb[0] * k, fb[1] * k, fb[2] * k) };
+    sh.vertexShader = "attribute vec2 tgrid;\nattribute vec4 tw;\nvarying vec2 vTg;\nvarying vec4 vTw;\n" + sh.vertexShader.replace("#include <begin_vertex>", "#include <begin_vertex>\n	vTg = tgrid; vTw = tw;");
+    sh.fragmentShader = "uniform sampler2D tL1;\nuniform sampler2D tL2;\nuniform sampler2D tL3;\nuniform vec4 tS;\nuniform vec4 tR;\nuniform vec3 sf2Fb;\nvarying vec2 vTg;\nvarying vec4 vTw;\nvec2 tuv(float s, float r) { vec2 u = vTg / s; return r > 0.5 ? vec2(u.y, -u.x) : u; }\n" + sh.fragmentShader.replace("#include <map_fragment>", `vec4 tc = texture2D( map, tuv( tS.x, tR.x ) );
+	tc = mix( tc, texture2D( tL1, tuv( tS.y, tR.y ) ), vTw.y );
+	tc = mix( tc, texture2D( tL2, tuv( tS.z, tR.z ) ), vTw.z );
+	tc = mix( tc, texture2D( tL3, tuv( tS.w, tR.w ) ), vTw.w );
+	diffuseColor *= tc;`).replace("#include <lights_fragment_maps>", "#include <lights_fragment_maps>\n	irradiance += sf2Fb;");
+  };
+  mat.customProgramCacheKey = () => "sf2terrain";
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.name = "terrain";
+  mesh.receiveShadow = true;
+  mesh.castShadow = true;
+  mesh.matrixAutoUpdate = false;
+  return mesh;
+}
+__name(sf2TerrainMesh, "sf2TerrainMesh");
 function sf2TriMap(def) {
   return Object.assign({
     indoor: false,
@@ -17042,7 +17152,7 @@ function sf2TriMap(def) {
       const gltf = await apexGLTF(bin);
       if (this.mirror !== false) gltf.scene.scale.z = -1;
       gltf.scene.updateMatrixWorld(true);
-      const pos = [], idx = [], v = new THREE.Vector3(), box = new THREE.Box3(), size = new THREE.Vector3(), all = new THREE.Box3();
+      const pos = [], idx = [], ramps = [], v = new THREE.Vector3(), box = new THREE.Box3(), size = new THREE.Vector3(), all = new THREE.Box3();
       gltf.scene.traverse((o) => {
         if (!o.isMesh) return;
         const ex = /* @__PURE__ */ __name((k) => o.userData[k] || o.parent && o.parent.userData[k], "ex");
@@ -17057,6 +17167,16 @@ function sf2TriMap(def) {
           return;
         }
         all.union(box);
+        if (this.rampStairs && this.rampStairs.test(o.name)) {
+          const q = sf2StairRamp(o);
+          if (q) {
+            ramps.push(q);
+            const b0 = pos.length / 3;
+            for (const v2 of q) pos.push(v2.x, v2.y, v2.z);
+            idx.push(b0, b0 + 1, b0 + 2, b0 + 2, b0 + 1, b0 + 3, b0, b0 + 2, b0 + 1, b0 + 2, b0 + 3, b0 + 1);
+            return;
+          }
+        }
         const g = o.geometry, P = g.attributes.position, base = pos.length / 3, flip = o.matrixWorld.determinant() < 0;
         for (let i = 0; i < P.count; i++) {
           v.fromBufferAttribute(P, i).applyMatrix4(o.matrixWorld);
@@ -17066,6 +17186,13 @@ function sf2TriMap(def) {
         for (let i = 0; i + 2 < n3; i += 3) if (flip) idx.push(base + I(i), base + I(i + 2), base + I(i + 1));
         else idx.push(base + I(i), base + I(i + 1), base + I(i + 2));
       });
+      const tgeo = d.meta.terrain ? sf2TerrainGeo(d.meta.terrain) : null;
+      if (tgeo) {
+        const TP = tgeo.attributes.position, TI = tgeo.index, base = pos.length / 3;
+        for (let i = 0; i < TP.count; i++) pos.push(TP.getX(i), TP.getY(i), TP.getZ(i));
+        for (let i = 0; i < TI.count; i++) idx.push(base + TI.getX(i));
+        all.union(tgeo.boundingBox);
+      }
       const soup = new TriSoup(new Float32Array(pos), new Uint32Array(idx), "concrete");
       if (this.mirror !== false && !d.meta.mirrored) {
         for (const st of d.meta.starts) {
@@ -17083,7 +17210,7 @@ function sf2TriMap(def) {
         t.anisotropy = 4;
         lm[k] = t;
       }));
-      this._s2 = { gltf, soup, meta: d.meta, lm };
+      this._s2 = { gltf, soup, ramps, meta: d.meta, lm, terrain: tgeo && await sf2TerrainMesh(d.meta.terrain, tgeo, this) };
       this.bounds = { minX: Math.floor(all.min.x) - 2, maxX: Math.ceil(all.max.x) + 2, minZ: Math.floor(all.min.z) - 2, maxZ: Math.ceil(all.max.z) + 2 };
       this.killY = all.min.y - 15;
       const levels = [];
@@ -17120,6 +17247,20 @@ function sf2TriMap(def) {
       b.col.useTris(soup);
       b.phys.triGround = new TriGround(soup);
       for (const l of this._s2.meta.ladders || []) b.navExtra.push(new THREE.Vector3(l[0], l[1], l[2]));
+      for (const q of this._s2.ramps || []) {
+        const lo = q[0].clone().add(q[1]).multiplyScalar(0.5), hi = q[2].clone().add(q[3]).multiplyScalar(0.5), [a, c] = lo.y < hi.y ? [lo, hi] : [hi, lo], dir = c.clone().sub(a).setY(0).normalize();
+        const foot = a.clone().addScaledVector(dir, -1.2), head = c.clone().addScaledVector(dir, 1.4);
+        for (const [e, y0] of [[foot, a.y], [head, c.y]]) {
+          const g = b.col.groundBelow(e.x, y0 + 0.8, e.z, 0.2, 1.6, 0);
+          e.y = g ? g.y : y0;
+        }
+        b.navChains.push([foot, a.clone().lerp(c, 0.33), a.clone().lerp(c, 0.66), head]);
+      }
+      for (const ch of def.navChains || []) {
+        const pts = ch.map((q) => new THREE.Vector3(q[0], q[1], q[2])), on = b.navChains.find((c2) => c2[c2.length - 1].distanceTo(pts[0]) < 0.8);
+        if (on) on.push(...pts.slice(1));
+        else b.navChains.push(pts);
+      }
       const meshes = [];
       gltf.scene.traverse((o) => {
         if (o.isMesh) meshes.push(o);
@@ -17154,7 +17295,7 @@ function sf2TriMap(def) {
             if (Math.abs(c.r - c.g) < 0.02 && Math.abs(c.g - c.b) < 0.02) c.setRGB(1, 1, 1);
           }
         }
-        if (/ladder/i.test(m.name)) sf2Ladder(b, m);
+        if (/ladder/i.test(m.name)) sf2Ladder(b, m, def.ladderNav);
         if (Array.isArray(m.material) || m.userData.sky) {
           b.scene.add(m);
           continue;
@@ -17163,6 +17304,7 @@ function sf2TriMap(def) {
         (groups.get(k) || groups.set(k, []).get(k)).push({ m, src, L });
       }
       for (const list of groups.values()) b.scene.add(sf2Merge(list, this._s2.lm, def));
+      if (this._s2.terrain) b.scene.add(this._s2.terrain);
     }
   }, def);
 }
@@ -17218,6 +17360,33 @@ MAPS.push(sf2TriMap({
   stairMat: "dc_stair_002_INST",
   stairKeep: ["dcnew_stair_001_INST"],
   stairSides: /^dc_stair_003/i
+}));
+MAPS.push(sf2TriMap({
+  id: "sf2_tower",
+  name: "SF2 邊境要塞",
+  en: "CANNON",
+  desc: "Special Force 2 原版地圖 1:1 · 佔領模式專用 · 原版模型、擺設、碰撞與烘焙光照",
+  slogan: "反衛星基地 · 中央據點爭奪",
+  bounds: { minX: -34, maxX: 27, minZ: -35, maxZ: 51 },
+  indoor: false,
+  killY: -20,
+  shot: { pos: [-3, 45, -50], target: [-3, 0, 8] },
+  thumb: { pos: [-3, 55, -60], target: [-3, 0, 8], fov: 55 },
+  objectives: { cap: [-3.2, 6.3, 7.68], capRadius: 2.4, dom: [[-3, 0, -20], [-3.2, 6.3, 7.68], [-6, 0, 36]], relic: [-3.2, 6.3, 7.68], domRadius: 4 },
+  background: 13222580,
+  envIntensity: 0,
+  exposure: 0.8,
+  hemi: [15129800, 6969928, 0],
+  sun: { pos: [-40, 43, -38], color: 16773336, intensity: 1.75, auto: false },
+  fog: { color: 13222580, near: 90, far: 420 },
+  lmEnv: 0,
+  lmK: 3.14,
+  rampStairs: /^ms_stair/i,
+  ladderNav: false,
+  // (its tower ladders: bots stuck at their heads)
+  // (its inner flights rise 4 m to a 3 m storey: their head steps down 1 m onto the capture room's floor — walked by a player, not
+  // something the nav grid links; one chain each from the flight's head across the room to the point)
+  navChains: [[[-7.3, 6, 4.2], [-7.8, 6.24, 1.6], [-3, 6.24, 1.8], [-3.2, 6.22, 6.6]], [[1.6, 6, 11.2], [1.6, 6.24, 13.6], [-3, 6.24, 13.4], [-3.2, 6.22, 8.8]]]
 }));
 
 // src/08_nav_input.js
@@ -25994,7 +26163,144 @@ var DomRule = class extends Rule {
     };
   }
 };
+var CAP_OPEN = 120;
+var CAP_HOLD = 60;
+var CAP_TAKE = 1;
+var CaptureRule = class extends Rule {
+  static {
+    __name(this, "CaptureRule");
+  }
+  init() {
+    const m = this.m, o = m.def.objectives || {}, B = m.def.bounds;
+    const r = this.place(o.cap || [(B.minX + B.maxX) / 2, 0, (B.minZ + B.maxZ) / 2]);
+    this.pos = new THREE.Vector3(r.pos.x, r.base, r.pos.z);
+    this.r = o.capRadius || 2.2;
+    this.owner = null;
+    this.left = CAP_HOLD;
+    this.takeT = 0;
+    this.taker = null;
+    this.contested = false;
+    this.warned = 0;
+    const g = this.group = new THREE.Group();
+    g.position.copy(this.pos);
+    const pOff = { polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4, depthWrite: false, transparent: true };
+    this.ringMat = new THREE.MeshBasicMaterial(Object.assign({ color: TEAM_HEX.none, opacity: 0.9, side: THREE.DoubleSide }, pOff));
+    const ring = new THREE.Mesh(new THREE.RingGeometry(this.r - 0.2, this.r, 64), this.ringMat);
+    ring.rotation.x = -Math.PI / 2;
+    ring.position.y = 0.04;
+    this.beamMat = new THREE.MeshBasicMaterial({ color: TEAM_HEX.none, transparent: true, opacity: 0.14, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide });
+    const beam = new THREE.Mesh(new THREE.CylinderGeometry(this.r, this.r, 40, 32, 1, true), this.beamMat);
+    beam.position.y = 20;
+    g.add(ring, beam);
+    g.traverse((c) => {
+      c.userData.noAO = true;
+    });
+    m.scene.add(g);
+  }
+  get open() {
+    return this.openAt !== void 0 && this.m.time >= this.openAt;
+  }
+  startRound() {
+  }
+  inside(c) {
+    return c.alive && Math.hypot(c.motor.pos.x - this.pos.x, c.motor.pos.z - this.pos.z) <= this.r && Math.abs(c.motor.pos.y - this.pos.y) < 1.6;
+  }
+  _setOwner(team, by) {
+    const m = this.m, prev = this.owner;
+    this.owner = team;
+    this.left = CAP_HOLD;
+    this.warned = 0;
+    const col = TEAM_HEX[team || "none"];
+    this.ringMat.color.setHex(col);
+    this.beamMat.color.setHex(col);
+    if (!team || m.phase !== "live") return;
+    const mine = team === m.player.team;
+    m.audio.objective(mine ? "capture" : "lost");
+    m.app.hud.announce(mine ? "我方佔領了據點" : "敵方佔領了據點！", `${CAP_HOLD} 秒倒數結束時，佔領的一方獲勝`);
+    if (by) {
+      by.score += POINTS.capture;
+      m.addTeam(team, 10);
+      if (by.isPlayer) m.app.hud.points(`+${POINTS.capture}  佔領據點`);
+      m.app.hud.killfeed(by.name, team, "佔領據點", "", team, false, by.isPlayer);
+    } else if (prev !== team) m.app.hud.killfeed(mine ? "我方" : "敵方", team, "佔領據點", "", team, false, false);
+  }
+  netState() {
+    const T = /* @__PURE__ */ __name((t) => t === "alpha" ? 1 : t === "bravo" ? 2 : 0, "T");
+    return { o: T(this.owner), l: +this.left.toFixed(1), c: this.contested ? 1 : 0 };
+  }
+  applyNet(s) {
+    const own = [null, "alpha", "bravo"][s.o | 0] || null;
+    if (own !== this.owner) this._setOwner(own, null);
+    this.left = clamp(+s.l || 0, 0, CAP_HOLD);
+    this.contested = !!s.c;
+  }
+  tick(dt) {
+    const m = this.m;
+    if (this.openAt === void 0 && m.phase === "live") this.openAt = m.time + CAP_OPEN;
+    this.group.visible = this.open;
+    this.ringMat.opacity = this.contested ? 0.55 + 0.4 * Math.sin(m.time * 9) : 0.9;
+    if (m.phase !== "live" || !this.open) return;
+    let a = 0, b = 0, first = null;
+    for (const c of m.combatants) if (this.inside(c)) {
+      if (c.team === "alpha") a++;
+      else b++;
+      if (!first) first = c;
+    }
+    this.contested = a > 0 && b > 0;
+    const team = !this.contested && (a || b) ? a ? "alpha" : "bravo" : null;
+    if (team && team !== this.owner) {
+      this.takeT += dt;
+      if (this.takeT >= CAP_TAKE) {
+        this.takeT = 0;
+        this._setOwner(team, first);
+      }
+    } else this.takeT = 0;
+    if (!this.owner) return;
+    this.left -= dt;
+    for (const w of [20, 5]) if (this.left <= w && this.warned < w && this.warned !== 5) {
+      this.warned = w;
+      const mine = this.owner === m.player.team;
+      m.audio.objective("tick");
+      m.app.hud.announce(`剩 ${w} 秒！`, mine ? "守住據點" : "快奪回據點！");
+    }
+    if (this.left <= 0) {
+      this.left = 0;
+      m.endMatch(this.owner);
+    }
+  }
+  timeUp() {
+    this.m.endMatch(this.owner);
+  }
+  botGoal(bot) {
+    if (!this.open) return { pos: this.pos, radius: 14, action: "guard" };
+    if (this.owner !== bot.team) return { pos: this.pos, radius: this.r * 0.6, action: "capture", urgent: true };
+    return bot.idx % 2 ? { pos: this.pos, radius: this.r * 0.8, action: "guard" } : { pos: this.pos, radius: 10, action: "guard" };
+  }
+  markers(out) {
+    const p = this.m.player;
+    out.push({
+      pos: this.pos.clone().setY(this.pos.y + 2.6),
+      label: "◎",
+      color: TEAM_CSS[this.owner || "none"],
+      zone: true,
+      sub: !this.open ? `${Math.ceil((this.openAt ?? this.m.time + CAP_OPEN) - this.m.time)}s 後開放` : this.contested ? "爭奪中" : this.owner ? `${this.owner === p.team ? "我方" : "敵方"} ${Math.ceil(this.left)}s` : "中立"
+    });
+    return out;
+  }
+  hudState() {
+    const m = this.m, p = m.player, mine = this.owner === p.team, s = /* @__PURE__ */ __name((n) => {
+      const t = Math.ceil(n);
+      return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, "0")}`;
+    }, "s");
+    let text;
+    if (this.openAt === void 0 || !this.open) text = `據點 ${s(Math.max(0, (this.openAt ?? m.time + CAP_OPEN) - m.time))} 後開放`;
+    else if (!this.owner) text = "據點已開放 · 站上據點佔領";
+    else text = `${mine ? "我方佔領中 · 守住" : "敵方佔領中 · 奪回據點"} · 倒數 ${Math.ceil(this.left)} 秒${this.contested ? "（爭奪中）" : ""}`;
+    return { kind: "tower", text, prompt: "", role: "佔領模式" };
+  }
+};
 function createRule(kind, m) {
+  if (kind === "tower") return new CaptureRule(m);
   if (kind === "rounds") return new RoundsRule(m);
   if (kind === "relic") return new RelicRule(m);
   if (kind === "dom") return new DomRule(m);
@@ -30446,11 +30752,12 @@ var App = class {
         this.audio.uiClick();
       }
     });
+    const tl = /* @__PURE__ */ __name((v) => R.targetText || (roundsLike ? `${v}先勝` : `${v} 分`), "tl");
     this._dd(
       "ddTarget",
-      roundsLike ? "勝負局數" : "勝利分數",
-      roundsLike ? `${rc.target}先勝` : `${rc.target} 分`,
-      R.targets.map((v) => [v, roundsLike ? `${v}先勝` : `${v} 分`]),
+      R.targetText ? "勝利條件" : roundsLike ? "勝負局數" : "勝利分數",
+      tl(rc.target),
+      R.targets.map((v) => [v, tl(v)]),
       (v) => {
         if (host()) {
           rc.target = +v;

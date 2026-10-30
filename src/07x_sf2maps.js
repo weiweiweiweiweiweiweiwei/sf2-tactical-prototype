@@ -39,7 +39,7 @@ function stairSides(g, mat) {
 // axis of its box is the climb direction, the side that is blocked at mid height is the wall, the floor found on top of the wall
 // is the platform; a climb volume and a nav link as MapBuilder.ladder() makes them, without its own rungs
 const _lb = new THREE.Box3(), _lc = new THREE.Vector3();
-function sf2Ladder(b, m) {
+function sf2Ladder(b, m, nav = true) {
   m.updateMatrixWorld(true); _lb.setFromObject(m); _lb.getCenter(_lc); const sx = _lb.max.x - _lb.min.x, sz = _lb.max.z - _lb.min.z, col = b.col;
   const y0 = _lb.min.y, hw = Math.max(sx, sz) / 2;
   // (the platform lies behind the ladder, −normal: the side whose floor, looked for from above the ladder's top, is the higher one —
@@ -49,7 +49,7 @@ function sf2Ladder(b, m) {
   const g = col.groundBelow(_lc.x - nx * 0.8, _lb.max.y + 1.5, _lc.z - nz * 0.8, 0.15, _lb.max.y - y0 + 2, 0);
   const y1 = g && g.y > y0 + 1 ? g.y : _lb.max.y - 0.2, x = _lc.x - nx * 0.15, z = _lc.z - nz * 0.15, tx = -nz, tz = nx;
   const P = (a, y, d) => new THREE.Vector3(x + tx * a + nx * d, y, z + tz * a + nz * d);
-  const chain = [P(0, y0, 0.95), P(0, y1, -0.95)]; chain.ladder = true; chain.cost = 1.8; b.navChains.push(chain);
+  const chain = [P(0, y0, 0.95), P(0, y1, -0.95)]; chain.ladder = true; chain.cost = 1.8; if (nav !== false) b.navChains.push(chain); // (v65z def.ladderNav false: players climb, bots take the stairs)
   b.ladders.push({ x, z, y0, y1, nx, nz });
   const vx0 = Math.min(x + nx * 0.8, x - nx * 0.15), vx1 = Math.max(x + nx * 0.8, x - nx * 0.15), vz0 = Math.min(z + nz * 0.8, z - nz * 0.15), vz1 = Math.max(z + nz * 0.8, z - nz * 0.15);
   col.addLadder({ minX: nx ? vx0 : x - hw, maxX: nx ? vx1 : x + hw, minZ: nz ? vz0 : z - hw, maxZ: nz ? vz1 : z + hw, y0: y0 - 0.1, y1: y1 + 0.35, top: y1, nx, nz });
@@ -111,6 +111,76 @@ function sf2Merge(list, sheets, def) {
   return out;
 }
 
+// v65z a flight of narrow steps as the ramp SF2 collides with (its static meshes carry a simple collision UModel does not export): the
+// treads are the up-facing faces with the most area at each point along the rise axis; a line fitted through them, as wide as they
+// are, gives two triangles in place of the mesh's own (Cannon's ms_stair001: 0.2 m treads, narrower than a body — every step blocked)
+function sf2StairRamp(o) {
+  const g = o.geometry, P = g.attributes.position, I = g.index, n3 = I ? I.count : P.count, at = (k) => (I ? I.getX(k) : k);
+  const a = new THREE.Vector3(), b = new THREE.Vector3(), c = new THREE.Vector3(), nrm = new THREE.Vector3(), up = [];
+  for (let k = 0; k + 2 < n3; k += 3) {
+    a.fromBufferAttribute(P, at(k)); b.fromBufferAttribute(P, at(k + 1)); c.fromBufferAttribute(P, at(k + 2));
+    nrm.subVectors(b, a).cross(c.clone().sub(a)); const area = nrm.length() / 2; if (area < 1e-5) continue; nrm.normalize();
+    if (Math.abs(nrm.y) > 0.8) up.push({ x: (a.x + b.x + c.x) / 3, y: (a.y + b.y + c.y) / 3, z: (a.z + b.z + c.z) / 3, area });
+  }
+  if (up.length < 4) return null;
+  // (the railings' caps face up too, along both sides: keep the middle 60 % across — the narrower of the two horizontal spans)
+  const ext = (k) => [Math.min(...up.map((f) => f[k])), Math.max(...up.map((f) => f[k]))], ex = ext('x'), ez = ext('z'), latK = ex[1] - ex[0] < ez[1] - ez[0] ? 'x' : 'z', le = latK === 'x' ? ex : ez;
+  const mid = up.filter((f) => f[latK] > le[0] + 0.2 * (le[1] - le[0]) && f[latK] < le[1] - 0.2 * (le[1] - le[0]));
+  if (mid.length >= 4) up.splice(0, up.length, ...mid);
+  const sx = Math.max(...up.map((f) => f.x)) - Math.min(...up.map((f) => f.x)), sz = Math.max(...up.map((f) => f.z)) - Math.min(...up.map((f) => f.z));
+  const fit = (ax) => { // least squares y = p + q·t over area-weighted tread centres, t along ax
+    let W = 0, T = 0, Y = 0, TT = 0, TY = 0; for (const f of up) { const t = f[ax], w = f.area; W += w; T += w * t; Y += w * f.y; TT += w * t * t; TY += w * t * f.y; }
+    const q = (W * TY - T * Y) / (W * TT - T * T || 1), p = (Y - q * T) / W; let err = 0; for (const f of up) err += f.area * Math.abs(f.y - (p + q * f[ax])); return { p, q, err };
+  };
+  const fx = fit('x'), fz = fit('z'), ax = Math.abs(fx.q) * sx > Math.abs(fz.q) * sz ? 'x' : 'z', L = ax === 'x' ? fx : fz, lat = ax === 'x' ? 'z' : 'x';
+  const on = up.filter((f) => Math.abs(f.y - (L.p + L.q * f[ax])) < 0.3); if (on.length < 3) return null;
+  const t0 = Math.min(...on.map((f) => f[ax])) - 0.12, t1 = Math.max(...on.map((f) => f[ax])) + 0.12, l0 = (lat === latK ? le[0] : Math.min(...on.map((f) => f[lat]))) + 0.05, l1 = (lat === latK ? le[1] : Math.max(...on.map((f) => f[lat]))) - 0.05;
+  // (the ends: the lowest and the highest tread — a least-squares line through all of them overshoots where a landing adjoins)
+  on.sort((f, g2) => f.y - g2.y); const lo = on[0], hi = on[on.length - 1], q2 = (hi.y - lo.y) / ((hi[ax] - lo[ax]) || 1), y = (t) => lo.y + q2 * (t - lo[ax]);
+  const ta = lo[ax] - Math.sign(hi[ax] - lo[ax]) * 0.15, tb = hi[ax] + Math.sign(hi[ax] - lo[ax]) * 0.15;
+  const pt = (t, l) => { const v = new THREE.Vector3(); v[ax] = t; v[lat] = l; v.y = y(t) + 0.03; return v.applyMatrix4(o.matrixWorld); };
+  return t0 < t1 ? [pt(ta, l0), pt(ta, l1), pt(tb, l0), pt(tb, l1)] : null;
+}
+
+// v65z an SF2 UE3 Terrain (tools/sf2_map_build.mjs meta.terrain, game metres, already in the mirrored-back frame): the height grid
+// less its holes, as positions + indices for the triangle soup and a mesh whose material blends the four layers by their painted
+// weights (layer 0 underneath, each next one mixed over it by its alpha), tiled every MappingScale quads, turned by MappingRotation
+function sf2TerrainGeo(T) {
+  const nx = T.nx, ny = T.ny, H = new Float32Array(Uint8Array.from(atob(T.h), (c) => c.charCodeAt(0)).buffer), W = Uint8Array.from(atob(T.w), (c) => c.charCodeAt(0));
+  const P = new Float32Array(nx * ny * 3), G = new Float32Array(nx * ny * 2), hole = new Set(T.holes || []), I = [];
+  for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) { const k = i + j * nx; P[k * 3] = T.x0 + i * T.dx; P[k * 3 + 1] = H[k]; P[k * 3 + 2] = T.z0 + j * T.dz; G[k * 2] = i; G[k * 2 + 1] = j; }
+  for (let j = 0; j + 1 < ny; j++) for (let i = 0; i + 1 < nx; i++) {
+    const a = i + j * nx, b = a + nx, c = a + 1, d = b + 1;
+    if (hole.has(a) || hole.has(b) || hole.has(c) || hole.has(d)) continue;
+    I.push(a, b, c, c, b, d); // (normals up: x east, z south)
+  }
+  const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(P, 3)); geo.setAttribute('tgrid', new THREE.BufferAttribute(G, 2));
+  geo.setAttribute('tw', new THREE.BufferAttribute(W, 4, true)); geo.setIndex(I); geo.computeVertexNormals(); geo.computeBoundingSphere(); geo.computeBoundingBox();
+  return geo;
+}
+async function sf2TerrainMesh(T, geo, def) {
+  const tex = await Promise.all(T.layers.map((L) => (L.tex ? new THREE.TextureLoader().loadAsync(L.tex) : null)));
+  for (const t of tex) if (t) { t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 8; }
+  const black = SF2_BLACK, L = T.layers, mat = new THREE.MeshStandardMaterial({ map: tex[0] || black, roughness: 0.95, metalness: 0 });
+  const fb = def.lmFallback || [0.3, 0.3, 0.3], k = def.lmK ?? Math.PI; mat.envMapIntensity = def.lmEnv ?? 0.1;
+  mat.onBeforeCompile = (sh) => {
+    for (let i = 1; i < 4; i++) sh.uniforms['tL' + i] = { value: tex[i] || black };
+    sh.uniforms.tS = { value: new THREE.Vector4(...[0, 1, 2, 3].map((i) => (L[i] ? L[i].scale : 4))) };
+    sh.uniforms.tR = { value: new THREE.Vector4(...[0, 1, 2, 3].map((i) => (L[i] && Math.abs(L[i].rot - 90) < 1 ? 1 : 0))) };
+    sh.uniforms.sf2Fb = { value: new THREE.Vector3(fb[0] * k, fb[1] * k, fb[2] * k) };
+    sh.vertexShader = 'attribute vec2 tgrid;\nattribute vec4 tw;\nvarying vec2 vTg;\nvarying vec4 vTw;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n\tvTg = tgrid; vTw = tw;');
+    sh.fragmentShader = 'uniform sampler2D tL1;\nuniform sampler2D tL2;\nuniform sampler2D tL3;\nuniform vec4 tS;\nuniform vec4 tR;\nuniform vec3 sf2Fb;\nvarying vec2 vTg;\nvarying vec4 vTw;\nvec2 tuv(float s, float r) { vec2 u = vTg / s; return r > 0.5 ? vec2(u.y, -u.x) : u; }\n'
+      + sh.fragmentShader.replace('#include <map_fragment>', `vec4 tc = texture2D( map, tuv( tS.x, tR.x ) );
+	tc = mix( tc, texture2D( tL1, tuv( tS.y, tR.y ) ), vTw.y );
+	tc = mix( tc, texture2D( tL2, tuv( tS.z, tR.z ) ), vTw.z );
+	tc = mix( tc, texture2D( tL3, tuv( tS.w, tR.w ) ), vTw.w );
+	diffuseColor *= tc;`).replace('#include <lights_fragment_maps>', '#include <lights_fragment_maps>\n\tirradiance += sf2Fb;');
+  };
+  mat.customProgramCacheKey = () => 'sf2terrain';
+  const mesh = new THREE.Mesh(geo, mat); mesh.name = 'terrain'; mesh.receiveShadow = true; mesh.castShadow = true; mesh.matrixAutoUpdate = false;
+  return mesh;
+}
+
 function sf2TriMap(def) {
   return Object.assign({
     indoor: false, killOutside: false, traversal: false, navClimb: 0.45, navGrid: 1, bodyRadius: 0.25, underFloorAirOnly: true, acoustics: 'indoor', ambience: 'warehouse',
@@ -127,18 +197,28 @@ function sf2TriMap(def) {
       if (this.mirror !== false) gltf.scene.scale.z = -1;
       gltf.scene.updateMatrixWorld(true);
       // collision: every mesh's world triangles (instances share geometry), the sky dome and other huge shells out
-      const pos = [], idx = [], v = new THREE.Vector3(), box = new THREE.Box3(), size = new THREE.Vector3(), all = new THREE.Box3();
+      const pos = [], idx = [], ramps = [], v = new THREE.Vector3(), box = new THREE.Box3(), size = new THREE.Vector3(), all = new THREE.Box3();
       gltf.scene.traverse((o) => {
         if (!o.isMesh) return;
         const ex = (k) => o.userData[k] || (o.parent && o.parent.userData[k]); // (glTF node extras: on the node, or its group)
         if (ex('colOnly')) o.userData.colOnly = true; else if (ex('nocol')) { o.userData.nocol = true; return; } // v65v SF2's collision: off where it turned it off, its blocking volumes in
         box.setFromObject(o); if (box.getSize(size).length() > 300) { o.userData.sky = true; return; }
         all.union(box);
+        if (this.rampStairs && this.rampStairs.test(o.name)) { const q = sf2StairRamp(o); if (q) { // (v65z this stair's ramp, both windings: up whichever way the mesh faces)
+          ramps.push(q); const b0 = pos.length / 3; for (const v2 of q) pos.push(v2.x, v2.y, v2.z); idx.push(b0, b0 + 1, b0 + 2, b0 + 2, b0 + 1, b0 + 3, b0, b0 + 2, b0 + 1, b0 + 2, b0 + 3, b0 + 1); return; } }
         const g = o.geometry, P = g.attributes.position, base = pos.length / 3, flip = o.matrixWorld.determinant() < 0; // (a mirrored node: its triangles wound the other way round)
         for (let i = 0; i < P.count; i++) { v.fromBufferAttribute(P, i).applyMatrix4(o.matrixWorld); pos.push(v.x, v.y, v.z); }
         const I = (i) => (g.index ? g.index.getX(i) : i), n3 = g.index ? g.index.count : P.count;
         for (let i = 0; i + 2 < n3; i += 3) if (flip) idx.push(base + I(i), base + I(i + 2), base + I(i + 1)); else idx.push(base + I(i), base + I(i + 1), base + I(i + 2));
       });
+      // v65z the map's UE3 Terrain (its ground, tower / Cannon): into the soup and the bounds; drawn in build()
+      const tgeo = d.meta.terrain ? sf2TerrainGeo(d.meta.terrain) : null;
+      if (tgeo) {
+        const TP = tgeo.attributes.position, TI = tgeo.index, base = pos.length / 3;
+        for (let i = 0; i < TP.count; i++) pos.push(TP.getX(i), TP.getY(i), TP.getZ(i));
+        for (let i = 0; i < TI.count; i++) idx.push(base + TI.getX(i));
+        all.union(tgeo.boundingBox);
+      }
       const soup = new TriSoup(new Float32Array(pos), new Uint32Array(idx), 'concrete');
       if (this.mirror !== false && !d.meta.mirrored) { // (once per page: the starts' z and facing, the ladders' z)
         for (const st of d.meta.starts) { st.pos[2] = -st.pos[2]; st.yaw = Math.PI - st.yaw; }
@@ -150,7 +230,7 @@ function sf2TriMap(def) {
       await Promise.all(Object.entries(d.meta.lightmaps || {}).map(async ([k, url]) => {
         const t = await new THREE.TextureLoader().loadAsync(url); t.flipY = false; t.colorSpace = THREE.NoColorSpace; t.anisotropy = 4; lm[k] = t;
       }));
-      this._s2 = { gltf, soup, meta: d.meta, lm };
+      this._s2 = { gltf, soup, ramps, meta: d.meta, lm, terrain: tgeo && await sf2TerrainMesh(d.meta.terrain, tgeo, this) };
       this.bounds = { minX: Math.floor(all.min.x) - 2, maxX: Math.ceil(all.max.x) + 2, minZ: Math.floor(all.min.z) - 2, maxZ: Math.ceil(all.max.z) + 2 };
       this.killY = all.min.y - 15;
       const levels = []; for (let y = Math.floor(all.min.y); y <= Math.ceil(all.max.y); y += 0.5) levels.push(y + 0.2); this.navLevels = levels; // v65v slabs every 0.5 m: NavGraph.walkable() takes a floor within ±0.25 m of the slab, so 1 m slabs missed every floor between (SF2's uneven ground: Desert Camp's graph fell into 155 pieces, no path between the bases)
@@ -176,6 +256,18 @@ function sf2TriMap(def) {
       const { gltf, soup } = this._s2;
       b.col.useTris(soup); b.phys.triGround = new TriGround(soup);
       for (const l of this._s2.meta.ladders || []) b.navExtra.push(new THREE.Vector3(l[0], l[1], l[2])); // (SF2's ladder volumes: climbing is a follow-up)
+      // v65z each stair ramp a nav chain foot → head, 1.2 / 1.4 m past its ends (the grid's own links did not climb Cannon's 29° flights)
+      for (const q of this._s2.ramps || []) {
+        const lo = q[0].clone().add(q[1]).multiplyScalar(0.5), hi = q[2].clone().add(q[3]).multiplyScalar(0.5), [a, c] = lo.y < hi.y ? [lo, hi] : [hi, lo], dir = c.clone().sub(a).setY(0).normalize();
+        const foot = a.clone().addScaledVector(dir, -1.2), head = c.clone().addScaledVector(dir, 1.4);
+        for (const [e, y0] of [[foot, a.y], [head, c.y]]) { const g = b.col.groundBelow(e.x, y0 + 0.8, e.z, 0.2, 1.6, 0); e.y = g ? g.y : y0; } // (on the floor the flight lands on)
+        b.navChains.push([foot, a.clone().lerp(c, 0.33), a.clone().lerp(c, 0.66), head]);
+      }
+      // v65z hand-set links (walked by a player first): one starting at a flight's head carries that flight's chain on
+      for (const ch of def.navChains || []) {
+        const pts = ch.map((q) => new THREE.Vector3(q[0], q[1], q[2])), on = b.navChains.find((c2) => c2[c2.length - 1].distanceTo(pts[0]) < 0.8);
+        if (on) on.push(...pts.slice(1)); else b.navChains.push(pts);
+      }
       const meshes = []; gltf.scene.traverse((o) => { if (o.isMesh) meshes.push(o); });
       // v65y def.stairMat (user 10-29, Desert Camp: the brick stair dc_stair_002 is the right look): every other stair mesh drawn with it,
       // its iron rails (def.stairKeep materials) left as they are
@@ -190,7 +282,7 @@ function sf2TriMap(def) {
         if (def.stairSides && def.stairSides.test(m.name)) { const s = stairSides(src.geometry, m.material); if (s) { s.matrix.copy(m.matrix); s.matrixAutoUpdate = false; s.castShadow = s.receiveShadow = true; b.scene.add(s); } }
         m.castShadow = !m.userData.sky; m.receiveShadow = true;
         for (const mt of Array.isArray(m.material) ? m.material : [m.material]) { mt.vertexColors = false; mt.side = THREE.DoubleSide; if (mt.map) { mt.map.anisotropy = 4; const c = mt.color; if (Math.abs(c.r - c.g) < 0.02 && Math.abs(c.g - c.b) < 0.02) c.setRGB(1, 1, 1); } } // (v65y UModel gives a plain mesh material a 0.58 grey base colour SF2 does not have — the sand mound by the square came out darker than the BSP sand around it in the same texture; a coloured one is the material's own tint, the hangars' red frames, and stays) // (v65w UModel writes SF2's vertex paint as COLOR_0: multiplied in, it striped crates and benches in rainbow colours)
-        if (/ladder/i.test(m.name)) sf2Ladder(b, m);
+        if (/ladder/i.test(m.name)) sf2Ladder(b, m, def.ladderNav);
         if (Array.isArray(m.material) || m.userData.sky) { b.scene.add(m); continue; }
         const L = sf2LightOf(src), k = m.material.uuid + '|' + (L.tex || '');
         (groups.get(k) || groups.set(k, []).get(k)).push({ m, src, L });
@@ -199,6 +291,7 @@ function sf2TriMap(def) {
       // Camp in SF2's look): each placement lights differently, so the v65y instancing gives way to merging — still one draw per
       // material and sheet (nothing raycasts the drawn map: shots and bodies use the triangle soup)
       for (const list of groups.values()) b.scene.add(sf2Merge(list, this._s2.lm, def));
+      if (this._s2.terrain) b.scene.add(this._s2.terrain);
     },
   }, def);
 }
@@ -234,4 +327,20 @@ MAPS.push(sf2TriMap({
   background: 0xcdbb9c, envIntensity: 0, exposure: 0.8, hemi: [0xe6d6bc, 0x6a5440, 0],
   sun: { pos: [-32, 57, 25], color: 0xfbdbc7, intensity: 2.5, auto: false }, fog: { color: 0xcdbb9c, near: 90, far: 420 },
   lmEnv: 0, lmK: 3.14, stairMat: 'dc_stair_002_INST', stairKeep: ['dcnew_stair_001_INST'], stairSides: /^dc_stair_003/i,
+}));
+
+// v65z 邊境要塞 (user 10-30: S.K.I.L.L. Special Force 2's Cannon — its install name `tower`, the anti-satellite base of SF2's
+// 佔領模式 / SFCaptureGame): one capture point on the roof of the central building under the satellite antenna (SFCaptureVolume_0,
+// UE (−320, 768, 704)); its DominantDirectionalLight 38° up from 43°, brightness 3.5 (Desert Camp's 5 → 2.5 here); Alpha's base south (z −30), Bravo's north (z +43), a watchtower at each (game metres: x −32 … 25, z −33 … 49)
+MAPS.push(sf2TriMap({
+  id: 'sf2_tower', name: 'SF2 邊境要塞', en: 'CANNON', desc: 'Special Force 2 原版地圖 1:1 · 佔領模式專用 · 原版模型、擺設、碰撞與烘焙光照', slogan: '反衛星基地 · 中央據點爭奪',
+  bounds: { minX: -34, maxX: 27, minZ: -35, maxZ: 51 }, indoor: false, killY: -20,
+  shot: { pos: [-3, 45, -50], target: [-3, 0, 8] }, thumb: { pos: [-3, 55, -60], target: [-3, 0, 8], fov: 55 },
+  objectives: { cap: [-3.2, 6.3, 7.68], capRadius: 2.4, dom: [[-3, 0, -20], [-3.2, 6.3, 7.68], [-6, 0, 36]], relic: [-3.2, 6.3, 7.68], domRadius: 4 },
+  background: 0xc9c2b4, envIntensity: 0, exposure: 0.8, hemi: [0xe6dcc8, 0x6a5a48, 0],
+  sun: { pos: [-40, 43, -38], color: 0xfff0d8, intensity: 1.75, auto: false }, fog: { color: 0xc9c2b4, near: 90, far: 420 },
+  lmEnv: 0, lmK: 3.14, rampStairs: /^ms_stair/i, ladderNav: false, // (its tower ladders: bots stuck at their heads)
+  // (its inner flights rise 4 m to a 3 m storey: their head steps down 1 m onto the capture room's floor — walked by a player, not
+  // something the nav grid links; one chain each from the flight's head across the room to the point)
+  navChains: [[[-7.3, 6.0, 4.2], [-7.8, 6.24, 1.6], [-3, 6.24, 1.8], [-3.2, 6.22, 6.6]], [[1.6, 6.0, 11.2], [1.6, 6.24, 13.6], [-3, 6.24, 13.4], [-3.2, 6.22, 8.8]]],
 }));

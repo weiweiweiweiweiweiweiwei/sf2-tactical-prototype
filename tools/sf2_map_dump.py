@@ -110,6 +110,29 @@ for e in p.exports:
             rot = pr.get('Rotation'); yaw = int(str(rot).strip('()').split(',')[1]) if rot else 0
             starts.append({'cls': c, 'team': int(pr.get('TeamIndex', 0)), 'loc': loc, 'yaw': yaw})
         else: ladders.append({'loc': loc})
-json.dump({'placed': out, 'starts': starts, 'ladders': ladders, 'blocks': blocks}, open(f'tools/out/sf2/maps/{name}.json', 'w'))
+# v65z UE3 Terrain (tower / Cannon's ground): after its tags Heights<WORD>[NumVerticesX × NumVerticesY], InfoData<BYTE> (bit 0: a hole),
+# AlphaMaps[]<BYTE> (one per layer, Layers[i].AlphaMapIndex); vertex (i, j) at Location + (i × DrawScale3D.X, j × DrawScale3D.Y) cm,
+# height (h − 32768) / 128 × DrawScale3D.Z cm. A layer's look: TerrainLayerSetup → TerrainMaterial (Material, MappingScale 4, MappingRotation)
+terrain = None
+for e in p.exports:
+    if p.clsname(e) != 'Terrain': continue
+    pr = {n: v for n, i, t, v in p.props(e)}; o = p.o; B = p.b
+    nx, ny = int(pr['NumVerticesX']), int(pr['NumVerticesY']); n = struct.unpack_from('<i', B, o)[0]; hs = list(struct.unpack_from(f'<{n}H', B, o + 4)); o += 4 + 2 * n
+    m = struct.unpack_from('<i', B, o)[0]; holes = [i for i, f in enumerate(B[o + 4:o + 4 + m]) if f & 1]; o += 4 + m
+    k = struct.unpack_from('<i', B, o)[0]; o += 4; alphas = []
+    for _ in range(k): c = struct.unpack_from('<i', B, o)[0]; alphas.append(list(B[o + 4:o + 4 + c])); o += 4 + c
+    byname = {x['name']: x for x in p.exports}; layers = []
+    for L in pr.get('Layers', []):
+        st = byname.get(L['Setup']); tm = {}
+        if st:
+            mats = {n2: v for n2, i, t, v in p.props(st)}.get('Materials') or []
+            tmn = mats[0].get('Material') if mats and isinstance(mats[0], dict) else None
+            if tmn and tmn in byname: tm = {n2: v for n2, i, t, v in p.props(byname[tmn])}
+        ai = L.get('AlphaMapIndex', -1)
+        layers.append({'mat': tm.get('Material'), 'scale': float(tm.get('MappingScale', 4.0)), 'rot': float(tm.get('MappingRotation', 0.0)), 'alpha': alphas[ai] if 0 <= ai < len(alphas) else None})
+    terrain = {'nx': nx, 'ny': ny, 'loc': vec(pr.get('Location')), 'scale': vec(pr.get('DrawScale3D'), (1.0, 1.0, 1.0)), 'h': hs, 'holes': holes, 'layers': layers}
+    print('terrain', nx, 'x', ny, 'layers', [(L['mat'], L['scale'], L['rot'], bool(L['alpha'])) for L in layers], 'holes', len(holes))
+    break
+json.dump({'placed': out, 'starts': starts, 'ladders': ladders, 'blocks': blocks, 'terrain': terrain}, open(f'tools/out/sf2/maps/{name}.json', 'w'))
 print('starts', [(s['cls'], s['team']) for s in starts], 'ladders', len(ladders))
 print(name, len(out), 'placements,', len({o['mesh'] for o in out}), 'meshes,', sum(not o['col'] for o in out), 'without collision,', len(blocks), 'blocking volumes;', __import__('collections').Counter(o.get('actor', 'collection') for o in out))

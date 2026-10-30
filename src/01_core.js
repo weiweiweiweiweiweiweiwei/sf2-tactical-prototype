@@ -1090,6 +1090,7 @@ const RULES = {
   tdm: { name: '團隊死鬥', desc: '陣亡 3 秒復活 · 先達到目標分數獲勝（爆頭 50 · 擊殺 30）', unit: '分', targets: [500, 1000, 1500, 2500], times: [0], timeUnit: 'min', def: { target: 1000, time: 0 } }, // v45: no time limit
   rounds: { name: '回合殲滅', desc: '陣亡本回合不復活 · 先贏得指定回合數', unit: '勝', targets: [5, 6, 7, 8, 9], times: [600], timeUnit: 'sec', def: { target: 6, time: 600 } }, // v45: SF2 先勝 rounds, 10 min a round
   relic: { name: '奪取戰', desc: '藍隊進攻奪取山丘聖物並運回撤離點 · 紅隊防守 · 回合制', unit: '勝', targets: [5, 6, 7, 8, 9], times: [600], timeUnit: 'sec', def: { target: 6, time: 600 } },
+  tower: { name: '佔領模式', desc: 'SF2 原版 · 單一據點，開局 2 分鐘後開放 · 站上據點即佔領，佔領方 60 秒倒數，易手重新計時 · 倒數結束時佔領的一方獲勝 · 10 分鐘時限到看誰佔領', unit: '分', targets: [0], targetText: '倒數結束時佔領', times: [600], timeUnit: 'sec', def: { target: 0, time: 600 } }, // v65z SFCaptureGame
   dom: { name: '佔領戰', desc: '按住 E 6 秒佔領 A/B/C · 佔點隨時間得分 · 全佔封鎖對手得分', unit: '分', targets: [150, 250, 400], times: [0], timeUnit: 'min', def: { target: 250, time: 0 } },
 };
 const FREEZE_TIME = 5;

@@ -206,7 +206,7 @@
 - ✅ DustCity（13.2 MB；v65t 沙漠之都，使用者 10-29 指定；⏸ 遠景大樓有幾棟浮空／傾斜、中央黑塔沒貼圖；渲染 CPU 平均 16.5 ms）
 - ⬜ Mangrove（13.2 MB）
 - ⬜ Satellite（13.7 MB）
-- ⬜ tower（13.8 MB）
+- 🔄 tower（13.8 MB）＝邊境要塞 Cannon：v65z 場景、地形、烘焙光照、佔領模式；機器人上二樓待修
 - ⬜ everland（14.1 MB）
 - ⬜ Harbor（14.1 MB）
 - ⬜ Base_camp（14.6 MB）
@@ -227,7 +227,7 @@
 - ⬜ Factory（18.4 MB）
 - ⬜ Guantanamo（18.7 MB）
 - ⬜ Oldtrain（18.7 MB）
-- 🔄 DesertCamp（19.6 MB）：v65x 形狀修好；v65y 光照第 1 段（太陽／霧）；光照交接見 `docs/loop/SF2_DESERTCAMP_LIGHT.md`
+- 🔄 DesertCamp（19.6 MB）：v65x 形狀修好；v65y 光照第 1 段（太陽／霧）；v65z SF2 原版烘焙光照；光照交接見 `docs/loop/SF2_DESERTCAMP_LIGHT.md`
 - ⬜ Rocket（20.0 MB）
 - ⬜ colombiana（20.5 MB）
 - ⬜ Shanghai（20.7 MB）
