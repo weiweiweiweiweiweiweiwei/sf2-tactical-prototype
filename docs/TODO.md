@@ -59,6 +59,12 @@
 - ⬜ Bizon（白紅）、CZ3A1（紫金）抓到特殊塗裝貼圖，要改成預設貼圖
 
 ## 1b. SF2 原版地圖（`docs/loop/SF2_ALL.md` M3）
+- ⬜ 沙漠營地畫面（10-30 分析，依效果排序）：
+  1. SF2 自己的光照貼圖：主包 63 張 `LightMapTexture2D`（方向性光照，內容在 `Lighting_DesertCamp.tfc`，UModel 匯得出來），要逐元件解 LightMap2D 的位置／縮放、配模型第二組 UV；BSP 的 505 個 ModelComponent 各有自己的光照貼圖
+  2. 色調查找表 `lut_desercamp`（256×16）套進後製
+  3. 78 張法線貼圖（`_n`）還沒接
+  4. 外圍沙丘地形（2 個 Terrain）、143 個牆面貼花（DecalActor）
+  5. 天空：`dc_sky_001` 的貼圖與霧色對照 SF2 截圖
 - ✅ 沙漠營地：地下通道木門框對齊（v65y NOFLIP）；FPS 已用實例化救回 58–59
 - ⬜ 沙漠營地：鐵皮軍營 dc_hanger_002 位置（資料看起來是對的，待使用者確認）；外圍沙丘地形（Terrain）還沒建
 - ⬜ 部分物件全黑：材質的貼圖在別的包（MIC 的父材質）沒匯出
