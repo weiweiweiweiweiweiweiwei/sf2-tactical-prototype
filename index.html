@@ -27243,7 +27243,7 @@ var Match = class _Match {
       const m = c.motor, p = m.pos;
       o.set(p.x, p.y + m.height - 0.05, p.z);
       const hit = tris.raycast(o, up, 6);
-      let under = !!(hit && hit.n[1] > 0.7) && !(this.def.underFloorAirOnly && m.grounded);
+      let under = !!(hit && hit.n[1] > 0.7 && hit.t < (m.grounded ? 1 : 2.5)) && !(this.def.underFloorAirOnly && m.grounded);
       if (under && nav) {
         let near = false;
         nav.near(p, 2, (n) => {
