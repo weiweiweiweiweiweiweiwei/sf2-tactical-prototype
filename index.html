@@ -53,6 +53,16 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
 #scope .mil{position:absolute;left:50%;top:50%;width:0;height:0}
 #scope .mil i{position:absolute;background:#000;width:1px;height:7px;top:-3.5px}
 #scope .cd{position:absolute;left:50%;top:50%;width:3px;height:3px;margin:-1.5px;background:#ff2020;border-radius:50%;box-shadow:0 0 4px #f00}
+/* v64f SF2's own sniper view (its SF2 snipers: the K14), measured on the user's SF2 K14 shots (10-28, 2000×1124): a dark tube
+   (sni_scope_zin) whose bright lens is a circle of 71vh radius with a soft brown inner edge; the HUD reticle (hud_sniper, a Flash
+   movie): a centre ring, a vertical line from 13.8vh above down to the ring's bottom, a heavier horizontal bar out to ±18.9vh
+   broken inside the ring with up-ticks every 3vh (tall 4vh / short 1.3vh), an orange-red dot (v64q user: a touch smaller, 80 % opaque, a slight glow round it). Same size on both zoom steps.
+   v64g (the user's SF2 shots, the clearest at 2000×1182; R = the ring's radius): the bar heavier (0.065R) out to 2.91R, a thin line across
+   the ring (the dot on it), the thin vertical from 2.13R above down to a heavy post (0.087R wide) from 1.43R to 2.52R below. */
+#scope.sf2 .lh,#scope.sf2 .lv,#scope.sf2 .tk,#scope.sf2 .cd,#scope.sf2 .zl{display:none}
+#scope.sf2 .lens{width:142vh;height:142vh;box-shadow:0 0 0 200vmax #070504,inset 0 0 9vh 4vh rgba(12,7,4,.97),inset 0 0 22vh 2vh rgba(40,24,14,.55);background:none}
+#scope .ret{display:none;position:absolute;left:50%;top:50%;width:100vh;height:100vh;transform:translate(-50%,-50%);overflow:visible}
+#scope.sf2[data-ret="bender"] .ret.bender,#scope.sf2[data-ret="zeiss"] .ret.zeiss,#scope.sf2[data-ret="mil"] .ret.mil,#scope.sf2[data-ret="mil3"] .ret.mil3,#scope.sf2[data-ret="mil1"] .ret.mil1{display:block} /* v64s each scope its own SF2 reticle (common_sight: the K14's Bender ScopeView_Reticle_06, the TRG-41's Zeiss _03; v64t 'mil': SF2's default mic_ScopeView — tex_scope_Crosshair_Diffuse + _dot, M40A1 / CZ700 / M200 / AWP, at the lens mask's scale: 200 texels = the tube's 71vh) */
 #scope .zl{position:absolute;right:calc(50% - 44vh);bottom:calc(50% - 40vh);font-weight:700;color:rgba(255,255,255,.5);font-size:14px;letter-spacing:2px}
 
 #vignette{position:absolute;inset:0;opacity:0;background:radial-gradient(ellipse at center,rgba(0,0,0,0) 40%,rgba(150,0,0,.55) 78%,rgba(200,0,0,.9) 100%)}
@@ -303,6 +313,7 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
 .btn.start.wait{background:rgba(255,255,255,.08);color:var(--dim);font-size:24px;letter-spacing:6px;opacity:1}
 .team-col li.human .rank{background:rgba(255,210,90,.22)!important;color:#ffd75a!important}
 .team-col li.human .nm em{font-style:normal;color:var(--gold);font-size:14px;margin-left:4px}
+.team-col li .st.ready{color:#5fe08a}.team-col li .st.armory{color:var(--dim)}
 .team-col li .st.loading,.team-col li .st.ended{color:var(--warn)}.team-col li .st.playing{color:var(--blue)}.team-col li .st.host{color:#ffd75a}
 .team-col li.bot .st{color:var(--faint)}
 
@@ -722,7 +733,7 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
 <div id="hud" class="hidden minimal">
   <div id="vignette"></div><div id="lowhp"></div><div id="flashWhite"></div>
   <div id="scope"><div class="lens"></div><div class="lh"></div><div class="lv"></div>
-    <div class="tk l"></div><div class="tk r"></div><div class="tk t"></div><div class="tk b"></div><div class="cd"></div><div class="zl" id="zoomLbl"></div></div>
+    <div class="tk l"></div><div class="tk r"></div><div class="tk t"></div><div class="tk b"></div><div class="cd"></div><div class="zl" id="zoomLbl"></div><svg class="ret bender" viewBox="-50 -50 100 100"><g stroke="#111" stroke-opacity=".88" fill="none"><circle r="6.6" stroke-width=".2"/><line x1="0" y1="-14.1" x2="0" y2="9.4" stroke-width=".2"/><line x1="-6.6" y1="0" x2="6.6" y2="0" stroke-width=".2"/><g stroke-width=".45"><line x1="-18.9" y1="0" x2="-6.6" y2="0"/><line x1="6.6" y1="0" x2="18.9" y2="0"/></g><line x1="0" y1="9.4" x2="0" y2="16.6" stroke-width=".57"/><g stroke-width=".2"><line x1="-18.9" y1="0" x2="-18.9" y2="-4.0"/><line x1="18.9" y1="0" x2="18.9" y2="-4.0"/><line x1="-16.0" y1="0" x2="-16.0" y2="-1.33"/><line x1="16.0" y1="0" x2="16.0" y2="-1.33"/><line x1="-12.85" y1="0" x2="-12.85" y2="-4.0"/><line x1="12.85" y1="0" x2="12.85" y2="-4.0"/><line x1="-9.8" y1="0" x2="-9.8" y2="-1.33"/><line x1="9.8" y1="0" x2="9.8" y2="-1.33"/><line x1="-6.85" y1="0" x2="-6.85" y2="-4.0"/><line x1="6.85" y1="0" x2="6.85" y2="-4.0"/></g></g><defs><radialGradient id="k14dot"><stop offset="0" stop-color="#ff5a24" stop-opacity=".5"/><stop offset="1" stop-color="#ff5a24" stop-opacity="0"/></radialGradient></defs><circle r="1.05" fill="url(#k14dot)"/><circle r=".48" fill="#ff5a24" fill-opacity=".8"/></svg><svg class="ret zeiss" viewBox="-50 -50 100 100"><g stroke="#ff0000" stroke-width=".18"><line x1="-70" y1="0" x2="70" y2="0"/><line x1="0" y1="-70" x2="0" y2="70"/></g><circle r=".36" fill="#ff55ff"/></svg><svg class="ret mil" viewBox="-50 -50 100 100"><g stroke="#111" stroke-opacity=".9" fill="none"><line x1="17.39" y1="0.0" x2="65.32" y2="0.0" stroke-width=".3"/><line x1="65.32" y1="0.0" x2="70.5" y2="0" stroke-width=".9"/><line x1="-17.39" y1="0.0" x2="-65.32" y2="0.0" stroke-width=".3"/><line x1="-65.32" y1="0.0" x2="-70.5" y2="0" stroke-width=".9"/><line x1="0.0" y1="17.39" x2="0.0" y2="65.32" stroke-width=".3"/><line x1="0.0" y1="65.32" x2="0" y2="70.5" stroke-width=".9"/><line x1="0.0" y1="-17.39" x2="0.0" y2="-65.32" stroke-width=".3"/><line x1="0.0" y1="-65.32" x2="0" y2="-70.5" stroke-width=".9"/><line x1="0" y1="17.39" x2="3.55" y2="17.39" stroke-width=".3"/><line x1="0" y1="19.88" x2="2.13" y2="19.88" stroke-width=".3"/><line x1="0" y1="22.36" x2="2.13" y2="22.36" stroke-width=".3"/><line x1="0" y1="24.85" x2="2.13" y2="24.85" stroke-width=".3"/><line x1="0" y1="27.33" x2="2.13" y2="27.33" stroke-width=".3"/><line x1="0" y1="29.82" x2="3.55" y2="29.82" stroke-width=".3"/><line x1="0" y1="32.66" x2="2.13" y2="32.66" stroke-width=".3"/><line x1="0" y1="35.5" x2="2.13" y2="35.5" stroke-width=".3"/><line x1="0" y1="38.34" x2="2.13" y2="38.34" stroke-width=".3"/><line x1="0" y1="41.18" x2="2.13" y2="41.18" stroke-width=".3"/><line x1="0" y1="44.02" x2="3.55" y2="44.02" stroke-width=".3"/><line x1="0" y1="47.21" x2="2.13" y2="47.21" stroke-width=".3"/><line x1="0" y1="50.05" x2="2.13" y2="50.05" stroke-width=".3"/><line x1="0" y1="52.89" x2="2.13" y2="52.89" stroke-width=".3"/><line x1="0" y1="55.73" x2="2.13" y2="55.73" stroke-width=".3"/><line x1="0" y1="58.57" x2="3.55" y2="58.57" stroke-width=".3"/></g><circle r=".55" fill="#111"/><circle r=".42" fill="#ff1a0a"/></svg><svg class="ret mil3" viewBox="-50 -50 100 100"><g fill="#111" fill-opacity=".9"><rect x="-2.13" y="-70.64" width="4.62" height="0.35"/><rect x="-2.13" y="-21.65" width="4.62" height="0.35"/><rect x="0.0" y="-70.29" width="0.35" height="48.63"/><rect x="0.0" y="-21.3" width="0.35" height="3.9"/><rect x="0.0" y="-17.04" width="0.35" height="6.74"/><rect x="0.0" y="-3.19" width="0.35" height="0.35"/><rect x="0.0" y="-1.77" width="0.35" height="0.35"/><rect x="0.0" y="2.48" width="0.35" height="14.91"/><rect x="0.0" y="17.75" width="0.35" height="12.07"/><rect x="0.0" y="30.17" width="0.35" height="13.84"/><rect x="0.0" y="44.38" width="0.35" height="25.91"/><rect x="-1.06" y="-17.39" width="2.48" height="0.35"/><rect x="-1.06" y="17.39" width="2.48" height="0.35"/><rect x="-0.71" y="-10.29" width="1.77" height="0.35"/><rect x="-0.35" y="-8.88" width="1.06" height="0.35"/><rect x="-0.35" y="-7.46" width="1.06" height="0.35"/><rect x="-0.35" y="-6.04" width="1.06" height="0.35"/><rect x="-0.35" y="-4.62" width="1.06" height="0.35"/><rect x="-0.35" y="-0.35" width="1.06" height="1.06"/><rect x="-68.87" y="-2.13" width="0.35" height="1.42"/><rect x="-68.87" y="1.06" width="0.35" height="1.06"/><rect x="-45.44" y="-2.13" width="0.35" height="1.42"/><rect x="-45.44" y="1.06" width="0.35" height="1.06"/><rect x="-23.07" y="-2.13" width="0.35" height="2.13"/><rect x="-23.07" y="0.35" width="0.35" height="1.77"/><rect x="23.07" y="-2.13" width="0.35" height="2.13"/><rect x="23.07" y="0.35" width="0.35" height="1.77"/><rect x="45.79" y="-2.13" width="0.35" height="1.42"/><rect x="45.79" y="1.06" width="0.35" height="1.06"/><rect x="68.87" y="-2.13" width="0.35" height="1.42"/><rect x="68.87" y="1.06" width="0.35" height="1.06"/><rect x="-68.87" y="-0.71" width="23.79" height="0.71"/><rect x="-68.87" y="0.35" width="23.79" height="0.71"/><rect x="-34.43" y="-0.71" width="0.35" height="0.71"/><rect x="-34.43" y="0.35" width="0.35" height="0.71"/><rect x="34.79" y="-0.71" width="0.35" height="0.71"/><rect x="34.79" y="0.35" width="0.35" height="0.71"/><rect x="45.79" y="-0.71" width="23.43" height="0.71"/><rect x="45.79" y="0.35" width="23.43" height="0.71"/><rect x="-68.87" y="0.0" width="67.09" height="0.35"/><rect x="2.13" y="0.0" width="67.09" height="0.35"/><rect x="0.0" y="29.82" width="1.77" height="0.35"/><rect x="0.0" y="44.02" width="1.77" height="0.35"/><rect x="-1.77" y="70.29" width="3.9" height="0.35"/></g><g fill="#ff1a0a"><rect x="-0.35" y="-0.35" width="1.06" height="1.06"/></g></svg><svg class="ret mil1" viewBox="-50 -50 100 100"><g fill="#111" fill-opacity=".9"><rect x="-2.13" y="-70.64" width="4.62" height="0.35"/><rect x="-2.13" y="-21.65" width="4.62" height="0.35"/><rect x="0.0" y="-70.29" width="0.35" height="48.63"/><rect x="0.0" y="-21.3" width="0.35" height="3.9"/><rect x="0.0" y="0.0" width="0.35" height="0.35"/><rect x="0.0" y="17.75" width="0.35" height="12.07"/><rect x="0.0" y="30.17" width="0.35" height="13.84"/><rect x="0.0" y="44.38" width="0.35" height="25.91"/><rect x="-1.06" y="-17.39" width="2.48" height="0.35"/><rect x="-1.06" y="17.39" width="2.48" height="0.35"/><rect x="-68.87" y="-2.13" width="0.35" height="2.13"/><rect x="-68.87" y="0.35" width="0.35" height="1.77"/><rect x="-45.44" y="-2.13" width="0.35" height="2.13"/><rect x="-45.44" y="0.35" width="0.35" height="1.77"/><rect x="-23.07" y="-2.13" width="0.35" height="2.13"/><rect x="-23.07" y="0.35" width="0.35" height="1.77"/><rect x="23.07" y="-2.13" width="0.35" height="2.13"/><rect x="23.07" y="0.35" width="0.35" height="1.77"/><rect x="45.79" y="-2.13" width="0.35" height="2.13"/><rect x="45.79" y="0.35" width="0.35" height="1.77"/><rect x="68.87" y="-2.13" width="0.35" height="2.13"/><rect x="68.87" y="0.35" width="0.35" height="1.77"/><rect x="-57.51" y="-0.71" width="0.35" height="0.71"/><rect x="-57.51" y="0.35" width="0.35" height="0.71"/><rect x="-34.43" y="-0.71" width="0.35" height="0.71"/><rect x="-34.43" y="0.35" width="0.35" height="0.71"/><rect x="34.79" y="-0.71" width="0.35" height="0.71"/><rect x="34.79" y="0.35" width="0.35" height="0.71"/><rect x="57.51" y="-0.71" width="0.35" height="0.71"/><rect x="57.51" y="0.35" width="0.35" height="0.71"/><rect x="-68.87" y="0.0" width="46.15" height="0.35"/><rect x="23.07" y="0.0" width="46.15" height="0.35"/><rect x="-0.35" y="0.35" width="0.35" height="0.35"/><rect x="0.35" y="0.35" width="0.35" height="0.35"/><rect x="-0.71" y="0.71" width="0.35" height="0.35"/><rect x="0.71" y="0.71" width="0.35" height="0.35"/><rect x="-1.06" y="1.06" width="0.35" height="0.35"/><rect x="1.06" y="1.06" width="0.35" height="0.35"/><rect x="-1.42" y="1.42" width="0.35" height="0.35"/><rect x="1.42" y="1.42" width="0.35" height="0.35"/><rect x="-1.77" y="1.77" width="0.35" height="0.35"/><rect x="1.77" y="1.77" width="0.35" height="0.35"/><rect x="-2.13" y="2.13" width="0.35" height="0.35"/><rect x="2.13" y="2.13" width="0.35" height="0.35"/><rect x="-2.48" y="2.48" width="0.35" height="0.35"/><rect x="2.48" y="2.48" width="0.35" height="0.35"/><rect x="0.0" y="29.82" width="1.77" height="0.35"/><rect x="0.0" y="44.02" width="1.77" height="0.35"/><rect x="-1.77" y="70.29" width="3.9" height="0.35"/></g><g fill="#ff1a0a"><rect x="-2.13" y="-70.64" width="4.62" height="0.53"/><rect x="-2.13" y="-21.65" width="4.62" height="0.53"/><rect x="0.0" y="-70.29" width="0.53" height="48.63"/><rect x="0.0" y="-21.3" width="0.53" height="3.9"/><rect x="0.0" y="17.75" width="0.53" height="12.07"/><rect x="0.0" y="30.17" width="0.53" height="13.84"/><rect x="0.0" y="44.38" width="0.53" height="25.91"/><rect x="-1.06" y="-17.39" width="2.48" height="0.53"/><rect x="-1.06" y="17.39" width="2.48" height="0.53"/><rect x="-68.87" y="-2.13" width="0.53" height="2.13"/><rect x="-68.87" y="0.35" width="0.53" height="1.77"/><rect x="-45.44" y="-2.13" width="0.53" height="2.13"/><rect x="-45.44" y="0.35" width="0.53" height="1.77"/><rect x="-23.07" y="-2.13" width="0.53" height="2.13"/><rect x="-23.07" y="0.35" width="0.53" height="1.77"/><rect x="23.07" y="-2.13" width="0.53" height="2.13"/><rect x="23.07" y="0.35" width="0.53" height="1.77"/><rect x="45.79" y="-2.13" width="0.53" height="2.13"/><rect x="45.79" y="0.35" width="0.53" height="1.77"/><rect x="68.87" y="-2.13" width="0.53" height="2.13"/><rect x="68.87" y="0.35" width="0.53" height="1.77"/><rect x="-57.51" y="-0.71" width="0.53" height="0.71"/><rect x="-57.51" y="0.35" width="0.53" height="0.71"/><rect x="-34.43" y="-0.71" width="0.53" height="0.71"/><rect x="-34.43" y="0.35" width="0.53" height="0.71"/><rect x="34.79" y="-0.71" width="0.53" height="0.71"/><rect x="34.79" y="0.35" width="0.53" height="0.71"/><rect x="57.51" y="-0.71" width="0.53" height="0.71"/><rect x="57.51" y="0.35" width="0.53" height="0.71"/><rect x="-68.87" y="0.0" width="46.15" height="0.53"/><rect x="23.07" y="0.0" width="46.15" height="0.53"/><rect x="0.0" y="29.82" width="1.77" height="0.53"/><rect x="0.0" y="44.02" width="1.77" height="0.53"/><rect x="-1.77" y="70.29" width="3.9" height="0.53"/></g></svg></div>
   <div id="markers"></div>
   <div id="crosshair"><div class="ch t"></div><div class="ch b"></div><div class="ch l"></div><div class="ch r"></div></div>
   <div id="aimName"></div><div id="charge"><div class="fill" id="chargeFill"></div></div>
@@ -1020,7 +1031,9 @@ var CFG = {
     crouchMult: 0.36,
     hp: 100,
     climbSpeed: 3.4,
-    baseSpeed: 5.9
+    baseSpeed: 5.9,
+    sf2Speed: 6.43
+    // v64r sf2Speed: SF2's MaxSpeed 390 UU/s in m/s — the M4A1 alone (load 4.1 → 340.1) walks the old 5.9 × 0.95
   },
   bot: { eye: 1.6, runSpeed: 4.9, patrolSpeed: 3.3 },
   spawnProtect: 3.5,
@@ -1071,6 +1084,8 @@ var WEAPON_DATABASE = {
     vmAdsHFov: 35,
     sf2ZoomIn: [-3, 0, -0.87],
     sf2ZoomOut: [-1, 0, 0],
+    sf2ReloadAnim: 2.533,
+    // v64m SF2's ReloadBlendTime (the Reload clip's length; rounds in at reloadTime)
     model: "m4",
     sound: "m4",
     sf2: "m4a1",
@@ -1211,6 +1226,8 @@ var WEAPON_DATABASE = {
     },
     sf2ZoomIn: [2.4, -2e-3, 0.3],
     sf2ReloadSounds: [[0.12, "magout"], [0.32, "magin"], [0.76, "charge"]],
+    sf2ReloadAnim: 2.5,
+    // v64m SF2's ReloadBlendTime (the Reload clip's length; rounds in at reloadTime)
     desc: "SF2 原版 G36C：5.56mm、輕巧，後座力小、開鏡穩，翻轉式機械瞄具。"
   },
   mp5: {
@@ -1517,6 +1534,8 @@ var WEAPON_DATABASE = {
     sf2ZoomIn: [-3, 0, -0.28],
     sf2ZoomOut: [0, 0, -0.5],
     sf2ReloadSounds: [[0.13, "magout"], [0.39, "magin"], [0.76, "charge"]],
+    sf2ReloadAnim: 2.533,
+    // v64m SF2's ReloadBlendTime (the Reload clip's length; rounds in at reloadTime)
     desc: "SF2 原版 AK-103：7.62mm、黑色聚合物護木，後座力大但開鏡穩，機械瞄具。"
   },
   scarl: {
@@ -2278,6 +2297,92 @@ var WEAPON_DATABASE = {
     tp: { len: 0.96, body: "tan", mag: "box" },
     desc: "SCAR 的 7.62mm 版本：單發傷害高、穿透強，射速較慢。"
   },
+  // v64 SF2's attachment builds (user 10-28): the base gun's SF2 rig with SF2's own EOTech / Reflex (its reticle) and silencer
+  // (tools/sf2_rig_build.mjs g36c_eo / hk417_rs / scarl_eo); timing, lenses and recoil from their own SF2 classes (SF2_WEAPONS below),
+  // damage on the base gun's balance; suppressed (SF2's AR_Silence shot, no radar ping, no flash). The camos come later.
+  g36c_eo: {
+    name: "G36C EOTech 消音",
+    type: "assault",
+    slot: "primary",
+    damageNear: 25,
+    damageFar: 19,
+    falloffStart: 25,
+    falloffEnd: 60,
+    fireRate: 0.109,
+    recoilPitch: 0.011,
+    recoilYaw: 0.012,
+    recoilRecovery: 10,
+    hipSpread: 0.07,
+    adsSpread: 18e-4,
+    adsFov: 55,
+    adsType: "3d_sight",
+    mobility: 0.95,
+    maxAmmo: 30,
+    reloadTime: 2.28,
+    modelUrl: null,
+    sound: "g36s",
+    suppressed: true,
+    tracerEvery: 0,
+    penetration: 1,
+    tp: { len: 0.9, body: "dark", mag: "box" },
+    desc: "SF2 原版 G36C，EOTech 全息瞄具 + 消音器：槍聲小、不上敵方雷達。"
+  },
+  hk417_rs: {
+    name: "HK417 mod2A Reflex 消音",
+    type: "assault",
+    slot: "primary",
+    damageNear: 36,
+    damageFar: 29,
+    falloffStart: 30,
+    falloffEnd: 80,
+    fireRate: 0.102,
+    recoilPitch: 0.017,
+    recoilYaw: 0.01,
+    recoilRecovery: 8,
+    hipSpread: 0.085,
+    adsSpread: 15e-4,
+    adsFov: 55,
+    adsType: "3d_sight",
+    mobility: 0.9,
+    maxAmmo: 20,
+    reloadTime: 2.18,
+    modelUrl: null,
+    sound: "g36s",
+    rate: 0.85,
+    suppressed: true,
+    tracerEvery: 0,
+    penetration: 2,
+    tp: { len: 1.15, body: "dark", mag: "box" },
+    desc: "SF2 原版 HK417 mod2A，Reflex 內紅點 + 消音器：7.62mm 高傷害，後座比原版好控。"
+  },
+  scarl_eo: {
+    name: "SCAR-L MK2 EOTech 消音",
+    type: "assault",
+    slot: "primary",
+    damageNear: 28,
+    damageFar: 21,
+    falloffStart: 25,
+    falloffEnd: 60,
+    fireRate: 0.0945,
+    recoilPitch: 0.011,
+    recoilYaw: 8e-3,
+    recoilRecovery: 10,
+    hipSpread: 0.072,
+    adsSpread: 19e-4,
+    adsFov: 55,
+    adsType: "3d_sight",
+    mobility: 0.94,
+    maxAmmo: 30,
+    reloadTime: 2.35,
+    modelUrl: null,
+    sound: "g36s",
+    rate: 0.95,
+    suppressed: true,
+    tracerEvery: 0,
+    penetration: 1,
+    tp: { len: 1.05, body: "tan", mag: "box" },
+    desc: "SF2 原版 SCAR-L MK2，EOTech 全息瞄具 + 消音器：射速比 SCAR-L 快。"
+  },
   qbz97: {
     name: "QBZ-97",
     type: "assault",
@@ -2384,6 +2489,72 @@ var WEAPON_DATABASE = {
     tracerEvery: 1,
     tp: { len: 1.12, body: "green", mag: "none", scope: true },
     desc: "美軍陸戰隊栓動狙擊槍，身體 1 發，移動較 AWP 靈活。"
+  },
+  // v64 SF2's own K14 (sni_k14, tools/sf2_rig_build.mjs k14): the rig, its bolt in the Fire clip, its sounds; damage on the M40A1's balance
+  k14: {
+    name: "K14",
+    type: "sniper",
+    slot: "primary",
+    damageNear: 110,
+    damageFar: 96,
+    falloffStart: 60,
+    falloffEnd: 200,
+    fireRate: 1.2,
+    recoilPitch: 0.065,
+    recoilYaw: 0.01,
+    recoilRecovery: 6,
+    hipSpread: 0.14,
+    adsSpread: 0,
+    adsFov: 20,
+    adsType: "2d_scope_overlay",
+    mobility: 0.82,
+    maxAmmo: 5,
+    reloadTime: 3,
+    modelUrl: null,
+    sound: "m40",
+    zoomFovs: [20, 9],
+    zoomHFovs: [45, 20],
+    penetration: 2,
+    range: 420,
+    adsSpeed: 17,
+    tracerEvery: 1,
+    tp: { len: 1.15, body: "dark", mag: "box", scope: true },
+    // v64f zoomHFovs: SF2's own two steps, horizontal like UE3 — fZoomedFOV 45, then 20 (SFPawn's CamFOVSniperZoomIn2nd; the user's SF2 shots: step 2 ≈ 2.5× step 1)
+    desc: "SF2 原版 K14（衝擊波）：韓國栓動狙擊槍，身體 1 發，開鏡快。"
+  },
+  // v64s SF2's own TRG-41 (sni_trg on the Zeiss scope, tools/sf2_rig_build.mjs trg; user 10-28's first sniper): timing, zoom and
+  // recoil from SFCWeaponTRG (SF2_WEAPONS), its scope's own reticle (Zeiss: ScopeView_Reticle_03); damage on the K14's balance
+  trg: {
+    name: "TRG-41",
+    type: "sniper",
+    slot: "primary",
+    damageNear: 110,
+    damageFar: 96,
+    falloffStart: 60,
+    falloffEnd: 200,
+    fireRate: 1.2,
+    recoilPitch: 0.065,
+    recoilYaw: 0.01,
+    recoilRecovery: 6,
+    hipSpread: 0.14,
+    adsSpread: 0,
+    adsFov: 20,
+    adsType: "2d_scope_overlay",
+    mobility: 0.82,
+    maxAmmo: 5,
+    reloadTime: 3,
+    modelUrl: null,
+    sf2Reticle: "zeiss",
+    sound: "m40",
+    zoomFovs: [20, 9],
+    zoomHFovs: [55, 20],
+    penetration: 2,
+    range: 420,
+    adsSpeed: 17,
+    tracerEvery: 1,
+    tp: { len: 1.2, body: "dark", mag: "box", scope: true },
+    // (zoomHFovs: SFCWeaponTRG fZoomedFOV 55, then SFPawn's 20)
+    desc: "SF2 原版 TRG-41：芬蘭 Sako 栓動狙擊槍，Zeiss 狙擊鏡，身體 1 發。"
   },
   sr25: {
     name: "SR-25",
@@ -2909,11 +3080,15 @@ function compileWeapon(id, s) {
     sf2ZoomIn: s.sf2ZoomIn || null,
     sf2ZoomOut: s.sf2ZoomOut || null,
     sf2ReloadSounds: s.sf2ReloadSounds || null,
+    sf2ReloadAnim: s.sf2ReloadAnim || null,
+    sf2Reticle: s.sf2Reticle || null,
+    camo: s.camo || null,
     // v62h (sf2 never reached the def before: v61's SF2 gun sounds never played)
     suppressed: !!s.suppressed,
     tracerEvery: s.tracerEvery ?? 2,
     shellReload: s.shellReload || 0,
     zoomFovs: s.zoomFovs || [s.adsFov],
+    zoomHFovs: s.zoomHFovs || null,
     noise: s.suppressed ? 14 : t.noise,
     pump,
     bolt,
@@ -2936,27 +3111,177 @@ function compileWeapon(id, s) {
   return def;
 }
 __name(compileWeapon, "compileWeapon");
+var SF2_WEIGHT = {
+  m4a1: [4.1, 2.05],
+  g36c: [3.5, 1.75],
+  g36c_gold: [3.5, 1.75],
+  g36c_sf2: [3.5, 1.75],
+  g36c_eo: [3.5, 1.75],
+  g36c_circuit: [3.5, 1.75],
+  mp5: [2.25, 1.25],
+  mp5k: [1.9, 0.9],
+  p90: [2.4, 1.4],
+  remington870: [2.8, 1.8],
+  m249: [7.5, 3.75],
+  cheytac_m200: [9.5, 4.75],
+  p226: [1, 0],
+  deagle: [1, 0],
+  ak47: [5.7, 2.85],
+  ak103: [5.7, 2.85],
+  scarl: [4.6, 2.3],
+  scarl_eo: [4.6, 2.3],
+  famas: [3.4, 1.7],
+  aug: [4.3, 2.15],
+  ump45: [1.96, 0.98],
+  vector: [2, 1],
+  mp7: [2.25, 1.25],
+  rpk: [7.7, 3.85],
+  negev: [7, 3.5],
+  pkm: [6.8, 3.4],
+  mg42: [7.8, 3.9],
+  benelli_m4: [2.5, 1.5],
+  m1014: [2.5, 1.5],
+  saiga12: [3, 2],
+  ksg: [2.4, 1.2],
+  awp: [8.1, 4.05],
+  barrett: [9.9, 4.95],
+  kar98k: [5.6, 2.8],
+  svd: [5.8, 2.9],
+  glock18: [1, 0],
+  usp: [1, 0],
+  m1911: [1, 0],
+  m16a3: [5.8, 2.9],
+  k2: [4, 2],
+  xm8: [3.2, 1.6],
+  galil: [5.6, 2.8],
+  sg551: [4.2, 2.1],
+  hk417: [4.5, 2.25],
+  scarh: [4.8, 2.4],
+  hk417_rs: [4.2, 2.1],
+  qbz97: [4.3, 2.15],
+  pp2000: [2.9, 1.9],
+  vz61: [2.8, 1.8],
+  m40a1: [5.7, 2.85],
+  k14: [7.6, 3.8],
+  sr25: [7, 3.5],
+  psg1: [7, 3.5],
+  mg4: [7.8, 3.9],
+  k3: [6.8, 3.4],
+  aa12: [4, 2],
+  m92fs: [1, 0],
+  cz75: [1, 0],
+  jericho: [1, 0],
+  sw60: [1, 0],
+  m14ebr: [6.1, 3.05],
+  type89: [4.7, 2.35],
+  l86a1: [7.2, 3.6],
+  hk23e: [7.9, 3.95],
+  frf2: [6.3, 3.15],
+  cz700: [7.5, 3.75],
+  trg: [7.3, 3.65],
+  awp_circuit: [8.1, 4.05],
+  cheytac_m200_circuit: [9.5, 4.75],
+  cz700_circuit: [7.5, 3.75],
+  k14_circuit: [7.6, 3.8],
+  infinity: [1, 0],
+  knife: [1, 0],
+  he: [1, 0],
+  flash: [1, 0],
+  smoke: [1, 0]
+};
 var SF2_WEAPONS = {
-  m16a3: { "fireRate": 0.098, "reloadTime": 2.3, "equipTime": 0.8, "adsSpeed": 12, "adsFov": 55, "adsType": "3d_sight", "vmHFov": 60, "vmAdsHFov": 35, "sf2Rig": "m16a3", "sf2": "m16a3", "sf2ZoomIn": [2, 0, -0.89], "sf2ZoomOut": [0, 0, 0], "sf2ReloadSounds": [[0.07, "magout"], [0.35, "magin"], [0.72, "charge"]], "sf2Recoil": { "nextCrossVert": 1.7, "maxCrossVert": 15, "vertInc": 7e3, "vertDec": 11, "crossDecreasInc": 9, "incline": 0.15, "forceCorrection": 50, "domDefault": 0.08, "domZoomDefault": 0, "domInc": 0.1, "domMax": 1.3, "domMin": 0.1, "domDec": 6, "maxMovingValue": 0.7, "mulValueRun": 0.8, "mulValueJump": 6, "zoomMod": 0.6, "crouchMod": 0.9 } },
+  m16a3: { "fireRate": 0.098, "reloadTime": 2.3, "equipTime": 0.8, "adsSpeed": 12, "adsFov": 55, "adsType": "3d_sight", "vmHFov": 60, "vmAdsHFov": 35, "sf2Rig": "m16a3", "sf2": "m16a3", "sf2ZoomIn": [2, 0, -0.89], "sf2ZoomOut": [0, 0, 0], "sf2ReloadSounds": [[0.07, "magout"], [0.35, "magin"], [0.72, "charge"]], "sf2Recoil": { "nextCrossVert": 1.7, "maxCrossVert": 15, "vertInc": 7e3, "vertDec": 11, "crossDecreasInc": 9, "incline": 0.15, "forceCorrection": 50, "domDefault": 0.08, "domZoomDefault": 0, "domInc": 0.1, "domMax": 1.3, "domMin": 0.1, "domDec": 6, "maxMovingValue": 0.7, "mulValueRun": 0.8, "mulValueJump": 6, "zoomMod": 0.6, "crouchMod": 0.9 }, "sf2ReloadAnim": 2.533 },
   // SFCWeaponM16A3
-  k2: { "fireRate": 0.1, "reloadTime": 2.2, "equipTime": 0.75, "adsSpeed": 12, "adsFov": 55, "adsType": "3d_sight", "vmHFov": 60, "vmAdsHFov": 35, "sf2Rig": "k2", "sf2": "k2", "sf2ZoomIn": [0, -0.01, -0.17], "sf2ZoomOut": [0, 0, 0], "sf2ReloadSounds": [[0.12, "magout"], [0.35, "magin"], [0.75, "charge"]], "sf2Recoil": { "nextCrossVert": 0.6, "maxCrossVert": 7, "vertInc": 15e3, "vertDec": 13, "crossDecreasInc": 15, "incline": 0.05, "forceCorrection": 50, "domDefault": 0.28, "domZoomDefault": 0, "domInc": 0.3, "domMax": 1, "domMin": 0, "domDec": 1.25, "maxMovingValue": 0.8, "mulValueRun": 0.4, "mulValueJump": 6, "zoomMod": 0.8, "crouchMod": 0.9 } },
+  k2: { "fireRate": 0.1, "reloadTime": 2.2, "equipTime": 0.75, "adsSpeed": 12, "adsFov": 55, "adsType": "3d_sight", "vmHFov": 60, "vmAdsHFov": 35, "sf2Rig": "k2", "sf2": "k2", "sf2ZoomIn": [0, -0.01, -0.17], "sf2ZoomOut": [0, 0, 0], "sf2ReloadSounds": [[0.12, "magout"], [0.35, "magin"], [0.75, "charge"]], "sf2Recoil": { "nextCrossVert": 0.6, "maxCrossVert": 7, "vertInc": 15e3, "vertDec": 13, "crossDecreasInc": 15, "incline": 0.05, "forceCorrection": 50, "domDefault": 0.28, "domZoomDefault": 0, "domInc": 0.3, "domMax": 1, "domMin": 0, "domDec": 1.25, "maxMovingValue": 0.8, "mulValueRun": 0.4, "mulValueJump": 6, "zoomMod": 0.8, "crouchMod": 0.9 }, "sf2ReloadAnim": 2.4 },
   // SFCWeaponK2
-  scarl: { "fireRate": 0.107, "reloadTime": 2.35, "equipTime": 0.9, "adsSpeed": 12, "adsFov": 55, "adsType": "3d_sight", "vmHFov": 60, "vmAdsHFov": 35, "sf2Rig": "scarl", "sf2": "scarh", "sf2ZoomIn": [0, -0.01, -0.2], "sf2ZoomOut": [-1, 0, 0], "sf2ReloadSounds": [[0.12, "magout"], [0.44, "magin"], [0.72, "charge"]], "sf2Recoil": { "nextCrossVert": 2.1, "maxCrossVert": 15, "vertInc": 15e3, "vertDec": 12, "crossDecreasInc": 9, "incline": 0.35, "forceCorrection": 50, "domDefault": 0.15, "domZoomDefault": 0, "domInc": 0.22, "domMax": 2.4, "domMin": 0.1, "domDec": 2, "maxMovingValue": 0.7, "mulValueRun": 0.7, "mulValueJump": 6, "zoomMod": 0.99, "crouchMod": 0.85 } },
+  scarl: { "fireRate": 0.107, "reloadTime": 2.35, "equipTime": 0.9, "adsSpeed": 12, "adsFov": 55, "adsType": "3d_sight", "vmHFov": 60, "vmAdsHFov": 35, "sf2Rig": "scarl", "sf2": "scarh", "sf2ZoomIn": [0, -0.01, -0.2], "sf2ZoomOut": [-1, 0, 0], "sf2ReloadSounds": [[0.12, "magout"], [0.44, "magin"], [0.72, "charge"]], "sf2Recoil": { "nextCrossVert": 2.1, "maxCrossVert": 15, "vertInc": 15e3, "vertDec": 12, "crossDecreasInc": 9, "incline": 0.35, "forceCorrection": 50, "domDefault": 0.15, "domZoomDefault": 0, "domInc": 0.22, "domMax": 2.4, "domMin": 0.1, "domDec": 2, "maxMovingValue": 0.7, "mulValueRun": 0.7, "mulValueJump": 6, "zoomMod": 0.99, "crouchMod": 0.85 }, "sf2ReloadAnim": 2.45 },
   // SFCWeaponSCARL
-  scarh: { "fireRate": 0.105, "reloadTime": 2.45, "equipTime": 0.92, "adsSpeed": 12, "adsFov": 55, "adsType": "3d_sight", "vmHFov": 60, "vmAdsHFov": 35, "sf2Rig": "scarh", "sf2": "scarh", "sf2ZoomIn": [0, -0.01, -0.2], "sf2ZoomOut": [-1, 0, 0], "sf2ReloadSounds": [[0.12, "magout"], [0.44, "magin"], [0.72, "charge"]], "sf2Recoil": { "nextCrossVert": 2.1, "maxCrossVert": 15, "vertInc": 15e3, "vertDec": 12, "crossDecreasInc": 9, "incline": 0.35, "forceCorrection": 50, "domDefault": 0.15, "domZoomDefault": 0, "domInc": 0.22, "domMax": 2.4, "domMin": 0.1, "domDec": 2, "maxMovingValue": 0.7, "mulValueRun": 0.7, "mulValueJump": 6, "zoomMod": 0.99, "crouchMod": 0.85 } },
+  scarh: { "fireRate": 0.105, "reloadTime": 2.45, "equipTime": 0.92, "adsSpeed": 12, "adsFov": 55, "adsType": "3d_sight", "vmHFov": 60, "vmAdsHFov": 35, "sf2Rig": "scarh", "sf2": "scarh", "sf2ZoomIn": [0, -0.01, -0.2], "sf2ZoomOut": [-1, 0, 0], "sf2ReloadSounds": [[0.12, "magout"], [0.44, "magin"], [0.72, "charge"]], "sf2Recoil": { "nextCrossVert": 2.1, "maxCrossVert": 15, "vertInc": 15e3, "vertDec": 12, "crossDecreasInc": 9, "incline": 0.35, "forceCorrection": 50, "domDefault": 0.15, "domZoomDefault": 0, "domInc": 0.22, "domMax": 2.4, "domMin": 0.1, "domDec": 2, "maxMovingValue": 0.7, "mulValueRun": 0.7, "mulValueJump": 6, "zoomMod": 0.99, "crouchMod": 0.85 }, "sf2ReloadAnim": 2.533 },
   // SFCWeaponSCARH
-  famas: { "fireRate": 0.085, "reloadTime": 2.35, "equipTime": 0.8, "adsSpeed": 12, "adsFov": 55, "adsType": "3d_sight", "vmHFov": 60, "vmAdsHFov": 35, "sf2Rig": "famas", "sf2": "famas", "sf2ZoomIn": [0, -0.02, -0.17], "sf2ZoomOut": [0, 0, 0], "sf2ReloadSounds": [[0.2, "magout"], [0.4, "magin"], [0.73, "charge"]], "sf2Recoil": { "nextCrossVert": 1.1, "maxCrossVert": 12, "vertInc": 15e3, "vertDec": 13, "crossDecreasInc": 15, "incline": 0.1, "forceCorrection": 50, "domDefault": 0.3, "domZoomDefault": 0.2, "domInc": 0.3, "domMax": 1.5, "domMin": 0, "domDec": 1.25, "maxMovingValue": 0.8, "mulValueRun": 0.4, "mulValueJump": 6, "zoomMod": 0.99, "crouchMod": 0.9 } },
+  famas: { "fireRate": 0.085, "reloadTime": 2.35, "equipTime": 0.8, "adsSpeed": 12, "adsFov": 55, "adsType": "3d_sight", "vmHFov": 60, "vmAdsHFov": 35, "sf2Rig": "famas", "sf2": "famas", "sf2ZoomIn": [0, -0.02, -0.17], "sf2ZoomOut": [0, 0, 0], "sf2ReloadSounds": [[0.2, "magout"], [0.4, "magin"], [0.73, "charge"]], "sf2Recoil": { "nextCrossVert": 1.1, "maxCrossVert": 12, "vertInc": 15e3, "vertDec": 13, "crossDecreasInc": 15, "incline": 0.1, "forceCorrection": 50, "domDefault": 0.3, "domZoomDefault": 0.2, "domInc": 0.3, "domMax": 1.5, "domMin": 0, "domDec": 1.25, "maxMovingValue": 0.8, "mulValueRun": 0.4, "mulValueJump": 6, "zoomMod": 0.99, "crouchMod": 0.9 }, "sf2ReloadAnim": 2.5 },
   // SFCWeaponFAMAS
-  xm8: { "fireRate": 0.106, "reloadTime": 2.25, "equipTime": 0.79, "adsSpeed": 12, "adsFov": 55, "adsType": "3d_sight", "vmHFov": 60, "vmAdsHFov": 35, "sf2Rig": "xm8", "sf2": "xm8", "sf2ZoomIn": [6, 0, 0.04], "sf2ZoomOut": [0, 0, 0], "sf2ReloadSounds": [[0.12, "magout"], [0.27, "magin"], [0.73, "charge"]], "sf2Recoil": { "nextCrossVert": 2, "maxCrossVert": 15, "vertInc": 15e3, "vertDec": 12, "crossDecreasInc": 9, "incline": 0.35, "forceCorrection": 50, "domDefault": 0.17, "domZoomDefault": 0, "domInc": 0.22, "domMax": 2.4, "domMin": 0.1, "domDec": 2, "maxMovingValue": 0.7, "mulValueRun": 0.7, "mulValueJump": 6, "zoomMod": 0.6, "crouchMod": 0.9 } },
+  xm8: { "fireRate": 0.106, "reloadTime": 2.25, "equipTime": 0.79, "adsSpeed": 12, "adsFov": 55, "adsType": "3d_sight", "vmHFov": 60, "vmAdsHFov": 35, "sf2Rig": "xm8", "sf2": "xm8", "sf2ZoomIn": [6, 0, 0.04], "sf2ZoomOut": [0, 0, 0], "sf2ReloadSounds": [[0.12, "magout"], [0.27, "magin"], [0.73, "charge"]], "sf2Recoil": { "nextCrossVert": 2, "maxCrossVert": 15, "vertInc": 15e3, "vertDec": 12, "crossDecreasInc": 9, "incline": 0.35, "forceCorrection": 50, "domDefault": 0.17, "domZoomDefault": 0, "domInc": 0.22, "domMax": 2.4, "domMin": 0.1, "domDec": 2, "maxMovingValue": 0.7, "mulValueRun": 0.7, "mulValueJump": 6, "zoomMod": 0.6, "crouchMod": 0.9 }, "sf2ReloadAnim": 2.533 },
   // SFCWeaponXM8
-  galil: { "fireRate": 0.112, "reloadTime": 2.1, "equipTime": 0.8, "adsSpeed": 12, "adsFov": 55, "adsType": "3d_sight", "vmHFov": 65, "vmAdsHFov": 35, "sf2Rig": "galil", "sf2": "galil", "sf2ZoomIn": [2, -0.01, 0], "sf2ZoomOut": [0, 0, 0], "sf2ReloadSounds": [[0.23, "magout"], [0.72, "magin"], [0.76, "charge"]], "sf2Recoil": { "nextCrossVert": 2.3, "maxCrossVert": 14, "vertInc": 15e3, "vertDec": 13, "crossDecreasInc": 15, "incline": 0.15, "forceCorrection": 50, "domDefault": 0.05, "domZoomDefault": 0, "domInc": 0.42, "domMax": 2.5, "domMin": 0, "domDec": 1.38, "maxMovingValue": 1.2, "mulValueRun": 0.1, "mulValueJump": 6, "zoomMod": 0.4, "crouchMod": 0.7 } },
+  galil: { "fireRate": 0.112, "reloadTime": 2.1, "equipTime": 0.8, "adsSpeed": 12, "adsFov": 55, "adsType": "3d_sight", "vmHFov": 65, "vmAdsHFov": 35, "sf2Rig": "galil", "sf2": "galil", "sf2ZoomIn": [2, -0.01, 0], "sf2ZoomOut": [0, 0, 0], "sf2ReloadSounds": [[0.23, "magout"], [0.72, "magin"], [0.76, "charge"]], "sf2Recoil": { "nextCrossVert": 2.3, "maxCrossVert": 14, "vertInc": 15e3, "vertDec": 13, "crossDecreasInc": 15, "incline": 0.15, "forceCorrection": 50, "domDefault": 0.05, "domZoomDefault": 0, "domInc": 0.42, "domMax": 2.5, "domMin": 0, "domDec": 1.38, "maxMovingValue": 1.2, "mulValueRun": 0.1, "mulValueJump": 6, "zoomMod": 0.4, "crouchMod": 0.7 }, "sf2ReloadAnim": 2.2 },
   // SFCWeaponGALIL
-  hk417: { "fireRate": 0.102, "reloadTime": 2.18, "equipTime": 0.85, "adsSpeed": 12, "adsFov": 55, "adsType": "3d_sight", "vmHFov": 60, "vmAdsHFov": 40, "sf2Rig": "hk417", "sf2": "hk417", "sf2ZoomIn": [-4, -0.02, -0.2], "sf2ZoomOut": [0, 0, 0], "sf2ReloadSounds": [[0.16, "magout"], [0.37, "magin"], [0.77, "charge"]], "sf2Recoil": { "nextCrossVert": 1.7, "maxCrossVert": 9, "vertInc": 15e3, "vertDec": 13, "crossDecreasInc": 15, "incline": 0.05, "forceCorrection": 50, "domDefault": 0.3, "domZoomDefault": 0, "domInc": 0.22, "domMax": 2.1, "domMin": 0, "domDec": 1.35, "maxMovingValue": 0.8, "mulValueRun": 0.4, "mulValueJump": 6, "zoomMod": 0.35, "crouchMod": 0.9 } },
+  hk417: { "fireRate": 0.102, "reloadTime": 2.18, "equipTime": 0.85, "adsSpeed": 12, "adsFov": 55, "adsType": "3d_sight", "vmHFov": 60, "vmAdsHFov": 40, "sf2Rig": "hk417", "sf2": "hk417", "sf2ZoomIn": [-4, -0.02, -0.2], "sf2ZoomOut": [0, 0, 0], "sf2ReloadSounds": [[0.16, "magout"], [0.37, "magin"], [0.77, "charge"]], "sf2Recoil": { "nextCrossVert": 1.7, "maxCrossVert": 9, "vertInc": 15e3, "vertDec": 13, "crossDecreasInc": 15, "incline": 0.05, "forceCorrection": 50, "domDefault": 0.3, "domZoomDefault": 0, "domInc": 0.22, "domMax": 2.1, "domMin": 0, "domDec": 1.35, "maxMovingValue": 0.8, "mulValueRun": 0.4, "mulValueJump": 6, "zoomMod": 0.35, "crouchMod": 0.9 }, "sf2ReloadAnim": 2.3 },
   // SFCWeaponHK417
-  mp5k: { "fireRate": 0.076, "reloadTime": 2, "equipTime": 0.63, "adsSpeed": 12, "adsFov": 55, "adsType": "3d_sight", "vmHFov": 60, "vmAdsHFov": 35, "sf2Rig": "mp5k", "sf2": "mp5k", "sf2ZoomIn": [3, -0.03, -0.2], "sf2ZoomOut": [0, 0, 0], "sf2ReloadSounds": [[0.17, "magout"], [0.48, "magin"], [0.77, "charge"]], "sf2Recoil": { "nextCrossVert": 0.94, "maxCrossVert": 3, "vertInc": 3670, "vertDec": 10, "crossDecreasInc": 30, "incline": 0.1, "forceCorrection": 50, "domDefault": 0.6, "domZoomDefault": 0, "domInc": 0.2, "domMax": 1.8, "domMin": 0.05, "domDec": 1, "maxMovingValue": 1, "mulValueRun": 0.35, "mulValueJump": 2, "zoomMod": 0.6, "crouchMod": 0.8 } },
+  mp5k: { "fireRate": 0.076, "reloadTime": 2, "equipTime": 0.63, "adsSpeed": 12, "adsFov": 55, "adsType": "3d_sight", "vmHFov": 60, "vmAdsHFov": 35, "sf2Rig": "mp5k", "sf2": "mp5k", "sf2ZoomIn": [3, -0.03, -0.2], "sf2ZoomOut": [0, 0, 0], "sf2ReloadSounds": [[0.17, "magout"], [0.48, "magin"], [0.77, "charge"]], "sf2Recoil": { "nextCrossVert": 0.94, "maxCrossVert": 3, "vertInc": 3670, "vertDec": 10, "crossDecreasInc": 30, "incline": 0.1, "forceCorrection": 50, "domDefault": 0.6, "domZoomDefault": 0, "domInc": 0.2, "domMax": 1.8, "domMin": 0.05, "domDec": 1, "maxMovingValue": 1, "mulValueRun": 0.35, "mulValueJump": 2, "zoomMod": 0.6, "crouchMod": 0.8 }, "sf2ReloadAnim": 2.133 },
   // SFCWeaponMP5K
-  qbz97: { "fireRate": 0.107, "reloadTime": 2.3, "equipTime": 0.8, "adsSpeed": 12, "adsFov": 55, "adsType": "3d_sight", "vmHFov": 60, "vmAdsHFov": 35, "sf2Rig": "qbz97", "sf2": "qbz97", "sf2ZoomIn": [10, 0, -0.1], "sf2ZoomOut": [0, 0, 0], "sf2ReloadSounds": [[0.19, "magout"], [0.4, "magin"], [0.73, "charge"]], "sf2Recoil": { "nextCrossVert": 1.45, "maxCrossVert": 12.5, "vertInc": 15e3, "vertDec": 11, "crossDecreasInc": 15, "incline": 0.08, "forceCorrection": 50, "domDefault": 0.2, "domZoomDefault": 0, "domInc": 0.25, "domMax": 1.15, "domMin": 0, "domDec": 1.3, "maxMovingValue": 0.8, "mulValueRun": 0.4, "mulValueJump": 6, "zoomMod": 0.7, "crouchMod": 0.9 } }
+  qbz97: { "fireRate": 0.107, "reloadTime": 2.3, "equipTime": 0.8, "adsSpeed": 12, "adsFov": 55, "adsType": "3d_sight", "vmHFov": 60, "vmAdsHFov": 35, "sf2Rig": "qbz97", "sf2": "qbz97", "sf2ZoomIn": [10, 0, -0.1], "sf2ZoomOut": [0, 0, 0], "sf2ReloadSounds": [[0.19, "magout"], [0.4, "magin"], [0.73, "charge"]], "sf2Recoil": { "nextCrossVert": 1.45, "maxCrossVert": 12.5, "vertInc": 15e3, "vertDec": 11, "crossDecreasInc": 15, "incline": 0.08, "forceCorrection": 50, "domDefault": 0.2, "domZoomDefault": 0, "domInc": 0.25, "domMax": 1.15, "domMin": 0, "domDec": 1.3, "maxMovingValue": 0.8, "mulValueRun": 0.4, "mulValueJump": 6, "zoomMod": 0.7, "crouchMod": 0.9 }, "sf2ReloadAnim": 2.533 },
   // SFCWeaponQBZ97
+  g36c_eo: { "fireRate": 0.109, "reloadTime": 2.28, "equipTime": 0.85, "adsSpeed": 12, "adsFov": 55, "adsType": "3d_sight", "vmHFov": 50, "vmAdsHFov": 20, "sf2Rig": "g36c_eo", "sf2": "g36c_eo", "sf2ZoomIn": [2.4, -2e-3, 0.3], "sf2ZoomOut": [0, 0, 0], "sf2ReloadSounds": [[0.12, "magout"], [0.32, "magin"], [0.76, "charge"]], "sf2Recoil": { "nextCrossVert": 1.78, "maxCrossVert": 10.6, "vertInc": 15e3, "vertDec": 13, "crossDecreasInc": 15, "incline": 0.05, "forceCorrection": 50, "domDefault": 0.15, "domZoomDefault": 0, "domInc": 0.3, "domMax": 2.2, "domMin": 0, "domDec": 1.4, "maxMovingValue": 0.8, "mulValueRun": 0.4, "mulValueJump": 6, "zoomMod": 0.35, "crouchMod": 0.9 }, "sf2ReloadAnim": 2.5 },
+  // SFCWeaponG36C_EOTech_Silencer_ButterflyFX
+  hk417_rs: { "fireRate": 0.102, "reloadTime": 2.18, "equipTime": 0.85, "adsSpeed": 12, "adsFov": 55, "adsType": "3d_sight", "vmHFov": 60, "vmAdsHFov": 15, "sf2Rig": "hk417_rs", "sf2": "hk417_rs", "sf2ZoomIn": [-4, -0.02, -0.2], "sf2ZoomOut": [0, 0, 0], "sf2ReloadSounds": [[0.16, "magout"], [0.37, "magin"], [0.77, "charge"]], "sf2Recoil": { "nextCrossVert": 1.63, "maxCrossVert": 7.9, "vertInc": 11700, "vertDec": 15.86, "crossDecreasInc": 15, "incline": 0.05, "forceCorrection": 50, "domDefault": 0.2, "domZoomDefault": 0, "domInc": 0.23, "domMax": 1.848, "domMin": 0, "domDec": 1.539, "maxMovingValue": 0.8, "mulValueRun": 0.4, "mulValueJump": 6, "zoomMod": 0.35, "crouchMod": 0.9 }, "sf2ReloadAnim": 2.3 },
+  // SFCWeaponHK417_mod2A
+  scarl_eo: { "fireRate": 0.095, "reloadTime": 2.35, "equipTime": 0.9, "adsSpeed": 12, "adsFov": 55, "adsType": "3d_sight", "vmHFov": 60, "vmAdsHFov": 20, "sf2Rig": "scarl_eo", "sf2": "scarl_eo", "sf2ZoomIn": [0, -0.01, -0.2], "sf2ZoomOut": [-1, 0, 0], "sf2ReloadSounds": [[0.12, "magout"], [0.44, "magin"], [0.72, "charge"]], "sf2Recoil": { "nextCrossVert": 2.1, "maxCrossVert": 15, "vertInc": 15e3, "vertDec": 12, "crossDecreasInc": 9, "incline": 0.35, "forceCorrection": 50, "domDefault": 0.15, "domZoomDefault": 0, "domInc": 0.22, "domMax": 2.4, "domMin": 0.1, "domDec": 2, "maxMovingValue": 0.7, "mulValueRun": 0.7, "mulValueJump": 6, "zoomMod": 0.99, "crouchMod": 0.85 }, "sf2ReloadAnim": 2.45 },
+  // SFCWeaponSCARL_MK2
+  k14: { "fireRate": 1.2, "reloadTime": 3, "equipTime": 0.8, "adsSpeed": 17, "adsFov": 20, "adsType": "2d_scope_overlay", "vmHFov": 70, "sf2Rig": "k14", "sf2": "k14", "sf2ZoomIn": [1.2, -0.01, -0.01], "sf2ZoomOut": [0, 0, 0], "sf2ReloadSounds": [[0.14, "boltback"], [0.31, "magout"], [0.48, "magin"], [0.75, "charge"]], "sf2ReloadAnim": 3.25 },
+  // SFCWeaponK14
+  m40a1: { "fireRate": 1.3, "reloadTime": 2.75, "equipTime": 0.7, "adsSpeed": 17, "adsFov": 20, "adsType": "2d_scope_overlay", "vmHFov": 65, "sf2Rig": "m40a1", "sf2": "m40a1", "sf2ZoomIn": [1.2, -0.015, 0.015], "sf2ZoomOut": [0.5, 1, 1], "sf2ReloadSounds": [[0.14, "boltback"], [0.31, "magout"], [0.48, "magin"], [0.75, "charge"]], "sf2ReloadAnim": 2.95, "sf2Reticle": "mil", "zoomHFovs": [55, 20] },
+  // SFCWeaponM40A1
+  cz700: { "fireRate": 1.3, "reloadTime": 3.05, "equipTime": 0.8, "adsSpeed": 17, "adsFov": 20, "adsType": "2d_scope_overlay", "vmHFov": 60, "sf2Rig": "cz700", "sf2": "cz700", "sf2ZoomIn": [1.2, -0.01, 0.01], "sf2ZoomOut": [0, 0, 0], "sf2ReloadSounds": [[0.14, "charge"], [0.31, "magout"], [0.48, "magin"], [0.75, "charge"]], "sf2ReloadAnim": 3.166, "sf2Reticle": "mil", "zoomHFovs": [55, 20] },
+  // SFCWeaponCZ700
+  cheytac_m200: { "fireRate": 1.6, "reloadTime": 3.2, "equipTime": 0.95, "adsSpeed": 17, "adsFov": 20, "adsType": "2d_scope_overlay", "vmHFov": 62, "sf2Rig": "cheytac", "sf2": "cheytac", "sf2ZoomIn": [1.2, -0.01, 0.012], "sf2ZoomOut": [0, 0, 0], "sf2ReloadSounds": [[0.14, "charge"], [0.31, "magout"], [0.48, "magin"], [0.75, "charge"]], "sf2ReloadAnim": 3.5, "sf2Reticle": "mil", "zoomHFovs": [55, 20] },
+  // SFCWeaponCheyTac
+  awp: { "fireRate": 1.4, "reloadTime": 2.8, "equipTime": 0.65, "adsSpeed": 17, "adsFov": 20, "adsType": "2d_scope_overlay", "vmHFov": 60, "sf2Rig": "awp", "sf2": "awp", "sf2ZoomIn": [1.2, -0.01, 0.01], "sf2ZoomOut": [0, 0, 0], "sf2ReloadSounds": [[0.14, "charge"], [0.31, "magout"], [0.48, "magin"], [0.75, "charge"]], "sf2ReloadAnim": 3, "sf2Reticle": "mil", "zoomHFovs": [55, 20] },
+  // SFCWeaponAWP
+  barrett: { "fireRate": 1.3, "reloadTime": 3.7, "equipTime": 1.3, "adsSpeed": 15, "adsFov": 20, "adsType": "2d_scope_overlay", "vmHFov": 60, "sf2Rig": "barrett", "sf2": "barrett", "sf2ZoomIn": [1.2, -0.012, 0.015], "sf2ZoomOut": [0, 0, 0], "sf2ReloadSounds": [[0.2, "magout"], [0.45, "magin"], [0.75, "charge"]], "sf2ReloadAnim": 3.9, "sf2Reticle": "mil3", "zoomHFovs": [55, 20] },
+  // SFCWeaponBarret
+  kar98k: { "fireRate": 1.4, "reloadTime": 3.3, "equipTime": 0.9, "adsSpeed": 17, "adsFov": 20, "adsType": "2d_scope_overlay", "vmHFov": 60, "sf2Rig": "kar98k", "sf2": "kar98k", "sf2ZoomIn": [1.2, -0.015, 0.015], "sf2ZoomOut": [0, 0, 0], "sf2ReloadSounds": [[0.14, "boltback"], [0.31, "magout"], [0.48, "magin"], [0.75, "charge"]], "sf2ReloadAnim": 3.466, "sf2Reticle": "mil", "zoomHFovs": [55, 20] },
+  // SFCWeaponKar98k
+  sr25: { "fireRate": 1.15, "reloadTime": 3.2, "equipTime": 1.5, "adsSpeed": 16, "adsFov": 20, "adsType": "2d_scope_overlay", "vmHFov": 60, "sf2Rig": "sr25", "sf2": "sr25", "sf2ZoomIn": [1.2, -0.015, 0.015], "sf2ZoomOut": [0, 0, 0], "sf2ReloadSounds": [[0.2, "magout"], [0.45, "magin"], [0.75, "charge"]], "sf2ReloadAnim": 3.4, "sf2Reticle": "mil", "zoomHFovs": [20, 12] },
+  // SFCWeaponSR25
+  psg1: { "fireRate": 0.95, "reloadTime": 3, "equipTime": 1.45, "adsSpeed": 16, "adsFov": 20, "adsType": "2d_scope_overlay", "vmHFov": 60, "sf2Rig": "psg1", "sf2": "psg1", "sf2ZoomIn": [1.2, -0.01, 0.01], "sf2ZoomOut": [0, 0, 0], "sf2ReloadSounds": [[0.2, "magout"], [0.45, "magin"], [0.75, "charge"]], "sf2ReloadAnim": 3.033, "sf2Reticle": "mil", "zoomHFovs": [20, 12] },
+  // SFCWeaponPSG1
+  frf2: { "fireRate": 1.45, "reloadTime": 3.2, "equipTime": 1.1, "adsSpeed": 17, "adsFov": 20, "adsType": "2d_scope_overlay", "vmHFov": 60, "sf2Rig": "frf2", "sf2": "frf2", "sf2ZoomIn": [1.2, -0.01, 0.01], "sf2ZoomOut": [0, 0, 0], "sf2ReloadSounds": [[0.14, "boltback"], [0.31, "magout"], [0.48, "magin"], [0.75, "charge"]], "sf2ReloadAnim": 3.5, "sf2Reticle": "mil1", "zoomHFovs": [55, 20] },
+  // SFCWeaponFRF2
+  m14ebr: { "fireRate": 0.3, "reloadTime": 3.5, "equipTime": 1.6, "adsSpeed": 12, "adsFov": 55, "adsType": "3d_sight", "vmHFov": 60, "vmAdsHFov": 20, "sf2Rig": "m14ebr", "sf2": "m14ebr", "sf2ZoomIn": [14, -0.08, -1.46], "sf2ZoomOut": [0, 0, 0], "sf2ReloadSounds": [[0.2, "magout"], [0.45, "magin"], [0.75, "charge"]], "sf2Recoil": { "nextCrossVert": 5, "maxCrossVert": 20, "vertInc": 3e4, "vertDec": 9, "crossDecreasInc": 7.5, "incline": 0.4, "forceCorrection": 50, "domDefault": 0.3, "domZoomDefault": 0, "domInc": 0.6, "domMax": 2.5, "domMin": 0, "domDec": 1, "maxMovingValue": 1.5, "mulValueRun": 1.2, "mulValueJump": 8, "zoomMod": 0.99, "crouchMod": 0.6 }, "sf2ReloadAnim": 3.65 },
+  // SFCWeaponM14EBR
+  aug: { "fireRate": 0.102, "reloadTime": 2.6, "equipTime": 0.85, "adsSpeed": 12, "adsFov": 55, "adsType": "3d_sight", "vmHFov": 60, "vmAdsHFov": 35, "sf2Rig": "aug", "sf2": "aug", "sf2ZoomIn": [-5, -0.01, -0.17], "sf2ZoomOut": [-2, 1, 0], "sf2ReloadSounds": [[0.15, "magout"], [0.4, "magin"], [0.75, "charge"]], "sf2Recoil": { "nextCrossVert": 1.4, "maxCrossVert": 10, "vertInc": 15e3, "vertDec": 12, "crossDecreasInc": 15, "incline": 0.05, "forceCorrection": 50, "domDefault": 0.25, "domZoomDefault": 0, "domInc": 0.28, "domMax": 1.6, "domMin": 0, "domDec": 1.48, "maxMovingValue": 0.8, "mulValueRun": 0.4, "mulValueJump": 6, "zoomMod": 0.75, "crouchMod": 0.9 }, "sf2ReloadAnim": 2.75 },
+  // SFCWeaponAUGA3
+  sg551: { "fireRate": 0.097, "reloadTime": 1.98, "equipTime": 0.83, "adsSpeed": 12, "adsFov": 55, "adsType": "3d_sight", "vmHFov": 60, "vmAdsHFov": 40, "sf2Rig": "sg551", "sf2": "sg551", "sf2ZoomIn": [3, -0.01, -0.3], "sf2ZoomOut": [0, 0, 0], "sf2ReloadSounds": [[0.15, "magout"], [0.4, "magin"], [0.75, "charge"]], "sf2Recoil": { "nextCrossVert": 0.5, "maxCrossVert": 8, "vertInc": 15e3, "vertDec": 5, "crossDecreasInc": 15, "incline": 0.04, "forceCorrection": 50, "domDefault": 0.15, "domZoomDefault": 0, "domInc": 0.3, "domMax": 1.1, "domMin": 0, "domDec": 1.35, "maxMovingValue": 0.8, "mulValueRun": 0.4, "mulValueJump": 6, "zoomMod": 0.75, "crouchMod": 0.9 }, "sf2ReloadAnim": 2.15 },
+  // SFCWeaponSIG551
+  type89: { "fireRate": 0.106, "reloadTime": 2.35, "equipTime": 0.82, "adsSpeed": 12, "adsFov": 55, "adsType": "3d_sight", "vmHFov": 60, "vmAdsHFov": 35, "sf2Rig": "type89", "sf2": "type89", "sf2ZoomIn": [-2, -0, 0], "sf2ZoomOut": [0, 0, -0.5], "sf2ReloadSounds": [[0.15, "magout"], [0.4, "magin"], [0.75, "charge"]], "sf2Recoil": { "nextCrossVert": 0.6, "maxCrossVert": 7, "vertInc": 15e3, "vertDec": 13, "crossDecreasInc": 15, "incline": 0.05, "forceCorrection": 50, "domDefault": 0.2, "domZoomDefault": 0, "domInc": 0.28, "domMax": 1.35, "domMin": 0, "domDec": 1.28, "maxMovingValue": 0.8, "mulValueRun": 0.4, "mulValueJump": 6, "zoomMod": 0.4, "crouchMod": 0.9 }, "sf2ReloadAnim": 2.6 },
+  // SFCWeaponType89
+  ump45: { "fireRate": 0.088, "reloadTime": 2.2, "equipTime": 0.7, "adsSpeed": 12, "adsFov": 55, "adsType": "3d_sight", "vmHFov": 60, "vmAdsHFov": 35, "sf2Rig": "ump45", "sf2": "ump45", "sf2ZoomIn": [8, -0.015, -0.13], "sf2ZoomOut": [0, 0, 0], "sf2ReloadSounds": [[0.15, "magout"], [0.4, "magin"], [0.75, "charge"]], "sf2Recoil": { "nextCrossVert": 1, "maxCrossVert": 8.2, "vertInc": 3670, "vertDec": 10, "crossDecreasInc": 30, "incline": 0.1, "forceCorrection": 50, "domDefault": 0.4, "domZoomDefault": 0, "domInc": 0.22, "domMax": 2, "domMin": 0.05, "domDec": 1.1, "maxMovingValue": 1, "mulValueRun": 0.35, "mulValueJump": 2, "zoomMod": 0.6, "crouchMod": 0.8 }, "sf2ReloadAnim": 2.4 },
+  // SFCWeaponUMP45
+  mp7: { "fireRate": 0.073, "reloadTime": 2.25, "equipTime": 0.821, "adsSpeed": 12, "adsFov": 55, "adsType": "3d_sight", "vmHFov": 60, "vmAdsHFov": 35, "sf2Rig": "mp7", "sf2": "mp7", "sf2ZoomIn": [2, -0.01, -0.16], "sf2ZoomOut": [0, 0, 0], "sf2ReloadSounds": [[0.15, "magout"], [0.4, "magin"], [0.75, "charge"]], "sf2Recoil": { "nextCrossVert": 1.34, "maxCrossVert": 9, "vertInc": 6e3, "vertDec": 10, "crossDecreasInc": 30, "incline": 0.1, "forceCorrection": 50, "domDefault": 0.75, "domZoomDefault": 0, "domInc": 0.17, "domMax": 2.15, "domMin": 0.05, "domDec": 0.95, "maxMovingValue": 1, "mulValueRun": 0.35, "mulValueJump": 2, "zoomMod": 0.6, "crouchMod": 0.8 }, "sf2ReloadAnim": 2.367 },
+  // SFCWeaponMP7A1
+  mg4: { "fireRate": 0.1, "reloadTime": 6.15, "equipTime": 1.9, "adsSpeed": 12, "adsFov": 55, "adsType": "3d_sight", "vmHFov": 60, "vmAdsHFov": 35, "sf2Rig": "mg4", "sf2": "mg4", "sf2ZoomIn": [5, 0, 0.06], "sf2ZoomOut": [1.2, 0, 0], "sf2ReloadSounds": [[0.15, "magout"], [0.45, "magin"], [0.8, "charge"]], "sf2Recoil": { "nextCrossVert": 1.1, "maxCrossVert": 7, "vertInc": 1e4, "vertDec": 10, "crossDecreasInc": 30, "incline": 0.1, "forceCorrection": 50, "domDefault": 1, "domZoomDefault": 0.1, "domInc": 0.2, "domMax": 1.9, "domMin": 0.2, "domDec": 1.5, "maxMovingValue": 1, "mulValueRun": 0.35, "mulValueJump": 2, "zoomMod": 0.7, "crouchMod": 0.8 }, "sf2ReloadAnim": 6.5 },
+  // SFCWeaponMG4
+  k3: { "fireRate": 0.097, "reloadTime": 4.7, "equipTime": 1.5, "adsSpeed": 12, "adsFov": 55, "adsType": "3d_sight", "vmHFov": 60, "vmAdsHFov": 45, "sf2Rig": "k3", "sf2": "k3", "sf2ZoomIn": [0, -0.01, 0.1], "sf2ZoomOut": [0, 0, 0], "sf2ReloadSounds": [[0.15, "magout"], [0.45, "magin"], [0.8, "charge"]], "sf2Recoil": { "nextCrossVert": 1.25, "maxCrossVert": 12, "vertInc": 4040, "vertDec": 11, "crossDecreasInc": 30, "incline": 0.32, "forceCorrection": 50, "domDefault": 2.4, "domZoomDefault": 0.6, "domInc": 0.2, "domMax": 2, "domMin": 0.4, "domDec": 3, "maxMovingValue": 0.5, "mulValueRun": 3, "mulValueJump": 6, "zoomMod": 0.7, "crouchMod": 0.6 }, "sf2ReloadAnim": 5 },
+  // SFCWeaponK3
+  hk23e: { "fireRate": 0.104, "reloadTime": 3.2, "equipTime": 1.6, "adsSpeed": 12, "adsFov": 55, "adsType": "3d_sight", "vmHFov": 60, "vmAdsHFov": 35, "sf2Rig": "hk23e", "sf2": "hk23e", "sf2ZoomIn": [-3, -0.03, -0.5], "sf2ZoomOut": [0, 0, 0], "sf2ReloadSounds": [[0.15, "magout"], [0.45, "magin"], [0.8, "charge"]], "sf2Recoil": { "nextCrossVert": 1.2, "maxCrossVert": 8, "vertInc": 4040, "vertDec": 11, "crossDecreasInc": 30, "incline": 0.25, "forceCorrection": 50, "domDefault": 2, "domZoomDefault": 0.4, "domInc": 0.3, "domMax": 2, "domMin": 0.5, "domDec": 3.8, "maxMovingValue": 0.5, "mulValueRun": 3, "mulValueJump": 6, "zoomMod": 0.7, "crouchMod": 0.6 }, "sf2ReloadAnim": 3.36 },
+  // SFCWeaponHK23E
+  remington870: { "fireRate": 0.55, "reloadTime": 0.57, "equipTime": 0.9, "adsSpeed": 12, "adsFov": 55, "adsType": "3d_sight", "vmHFov": 60, "vmAdsHFov": 55, "sf2Rig": "remington870", "sf2": "remington870", "sf2ZoomIn": [-5, 0, -0.6], "sf2ZoomOut": [0, 0, 0], "sf2ReloadSounds": [[0.2, "magout"], [0.5, "magin"], [0.8, "charge"]], "sf2Recoil": { "nextCrossVert": 10, "maxCrossVert": 20, "vertInc": 17e3, "vertDec": 18, "crossDecreasInc": 30, "incline": 0, "forceCorrection": 300, "domDefault": 0.6, "domZoomDefault": 0.6, "domInc": 0.4, "domMax": 3, "domMin": 0.6, "domDec": 10.5, "maxMovingValue": 0.5, "mulValueRun": 1, "mulValueJump": 2, "zoomMod": 1, "crouchMod": 1 }, "sf2ReloadAnim": 0.6 },
+  // SFCWeaponM870
+  benelli_m4: { "fireRate": 0.4, "reloadTime": 0.57, "equipTime": 0.85, "adsSpeed": 12, "adsFov": 55, "adsType": "3d_sight", "vmHFov": 60, "vmAdsHFov": 55, "sf2Rig": "benelli_m4", "sf2": "benelli_m4", "sf2ZoomIn": [-3, -0.02, -0.2], "sf2ZoomOut": [0, 0, 0], "sf2ReloadSounds": [[0.2, "magout"], [0.5, "magin"], [0.8, "charge"]], "sf2Recoil": { "nextCrossVert": 7, "maxCrossVert": 10, "vertInc": 17e3, "vertDec": 10, "crossDecreasInc": 30, "incline": 0, "forceCorrection": 300, "domDefault": 0.6, "domZoomDefault": 0.6, "domInc": 0.8, "domMax": 3, "domMin": 0.6, "domDec": 1.5, "maxMovingValue": 0.5, "mulValueRun": 1, "mulValueJump": 2, "zoomMod": 1, "crouchMod": 1 }, "sf2ReloadAnim": 0.6 },
+  // SFCWeaponBNLLI
+  ksg: { "fireRate": 0.5, "reloadTime": 0.7, "equipTime": 0.85, "adsSpeed": 12, "adsFov": 55, "adsType": "3d_sight", "vmHFov": 60, "vmAdsHFov": 55, "sf2Rig": "ksg", "sf2": "ksg", "sf2ZoomIn": [-3, -0.02, -0.2], "sf2ZoomOut": [0, 0, -1], "sf2ReloadSounds": [[0.2, "magout"], [0.5, "magin"], [0.8, "charge"]], "sf2Recoil": { "nextCrossVert": 9.5, "maxCrossVert": 15, "vertInc": 15e3, "vertDec": 15, "crossDecreasInc": 30, "incline": 0, "forceCorrection": 300, "domDefault": 0.6, "domZoomDefault": 0.6, "domInc": 0.6, "domMax": 3, "domMin": 0.6, "domDec": 9.8, "maxMovingValue": 0.5, "mulValueRun": 1, "mulValueJump": 2, "zoomMod": 1, "crouchMod": 1 }, "sf2ReloadAnim": 0.742 },
+  // SFCWeaponKeltecKSG
+  saiga12: { "fireRate": 0.25, "reloadTime": 2.9, "equipTime": 1.1, "adsSpeed": 12, "adsFov": 55, "adsType": "3d_sight", "vmHFov": 60, "vmAdsHFov": 55, "sf2Rig": "saiga12", "sf2": "saiga12", "sf2ZoomIn": [0, -0.01, -0.065], "sf2ZoomOut": [0, 0, 0], "sf2ReloadSounds": [[0.15, "magout"], [0.4, "magin"], [0.75, "charge"]], "sf2Recoil": { "nextCrossVert": 8.5, "maxCrossVert": 19, "vertInc": 11e3, "vertDec": 19, "crossDecreasInc": 30, "incline": 0.1, "forceCorrection": 300, "domDefault": 0.6, "domZoomDefault": 0.6, "domInc": 0.4, "domMax": 3, "domMin": 0.6, "domDec": 10.5, "maxMovingValue": 0.5, "mulValueRun": 1, "mulValueJump": 2, "zoomMod": 1, "crouchMod": 1 }, "sf2ReloadAnim": 3 },
+  // SFCWeaponSAIGA12
+  p226: { "fireRate": 0.095, "reloadTime": 1.3, "equipTime": 0.38, "adsSpeed": 12, "adsFov": 55, "adsType": "3d_sight", "vmHFov": 60, "vmAdsHFov": 40, "sf2Rig": "p226", "sf2": "p226", "sf2ZoomIn": [12, -0.02, -0.15], "sf2ZoomOut": [-0.4, 0.8, 1.2], "sf2ReloadSounds": [[0.15, "magout"], [0.45, "magin"], [0.8, "charge"]], "sf2Recoil": { "nextCrossVert": 0.9, "maxCrossVert": 7, "vertInc": 3e4, "vertDec": 7, "crossDecreasInc": 30, "incline": 0.1, "forceCorrection": 50, "domDefault": 0.25, "domZoomDefault": 0.1, "domInc": 0.2, "domMax": 0.5, "domMin": 0.5, "domDec": 2.5, "maxMovingValue": 0.5, "mulValueRun": 1.5, "mulValueJump": 2, "zoomMod": 0.8, "crouchMod": 0.8 }, "sf2ReloadAnim": 1.45 },
+  // SFCWeaponP226
+  deagle: { "fireRate": 0.15, "reloadTime": 2.3, "equipTime": 0.8, "adsSpeed": 12, "adsFov": 55, "adsType": "3d_sight", "vmHFov": 60, "vmAdsHFov": 32, "sf2Rig": "deagle", "sf2": "deagle", "sf2ZoomIn": [14, -0.03, 0], "sf2ZoomOut": [0, 0, 0], "sf2ReloadSounds": [[0.15, "magout"], [0.45, "magin"], [0.8, "charge"]], "sf2Recoil": { "nextCrossVert": 1.8, "maxCrossVert": 15, "vertInc": 65e3, "vertDec": 6, "crossDecreasInc": 30, "incline": 0.2, "forceCorrection": 50, "domDefault": 0, "domZoomDefault": 0, "domInc": 0.4, "domMax": 2, "domMin": 0.25, "domDec": 5, "maxMovingValue": 0.5, "mulValueRun": 1.5, "mulValueJump": 2, "zoomMod": 0.8, "crouchMod": 0.8 }, "sf2ReloadAnim": 2.5 },
+  // SFCWeaponDESERTEAGLE
+  glock18: { "fireRate": 0.1, "reloadTime": 1.615, "equipTime": 0.51, "adsSpeed": 12, "adsFov": 55, "adsType": "3d_sight", "vmHFov": 60, "vmAdsHFov": 32, "sf2Rig": "glock18", "sf2": "glock18", "sf2ZoomIn": [2, -0.02, 0.09], "sf2ZoomOut": [0, 0, 0], "sf2ReloadSounds": [[0.15, "magout"], [0.45, "magin"], [0.8, "charge"]], "sf2Recoil": { "nextCrossVert": 1.4, "maxCrossVert": 8, "vertInc": 65e3, "vertDec": 5, "crossDecreasInc": 30, "incline": 0.4, "forceCorrection": 50, "domDefault": 0.5, "domZoomDefault": 0.25, "domInc": 0.2, "domMax": 1.5, "domMin": 0.25, "domDec": 3, "maxMovingValue": 0.5, "mulValueRun": 1.5, "mulValueJump": 2, "zoomMod": 0.8, "crouchMod": 0.8 }, "sf2ReloadAnim": 1.7 },
+  // SFCWeaponGLOCK17
+  m1911: { "fireRate": 0.12, "reloadTime": 1.8, "equipTime": 0.4, "adsSpeed": 12, "adsFov": 55, "adsType": "3d_sight", "vmHFov": 60, "vmAdsHFov": 40, "sf2Rig": "m1911", "sf2": "m1911", "sf2ZoomIn": [0, 0, 0.09], "sf2ZoomOut": [-0, -0.02, 0.08], "sf2ReloadSounds": [[0.15, "magout"], [0.45, "magin"], [0.8, "charge"]], "sf2Recoil": { "nextCrossVert": 1.4, "maxCrossVert": 10, "vertInc": 3e4, "vertDec": 7, "crossDecreasInc": 30, "incline": 0.4, "forceCorrection": 50, "domDefault": 0.4, "domZoomDefault": 0.5, "domInc": 0.3, "domMax": 1.5, "domMin": 0.5, "domDec": 3, "maxMovingValue": 0.5, "mulValueRun": 1.5, "mulValueJump": 2, "zoomMod": 0.8, "crouchMod": 0.8 }, "sf2ReloadAnim": 1.95 },
+  // SFCWeaponColt1911
+  cz75: { "fireRate": 0.1, "reloadTime": 1.615, "equipTime": 0.51, "adsSpeed": 12, "adsFov": 55, "adsType": "3d_sight", "vmHFov": 60, "vmAdsHFov": 32, "sf2Rig": "cz75", "sf2": "cz75", "sf2ZoomIn": [12, -0.1, -0.1], "sf2ZoomOut": [0, -0.7, 0.5], "sf2ReloadSounds": [[0.15, "magout"], [0.45, "magin"], [0.8, "charge"]], "sf2Recoil": { "nextCrossVert": 1.4, "maxCrossVert": 8, "vertInc": 65e3, "vertDec": 5, "crossDecreasInc": 30, "incline": 0.4, "forceCorrection": 50, "domDefault": 0.5, "domZoomDefault": 0.25, "domInc": 0.2, "domMax": 1.5, "domMin": 0.25, "domDec": 3, "maxMovingValue": 0.5, "mulValueRun": 1.5, "mulValueJump": 2, "zoomMod": 0.8, "crouchMod": 0.8 }, "sf2ReloadAnim": 1.7 },
+  // SFCWeaponCZ75BD
+  jericho: { "fireRate": 0.11, "reloadTime": 1.675, "equipTime": 0.425, "adsSpeed": 12, "adsFov": 55, "adsType": "3d_sight", "vmHFov": 60, "vmAdsHFov": 40, "sf2Rig": "jericho", "sf2": "jericho", "sf2ZoomIn": [0, -0.02, -0.17], "sf2ZoomOut": [0, 0, 0], "sf2ReloadSounds": [[0.15, "magout"], [0.45, "magin"], [0.8, "charge"]], "sf2Recoil": { "nextCrossVert": 1.52, "maxCrossVert": 12, "vertInc": 8e4, "vertDec": 8, "crossDecreasInc": 30, "incline": 0.35, "forceCorrection": 50, "domDefault": 0.4, "domZoomDefault": 0.2, "domInc": 0.3, "domMax": 1.65, "domMin": 0.25, "domDec": 3, "maxMovingValue": 0.5, "mulValueRun": 1.5, "mulValueJump": 2, "zoomMod": 0.8, "crouchMod": 0.8 }, "sf2ReloadAnim": 1.767 },
+  // SFCWeaponJERICHO941
+  sw60: { "fireRate": 0.155, "reloadTime": 1.5, "equipTime": 0.39, "adsSpeed": 12, "adsFov": 55, "adsType": "3d_sight", "vmHFov": 60, "vmAdsHFov": 32, "sf2Rig": "sw60", "sf2": "sw60", "sf2ZoomIn": [4, -0.03, 0], "sf2ZoomOut": [0, 0, 0], "sf2ReloadSounds": [[0.15, "magout"], [0.45, "magin"], [0.8, "charge"]], "sf2Recoil": { "nextCrossVert": 2.1, "maxCrossVert": 7, "vertInc": 65e3, "vertDec": 6, "crossDecreasInc": 30, "incline": 0.15, "forceCorrection": 50, "domDefault": 0.1, "domZoomDefault": 0, "domInc": 2, "domMax": 1.4, "domMin": 0.25, "domDec": 8, "maxMovingValue": 0.5, "mulValueRun": 1, "mulValueJump": 2, "zoomMod": 0.8, "crouchMod": 0.8 }, "sf2ReloadAnim": 1.8 },
+  // SFCWeaponRevolverSW60
+  m92fs: { "fireRate": 0.11, "reloadTime": 1.675, "equipTime": 0.425, "adsSpeed": 12, "adsFov": 55, "adsType": "3d_sight", "vmHFov": 60, "vmAdsHFov": 40, "sf2Rig": "m92fs", "sf2": "m92fs", "sf2ZoomIn": [2, -0.01, -0.2], "sf2ZoomOut": [-0.4, 0.8, 1.2], "sf2ReloadSounds": [[0.15, "magout"], [0.45, "magin"], [0.8, "charge"]], "sf2Recoil": { "nextCrossVert": 1.4, "maxCrossVert": 10, "vertInc": 3e4, "vertDec": 7, "crossDecreasInc": 30, "incline": 0.4, "forceCorrection": 50, "domDefault": 0.4, "domZoomDefault": 0.5, "domInc": 0.3, "domMax": 1.5, "domMin": 0.5, "domDec": 3, "maxMovingValue": 0.5, "mulValueRun": 1.5, "mulValueJump": 2, "zoomMod": 0.8, "crouchMod": 0.8 }, "sf2ReloadAnim": 1.767 },
+  // SFCWeaponM92FS
+  infinity: { "fireRate": 0.13, "reloadTime": 1.615, "equipTime": 0.51, "adsSpeed": 12, "adsFov": 55, "adsType": "3d_sight", "vmHFov": 60, "vmAdsHFov": 32, "sf2Rig": "infinity", "sf2": "infinity", "sf2ZoomIn": [12, 0, -0.45], "sf2ZoomOut": [-1, -1, 0], "sf2ReloadSounds": [[0.15, "magout"], [0.45, "magin"], [0.8, "charge"]], "sf2Recoil": { "nextCrossVert": 1.6, "maxCrossVert": 14, "vertInc": 8e4, "vertDec": 8, "crossDecreasInc": 30, "incline": 0.4, "forceCorrection": 50, "domDefault": 0.35, "domZoomDefault": 0.25, "domInc": 0.35, "domMax": 1.7, "domMin": 0.25, "domDec": 3, "maxMovingValue": 0.5, "mulValueRun": 1.5, "mulValueJump": 2, "zoomMod": 0.8, "crouchMod": 0.8 }, "sf2ReloadAnim": 1.7 },
+  // SFCWeaponINFINITY
+  trg: { "fireRate": 1.2, "reloadTime": 3.3, "equipTime": 0.7, "adsSpeed": 17, "adsFov": 20, "adsType": "2d_scope_overlay", "vmHFov": 65, "sf2Rig": "trg", "sf2": "trg", "sf2ZoomIn": [1.2, -0.01, -0.01], "sf2ZoomOut": [0, 0, 0], "sf2ReloadSounds": [[0.14, "boltback"], [0.31, "magout"], [0.48, "magin"], [0.75, "charge"]], "sf2ReloadAnim": 3.466 }
+  // SFCWeaponTRG
 };
 for (const [id, o] of Object.entries(SF2_WEAPONS)) {
   const s = WEAPON_DATABASE[id];
@@ -2998,9 +3323,21 @@ var APEX_WEAPONS = {
 var APEX_POOL = { "assault": ["r301", "flatline", "havoc"], "smg": ["alternator", "car", "r99", "volt"], "lmg": ["spitfire", "rampage"], "pistol": ["p2020", "re45", "wingman"], "shotgun": ["eva8", "mastiff", "peacekeeper", "mozambique"], "sniper": ["longbow", "g7", "r3030"], "sniper_bolt": ["kraber", "sentinel"] };
 var apexFor = /* @__PURE__ */ __name((def) => (APEX_POOL[def.bolt ? "sniper_bolt" : def.type] || []).map((k) => APEX_WEAPONS[k]).reduce((best, a) => !best || Math.abs(Math.log(a.rpm * def.interval / 60)) < Math.abs(Math.log(best.rpm * def.interval / 60)) ? a : best, null), "apexFor");
 var WEAPON_DEFS = {};
+WEAPON_DATABASE.g36c_circuit = Object.assign({}, WEAPON_DATABASE.g36c_eo, {
+  name: "G36C 魔術迴路",
+  camo: "circuit",
+  desc: "SF2 原版 G36C EOTech 消音，魔術迴路迷彩：電路紋路流動，擊殺後閃出黃色電光 1.5 秒。"
+});
+for (const [id, name] of [["awp", "AWP"], ["cheytac_m200", "CheyTac M200"], ["cz700", "CZ 700"], ["k14", "K14"]]) {
+  WEAPON_DATABASE[id + "_circuit"] = Object.assign({}, WEAPON_DATABASE[id], { name: name + " 魔術迴路", camo: "circuit", desc: `SF2 原版 ${name}，魔術迴路迷彩：電路紋路流動，擊殺後閃出黃色電光。` });
+}
 for (const [id, s] of Object.entries(WEAPON_DATABASE)) {
   WEAPON_DEFS[id] = compileWeapon(id, s);
   WEAPON_DEFS[id].apex = apexFor(WEAPON_DEFS[id]);
+}
+for (const d of Object.values(WEAPON_DEFS)) if (d.apex && d.damageNear > 0) {
+  const n = d.pellets || 1, ours = Math.ceil(100 / (d.damageNear * n)), theirs = Math.ceil((100 + APEX.shields[APEX.shields.length - 1]) / (d.apex.body * (d.apex.pellets || 1)));
+  d.apexReserveMult = Math.min(4, Math.max(1, theirs / ours));
 }
 Object.assign(WEAPON_DEFS, {
   knife: {
@@ -3022,6 +3359,19 @@ Object.assign(WEAPON_DEFS, {
   flash: { id: "flash", name: "閃光彈", kind: "grenade", gtype: "flash", model: "flash", count: 1, fuse: 1.9, radius: 24, moveSpeed: 6, adsMove: 1, falloff: 1 },
   smoke: { id: "smoke", name: "煙霧彈", kind: "grenade", gtype: "smoke", model: "smoke", count: 1, fuse: 1.8, duration: 17, moveSpeed: 6, adsMove: 1, falloff: 1 }
 });
+var sf2Speed = /* @__PURE__ */ __name((load) => CFG.player.sf2Speed * Math.min(780, Math.max(295, 390 - (load - 2) * 95 / 4)) / 390, "sf2Speed");
+var sf2Load = /* @__PURE__ */ __name((w, weapons) => {
+  const d = w.def || w;
+  if (!d.weight) return null;
+  const o = weapons.find((x) => x !== w && x.def && x.def.slot === (d.slot === "primary" ? "secondary" : "primary"));
+  return d.weight[0] + (o && o.def.weight ? o.def.weight[1] : 0);
+}, "sf2Load");
+for (const [id, d] of Object.entries(WEAPON_DEFS)) {
+  const w = SF2_WEIGHT[id];
+  if (!w) continue;
+  d.weight = w;
+  d.moveSpeed = sf2Speed(w[0] + (d.slot === "primary" ? 0 : SF2_WEIGHT.m4a1[1]));
+}
 var PRIMARY_IDS = Object.keys(WEAPON_DATABASE).filter((k) => WEAPON_DATABASE[k].slot === "primary");
 var SECONDARY_IDS = Object.keys(WEAPON_DATABASE).filter((k) => WEAPON_DATABASE[k].slot === "secondary");
 var WEAPON_ICONS = {};
@@ -3035,6 +3385,16 @@ var WEAPON_BLURBS = {
   aug: "內建基礎瞄具，適合中遠距離穩定輸出。",
   mp5: "經典衝鋒槍，腰射穩定、容錯率高。",
   mp5k: "短槍管 MP5，射速快、近距離靈活。",
+  g36c_eo: "緊湊型步槍加全息瞄具與消音器，不上敵方雷達。",
+  g36c_circuit: "魔術迴路迷彩的 G36C EOTech 消音：電路紋路流動，擊殺時閃出電光。",
+  awp_circuit: "魔術迴路迷彩的 AWP。",
+  cheytac_m200_circuit: "魔術迴路迷彩的 CheyTac M200。",
+  cz700_circuit: "魔術迴路迷彩的 CZ 700。",
+  k14_circuit: "魔術迴路迷彩的 K14。",
+  hk417_rs: "7.62mm 戰鬥步槍加內紅點與消音器，單發傷害高。",
+  scarl_eo: "高射速的 SCAR-L 加全息瞄具與消音器。",
+  k14: "韓國栓動狙擊槍，開鏡快、移動靈活。",
+  trg: "芬蘭 Sako 栓動狙擊槍，Zeiss 鏡，細十字貫穿視野。",
   p90: "50 發大彈匣，適合持續火力壓制與近距離掃射。",
   ump45: "衝鋒槍中單發傷害較高的一把，射速偏慢但穩定。",
   vector: "利用特殊槍機設計將後座力降至最低，近戰秒傷極高。",
@@ -3095,7 +3455,8 @@ function weaponStats(id) {
     fireRate: clamp(Math.round(60 / s.fireRate / 950 * 100), 5, 100),
     accuracy: clamp(Math.round((1 - clamp(s.adsSpread / 0.08, 0, 1)) * 60 + (1 - clamp(s.hipSpread / 0.16, 0, 1)) * 40), 5, 100),
     control: clamp(Math.round((1 - clamp(s.recoilPitch / 0.09, 0, 1)) * 100), 5, 100),
-    mobility: clamp(Math.round(s.mobility * 90), 5, 100),
+    mobility: clamp(Math.round((d && d.weight ? d.moveSpeed / CFG.player.baseSpeed : s.mobility) * 90), 5, 100),
+    // v64r SF2: from the weight
     rpm: Math.round(60 / s.fireRate),
     mag: s.maxAmmo,
     kind: d.kind
@@ -3119,9 +3480,9 @@ var MODES = {
   knife: { name: "小刀戰", desc: "全員只能拿刀，貼身肉搏", slots: ["knife"] }
 };
 var BOT_POOLS = {
-  general: ["m4a1", "ak47", "g36c", "g36c_gold", "scarl", "famas", "aug", "mp5", "mp5k", "p90", "ump45", "vector", "mp7", "remington870", "benelli_m4", "saiga12", "m249", "rpk", "negev", "pkm", "cheytac_m200", "awp", "svd", "kar98k", "m16a3", "k2", "xm8", "galil", "sg551", "hk417", "scarh", "qbz97", "pp2000", "vz61", "aa12", "mg4", "k3", "m40a1", "sr25", "psg1", "m14ebr", "type89", "l86a1", "hk23e", "frf2", "cz700"],
-  rifle: ["m4a1", "ak47", "g36c", "g36c_gold", "scarl", "famas", "aug", "mp5", "mp5k", "p90", "ump45", "vector", "mp7", "m249", "rpk", "negev", "pkm", "mg42", "m16a3", "k2", "xm8", "galil", "sg551", "hk417", "scarh", "qbz97", "pp2000", "vz61", "mg4", "k3", "type89", "l86a1", "hk23e"],
-  sniper: ["cheytac_m200", "awp", "barrett", "kar98k", "svd", "m40a1", "sr25", "psg1", "m14ebr", "frf2", "cz700"],
+  general: ["m4a1", "ak47", "g36c", "g36c_gold", "g36c_eo", "g36c_circuit", "hk417_rs", "scarl_eo", "scarl", "famas", "aug", "mp5", "mp5k", "p90", "ump45", "vector", "mp7", "remington870", "benelli_m4", "saiga12", "m249", "rpk", "negev", "pkm", "trg", "cheytac_m200", "k14", "awp", "svd", "kar98k", "m16a3", "k2", "xm8", "galil", "sg551", "hk417", "scarh", "qbz97", "pp2000", "vz61", "aa12", "mg4", "k3", "m40a1", "sr25", "psg1", "m14ebr", "type89", "l86a1", "hk23e", "frf2", "cz700"],
+  rifle: ["m4a1", "ak47", "g36c", "g36c_gold", "g36c_eo", "g36c_circuit", "hk417_rs", "scarl_eo", "scarl", "famas", "aug", "mp5", "mp5k", "p90", "ump45", "vector", "mp7", "m249", "rpk", "negev", "pkm", "mg42", "m16a3", "k2", "xm8", "galil", "sg551", "hk417", "scarh", "qbz97", "pp2000", "vz61", "mg4", "k3", "type89", "l86a1", "hk23e"],
+  sniper: ["trg", "cheytac_m200", "cheytac_m200_circuit", "k14", "k14_circuit", "awp_circuit", "cz700_circuit", "awp", "barrett", "kar98k", "svd", "m40a1", "sr25", "psg1", "m14ebr", "frf2", "cz700"],
   pistol: ["p226", "deagle", "glock18", "usp", "m1911", "m92fs", "cz75", "jericho", "sw60", "infinity"],
   knife: ["knife"]
 };
@@ -3280,8 +3641,8 @@ var Settings = {
     showFps: true,
     hipMode: "precise",
     killcam: true,
-    hitSound: "flesh",
-    // v38 ESC → 命中音效 (audition list, HIT_SOUNDS)
+    hitSound: "sf2",
+    // v38 ESC → 命中音效 (audition list, HIT_SOUNDS); v64e SF2's own by default
     hudStyle: "minimal",
     // v19: 'minimal' (SF2) | 'panel' (v5)
     loadouts: DEFAULT_LOADOUTS.map((l) => Object.assign({}, l)),
@@ -3371,6 +3732,8 @@ __name(loadoutDefs, "loadoutDefs");
 
 // src/02_audio.js
 var HIT_SOUNDS = {
+  sf2: { label: "SF2 原版", sf2: true },
+  // v64e (user 10-28) SF2's own: HitNormal_cue on a hit, HitDead_cue + the kill sound on the kill
   flesh: { label: "真實子彈入肉", s: [["hit_flesh", 1.25]], headS: "hit_head" },
   fleshgore: { label: "子彈入肉＋血肉聲", s: [["hit_flesh", 1.15], ["hit_gore", 0.6]], headS: "hit_head" },
   gore: { label: "血肉撕裂（中頻）", s: [["hit_gore", 1.2]] },
@@ -3440,7 +3803,11 @@ var MECH_REC = {
   shell: ["mech_shell", 0.55, 1],
   dry: ["mech_dry", 0.45, 1.1],
   draw_rifle: ["mech_draw", 0.35, 1],
-  draw_pistol: ["mech_draw", 0.3, 1.2]
+  draw_pistol: ["mech_draw", 0.3, 1.2],
+  pin: ["nade_pin", 0.8, 1],
+  throw: ["nade_throw", 0.8, 1],
+  draw_grenade: ["nade_equip", 0.7, 1]
+  // v64e SF2's own Grenade_Pin / _Throw / _Equip
 };
 var GUN_PROFILES = {
   m4: {
@@ -3797,8 +4164,23 @@ var AudioEngine = class _AudioEngine {
       s.onload = () => res();
       s.onerror = () => res();
       document.head.appendChild(s);
+    })).then(() => new Promise((res) => {
+      if (window.SF2_SFX_FX) {
+        res();
+        return;
+      }
+      const s = document.createElement("script");
+      s.src = "assets/sfx_sf2_fx.js";
+      s.async = true;
+      s.onload = () => res();
+      s.onerror = () => res();
+      document.head.appendChild(s);
     })).then(async () => {
       const pack = window.SF2_SFX;
+      if (pack && window.SF2_SFX_FX) {
+        Object.assign(pack, window.SF2_SFX_FX);
+        delete window.SF2_SFX_FX;
+      }
       if (pack && window.SF2_SFX_MECH) {
         Object.assign(pack, window.SF2_SFX_MECH);
         delete window.SF2_SFX_MECH;
@@ -4337,7 +4719,9 @@ var AudioEngine = class _AudioEngine {
   }
   // Explosions carry across the whole map: large refDistance + an extra sub-bass rumble that barely attenuates.
   explosion(kind, pos) {
-    this.playBank(kind === "flash" ? "flash" : "he", pos, { gain: kind === "flash" ? 1.5 : 2, ref: kind === "flash" ? 14 : 26, roll: 0.8, send: 0.9, lpDist: 90, lpMin: 500 });
+    const o = { gain: kind === "flash" ? 1.5 : 2, ref: kind === "flash" ? 14 : 26, roll: 0.8, send: 0.9, lpDist: 90, lpMin: 500 }, rec = this.ctx && this._s(kind === "flash" ? "sf2_flash" : "sf2_he");
+    if (rec) this._playBuf(rec, pos, Object.assign(o, { gain: kind === "flash" ? 1.4 : 1.8 }));
+    else this.playBank(kind === "flash" ? "flash" : "he", pos, o);
     if (!this.ctx || kind === "flash") return;
     const d = this.listener.distanceTo(pos), t = this.ctx.currentTime + Math.min(d / 343, 0.4), out = this._bus(pos, 0.2, 60);
     this._osc("sine", t, 62, 26, 1.3, out, 0.9, 4e-3);
@@ -4428,6 +4812,15 @@ var AudioEngine = class _AudioEngine {
       this._osc("sine", t, 260, 120, 0.06, out, 0.25, 1e-3);
       return;
     }
+    const S2 = HIT_SOUNDS[Settings.data.hitSound] && HIT_SOUNDS[Settings.data.hitSound].sf2 && this._s("sf2_hit");
+    if (S2) {
+      if (kind === "kill") {
+        const d = this._s("sf2_hitdead"), k2 = !this._s("kfb_default") && this._s("sf2_kill");
+        if (d) this._one(pick(d), out, 1.1, 0.8);
+        if (k2) this._one(pick(k2), out, 0.9);
+      } else this._one(this._hitHead(S2[0]), out, 1, 0.98 + Math.random() * 0.04);
+      return;
+    }
     const H = HIT_SOUNDS[Settings.data.hitSound] || HIT_SOUNDS.flesh, k = (kind === "kill" ? 1.2 : kind === "head" ? 1.1 : 1) * (H.gain || 1);
     let played = false;
     for (const [grp, g] of H.s || []) {
@@ -4450,6 +4843,30 @@ var AudioEngine = class _AudioEngine {
       this._nb(t, out, "highpass", 5200, 0.9, 0.24, 3e-4, 6e-3);
       this._osc("triangle", t, 1300, 700, 0.028, out, 0.14, 5e-4);
     }
+  }
+  // v64m SF2's kill sound (SFKillMessage.GetKillFeedBackSound): hud_kill_<tier> by the kill's strongest message — default (a plain
+  // kill), normal (瞬間秒殺 / 遠射高手 / 同歸於盡), special (爆頭 / 無處可藏 / 背後突襲 / 復仇 / 刀 / 手榴彈), rare (最後一擊 / 首殺 / 捲土重來),
+  // continuous (2 連殺 and up). Only with the 'SF2 原版' hit sound, like the hit itself.
+  killFeedback(tier) {
+    if (!this.ctx || !(HIT_SOUNDS[Settings.data.hitSound] && HIT_SOUNDS[Settings.data.hitSound].sf2)) return;
+    const l = this._s("kfb_" + tier) || this._s("kfb_default");
+    if (!l) return;
+    const out = this.ctx.createGain();
+    out.gain.value = 0.7;
+    out.connect(this.dry);
+    this._one(l[0], out, 1);
+  }
+  // v64g bullet_hit_2d_03 carries a second sound after the hit (user 10-28: a man's odd laugh, from 0.40 s): only its first 0.37 s,
+  // faded out over the last 25 ms (its RMS: the hit 0.04–0.36 s, down to −36 dB at 0.38, the other sound rising again at 0.40)
+  _hitHead(buf) {
+    if (this._hitCut && this._hitCut.src === buf) return this._hitCut.buf;
+    const n = Math.min(buf.length, Math.round(buf.sampleRate * 0.37)), f = Math.round(buf.sampleRate * 0.025), out = this.ctx.createBuffer(buf.numberOfChannels, n, buf.sampleRate);
+    for (let c = 0; c < buf.numberOfChannels; c++) {
+      const a = buf.getChannelData(c), b = out.getChannelData(c);
+      for (let i = 0; i < n; i++) b[i] = a[i] * Math.min(1, (n - i) / f);
+    }
+    this._hitCut = { src: buf, buf: out };
+    return out;
   }
   _hit_juice(t, out, k) {
     this._osc("sine", t, 170, 55, 0.08, out, 0.5 * k, 1e-3);
@@ -4762,6 +5179,11 @@ var AudioEngine = class _AudioEngine {
   }
   smokeHiss(pos) {
     if (!this.ctx) return;
+    const rec = this._s("sf2_smoke");
+    if (rec) {
+      this._playBuf(rec, pos, { gain: 1.2, ref: 10, roll: 0.9, send: 0.6, lpDist: 60, lpMin: 600 });
+      return;
+    }
     const t = this.ctx.currentTime, out = this._bus(pos, 0.1, 3);
     const s = this._noiseSrc(t, 3.5), f = this._filter("bandpass", 2600, 0.6), g = this.ctx.createGain();
     g.gain.setValueAtTime(1e-4, t);
@@ -4839,6 +5261,12 @@ var AudioEngine = class _AudioEngine {
     const t = this.ctx.currentTime, out = this._bus(null, 0.3);
     this._osc("sawtooth", t, 180, 40, 0.9, out, 0.25, 0.01);
     this._osc("sine", t, 90, 30, 1.2, out, 0.6, 0.01);
+  }
+  // v64e SF2's HUD weapon switch tick (hud_switch05), played with every switch of your own weapon
+  weaponSwitch() {
+    if (!this.ctx) return;
+    const l = this._s("sf2_switch");
+    if (l) this._one(l[0], this._bus(null, 0), 0.6);
   }
   uiClick() {
     if (!this.ctx) return;
@@ -14724,52 +15152,13 @@ var SkullStreaming = class {
       m.userData.far = clamp(m.geometry.boundingSphere.radius * M.getMaxScaleOnAxis() * 35, 45, 160);
     }
     this.b = b;
-    this.tris = tris;
     this.meshes = meshes;
-    this.built = /* @__PURE__ */ new Map();
-    this.active = /* @__PURE__ */ new Map();
-    this.physT = 0;
     this.cullT = 0;
   }
-  _tile(key) {
-    const [x, z] = key.split(",").map(Number), T = this.tris, v = T.v, verts = [], ids = [];
-    T.each(x * 16, z * 16, x * 16 + 16, z * 16 + 16, (t) => {
-      const o = t * 6;
-      if (T.bb[o + 3] < x * 16 || T.bb[o] > x * 16 + 16 || T.bb[o + 5] < z * 16 || T.bb[o + 2] > z * 16 + 16) return false;
-      const n = verts.length / 3;
-      for (let k = 0; k < 9; k++) verts.push(v[t * 9 + k]);
-      ids.push(n, n + 1, n + 2);
-      return false;
-    });
-    if (!ids.length) return null;
-    const body = new CANNON.Body({ mass: 0, type: CANNON.Body.STATIC, material: this.b.phys.matDefault, collisionFilterGroup: 2, collisionFilterMask: 4 });
-    body.addShape(new CANNON.Trimesh(verts, ids));
-    return body;
+  tick() {
   }
-  tick(h) {
-    if ((this.physT -= h) > 0) return;
-    this.physT = 0.1;
-    const world = this.b.phys.world, want = /* @__PURE__ */ new Set();
-    for (const gr of this.b.game.grenades) {
-      const p = gr.dyn?.body?.position;
-      if (!p) continue;
-      const tx = Math.floor(p.x / 16), tz = Math.floor(p.z / 16);
-      for (let x = tx - 1; x <= tx + 1; x++) for (let z = tz - 1; z <= tz + 1; z++) want.add(x + "," + z);
-    }
-    for (const [key, body] of this.active) if (!want.has(key)) {
-      world.removeBody(body);
-      this.active.delete(key);
-    }
-    for (const key of want) {
-      if (this.active.has(key)) continue;
-      if (!this.built.has(key)) this.built.set(key, this._tile(key));
-      const body = this.built.get(key);
-      if (body) {
-        world.addBody(body);
-        this.active.set(key, body);
-      }
-    }
-  }
+  // v63m grenades on a triangle map bounce in Match.stepGrenades (swept rays + floor rest): cannon trimesh tiles of the map
+  // (16 m, 3×3 around each grenade, ~100k triangles) cost up to 100 ms a step
   render(dt) {
     if ((this.cullT -= dt) > 0) return;
     this.cullT = 0.25;
@@ -14900,6 +15289,7 @@ function apexTriMap(def) {
           b.scene.add(mesh);
           return;
         }
+        if ([].concat(o.material).some((m) => /grass_clump/i.test(m.name) && !m.map)) return;
         for (const m of Array.isArray(o.material) ? o.material : [o.material]) {
           if (m.transparent && !/glass/i.test(m.name)) {
             m.alphaTest = 0.35;
@@ -15454,6 +15844,10 @@ var SF2Rig = class {
       x.castShadow = false;
       x.receiveShadow = true;
       if (x.name === "sleeve" || x.name === "glove") x.userData.arm = true;
+      if (x.material && x.material.transparent) {
+        x.userData.noAO = true;
+        x.renderOrder = 3;
+      }
     });
     this.mixer = new THREE.AnimationMixer(m);
     this.a = {};
@@ -15465,14 +15859,15 @@ var SF2Rig = class {
       this.a[c.name] = a;
     }
     this.pose({ Zoom: [this.dur("Zoom"), 1] });
-    const sm = m.getObjectByName("SIGHT"), head = m.getObjectByName("Bip01-Head").getWorldPosition(new THREE.Vector3());
-    const s = (sm || m.getObjectByName("POST")).getWorldPosition(new THREE.Vector3());
-    const eye = new THREE.Vector3(s.x, s.y, sm ? o.eyeRelief != null ? s.z - o.eyeRelief : head.z : head.z - 0.03 - (o.zoomIn ? o.zoomIn[0] : -3) / 100);
+    const sm = m.getObjectByName("SIGHT"), dm = m.getObjectByName("DOT"), head = m.getObjectByName("Bip01-Head").getWorldPosition(new THREE.Vector3());
+    const s = (sm || dm || m.getObjectByName("POST")).getWorldPosition(new THREE.Vector3());
+    const eye = new THREE.Vector3(s.x, s.y, (sm || dm) && o.eyeRelief != null ? s.z - o.eyeRelief : sm ? head.z : head.z - 0.03 - (o.zoomIn ? o.zoomIn[0] : -3) / 100);
     m.rotation.y = Math.PI;
     m.position.set(eye.x, -eye.y, eye.z);
     const zi = o.zoomIn || [-3, 0, 0], zo = o.zoomOut || [0, 0, 0];
     this.eyeAim = eye.clone();
     this.hipShift = new THREE.Vector3(-(zi[1] - zo[1]), zi[2] - zo[2], zi[0] - zo[0]).multiplyScalar(0.01);
+    if (o.hipPos) this.hipShift.set(o.hipPos[0] - eye.x, -o.hipPos[1] - eye.y, o.hipPos[2] - eye.z);
     this.place(0);
     this.reloadSounds = o.reloadSounds || null;
     this.equipRate = o.equipTime ? this.dur("Equip") / o.equipTime : o.equipRate || 1.6;
@@ -15502,12 +15897,16 @@ var SF2Rig = class {
     this.mixer.update(0);
   }
   fire(ads) {
+    this.reloadAt = -1;
+    this.shellEnd = -1;
     this.fireT = 0;
-    this.fireClip = ads ? "ZoomFire" : "Fire";
+    this.fireClip = ads && this.a.ZoomFire ? "ZoomFire" : "Fire";
     this.equipT = -1;
   }
-  // s: { ads 0–1, sprint 0–1, reload phase 0–1 or −1, draw (WeaponSystem.drawT: 1 on a switch, running down) }
+  // (v64 the K14 has no ZoomFire: its Fire works the bolt)
+  // s: { ads 0–1, sprint 0–1, reload s or −1 / reloadDone / reloadLen (the clip's s), draw (WeaponSystem.drawT: 1 on a switch, running down) }
   update(dt, s) {
+    if (this.camo) this.camo.update(dt);
     const w = {}, fade = /* @__PURE__ */ __name((t, d, i, o) => Math.max(0, Math.min(1, i > 0 ? t / i : 1, o > 0 ? (d - t) / o : 1)), "fade");
     let rest = 1;
     if (s.draw > this.lastDraw + 0.5) {
@@ -15518,12 +15917,40 @@ var SF2Rig = class {
     this.idleT = (this.idleT + dt) % this.dur("Idle");
     this.zoomT = (this.zoomT + dt) % this.dur("Zoom");
     this.dashT = (this.dashT + dt * 0.6) % this.dur("dash");
-    if (s.reload >= 0) {
-      const d = this.dur("Reload"), k = fade(s.reload, 1, 0.05, 0.08);
-      w.Reload = [s.reload * d, k];
+    if (s.reload >= 0) this.reloadAt = s.reload;
+    else if (s.reloadDone && this.reloadAt >= 0) this.reloadAt += dt;
+    else this.reloadAt = -1;
+    if (this.reloadAt >= 0 && this.reloadAt < s.reloadLen) {
+      const q = this.reloadAt / s.reloadLen, d = this.dur("Reload"), k = fade(q, 1, 0.05, 0.08);
+      w.Reload = [q * d, k];
       rest -= k;
       this.fireT = -1;
       this.equipT = -1;
+    } else this.reloadAt = -1;
+    if (this.a.ReloadLoop && !this.a.Reload) {
+      if (s.reloading) {
+        this.shellT = this.shellT >= 0 ? this.shellT + dt : 0;
+        this.shellEnd = -1;
+      } else if (this.shellT >= 0) {
+        this.shellT = -1;
+        this.shellEnd = 0;
+      }
+      const ds = this.dur("ReloadStart"), dl = this.dur("ReloadLoop"), de = this.dur("ReloadEnd");
+      if (this.shellT >= 0) {
+        const k = fade(this.shellT, 1e9, 0.08, 0);
+        if (this.shellT < ds) w.ReloadStart = [this.shellT, k];
+        else w.ReloadLoop = [(this.shellT - ds) % dl, k];
+        rest -= k;
+        this.fireT = -1;
+        this.equipT = -1;
+      } else if (this.shellEnd >= 0) {
+        this.shellEnd += dt;
+        if (this.shellEnd < de) {
+          const k = fade(this.shellEnd, de, 0, 0.1);
+          w.ReloadEnd = [this.shellEnd, k];
+          rest -= k;
+        } else this.shellEnd = -1;
+      }
     }
     if (this.equipT >= 0) {
       const d = this.dur("Equip");
@@ -15645,6 +16072,62 @@ var SF2Flash = class _SF2Flash {
     if (this.ok) for (const m of ["hip", "ads"]) for (const L of this.layers[m]) L.s.visible = false;
   }
 };
+var SF2Camo = class _SF2Camo {
+  static {
+    __name(this, "SF2Camo");
+  }
+  static tex(id) {
+    const C = _SF2Camo._t || (_SF2Camo._t = {});
+    if (C[id] || !window.SF2_CAMO || !window.SF2_CAMO[id]) return C[id] || null;
+    const L = new THREE.TextureLoader(), t = C[id] = {};
+    for (const [k, url] of Object.entries(window.SF2_CAMO[id])) {
+      t[k] = L.load(url);
+      t[k].colorSpace = THREE.SRGBColorSpace;
+      t[k].wrapS = t[k].wrapT = THREE.RepeatWrapping;
+    }
+    return t;
+  }
+  constructor(model, id, isArm) {
+    const T = _SF2Camo.tex(id);
+    this.ok = !!T;
+    this.killT = 0;
+    if (!T) return;
+    this.u = { uTime: { value: 0 }, uKill: { value: 0 }, uCamoBase: { value: T.base }, uCamoShine: { value: T.shine }, uCamoKill: { value: T.kill } };
+    const done = /* @__PURE__ */ new Map();
+    model.traverse((o) => {
+      if (!o.isMesh || isArm(o) || o.userData.noAO || !o.material || !o.material.map) return;
+      if (!done.has(o.material)) {
+        const m = o.material.clone();
+        m.name = o.material.name + ":camo_" + id;
+        m.onBeforeCompile = (sh) => {
+          Object.assign(sh.uniforms, this.u);
+          sh.fragmentShader = "uniform float uTime, uKill; uniform sampler2D uCamoBase, uCamoShine, uCamoKill;\n" + sh.fragmentShader.replace("#include <map_fragment>", `#include <map_fragment>
+              vec2 cu = vMapUv * 2.0; // camo_value 2
+              vec3 cb = texture2D(uCamoBase, vec2(cu.x + uTime * 0.12, cu.y)).rgb;
+              diffuseColor.rgb = diffuseColor.rgb * 0.07 + cb * 0.06; // v64q (user, SF2's own picture): near-black under bright lines`).replace("#include <emissivemap_fragment>", `#include <emissivemap_fragment>
+              float sweep = texture2D(uCamoBase, vec2(cu.x * 0.5 - uTime * 0.3, 0.5)).g; // a brighter band running along the lines
+              vec3 cs = texture2D(uCamoShine, cu + vec2(uTime * 0.05, 0.0)).rgb;
+              float ln = smoothstep(0.012, 0.09, dot(cs, vec3(0.3, 0.6, 0.1))); // v64q contrast (user, SF2's own picture): the lines cut hard, bright green on near-black
+              totalEmissiveRadiance += ln * vec3(0.02, 1.0, 0.22) * (0.75 + 0.9 * sweep) * (1.0 - 0.6 * uKill);
+              totalEmissiveRadiance += texture2D(uCamoKill, cu * 0.75 + vec2(0.0, uTime * 0.35)).rgb * uKill * 1.4;`);
+        };
+        m.customProgramCacheKey = () => "sf2camo_" + id;
+        done.set(o.material, m);
+      }
+      o.material = done.get(o.material);
+    });
+  }
+  kill() {
+    this.killT = 4.5;
+  }
+  // SF2's ActionCamoKillTime is 1.5 s; v64q the user asked for 3× that
+  update(dt) {
+    if (!this.ok) return;
+    this.u.uTime.value = (this.u.uTime.value + dt) % 400;
+    this.killT = Math.max(0, this.killT - dt);
+    this.u.uKill.value = this.killT > 4.2 ? (4.5 - this.killT) / 0.3 : Math.min(1, this.killT / 1.5);
+  }
+};
 
 // src/09_models.js
 var GunMats = class {
@@ -15704,8 +16187,9 @@ var GunMats = class {
 };
 var GUN_MODELS = {};
 var GUN_RIGS = {};
-var GUN_3RD = {};
-var RIG_EYE = { m16a3: 0.055, qbz97: 0.06 };
+var RIG_EYE = { m16a3: 0.055, qbz97: 0.06, g36c_eo: 0.15, m14ebr: 0.15, hk417_rs: 0.15, scarl_eo: 0.15 };
+var RIG_HIP = { k14: [0.0217, -1.2026, -0.0378] };
+var RIG_RETICLE = { g36c_eo: [0.093, 82], m14ebr: [0.093, 82], hk417_rs: [0.06, 32], scarl_eo: [0.093, 82] };
 var GLB_RELOAD_POSE = { roll: -0.5, pitch: 0.32, drop: -0.09, shift: 0.08 };
 function loadGunModels() {
   if (loadGunModels.p) return loadGunModels.p;
@@ -15719,7 +16203,7 @@ function loadGunModels() {
         s.onerror = res;
         document.head.appendChild(s);
       }), "script");
-      await Promise.all([window.GUN_GLB ? null : script("assets/guns/guns.js"), window.SF2_FX ? null : script("assets/fx_sf2.js")]);
+      await Promise.all([window.GUN_GLB ? null : script("assets/guns/guns.js"), window.SF2_FX ? null : script("assets/fx_sf2.js"), window.SF2_CAMO ? null : script("assets/camo_sf2.js")]);
       const L = new GLTFLoader(), D = new DRACOLoader();
       D.setDecoderPath("https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/libs/draco/gltf/");
       L.setDRACOLoader(D);
@@ -15727,11 +16211,6 @@ function loadGunModels() {
         const bin = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0)).buffer, gltf = await L.parseAsync(bin, ""), parts = [], marks = {};
         if (gltf.animations.length) {
           GUN_RIGS[id] = gltf;
-          continue;
-        }
-        if (id.endsWith("_3rd")) {
-          const wid = id.slice(0, -4), d = WEAPON_DATABASE[wid];
-          GUN_3RD[d && d.model || wid] = gltf.scene;
           continue;
         }
         gltf.scene.updateMatrixWorld(true);
@@ -15909,6 +16388,41 @@ var WeaponModels = class {
     if (def.kind !== "grenade" && def.kind !== "knife" && !vm.rig) this._fitAds(vm, def);
     if (def.modelUrl) this.attachGLTF(vm, def.modelUrl);
     return vm;
+  }
+  // v64d a dropped gun (user 10-28: what lies on the floor must be recognisable — it is picked up by sight): the first-person model
+  // without arms, frozen into plain meshes once per gun (a skinned rig is baked at its pose; geometry shared by every drop),
+  // centred, muzzle toward −Z, real size. Cheap to clone: a drop is a few static meshes, no skeleton.
+  dropModel(def) {
+    const key = (def.sf2Rig || def.model || def.id) + (def.camo ? ":" + def.camo : ""), c = (this.dropCache || (this.dropCache = /* @__PURE__ */ new Map())).get(key);
+    if (c) return c.clone();
+    const vm = this.build(def), g = vm.group, out = new THREE.Group(), v = new THREE.Vector3(), inv = new THREE.Matrix4();
+    g.position.set(0, 0, 0);
+    g.rotation.set(0, 0, 0);
+    g.updateMatrixWorld(true);
+    inv.copy(g.matrixWorld).invert();
+    g.traverse((o) => {
+      if (!o.isMesh || !o.visible || this.isArm(o) || !o.geometry.attributes.position) return;
+      const src = o.geometry, geo = new THREE.BufferGeometry(), P = src.attributes.position, pos = new Float32Array(P.count * 3), M = new THREE.Matrix4().multiplyMatrices(inv, o.matrixWorld);
+      for (let i = 0; i < P.count; i++) {
+        v.fromBufferAttribute(P, i);
+        if (o.isSkinnedMesh) o.applyBoneTransform(i, v);
+        v.applyMatrix4(M);
+        pos.set([v.x, v.y, v.z], i * 3);
+      }
+      geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+      if (src.index) geo.setIndex(src.index);
+      for (const k of ["uv", "tangent"]) if (src.attributes[k]) geo.setAttribute(k, src.attributes[k]);
+      for (const gr of src.groups) geo.addGroup(gr.start, gr.count, gr.materialIndex);
+      geo.computeVertexNormals();
+      const m = new THREE.Mesh(geo, o.material);
+      m.castShadow = true;
+      out.add(m);
+    });
+    const box = new THREE.Box3().setFromObject(out), ctr = box.getCenter(new THREE.Vector3());
+    for (const m of out.children) m.geometry.translate(-ctr.x, -ctr.y, -ctr.z);
+    this.dropCache.set(key, out);
+    if (vm.rig && vm.rig.mixer) vm.rig.mixer.stopAllAction();
+    return out.clone();
   }
   // v16 ADS eye relief: push the ADS pose forward until nothing that lands in the middle of the view is closer than
   // 13 cm (iron sights), 9 cm (red dot / holo) or 30 cm (pistols, held at arm's length). Otherwise the receiver or
@@ -16121,6 +16635,21 @@ var WeaponModels = class {
     if (sf.ok) out.sf2flash = sf;
     else out.flash = this._flash(out.muzzle, 0, 0, 0, o.flash ?? 0.2);
     if (o.reticle) out.reticle = this._reticle(g, 0, true, o.reticleScale || 1, [0.25, 1, 0.3]);
+    const rm = rig.model.getObjectByName("reticle"), dot = rig.model.getObjectByName("DOT");
+    if (rm && rm.material && rm.material.map && dot) {
+      rm.visible = false;
+      const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: rm.material.map, blending: THREE.NormalBlending, depthWrite: false, depthTest: true, transparent: true, toneMapped: false, color: new THREE.Color(1.8, 0.07, 0.05), opacity: 0 }));
+      const [rw, rpx] = o.sf2Reticle || [0.097, 96], k = 2 * 3 * rw * Math.tan((o.adsHFov || 40) * Math.PI / 360) / (rpx / 256);
+      s.position.set(0, 0, -3);
+      s.scale.set(k, k, 1);
+      s.renderOrder = 4;
+      g.add(s);
+      out.reticle = s;
+    }
+    if (o.camo) {
+      const c = new SF2Camo(rig.model, o.camo, (x) => this.isArm(x));
+      if (c.ok) rig.camo = c;
+    }
     out.reloadSounds = rig.reloadSounds;
     return out;
   }
@@ -16137,9 +16666,22 @@ var WeaponModels = class {
   g36c_sf2(def) {
     return this.fromRig("g36c_sf2_rig", this._rigOpts(def)) || this.g36c(def);
   }
+  // v64 the attachment builds and the K14 (def.sf2Rig): these stand in until the pack is parsed
+  g36c_eo(def) {
+    return this.g36c(def);
+  }
+  hk417_rs() {
+    return this.hk417();
+  }
+  scarl_eo() {
+    return this.scarl();
+  }
+  k14() {
+    return this.m40a1();
+  }
   // v62z the eye behind a fitted peep (SIGHT mark) where the head bone is not right: the M16A3 carries the M4A1's handle (5.5 cm, see m4())
   _rigOpts(def) {
-    return def ? { equipTime: def.equipTime, zoomIn: def.sf2ZoomIn, zoomOut: def.sf2ZoomOut, reloadSounds: def.sf2ReloadSounds || void 0, eyeRelief: RIG_EYE[def.sf2Rig] } : {};
+    return def ? { equipTime: def.equipTime, zoomIn: def.sf2ZoomIn, zoomOut: def.sf2ZoomOut, reloadSounds: def.sf2ReloadSounds || void 0, eyeRelief: RIG_EYE[def.sf2Rig], adsHFov: def.vmAdsHFov, sf2Reticle: RIG_RETICLE[def.sf2Rig], hipPos: RIG_HIP[def.sf2Rig], camo: def.camo } : {};
   }
   m4(def) {
     return this.fromRig("m4a1_sf2_rig", Object.assign(this._rigOpts(def), { reloadSounds: void 0, eyeRelief: 0.055 })) || this.fromGLB("m4a1_sf2", { eye: 0.03, eyeRelief: 0.025, reticle: "tritium", reticleScale: 0.22 }) || this.fromGLB("m4a1", { eye: 0.2, eyeRelief: 0.03 }) || this.m4Proc();
@@ -16901,20 +17443,6 @@ var SoldierFactory = class {
   }
   setWeapon(s, id) {
     if (s.gun) s.gunHolder.remove(s.gun);
-    const g3 = GUN_3RD[id];
-    if (g3) {
-      s.gun = g3.clone(true);
-      s.gun.rotation.y = Math.PI / 2;
-      const bore = g3.getObjectByName("MUZZLE").position, rear = g3.getObjectByName("SCOPE").position.x;
-      s.gun.position.set(0, 0.01 - bore.y, 0.02 - rear);
-      s.gun.traverse((o) => {
-        if (o.isMesh) o.castShadow = true;
-      });
-      s.gunHolder.add(s.gun);
-      s.muzzle.position.set(0, 0.01, -(bore.x - rear) + 0.02);
-      s.gunHolder.position.set(0.06, -0.1, -0.32);
-      return;
-    }
     s.gun = new THREE.Mesh(this.wm.tp(id), this.gunMat);
     s.gun.castShadow = true;
     s.gunHolder.add(s.gun);
@@ -18047,7 +18575,7 @@ var Weapon = class _Weapon {
     Object.assign(this, def);
     if (vm.reloadSounds) this.reloadSounds = vm.reloadSounds;
     this.ammo = def.mag || 0;
-    this.reserveAmmo = def.reserve || 0;
+    this.reserveAmmo = this.reserveMax;
     this.shotN = 0;
     this.cooldown = 0;
     this.bloom = 0;
@@ -18076,9 +18604,13 @@ var Weapon = class _Weapon {
   get scoped() {
     return this.adsType === "2d_scope_overlay";
   }
+  get reserveMax() {
+    return Math.round((this.def.reserve || 0) * (this.game.apex && this.def.apexReserveMult || 1));
+  }
+  // v64n Apex 扣血: a bigger reserve
   resetAmmo() {
     this.ammo = this.def.mag || 0;
-    this.reserveAmmo = this.def.reserve || 0;
+    this.reserveAmmo = this.reserveMax;
     this.shotN = 0;
     this.cooldown = 0;
     this.bloom = 0;
@@ -18357,10 +18889,11 @@ var Weapon = class _Weapon {
   magOff(p) {
     return p > 0.15 && p < 0.35 ? (p - 0.15) / 0.2 : p >= 0.35 && p < 0.55 ? 1 : p >= 0.55 && p < 0.72 ? 1 - (p - 0.55) / 0.17 : 0;
   }
+  // (v64m the SF2 guns' sound marks are fractions of their Reload clip, played over sf2ReloadAnim — see SF2Rig.update)
   _reload(h) {
     if (!this.reloading) return;
     this.reloadT += h;
-    for (const [t, snd] of this.reloadSounds) if (this.reloadT >= t * this.reloadTime && !this.reloadFired.has(snd)) {
+    for (const [t, snd] of this.reloadSounds) if (this.reloadT >= t * (this.def.sf2ReloadAnim || this.reloadTime) && !this.reloadFired.has(snd)) {
       this.reloadFired.add(snd);
       this._mech(snd);
     }
@@ -19243,6 +19776,7 @@ var WeaponSystem = class extends Arsenal {
     this.kickRotVel.set(0, 0, 0);
     this.game.audio.mech("draw_rifle");
     this.game.audio.mech("draw");
+    this.game.audio.weaponSwitch();
   }
   onZoomSound() {
     this.game.audio.mech("zoom");
@@ -19327,11 +19861,11 @@ var WeaponSystem = class extends Arsenal {
     if (sc !== this._scopeShown || sc && this.scopeLevel !== this._scopeLvl) {
       this._scopeShown = sc;
       this._scopeLvl = this.scopeLevel;
-      g.app.hud.setScope(sc, this.scopeLevel);
+      g.app.hud.setScope(sc, this.scopeLevel, w.def.sf2Rig ? w.def.sf2Reticle || "bender" : false);
     }
     w.vm.group.visible = !sc;
     const vert = /* @__PURE__ */ __name((h) => 2 * Math.atan(Math.tan(h * Math.PI / 360) / this.camera.aspect) * 180 / Math.PI, "vert");
-    const target = this.ads ? w.scoped ? this.scopedIn ? w.def.zoomFovs[this.zoomLevel - 1] : this.baseFov * 0.82 : w.def.vmAdsHFov ? vert(w.def.adsFov) : w.def.adsFov : this.baseFov;
+    const target = this.ads ? w.scoped ? this.scopedIn ? w.def.zoomHFovs ? vert(w.def.zoomHFovs[this.zoomLevel - 1]) : w.def.zoomFovs[this.zoomLevel - 1] : this.baseFov * 0.82 : w.def.vmAdsHFov ? vert(w.def.adsFov) : w.def.adsFov : this.baseFov;
     this.fov = THREE.MathUtils.lerp(this.fov, target, 1 - Math.exp(-(w.scoped ? 32 : w.def.adsSpeed * 1.4 || 28) * dt));
     if (Math.abs(this.fov - target) < 0.01 || w.scoped && this.scopedIn) this.fov = target;
     const fovNow = this.fov + p.fovPunch;
@@ -19456,7 +19990,7 @@ var WeaponSystem = class extends Arsenal {
       ey += 0.62 * s;
       ez += 0.28 * s;
     }
-    if (rig) rig.update(dt, { ads: this.adsT, sprint: this.sprintT, reload: w.reloading ? w.reloadPhase : -1, draw: this.drawT });
+    if (rig) rig.update(dt, { ads: this.adsT, sprint: this.sprintT, reloading: !!w.reloading, reload: w.reloading && !w.shellReload ? w.reloadT : -1, reloadDone: !w.reloading && w.reloadT >= w.reloadTime, reloadLen: w.def.sf2ReloadAnim || w.reloadTime, draw: this.drawT });
     if (this.drawT > 0) {
       this.drawT = Math.max(0, this.drawT - dt / 0.22);
       const e = rig ? 0 : this.drawT * this.drawT;
@@ -19770,7 +20304,8 @@ var Human = class extends Combatant {
     if (m.grounded) this.sprintAir = canSprint;
     this.sprinting = canSprint && m.grounded;
     m.edgeGuard = crouchKey && m.grounded;
-    let speed = w.moveSpeed * (this.carrying ? 0.88 : 1);
+    const load = sf2Load(w, ws.weapons);
+    let speed = (load != null ? sf2Speed(load) : w.moveSpeed) * (this.carrying ? 0.88 : 1);
     if (m.crouching) speed *= P.crouchMult;
     else if (this.sprinting || canSprint && this.sprintAir) speed *= P.sprintMult;
     if (ws.ads) speed *= w.adsMove ?? 1;
@@ -21764,8 +22299,10 @@ var HUD = class {
       this.cache.chg = g;
     }
   }
-  setScope(on, level) {
+  setScope(on, level, sf2 = false) {
     this._cls("scope", this.el.scope, "on", on);
+    this._cls("scopeSf2", this.el.scope, "sf2", on && !!sf2);
+    if (sf2 && this.el.scope.dataset.ret !== sf2) this.el.scope.dataset.ret = sf2;
     this._set("zl", this.el.zoomLbl, "text", on ? level === 2 ? "×10" : "×4" : "");
   }
   // The scope overlay stays perfectly crisp (no blur / line thickening); moving-scope inaccuracy is still simulated in the ballistics.
@@ -24360,7 +24897,19 @@ var Match = class _Match {
     p.multi = this.time - p.lastKillT < 4 ? p.multi + 1 : 1;
     p.lastKillT = this.time;
     p.lastVictim = victim;
-    hud.points(`+${pts}  ${def.kind === "knife" ? "刀殺" : def.kind === "grab" ? "擒拿擊殺" : def.kind === "grenade" ? "手榴彈擊殺" : head ? "爆頭" : "擊殺"}${opts.collateral ? " · 穿透" : ""}`);
+    {
+      const rg = ws.current && ws.current.def === def && ws.current.vm && ws.current.vm.rig;
+      if (rg && rg.camo) rg.camo.kill();
+    }
+    let refill = "";
+    if (this.apex && ws.current && ws.current.mag && ws.current.reserveMax) {
+      const w = ws.current, add = Math.min(w.mag, w.reserveMax - w.reserveAmmo);
+      if (add > 0) {
+        w.reserveAmmo += add;
+        refill = ` · 彈藥 +${add}`;
+      }
+    }
+    hud.points(`+${pts}  ${def.kind === "knife" ? "刀殺" : def.kind === "grab" ? "擒拿擊殺" : def.kind === "grenade" ? "手榴彈擊殺" : head ? "爆頭" : "擊殺"}${opts.collateral ? " · 穿透" : ""}${refill}`);
     const E = [], d = victim ? Math.hypot(victim.motor.pos.x - p.motor.pos.x, victim.motor.pos.z - p.motor.pos.z) : 0, gun = def.kind !== "knife" && def.kind !== "grab" && def.kind !== "grenade";
     if (p.multi >= 2) E.push(["double", "multi", "specialist", "specialforce"][Math.min(p.multi - 2, 3)]);
     if (def.kind === "grenade") E.push("grenade");
@@ -24386,6 +24935,8 @@ var Match = class _Match {
       setTimeout(() => hud.lucky(100), 900);
     }
     for (const id of E.slice(0, 4)) hud.emblem(id);
+    const T = { double: "continuous", multi: "continuous", specialist: "continuous", specialforce: "continuous", lastshot: "rare", first: "rare", welcome: "rare", headshot: "special", wall: "special", slash: "special", revenge: "special", knife: "special", grenade: "special", grab: "special", pierce: "special", fastzoom: "normal", longshot: "normal" };
+    this.audio.killFeedback(["continuous", "rare", "special", "normal"].find((t) => E.some((x) => T[x] === t)) || "default");
     if (victim) hud.killNote(victim.name, E.find((x) => x === "headshot" || x === "grenade" || x === "slash" || x === "knife" || x === "grab") || "kill");
     p.emblems = p.emblems || {};
     for (const id of E) p.emblems[id] = (p.emblems[id] || 0) + 1;
@@ -24534,12 +25085,18 @@ var Match = class _Match {
   static isGun(def) {
     return !!def && !!def.mag && def.kind !== "knife" && def.kind !== "grenade";
   }
-  // A dropped gun: physics body (it tumbles and settles), low-poly mesh, pulsing ground glow; remembers its ammo.
+  // A dropped gun: physics body (it tumbles and settles), the detailed model (v64d), pulsing ground glow; remembers its ammo.
   dropWeapon(def, ammo, reserve, pos, vel, netId = 0) {
     if (!_Match.isGun(def) || !this.opts.pickup) return null;
-    const holder = new THREE.Group(), gun = new THREE.Mesh(this.app.models.tp(def.model), this.app.soldiers.gunMat);
-    gun.scale.setScalar(1.25);
-    gun.castShadow = true;
+    const holder = new THREE.Group();
+    let gun;
+    try {
+      gun = this.app.models.dropModel(def);
+    } catch (e) {
+      gun = new THREE.Mesh(this.app.models.tp(def.model), this.app.soldiers.gunMat);
+      gun.scale.setScalar(1.25);
+      gun.castShadow = true;
+    }
     holder.add(gun);
     const len = (WEAPON_DATABASE[def.id] && WEAPON_DATABASE[def.id].tp && WEAPON_DATABASE[def.id].tp.len || (def.kind === "pistol" ? 0.22 : 0.9)) * 0.62;
     const dyn = this.physics.addDynamic({
@@ -24724,22 +25281,50 @@ var Match = class _Match {
       const n = this.grenades[i];
       n.t += h;
       const b = n.body, cur = TMP_V3.set(b.position.x, b.position.y, b.position.z), seg = d.subVectors(cur, n.prev), len = seg.length();
-      if (len > 0.08) {
+      const tri = this.collision.tris;
+      if (len > (tri ? 4e-3 : 0.08)) {
         seg.divideScalar(len);
         const h2 = this.collision.raycast(o.copy(n.prev), seg, len + 0.05, false);
         if (h2) {
           const nrm = h2.normal, v = b.velocity, vn = v.x * nrm.x + v.y * nrm.y + v.z * nrm.z;
           b.position.set(h2.point.x + nrm.x * 0.07, h2.point.y + nrm.y * 0.07, h2.point.z + nrm.z * 0.07);
-          if (vn < 0) {
-            v.x -= 1.38 * vn * nrm.x;
-            v.y -= 1.38 * vn * nrm.y;
-            v.z -= 1.38 * vn * nrm.z;
-            v.x *= 0.75;
-            v.y *= 0.75;
-            v.z *= 0.75;
+          if (tri && nrm.y > 0.7 && vn > -1.5) {
+            if (vn < 0) {
+              v.x -= vn * nrm.x;
+              v.y -= vn * nrm.y;
+              v.z -= vn * nrm.z;
+            }
+          } else {
+            if (vn < 0) {
+              v.x -= 1.38 * vn * nrm.x;
+              v.y -= 1.38 * vn * nrm.y;
+              v.z -= 1.38 * vn * nrm.z;
+              v.x *= 0.75;
+              v.y *= 0.75;
+              v.z *= 0.75;
+            }
+            this.audio.nadeBounce(b.position, Math.min(1, Math.abs(vn) / 8));
           }
-          this.audio.nadeBounce(b.position, Math.min(1, Math.abs(vn) / 8));
           cur.set(b.position.x, b.position.y, b.position.z);
+        }
+      }
+      if (tri) {
+        const g = tri.groundAt(cur.x, cur.y + 0.05, cur.z, 0.03, 0.16), v = b.velocity;
+        if (g !== null && cur.y - 0.05 <= g + 0.03) {
+          if (cur.y - 0.05 < g) {
+            b.position.y = g + 0.05;
+            cur.y = b.position.y;
+          }
+          if (v.y < 0) v.y = v.y < -1.5 ? -v.y * 0.3 : 0;
+          const k = Math.max(0, 1 - 3 * h);
+          v.x *= k;
+          v.z *= k;
+          b.angularVelocity.scale(k, b.angularVelocity);
+          const ny = tri.nrm[tri.lastTri * 3 + 1] || 1;
+          if (ny > 0.9 && v.x * v.x + v.y * v.y + v.z * v.z < 0.6) {
+            v.set(0, 0, 0);
+            b.angularVelocity.set(0, 0, 0);
+          }
         }
       }
       n.prev.copy(cur);
@@ -25069,7 +25654,7 @@ var Match = class _Match {
 };
 
 // src/18_net.js
-var NET_VERSION = 30;
+var NET_VERSION = 31;
 var NET_PHASES = ["loading", "freeze", "live", "roundEnd", "over"];
 var NET_SNAP_HZ = 30;
 var NET_CMD_EVERY = 1;
@@ -26307,7 +26892,7 @@ function chatSafe(m) {
   return { n: m.sys ? "" : safeName(m.n, "玩家"), c: m.c === "bravo" ? "bravo" : m.c === "alpha" ? "alpha" : null, t, tm: !!m.tm, sys: !!m.sys };
 }
 __name(chatSafe, "chatSafe");
-var ROOM_ST = { room: "READY", loading: "載入中", playing: "對戰中", ended: "結算中" };
+var ROOM_ST = { room: "", ready: "已準備", armory: "備戰中", loading: "載入中", playing: "對戰中", ended: "結算中" };
 function roomCfgOut() {
   const L = Settings.data.lobby;
   return { map: L.map, mode: L.mode, rule: L.rule, difficulty: L.difficulty, allies: L.allies, enemies: L.enemies, opts: L.opts, ruleCfg: { [L.rule]: L.ruleCfg[L.rule] || RULES[L.rule].def } };
@@ -26539,17 +27124,24 @@ var RoomHost = class extends RoomSession {
       if (this.pub && this.online) this._announce();
     }, 60);
   }
+  // v64c the 3-2-1 and the start go to the ready guests only; the others see the room turn 'playing' and may join it later
+  readyIds() {
+    return this.members.filter((m) => !m.host && m.st === "ready").map((m) => m.id);
+  }
   countdown() {
-    if (this.t) this.t.send("*", { k: "rcount" });
+    this.counted = this.readyIds();
+    if (this.t) for (const id of this.counted) this.t.send(id, { k: "rcount" });
   }
   cancel() {
-    if (this.t) this.t.send("*", { k: "rcancel" });
+    if (this.t) for (const id of this.counted || []) this.t.send(id, { k: "rcancel" });
+    this.counted = null;
   }
   go(cfg) {
     this.phase = "playing";
     this.mcfg = cfg;
     this.members[0].st = "loading";
-    if (this.t) this.t.send("*", { k: "rgo", cfg });
+    this.counted = null;
+    if (this.t) for (const id of this.readyIds()) this.t.send(id, { k: "rgo", cfg });
     this._changed();
   }
   status(st) {
@@ -28130,11 +28722,10 @@ var App = class {
     let txt = "開始 (F5)", off = false, msg = "";
     if (guest) {
       if (r.phase === "playing" && r.mcfg) txt = "加入對戰 (F5)";
-      else {
-        txt = "等待房主開始";
+      else if (!r.entered) {
+        txt = "連線中…";
         off = true;
-        msg = r.entered ? "地圖和模式由房主設定 · 你可以選擇隊伍和配裝" : "";
-      }
+      } else txt = r.me && r.me.st === "ready" ? "取消準備 (F5)" : "準備 (F5)";
     }
     sb.textContent = txt;
     sb.disabled = off;
@@ -28149,6 +28740,12 @@ var App = class {
         this.audio.init();
         this.audio.uiClick();
         this.startGuestMatch();
+      } else if (r.entered && r.me) {
+        this.audio.init();
+        this.audio.uiClick();
+        r.status(r.me.st === "ready" ? "room" : "ready");
+        this.renderRoomBar();
+        this.refreshLobby();
       }
       return;
     }
@@ -28548,7 +29145,11 @@ var App = class {
         o.textContent = v.label;
         hs.append(o);
       }
-      if (!HIT_SOUNDS[S.hitSound]) S.hitSound = "flesh";
+      if (!HIT_SOUNDS[S.hitSound] || !S.hitSf2) {
+        S.hitSound = "sf2";
+        S.hitSf2 = true;
+        Settings.save();
+      }
       const demo = /* @__PURE__ */ __name(() => {
         this.audio.init();
         AudioEngine.loadSamples();
@@ -28742,6 +29343,7 @@ var App = class {
     $("lobby").classList.remove("on");
     $("hub").classList.remove("on");
     $("warehouse").classList.add("on");
+    if (this.whFrom === "lobby" && this.isGuest() && this.room.entered) this.room.status("armory");
     if (!this.whR) this._initPreview();
     this.renderWarehouse();
   }
@@ -28751,6 +29353,7 @@ var App = class {
     this.$(back).classList.add("on");
     Settings.save();
     this.audio.uiClick();
+    if (back === "lobby" && this.isGuest() && this.room.me && this.room.me.st === "armory") this.room.status("room");
     if (back === "lobby") this.refreshLobby();
   }
   _initPreview() {

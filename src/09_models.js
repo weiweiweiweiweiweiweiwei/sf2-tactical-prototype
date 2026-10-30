@@ -6,7 +6,7 @@
    Profile coordinates (u, v): u = distance forward, v = up.
    ===================================================================== */
 import { DRACOLoader, GLTFLoader, RoundedBoxGeometry, THREE, WEAPON_DATABASE, mergeGeometries } from './01_core.js';
-import { SF2Flash, SF2Rig } from './09c_sf2rig.js';
+import { SF2Camo, SF2Flash, SF2Rig } from './09c_sf2rig.js';
 class GunMats {
   constructor(tf) {
     const wear = tf.surface('gunWear'), fab = tf.surface('fabric');
@@ -54,10 +54,12 @@ class GunMats {
 /* v45 Blender gun models: assets/guns/guns.js sets window.GUN_GLB[id] = base64 GLB (file:// friendly). Meshes are named
    '<node>__<material>' in gun space; empties SIGHT / MUZZLE / MUZZLE_S mark the sight axis and the two muzzle ends. */
 const GUN_MODELS = {}, GUN_RIGS = {}; // v62 GUN_RIGS: animated first-person rigs (<id>_sf2_rig.glb, see SF2Rig)
-// v63f GUN_3RD: SF2's own third-person guns (<weapon id>_3rd.glb, tools/sf2_3rd_build.mjs), keyed by the weapon's model id; UModel
-// space (metres, Y up, muzzle +X) with MUZZLE / SCOPE / GRIP / STOCK marks
-const GUN_3RD = {};
-const RIG_EYE = { m16a3: 0.055, qbz97: 0.06 }; // v62z rigs whose eye sits this far behind their SIGHT mark (WeaponModels._rigOpts; others: as deep as the head bone)
+const RIG_EYE = { m16a3: 0.055, qbz97: 0.06, g36c_eo: 0.15, m14ebr: 0.15, hk417_rs: 0.15, scarl_eo: 0.15 }; // v62z rigs whose eye sits this far behind their SIGHT / DOT mark (WeaponModels._rigOpts; others: as deep as the head bone). v64 the optic rigs: 15 cm — the user's SF2 HK417 Reflex hip shot (10-28: the sight 205 px of 2000 wide at the hip lens), one camera for hip and ADS as in SF2
+// v64 an optic's SF2 reticle: [the ring's share of the screen's width when aimed, the ring's diameter in px of its 256 px texture, measured on the diagonal clear of the ticks] — the user's SF2 ADS shots (HK417 Reflex 6 %; G36C EOTech 16.5 % of the height)
+// v64g a scoped SF2 gun's model position at the hip (camera space, m): solved so the scope's eyepiece sits where the user's SF2 hip shot
+// has it (K14, 10-28: centre 83.5 % / 67.6 % of the screen, radius 6.25 % of its width)
+const RIG_HIP = { k14: [0.0217, -1.2026, -0.0378] }; // (projected with the game's own viewmodel camera, tools/out/_k14fit2.mjs: the EYEPIECE end — the lens facing the camera in SF2's shot)
+const RIG_RETICLE = { g36c_eo: [0.093, 82], m14ebr: [0.093, 82], hk417_rs: [0.06, 32], scarl_eo: [0.093, 82] };
 // v53 reload pose of the Blender guns: cant the other way (bottom toward the middle of the screen), swing in and lift, so the
 // magazine well and the left hand working it stay in view (the procedural guns keep RELOAD_POSE, which rolls them away)
 const GLB_RELOAD_POSE = { roll: -0.5, pitch: 0.32, drop: -0.09, shift: 0.08 };
@@ -66,13 +68,12 @@ function loadGunModels() {
   return (loadGunModels.p = (async () => {
     try {
       const script = (src) => new Promise((res) => { const s = document.createElement('script'); s.src = src; s.async = true; s.onload = res; s.onerror = res; document.head.appendChild(s); });
-      await Promise.all([window.GUN_GLB ? null : script('assets/guns/guns.js'), window.SF2_FX ? null : script('assets/fx_sf2.js')]); // v62m + SF2's own muzzle-flash textures
+      await Promise.all([window.GUN_GLB ? null : script('assets/guns/guns.js'), window.SF2_FX ? null : script('assets/fx_sf2.js'), window.SF2_CAMO ? null : script('assets/camo_sf2.js')]); // (v64o + SF2's weapon camos) // v62m + SF2's own muzzle-flash textures
       const L = new GLTFLoader(), D = new DRACOLoader(); // v49 gunlib exports Draco-compressed GLBs (older ones are plain; both load)
       D.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/libs/draco/gltf/'); L.setDRACOLoader(D);
       for (const [id, b64] of Object.entries(window.GUN_GLB || {})) {
         const bin = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0)).buffer, gltf = await L.parseAsync(bin, ''), parts = [], marks = {};
         if (gltf.animations.length) { GUN_RIGS[id] = gltf; continue; }
-        if (id.endsWith('_3rd')) { const wid = id.slice(0, -4), d = WEAPON_DATABASE[wid]; GUN_3RD[(d && d.model) || wid] = gltf.scene; continue; }
         gltf.scene.updateMatrixWorld(true);
         gltf.scene.traverse((o) => {
           if (o.isMesh) { const g = o.geometry.clone(); g.applyMatrix4(o.matrixWorld); const nm = o.name.split('__'); parts.push({ node: nm[0], mat: ((o.material && o.material.name) || '').replace('gun:', '') || (nm[1] || '').replace(/_\d+$/, ''), geo: g, material: o.material }); }
@@ -180,6 +181,31 @@ class WeaponModels {
     if (def.modelUrl) this.attachGLTF(vm, def.modelUrl);
     return vm;
   }
+  // v64d a dropped gun (user 10-28: what lies on the floor must be recognisable — it is picked up by sight): the first-person model
+  // without arms, frozen into plain meshes once per gun (a skinned rig is baked at its pose; geometry shared by every drop),
+  // centred, muzzle toward −Z, real size. Cheap to clone: a drop is a few static meshes, no skeleton.
+  dropModel(def) {
+    const key = (def.sf2Rig || def.model || def.id) + (def.camo ? ':' + def.camo : ''), c = (this.dropCache || (this.dropCache = new Map())).get(key);
+    if (c) return c.clone();
+    const vm = this.build(def), g = vm.group, out = new THREE.Group(), v = new THREE.Vector3(), inv = new THREE.Matrix4();
+    g.position.set(0, 0, 0); g.rotation.set(0, 0, 0); g.updateMatrixWorld(true); inv.copy(g.matrixWorld).invert();
+    g.traverse((o) => {
+      if (!o.isMesh || !o.visible || this.isArm(o) || !o.geometry.attributes.position) return;
+      const src = o.geometry, geo = new THREE.BufferGeometry(), P = src.attributes.position, pos = new Float32Array(P.count * 3), M = new THREE.Matrix4().multiplyMatrices(inv, o.matrixWorld);
+      for (let i = 0; i < P.count; i++) { v.fromBufferAttribute(P, i); if (o.isSkinnedMesh) o.applyBoneTransform(i, v); v.applyMatrix4(M); pos.set([v.x, v.y, v.z], i * 3); }
+      geo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); if (src.index) geo.setIndex(src.index);
+      for (const k of ['uv', 'tangent']) if (src.attributes[k]) geo.setAttribute(k, src.attributes[k]);
+      for (const gr of src.groups) geo.addGroup(gr.start, gr.count, gr.materialIndex);
+      geo.computeVertexNormals();
+      const m = new THREE.Mesh(geo, o.material); m.castShadow = true; out.add(m);
+    });
+    const box = new THREE.Box3().setFromObject(out), ctr = box.getCenter(new THREE.Vector3());
+    for (const m of out.children) m.geometry.translate(-ctr.x, -ctr.y, -ctr.z);
+    this.dropCache.set(key, out);
+    if (vm.rig && vm.rig.mixer) vm.rig.mixer.stopAllAction();
+    return out.clone();
+  }
+
   // v16 ADS eye relief: push the ADS pose forward until nothing that lands in the middle of the view is closer than
   // 13 cm (iron sights), 9 cm (red dot / holo) or 30 cm (pistols, held at arm's length). Otherwise the receiver or
   // the slide sits a few cm from the eye and fills the screen as a black block. The sight line stays on the axis.
@@ -320,6 +346,16 @@ class WeaponModels {
     out.muzzle = rig.model.getObjectByName('MUZZLE');
     const sf = new SF2Flash(out.muzzle, o.flashScale ?? 0.4); if (sf.ok) out.sf2flash = sf; else out.flash = this._flash(out.muzzle, 0, 0, 0, o.flash ?? 0.2); // v62m SF2's own flash
     if (o.reticle) out.reticle = this._reticle(g, 0, true, o.reticleScale || 1, [0.25, 1, 0.3]);
+    const rm = rig.model.getObjectByName('reticle'), dot = rig.model.getObjectByName('DOT');
+    if (rm && rm.material && rm.material.map && dot) { // v64 an optic's own SF2 reticle (EOTech ring / Reflex dot): its quad's texture on the sight line
+      // as SF2 draws it (the user's G36C EOTech ADS shot, 10-28 — a 4:3 frame stretched to 16:9, the ring an ellipse: only heights
+      // compare): solid red, the ring o.reticle[0] of the screen's width at the aimed lens o.adsHFov (RIG_RETICLE)
+      // (the ring is 96 of the texture's 256 px)
+      rm.visible = false;
+      const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: rm.material.map, blending: THREE.NormalBlending, depthWrite: false, depthTest: true, transparent: true, toneMapped: false, color: new THREE.Color(1.8, 0.07, 0.05), opacity: 0 }));
+      const [rw, rpx] = o.sf2Reticle || [0.097, 96], k = 2 * 3 * rw * Math.tan(((o.adsHFov || 40) * Math.PI) / 360) / (rpx / 256); s.position.set(0, 0, -3); s.scale.set(k, k, 1); s.renderOrder = 4; g.add(s); out.reticle = s;
+    }
+    if (o.camo) { const c = new SF2Camo(rig.model, o.camo, (x) => this.isArm(x)); if (c.ok) rig.camo = c; } // v64o SF2's weapon camo (魔術迴路)
     out.reloadSounds = rig.reloadSounds;
     return out;
   }
@@ -330,8 +366,13 @@ class WeaponModels {
   ak103(def) { return this.fromRig('ak103_sf2_rig', this._rigOpts(def)) || this.ak47(def); }
   mp5k(def) { return this.fromRig('mp5k_sf2_rig', this._rigOpts(def)) || this.mp5(def); } // v62z (loop H3) SF2's own MP5K; the MP5 until the pack is parsed
   g36c_sf2(def) { return this.fromRig('g36c_sf2_rig', this._rigOpts(def)) || this.g36c(def); }
+  // v64 the attachment builds and the K14 (def.sf2Rig): these stand in until the pack is parsed
+  g36c_eo(def) { return this.g36c(def); }
+  hk417_rs() { return this.hk417(); }
+  scarl_eo() { return this.scarl(); }
+  k14() { return this.m40a1(); }
   // v62z the eye behind a fitted peep (SIGHT mark) where the head bone is not right: the M16A3 carries the M4A1's handle (5.5 cm, see m4())
-  _rigOpts(def) { return def ? { equipTime: def.equipTime, zoomIn: def.sf2ZoomIn, zoomOut: def.sf2ZoomOut, reloadSounds: def.sf2ReloadSounds || undefined, eyeRelief: RIG_EYE[def.sf2Rig] } : {}; }
+  _rigOpts(def) { return def ? { equipTime: def.equipTime, zoomIn: def.sf2ZoomIn, zoomOut: def.sf2ZoomOut, reloadSounds: def.sf2ReloadSounds || undefined, eyeRelief: RIG_EYE[def.sf2Rig], adsHFov: def.vmAdsHFov, sf2Reticle: RIG_RETICLE[def.sf2Rig], hipPos: RIG_HIP[def.sf2Rig], camo: def.camo } : {}; }
   m4(def) { return this.fromRig('m4a1_sf2_rig', Object.assign(this._rigOpts(def), { reloadSounds: undefined, eyeRelief: 0.055 })) || this.fromGLB('m4a1_sf2', { eye: 0.03, eyeRelief: 0.025, reticle: 'tritium', reticleScale: 0.22 }) || this.fromGLB('m4a1', { eye: 0.2, eyeRelief: 0.03 }) || this.m4Proc(); } // v61 SF2's own M4A1 first (tools/blender/sf2_gun_build.py): like SF2's ADS, the eye right at the carry handle's peep and a green dot on the front post // eye 20 cm behind the hood: the holo frame fills about a quarter of the view
   m4Proc() {
     const M = this.M, gb = new GunBuilder(M);
@@ -875,14 +916,7 @@ class SoldierFactory {
 
   setWeapon(s, id) {
     if (s.gun) s.gunHolder.remove(s.gun);
-    const g3 = GUN_3RD[id];
-    if (g3) { // v63f SF2's own model: muzzle +X → −Z, the bore 1 cm up and the receiver over the hand like the procedural guns
-      s.gun = g3.clone(true); s.gun.rotation.y = Math.PI / 2;
-      const bore = g3.getObjectByName('MUZZLE').position, rear = g3.getObjectByName('SCOPE').position.x;
-      s.gun.position.set(0, 0.01 - bore.y, 0.02 - rear); s.gun.traverse((o) => { if (o.isMesh) o.castShadow = true; });
-      s.gunHolder.add(s.gun); s.muzzle.position.set(0, 0.01, -(bore.x - rear) + 0.02);
-      s.gunHolder.position.set(0.06, -0.1, -0.32); return;
-    }
+    // (v64d SF2's third-person M4A1 (v63f GUN_3RD, 4 parts = 4 draw calls a soldier, ×2 with shadows) dropped for speed — user 10-28)
     s.gun = new THREE.Mesh(this.wm.tp(id), this.gunMat); s.gun.castShadow = true; s.gunHolder.add(s.gun);
     const spec = WEAPON_DATABASE[id] && WEAPON_DATABASE[id].tp;
     const len = spec ? spec.len * 0.72 : ({ m4: 0.42, g36c: 0.55, mp5: 0.34, m200: 0.85, p226: 0.12, deagle: 0.15, knife: 0.2, p90: 0.3, m870: 0.62, m249: 0.76 }[id] ?? 0.3);

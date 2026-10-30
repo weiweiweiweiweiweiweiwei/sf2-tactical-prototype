@@ -13,6 +13,7 @@ class SF2Rig {
       if (!x.isMesh) return;
       x.frustumCulled = false; x.castShadow = false; x.receiveShadow = true; // (skinned: the bind-pose bounds are elsewhere)
       if (x.name === 'sleeve' || x.name === 'glove') x.userData.arm = true;
+      if (x.material && x.material.transparent) { x.userData.noAO = true; x.renderOrder = 3; } // v64 an optic's lens: out of the AO pass (it greyed the window), drawn after the gun
     });
     this.mixer = new THREE.AnimationMixer(m); this.a = {};
     for (const c of gltf.animations) { const a = this.mixer.clipAction(c); a.play(); a.paused = true; a.setEffectiveWeight(0); this.a[c.name] = a; }
@@ -25,14 +26,19 @@ class SF2Rig {
     // the M4A1's −3 gives the head depth the screenshot fit found.
     // Rig space is +Z forward, −X right, +Y up: turned half a turn about Y it is camera space.
     this.pose({ Zoom: [this.dur('Zoom'), 1] });
-    const sm = m.getObjectByName('SIGHT'), head = m.getObjectByName('Bip01-Head').getWorldPosition(new THREE.Vector3());
-    const s = (sm || m.getObjectByName('POST')).getWorldPosition(new THREE.Vector3());
-    const eye = new THREE.Vector3(s.x, s.y, sm ? (o.eyeRelief != null ? s.z - o.eyeRelief : head.z) : head.z - 0.03 - (o.zoomIn ? o.zoomIn[0] : -3) / 100);
+    // v64 an optic (EOTech / Reflex): its ZoomCrosshair socket (the DOT mark) is the aim point, the eye o.eyeRelief behind it
+    // (the user's SF2 G36C EOTech ADS shot, 10-28: the window half the screen wide → 6 cm), else at the vLocZoomIN depth
+    const sm = m.getObjectByName('SIGHT'), dm = m.getObjectByName('DOT'), head = m.getObjectByName('Bip01-Head').getWorldPosition(new THREE.Vector3());
+    const s = (sm || dm || m.getObjectByName('POST')).getWorldPosition(new THREE.Vector3());
+    const eye = new THREE.Vector3(s.x, s.y, (sm || dm) && o.eyeRelief != null ? s.z - o.eyeRelief : sm ? head.z : head.z - 0.03 - (o.zoomIn ? o.zoomIn[0] : -3) / 100);
     m.rotation.y = Math.PI; m.position.set(eye.x, -eye.y, eye.z);
     // v62i at the hip SF2 holds the mesh at vLocZoomOut, aimed at vLocZoomIN (UE cm: x forward, y right, z up), blended by the aim:
     // the hip eye = the aimed eye + (in − out) in rig space (−y, z, x) / 100 (M4A1: 2 cm further back and 0.87 cm lower)
     const zi = o.zoomIn || [-3, 0, 0], zo = o.zoomOut || [0, 0, 0];
     this.eyeAim = eye.clone(); this.hipShift = new THREE.Vector3(-(zi[1] - zo[1]), zi[2] - zo[2], zi[0] - zo[0]).multiplyScalar(0.01);
+    // v64g o.hipPos: the model's position at the hip given outright (camera space) — a scoped gun has no sight line to derive it from
+    // (the K14: fitted to the user's SF2 hip shot, tools/out/_k14fit.mjs); the aim end stays the eye rule's
+    if (o.hipPos) this.hipShift.set(o.hipPos[0] - eye.x, -o.hipPos[1] - eye.y, o.hipPos[2] - eye.z);
     this.place(0);
     this.reloadSounds = o.reloadSounds || null;
     // v62d play the Equip clip over the gun's draw time (def.equipTime, SF2's own 0.8 s for the M4A1); with none, the old 1.6×
@@ -47,16 +53,27 @@ class SF2Rig {
     for (const [k, a] of Object.entries(this.a)) { const v = w[k]; a.setEffectiveWeight(v ? v[1] : 0); if (v) a.time = v[0]; }
     this.mixer.update(0);
   }
-  fire(ads) { this.fireT = 0; this.fireClip = ads ? 'ZoomFire' : 'Fire'; this.equipT = -1; }
-  // s: { ads 0–1, sprint 0–1, reload phase 0–1 or −1, draw (WeaponSystem.drawT: 1 on a switch, running down) }
+  fire(ads) { this.reloadAt = -1; this.shellEnd = -1; this.fireT = 0; this.fireClip = ads && this.a.ZoomFire ? 'ZoomFire' : 'Fire'; this.equipT = -1; } // (v64 the K14 has no ZoomFire: its Fire works the bolt)
+  // s: { ads 0–1, sprint 0–1, reload s or −1 / reloadDone / reloadLen (the clip's s), draw (WeaponSystem.drawT: 1 on a switch, running down) }
   update(dt, s) {
+    if (this.camo) this.camo.update(dt);
     const w = {}, fade = (t, d, i, o) => Math.max(0, Math.min(1, i > 0 ? t / i : 1, o > 0 ? (d - t) / o : 1));
     let rest = 1;
     if (s.draw > this.lastDraw + 0.5) { this.equipT = 0; this.fireT = -1; }
     this.lastDraw = s.draw;
     this.idleT = (this.idleT + dt) % this.dur('Idle'); this.zoomT = (this.zoomT + dt) % this.dur('Zoom'); this.dashT = (this.dashT + dt * 0.6) % this.dur('dash'); // v63e the sprint sway at 0.6× (user: too quick)
-    if (s.reload >= 0) { // the clip stretched over the game's reload time; in / out over a few frames
-      const d = this.dur('Reload'), k = fade(s.reload, 1, 0.05, 0.08); w.Reload = [s.reload * d, k]; rest -= k; this.fireT = -1; this.equipT = -1;
+    // v64m SF2 plays the Reload clip over ReloadBlendTime (s.reloadLen, the K14 3.25 s) while the rounds go in at ReloadTimes (3.0 s):
+    // the clip runs on past the reload unless the gun fires (fire() cuts it) or is switched; in / out over a few frames
+    if (s.reload >= 0) this.reloadAt = s.reload; else if (s.reloadDone && this.reloadAt >= 0) this.reloadAt += dt; else this.reloadAt = -1;
+    if (this.reloadAt >= 0 && this.reloadAt < s.reloadLen) {
+      const q = this.reloadAt / s.reloadLen, d = this.dur('Reload'), k = fade(q, 1, 0.05, 0.08); w.Reload = [q * d, k]; rest -= k; this.fireT = -1; this.equipT = -1;
+    } else this.reloadAt = -1;
+    if (this.a.ReloadLoop && !this.a.Reload) { // v65h a shell-by-shell gun (SF2's shotguns): ReloadStart once, ReloadLoop per shell while
+      // reloading (s.reloading), ReloadEnd when it stops — full, or cut by a shot (fire() drops the End: the Fire clip pumps)
+      if (s.reloading) { this.shellT = this.shellT >= 0 ? this.shellT + dt : 0; this.shellEnd = -1; } else if (this.shellT >= 0) { this.shellT = -1; this.shellEnd = 0; }
+      const ds = this.dur('ReloadStart'), dl = this.dur('ReloadLoop'), de = this.dur('ReloadEnd');
+      if (this.shellT >= 0) { const k = fade(this.shellT, 1e9, 0.08, 0); if (this.shellT < ds) w.ReloadStart = [this.shellT, k]; else w.ReloadLoop = [(this.shellT - ds) % dl, k]; rest -= k; this.fireT = -1; this.equipT = -1; }
+      else if (this.shellEnd >= 0) { this.shellEnd += dt; if (this.shellEnd < de) { const k = fade(this.shellEnd, de, 0, 0.1); w.ReloadEnd = [this.shellEnd, k]; rest -= k; } else this.shellEnd = -1; }
     }
     if (this.equipT >= 0) {
       const d = this.dur('Equip'); this.equipT += dt * this.equipRate;
@@ -139,4 +156,53 @@ class SF2Flash {
   hide() { if (this.ok) for (const m of ['hip', 'ads']) for (const L of this.layers[m]) L.s.visible = false; }
 }
 
-export { SF2Flash, SF2Rig };
+// v64o SF2's weapon camos (user 10-28: 魔術迴路 G36C = SFCItem_G36C_EOTech_Silencer_CircuitFX). An ECAMOT_MATERIAL camo puts its own
+// material on the gun's parts (the arms keep theirs): CircuitFX is circuit_FX_m in weapon_shader_base_sc — the teal band
+// FX_circuit_Base, the circuit lines FX_circuit_Shine, both at camo_value 2 (UV ×2) and running along the gun; a kill sets its
+// 'Kill' parameter for ActionCamoKillTime 1.5 s and the yellow lightning FX_circuit_Kill flares up. The cooked material lost its
+// panner nodes: the speeds below are set by eye. Textures: assets/camo_sf2.js (tools/camo_sf2.py). The gun's own normal map and
+// its shading stay; its colour goes dark under the camo.
+class SF2Camo {
+  static tex(id) {
+    const C = SF2Camo._t || (SF2Camo._t = {}); if (C[id] || !window.SF2_CAMO || !window.SF2_CAMO[id]) return C[id] || null;
+    const L = new THREE.TextureLoader(), t = C[id] = {};
+    for (const [k, url] of Object.entries(window.SF2_CAMO[id])) { t[k] = L.load(url); t[k].colorSpace = THREE.SRGBColorSpace; t[k].wrapS = t[k].wrapT = THREE.RepeatWrapping; }
+    return t;
+  }
+  constructor(model, id, isArm) {
+    const T = SF2Camo.tex(id); this.ok = !!T; this.killT = 0; if (!T) return;
+    this.u = { uTime: { value: 0 }, uKill: { value: 0 }, uCamoBase: { value: T.base }, uCamoShine: { value: T.shine }, uCamoKill: { value: T.kill } };
+    const done = new Map();
+    model.traverse((o) => {
+      if (!o.isMesh || isArm(o) || o.userData.noAO || !o.material || !o.material.map) return; // (a lens keeps its glass)
+      if (!done.has(o.material)) {
+        const m = o.material.clone(); m.name = o.material.name + ':camo_' + id;
+        m.onBeforeCompile = (sh) => {
+          Object.assign(sh.uniforms, this.u);
+          sh.fragmentShader = 'uniform float uTime, uKill; uniform sampler2D uCamoBase, uCamoShine, uCamoKill;\n' + sh.fragmentShader
+            .replace('#include <map_fragment>', `#include <map_fragment>
+              vec2 cu = vMapUv * 2.0; // camo_value 2
+              vec3 cb = texture2D(uCamoBase, vec2(cu.x + uTime * 0.12, cu.y)).rgb;
+              diffuseColor.rgb = diffuseColor.rgb * 0.07 + cb * 0.06; // v64q (user, SF2's own picture): near-black under bright lines`)
+            .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
+              float sweep = texture2D(uCamoBase, vec2(cu.x * 0.5 - uTime * 0.3, 0.5)).g; // a brighter band running along the lines
+              vec3 cs = texture2D(uCamoShine, cu + vec2(uTime * 0.05, 0.0)).rgb;
+              float ln = smoothstep(0.012, 0.09, dot(cs, vec3(0.3, 0.6, 0.1))); // v64q contrast (user, SF2's own picture): the lines cut hard, bright green on near-black
+              totalEmissiveRadiance += ln * vec3(0.02, 1.0, 0.22) * (0.75 + 0.9 * sweep) * (1.0 - 0.6 * uKill);
+              totalEmissiveRadiance += texture2D(uCamoKill, cu * 0.75 + vec2(0.0, uTime * 0.35)).rgb * uKill * 1.4;`);
+        };
+        m.customProgramCacheKey = () => 'sf2camo_' + id;
+        done.set(o.material, m);
+      }
+      o.material = done.get(o.material);
+    });
+  }
+  kill() { this.killT = 4.5; } // SF2's ActionCamoKillTime is 1.5 s; v64q the user asked for 3× that
+  update(dt) {
+    if (!this.ok) return;
+    this.u.uTime.value = (this.u.uTime.value + dt) % 400; this.killT = Math.max(0, this.killT - dt);
+    this.u.uKill.value = this.killT > 4.2 ? (4.5 - this.killT) / 0.3 : Math.min(1, this.killT / 1.5); // flares in 0.3 s, holds, fades over the last 1.5 s
+  }
+}
+
+export { SF2Camo, SF2Flash, SF2Rig };

@@ -122,6 +122,8 @@ node tools/check.mjs --map 0 --gpu intel
    - `src/01_core.js` 加武器：時間、`sf2Recoil`、`vmHFov` 90／`vmAdsHFov`（`fZoomedMeshFOV`）、`sf2ZoomIn`（`vLocZoomIN`）、`sf2ReloadSounds`（量 Reload 片段裡 `weapon_magazine`／`weapon_cartridge` 動的格數）、`sf2`（槍聲 id）、`tp`；`src/09_models.js` 加 `<model>(def) { return this.fromRig('<id>_sf2_rig', this._rigOpts(def)) || 備用槍; }`。
    - 開鏡鏡頭：有 `SIGHT` 標記（M4A1）照截圖校正；其他槍眼睛和 `POST` 等高，深度 = 頭部骨頭 − 3 cm − `vLocZoomIN.x`。
 
+8. **配件版（v64，本機 B）**：`gun('<id>', { optic: EOTECH | REFLEX, silencer: SIL('a'|'b'|'c') })`——瞄具放 `Scope` 插槽、瞄準點是瞄具的 `ZoomCrosshair`（`DOT` 標記，遊戲端眼睛對準它、準心貼圖在那裡）；消音器放 `Silencer` 插槽、槍口改成消音器的 `flame`。匯出：`-export -gltf -png weapon_common_part <mesh>`、`-export -psk`（插槽的 `.props.txt`）→ `tools/out/sf2/parts/`、`parts_props/`；貼圖 `-export -png weapon_common_part <tex>`。槍聲 `node tools/sfx_sf2.mjs … <id>=<槍>+silence`。
+
 ## 下一批
 - **CheyTac M200**：`m200()`。開鏡用 2D 狙擊鏡畫面，所以 `SIGHT` 可以放在鏡管中心。要另外加 `bolt` 部件，供拉栓動畫使用（目前 `fromGLB` 只處理 `mag` 和 `charge`，這部分需要擴充）。
 - **P90**：`p90()`。頂置透明彈匣放在 `mag` 部件，換彈的移動方向要另外設定 `magMove`。

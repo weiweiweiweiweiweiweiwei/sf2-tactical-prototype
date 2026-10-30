@@ -55,7 +55,20 @@ ok((await st(H)).members.some((m) => m.startsWith('Ming/bravo')), 'friend switch
 await H.evaluate(() => { document.querySelectorAll('#lbMaps button')[1].click(); }); await sleep(600);
 const syncMap = await C.evaluate(() => app.roomCfg().map); ok(syncMap === 1, 'host picks map 2 → friend sees it', String(syncMap));
 await H.evaluate(() => { document.querySelectorAll('#lbMaps button')[0].click(); }); await sleep(400);
-ok(await C.evaluate(() => document.getElementById('lbStart').disabled && document.getElementById('lobby').classList.contains('guest')), 'friend: settings read-only, start button waits for the host');
+ok(await C.evaluate(() => document.getElementById('lobby').classList.contains('guest') && document.getElementById('lbStart').textContent.includes('準備')), "friend: settings read-only, the button is 準備 (F5)");
+
+// 3b. v64c SF2's ready check: not ready → the host's start leaves the friend in the room (he can join it); the armory is 備戰中
+await C.click('#lbWarehouse'); await sleep(700);
+ok(await H.evaluate(() => [...document.querySelectorAll('#lbListB li.human .st')].some((e) => e.textContent === '備戰中')), "friend in the armory: the host's list says 備戰中");
+await C.click('#whClose'); await sleep(700);
+await H.click('#lbStart');
+ok(await wait(H, () => app.state === 'playing' && app.match && app.match.net, null, 60000), 'host started alone');
+await sleep(1500);
+ok(await C.evaluate(() => app.state === 'lobby' && document.getElementById('lbStart').textContent.includes('加入對戰')), 'friend (not ready) stayed in the room, offered 加入對戰');
+await H.evaluate(() => app.returnToLobby()); await wait(H, () => app.state === 'lobby', null, 10000); await sleep(800);
+await C.click('#lbStart'); await sleep(700); // 準備
+ok(await H.evaluate(() => [...document.querySelectorAll('#lbListB li.human .st')].some((e) => e.textContent === '已準備')), "friend pressed 準備: the host's list says 已準備");
+ok(await C.evaluate(() => document.getElementById('lbStart').textContent.includes('取消準備')), "friend's button turns 取消準備");
 
 // 4. match 1: host presses GO → countdown on both → both play
 await H.click('#lbStart'); await sleep(700);
@@ -78,6 +91,7 @@ const h2 = await st(H), c2 = await st(C);
 ok(back && h2.phase === 'room' && h2.members.length === 2 && h2.members.every((m) => m.includes('/room') || m.endsWith('/H')), 'both back in the same room', JSON.stringify(h2.members));
 
 // 6. match 2 on the same connection; the host leaves it mid-way → everyone back in the room
+await C.click('#lbStart'); await sleep(700); // 準備 again (back from a match = not ready)
 await H.click('#lbStart');
 const both2 = (await wait(H, () => app.state === 'playing' && app.match && app.match.humans.length === 1, null, 60000)) && (await wait(C, () => app.state === 'playing' && app.match && app.match.net && app.match.net.ready, null, 60000));
 ok(both2, 'match 2 on the same room connection');
@@ -87,6 +101,7 @@ await C.click('#endBack');
 ok((await wait(H, () => app.state === 'lobby', null, 10000)) && (await wait(C, () => app.state === 'lobby', null, 10000)), 'both back in the room again');
 
 // 7. friend drops into a running match (leaves it, then 加入對戰)
+await C.click('#lbStart'); await sleep(700);
 await H.click('#lbStart');
 await wait(C, () => app.state === 'playing' && app.match && app.match.net && app.match.net.ready, null, 60000);
 await C.evaluate(() => app.returnToLobby()); await wait(C, () => app.state === 'lobby', null, 10000); await sleep(500);

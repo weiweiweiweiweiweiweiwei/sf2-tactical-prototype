@@ -19,7 +19,10 @@ function chatSafe(m) {
   if (!m || typeof m !== 'object') return null; const t = chatText(m.t); if (!t) return null;
   return { n: m.sys ? '' : safeName(m.n, '玩家'), c: m.c === 'bravo' ? 'bravo' : m.c === 'alpha' ? 'alpha' : null, t, tm: !!m.tm, sys: !!m.sys };
 }
-const ROOM_ST = { room: 'READY', loading: '載入中', playing: '對戰中', ended: '結算中' };
+// v64c SF2's ready check (user 10-28): a guest presses 準備 (F5) in the room — 'ready' — and only ready players go when the host
+// starts; the rest stay in the room and can join the running match. In the armory a player is never ready ('armory', 備戰中:
+// still picking guns, he would be pulled in mid-pick). 'room' = in the room, not ready (no label).
+const ROOM_ST = { room: '', ready: '已準備', armory: '備戰中', loading: '載入中', playing: '對戰中', ended: '結算中' };
 
 // the room's settings as the host sends them, and as a member accepts them (a broken or hostile value can never reach Match)
 function roomCfgOut() {
@@ -131,9 +134,15 @@ class RoomHost extends RoomSession {
       if (this.pub && this.online) this._announce();
     }, 60);
   }
-  countdown() { if (this.t) this.t.send('*', { k: 'rcount' }); }
-  cancel() { if (this.t) this.t.send('*', { k: 'rcancel' }); }
-  go(cfg) { this.phase = 'playing'; this.mcfg = cfg; this.members[0].st = 'loading'; if (this.t) this.t.send('*', { k: 'rgo', cfg }); this._changed(); }
+  // v64c the 3-2-1 and the start go to the ready guests only; the others see the room turn 'playing' and may join it later
+  readyIds() { return this.members.filter((m) => !m.host && m.st === 'ready').map((m) => m.id); }
+  countdown() { this.counted = this.readyIds(); if (this.t) for (const id of this.counted) this.t.send(id, { k: 'rcount' }); }
+  cancel() { if (this.t) for (const id of this.counted || []) this.t.send(id, { k: 'rcancel' }); this.counted = null; }
+  go(cfg) {
+    this.phase = 'playing'; this.mcfg = cfg; this.members[0].st = 'loading'; this.counted = null;
+    if (this.t) for (const id of this.readyIds()) this.t.send(id, { k: 'rgo', cfg });
+    this._changed();
+  }
   status(st) { const me = this.members[0]; if (me.st !== st) { me.st = st; this._changed(); } }
   matchOver() { if (this.phase !== 'room') { this.phase = 'room'; this.mcfg = null; this._changed(); } }
   setPublic(on) { this.pub = !!on; if (this.pub) this._announce(); else this.app.dir.withdraw().catch(() => {}); this._changed(); }

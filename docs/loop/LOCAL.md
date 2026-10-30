@@ -3,7 +3,9 @@
 > 本機負責雲端做不到的事：D 槽的 SF2／Apex 安裝檔、真實顯卡、雲端連不上的網站。
 > 工作清單在 [`HANDOFF.md`](HANDOFF.md) 的「待本機」。雲端的規則在 [`CLOUD.md`](CLOUD.md)。
 
-## 分支規則（最優先）
+> **10-28 起只有這一個 Claude Code**（雲端、本機 B 停用，見 HANDOFF 開頭）：沒有雲端可合併，`src/` 也由本機改；推 `master` 仍只在使用者要求時。
+
+## 分支規則（最優先，雙視窗時期）
 - 只在 `local/assets` 分支開發和 push。分支不存在就從 `origin/claude/intelligent-einstein-vgvrqy` 建立。
 - 不 push 到 `master` 或 `claude/intelligent-einstein-vgvrqy`，不開 PR。雲端每輪會把 `local/assets` 合進雲端分支。
 - loop 自己只用 `git push origin local/assets`。使用者在對話中明確要求合併進 `master` 時才推 `master`（2026-10-28 就是這樣，`f1d39c0`）。

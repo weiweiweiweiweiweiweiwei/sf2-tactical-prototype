@@ -521,7 +521,10 @@ class Match {
   _killAnnounce(def, head, pts, opts, victim) {
     const hud = this.app.hud, p = this.player, ws = this.weapons;
     p.streak++; p.multi = this.time - p.lastKillT < 4 ? p.multi + 1 : 1; p.lastKillT = this.time; p.lastVictim = victim;
-    hud.points(`+${pts}  ${def.kind === 'knife' ? '刀殺' : def.kind === 'grab' ? '擒拿擊殺' : def.kind === 'grenade' ? '手榴彈擊殺' : head ? '爆頭' : '擊殺'}${opts.collateral ? ' · 穿透' : ''}`);
+    { const rg = ws.current && ws.current.def === def && ws.current.vm && ws.current.vm.rig; if (rg && rg.camo) rg.camo.kill(); } // v64o a camo's kill flare (魔術迴路)
+    let refill = ''; // v64n Apex 扣血 (user 10-28 B, like looting a death box): a kill puts one mag of the gun in hand back in its reserve, up to the full reserve
+    if (this.apex && ws.current && ws.current.mag && ws.current.reserveMax) { const w = ws.current, add = Math.min(w.mag, w.reserveMax - w.reserveAmmo); if (add > 0) { w.reserveAmmo += add; refill = ` · 彈藥 +${add}`; } }
+    hud.points(`+${pts}  ${def.kind === 'knife' ? '刀殺' : def.kind === 'grab' ? '擒拿擊殺' : def.kind === 'grenade' ? '手榴彈擊殺' : head ? '爆頭' : '擊殺'}${opts.collateral ? ' · 穿透' : ''}${refill}`);
     // v34 SF2 kill emblems — the strongest one first, then the extras
     const E = [], d = victim ? Math.hypot(victim.motor.pos.x - p.motor.pos.x, victim.motor.pos.z - p.motor.pos.z) : 0, gun = def.kind !== 'knife' && def.kind !== 'grab' && def.kind !== 'grenade';
     if (p.multi >= 2) E.push(['double', 'multi', 'specialist', 'specialforce'][Math.min(p.multi - 2, 3)]);
@@ -540,6 +543,8 @@ class Match {
     p.deathRun = 0;
     if (!this.isClient && Math.random() < 0.06) { p.score += 100; setTimeout(() => hud.lucky(100), 900); } // SF2 'Lucky Point': a random bonus on a kill
     for (const id of E.slice(0, 4)) hud.emblem(id);
+    const T = { double: 'continuous', multi: 'continuous', specialist: 'continuous', specialforce: 'continuous', lastshot: 'rare', first: 'rare', welcome: 'rare', headshot: 'special', wall: 'special', slash: 'special', revenge: 'special', knife: 'special', grenade: 'special', grab: 'special', pierce: 'special', fastzoom: 'normal', longshot: 'normal' }; // v64m SF2 kill sound tiers
+    this.audio.killFeedback(['continuous', 'rare', 'special', 'normal'].find((t) => E.some((x) => T[x] === t)) || 'default');
     if (victim) hud.killNote(victim.name, E.find((x) => x === 'headshot' || x === 'grenade' || x === 'slash' || x === 'knife' || x === 'grab') || 'kill');
     p.emblems = p.emblems || {}; for (const id of E) p.emblems[id] = (p.emblems[id] || 0) + 1;
     const streaks = { 5: 'KILLING SPREE', 8: 'RAMPAGE', 12: 'UNSTOPPABLE', 16: 'GODLIKE' };
@@ -650,11 +655,12 @@ class Match {
 
   /* ------------------------------ weapon drops / pickups ------------------------------ */
   static isGun(def) { return !!def && !!def.mag && def.kind !== 'knife' && def.kind !== 'grenade'; }
-  // A dropped gun: physics body (it tumbles and settles), low-poly mesh, pulsing ground glow; remembers its ammo.
+  // A dropped gun: physics body (it tumbles and settles), the detailed model (v64d), pulsing ground glow; remembers its ammo.
   dropWeapon(def, ammo, reserve, pos, vel, netId = 0) {
     if (!Match.isGun(def) || !this.opts.pickup) return null; // room option: no weapon drops / pickups
-    const holder = new THREE.Group(), gun = new THREE.Mesh(this.app.models.tp(def.model), this.app.soldiers.gunMat);
-    gun.scale.setScalar(1.25); gun.castShadow = true; holder.add(gun);
+    const holder = new THREE.Group(); let gun; // v64d the detailed first-person model (no arms), real size; the low-poly one if it cannot be built
+    try { gun = this.app.models.dropModel(def); } catch (e) { gun = new THREE.Mesh(this.app.models.tp(def.model), this.app.soldiers.gunMat); gun.scale.setScalar(1.25); gun.castShadow = true; }
+    holder.add(gun);
     const len = ((WEAPON_DATABASE[def.id] && WEAPON_DATABASE[def.id].tp && WEAPON_DATABASE[def.id].tp.len) || (def.kind === 'pistol' ? 0.22 : 0.9)) * 0.62;
     const dyn = this.physics.addDynamic({ mesh: holder, mass: 3, shape: new CANNON.Box(new CANNON.Vec3(0.035, 0.06, Math.max(0.08, len / 2))), position: pos, velocity: vel,
       angularVelocity: { x: rand(-2, 2), y: rand(-6, 6), z: rand(-4, 4) }, linearDamping: 0.08, angularDamping: 0.45, life: 999, manual: true });
@@ -786,15 +792,29 @@ class Match {
       const n = this.grenades[i]; n.t += h;
       // anti-tunnelling: fast grenades are swept against the level every step and bounced off whatever they would pass through
       const b = n.body, cur = TMP_V3.set(b.position.x, b.position.y, b.position.z), seg = d.subVectors(cur, n.prev), len = seg.length();
-      if (len > 0.08) {
+      const tri = this.collision.tris; // v63m triangle maps: no cannon trimesh tiles (3 grenades = ~200k triangles, 100 ms a step) — every step is swept here
+      if (len > (tri ? 0.004 : 0.08)) {
         seg.divideScalar(len);
         const h = this.collision.raycast(o.copy(n.prev), seg, len + 0.05, false);
         if (h) {
           const nrm = h.normal, v = b.velocity, vn = v.x * nrm.x + v.y * nrm.y + v.z * nrm.z;
           b.position.set(h.point.x + nrm.x * 0.07, h.point.y + nrm.y * 0.07, h.point.z + nrm.z * 0.07);
-          if (vn < 0) { v.x -= 1.38 * vn * nrm.x; v.y -= 1.38 * vn * nrm.y; v.z -= 1.38 * vn * nrm.z; v.x *= 0.75; v.y *= 0.75; v.z *= 0.75; }
-          this.audio.nadeBounce(b.position, Math.min(1, Math.abs(vn) / 8));
+          if (tri && nrm.y > 0.7 && vn > -1.5) { if (vn < 0) { v.x -= vn * nrm.x; v.y -= vn * nrm.y; v.z -= vn * nrm.z; } } // (a slow touch on a floor: it rests, no bounce)
+          else {
+            if (vn < 0) { v.x -= 1.38 * vn * nrm.x; v.y -= 1.38 * vn * nrm.y; v.z -= 1.38 * vn * nrm.z; v.x *= 0.75; v.y *= 0.75; v.z *= 0.75; }
+            this.audio.nadeBounce(b.position, Math.min(1, Math.abs(vn) / 8));
+          }
           cur.set(b.position.x, b.position.y, b.position.z);
+        }
+      }
+      if (tri) { // resting / rolling on a triangle floor: held on it, rolling friction
+        const g = tri.groundAt(cur.x, cur.y + 0.05, cur.z, 0.03, 0.16), v = b.velocity; // (centre 5 cm above the floor at rest, 7 after a swept bounce)
+        if (g !== null && cur.y - 0.05 <= g + 0.03) { // (a swept bounce leaves it 7 cm up: within 3 cm of the radius counts as touching)
+          if (cur.y - 0.05 < g) { b.position.y = g + 0.05; cur.y = b.position.y; }
+          if (v.y < 0) v.y = v.y < -1.5 ? -v.y * 0.3 : 0;
+          const k = Math.max(0, 1 - 3 * h); v.x *= k; v.z *= k; b.angularVelocity.scale(k, b.angularVelocity);
+          const ny = tri.nrm[tri.lastTri * 3 + 1] || 1; // (static friction: slow on a gentle floor → stop; a steep one still rolls it down)
+          if (ny > 0.9 && v.x * v.x + v.y * v.y + v.z * v.z < 0.6) { v.set(0, 0, 0); b.angularVelocity.set(0, 0, 0); }
         }
       }
       n.prev.copy(cur);

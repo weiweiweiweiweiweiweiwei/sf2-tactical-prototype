@@ -1213,3 +1213,363 @@
 - `src/07w_skulltown.js`：`apexColPatchLoad` 在 preload 載入 colpatch.js（`?nocolpatch` 不載，給工具量測用），`apexColPatch` 併進碰撞三角形。
 - 驗證：`check-apex-full.mjs` 兩張圖都 `APEX_MAP_OK`。隨機走探測仍有約 5 % 走進岩石或牆縫（那些是牆沒有碰撞，不是地板），由上一筆的拉回保護處理。
 - index.html 沒有一起 commit（工作目錄裡有另一個視窗未 commit 的改動），合併時請重新 `sh src/build.sh`。
+
+
+### （本機 B，2026-10-28）SF2 新槍：G36C EOTech 消音、HK417 mod2A Reflex 消音、SCAR-L MK2 EOTech 消音、K14
+- 使用者 10-28 指定（烤漆之後再說）：「魔術迴路 G36C EOTech Silencer」就是 `SFCWeaponG36C_EOTech_Silencer_ButterflyFX`（ButterflyFX 是烤漆名），「衝擊波 K14」是 `SFCWeaponK14`。
+- 配件從 SF2 原版的包匯出：`weapon_common_part` 的 `DOT_EOTECH`、`silencer_ar_type_a/b/c`，`weapon_common_part01` 的 `DOT_REFLEX`，準心貼圖 `dot_point` 的 `eotech_reticleDot`／`reflex_reticleDot`（EOTech 圓圈＋中心點、Reflex 小圓＋點），消音槍聲 `Sound_Silence` 的 `AR_Silence`／`_T`。
+- `tools/sf2_rig_build.mjs`：新選項 `optic`／`silencer`——瞄具的根骨頭對到槍身的 `Scope` 插槽、消音器對到 `Silencer` 插槽；瞄具自己的 `ZoomCrosshair` 插槽是瞄準點（`DOT` 標記），消音器自己的 `flame` 插槽是新槍口（`MUZZLE`）；鏡片（`lens_*`／`*_glass`）用半透明材質；準心貼圖做成 2 cm 的方片放在 DOT。新槍：`g36c_eo`、`hk417_rs`、`scarl_eo`（各自原槍的骨架和動畫）、`k14`（`sni_k14`，鏡在槍身上；Fire 片段就是拉栓）。
+- 遊戲端：`SF2Rig` 有 `DOT` 時眼睛對準 DOT（深度照 `vLocZoomIN`），K14 沒有 `ZoomFire` 時用 `Fire`；透明網格不進 AO（原本鏡片被 AO 蓋成灰色）。`fromRig` 把準心方片的貼圖做成開鏡時淡入的 sprite，角度大小和 SF2 的方片一樣。`01_core.js` 新增四把槍（傷害照原槍的平衡：G36C 25/19、HK417 36/29 20 發、SCAR-L 28/21、K14 照 M40A1 110/96），時間、鏡頭、後座力由 `tools/sf2_weapon_table.py` 從各自的 SF2 類別產生（HK417 mod2A 後座比原版小、SCAR-L MK2 射速 0.0945）；三把消音槍 `suppressed`（不上雷達、沒有火光）；Bot 也會拿。
+- 聲音：`tools/sfx_sf2.mjs` 支援 `<id>=<槍>+silence` 別名（不複製資料）；K14 自己的槍聲、拉栓（`Fire_Slide` → `boltback`）、換彈（Reload 91 格：13 開栓、28 退匣、44 插匣、68 關栓）。
+- 驗證：`analyze`、`build`、`check.mjs --gpu intel`（CHECK_OK）、`_fileplay`（FILE_PLAY_OK）；`_gunshot` 腰射／開鏡（EOTech、Reflex 準心在瞄具窗正中、透得過鏡片；K14 開鏡是 2D 狙擊鏡）、`_gunreload`（HK417 換彈、K14 拉栓）。
+- 照使用者的 SF2 截圖校正（10-28）：HK417 Reflex 的腰射＋開鏡（真 16:9，準心是正圓）和魔術迴路 G36C 的開鏡（4:3 拉成 16:9，只比高度）。
+  - 和 SF2 一樣腰射、開鏡同一個眼睛位置：瞄具的 DOT 後 15 cm（HK417 腰射時瞄具 205／2000 px 寬，位置也對上）；SF2 開鏡是把網格鏡頭變窄來放大，不是把眼睛移近——開鏡鏡頭 HK417 15、G36C／SCAR-L 20（類別寫 40／35）。HK417 瞄具窗佔畫面寬 75 %（SF2 76 %），G36C 窗高 55 %（SF2 52.5 %）。
+  - 準心：實心紅、不受色調映射影響；圈的大小照截圖（Reflex 圈佔畫面寬 6 %、EOTech 圈高 16.5 %），貼圖裡圈的直徑在對角線上量（EOTech 82、Reflex 32 px）。鏡片淡暖色。
+- 未做：烤漆（魔術迴路的綠色電路紋）；K14 的腰射、SCAR-L 沒有 SF2 截圖可對照；G36C 腰射沒有截圖（用和 HK417 同樣的 15 cm）。
+
+
+### （本機，2026-10-28）：Apex 地圖手榴彈造成的卡頓（0.1–0.4 秒停頓）
+- 使用者 10-28：現在的版本很不順暢。量測（`tools/out/_spikes.mjs`：訓練場 5v5、150 秒，逐幀拆每一部分的時間）：慢幀幾乎都是物理步驟 `world.step` 40–110 ms——每顆飛行中的手榴彈周圍 3×3 個 16 m 地圖碰撞塊做成 cannon Trimesh（一顆約 10 萬個三角形，3 顆 19 萬），一幀又跑好幾步，畫面停 0.1–0.4 秒；動態解析度也因此一直降到 0.55（畫面變糊）。
+- 改成：三角碰撞地圖不再建 Trimesh 塊（`SkullStreaming.tick` 空了、`_tile` 刪除）。`Match.stepGrenades` 每步都用射線掃過這一步的路徑反彈（原本只在一步 > 8 cm 時），慢速碰到地板就停住不彈；在地板上時貼地、滾動摩擦，緩坡上慢到 0.77 m/s 以下就靜止，陡坡仍會滾下去。
+- 驗證：`tools/out/_nadetest.mjs`（40 顆、隨機導航點、隨機方向）訓練場 39 顆停在地板上、1 顆還在斜坡上滾，0 顆穿地；骷髏鎮 39 停、1 顆停在地板下 23 cm（縫隙）。物理一步最多 3.3 ms（原本 100 ms）。訓練場 150 秒 > 20 ms 的幀 189 → 4；`check-apex-full` 過。
+
+
+### （本機，2026-10-28）：SCAR 槍托接回槍身、K14 裝上狙擊鏡
+- 使用者 10-28（倉庫截圖）：SCAR-H、SCAR-L MK2 的槍托和槍身分開。原因：SCAR 的槍托用自己的綁定姿勢（`weapon_stock` 和槍身差 90°），套 SF2 的動畫後槍托落在機匣後方 5.2 cm——SF2 第一人稱看不到槍托所以沒差，倉庫卡片看得到。`tools/sf2_rig_build.mjs`：名為 `stock` 的零件有自己的綁定時，沿槍身長軸量出空隙（> 1 cm）並在它自己的綁定空間裡移回去（`STOCKGAP` 記錄）。SCAR-H／L／L MK2 各 5.2 cm；AK-103 沒有空隙、不變。
+- 使用者 10-28：K14 沒有狙擊鏡。SF2 的 K14 鏡是另一個零件：`weapon_common_part01` 的 `scope_k14_bender`（它的 UV 和 K14 各款塗裝的鏡貼圖對得上，`sni_k14` 也有轉向 `bender_scope_*` 的參照），貼圖 `bender_scope_d／_n`。加進建模工具（`K14_SCOPE`，掛槍身的 `Scope` 插槽；它沒有 `ZoomCrosshair` 插槽，狙擊開鏡是全螢幕鏡圈，所以不設 DOT）。
+- 驗證：倉庫卡片圖（`tools/out/_thumbs.mjs`）SCAR 三把槍托接上、K14 有鏡；遊戲中 K14 腰射看得到鏡、開鏡是鏡圈畫面；`check.mjs` 過。
+
+
+### （本機，2026-10-28）：房間的準備機制（照 SF2）
+- 使用者 10-28：非房主玩家的按鈕改成「準備 (F5)」（再按一次「取消準備」）；房主按開始時只有已準備的玩家進入對戰，沒準備的留在房間、之後可以「加入對戰」；在倉庫一律視同未準備（還在備槍不會被拉進去）。名字右邊顯示「已準備」（綠）或「備戰中」（倉庫）；原本的「READY」標籤拿掉。
+- `src/18c_room.js`：`ROOM_ST` 加 `ready`／`armory`；`countdown`／`cancel`／`go` 只送給已準備的成員（`readyIds`）。`src/17_app.js`：客人按鈕切換準備、開倉庫送 `armory`、關倉庫回 `room`；對戰結束回房間就是未準備。`NET_VERSION` 30 → 31（舊版客人不會送準備）。
+- 驗證：`tools/_room.mjs`（真的 Supabase＋WebRTC、兩個瀏覽器）全部 PASS，新增：倉庫中房主看到「備戰中」、沒準備時房主開始只有自己進場、朋友看到「加入對戰」、按準備後房主看到「已準備」、按鈕變「取消準備」。
+
+
+### （本機，2026-10-28）：別人手上的槍回到簡易模型；掉在地上的槍改用精細模型
+- 使用者 10-28：第三人稱看到的 SF2 原版 M4A1（v63f）如果拿掉能讓遊戲順一點就拿掉；掉在地上的槍要辨識、拾取，才需要精細模型。
+- 士兵手上：拿掉 `GUN_3RD`（M4A1 第三人稱是 4 個零件＝每個士兵 4 次繪製、加陰影 8 次），回到合併成一個網格的程式槍模；`tools/guns/pack.mjs` 不再打包 `*_3rd.glb`。
+- 掉落的槍：`WeaponModels.dropModel` 用第一人稱模型（不含手臂），SF2 原版槍的骨架在當下姿勢烘成一般網格，每種槍只做一次、之後的掉落共用幾何（第一次 7–15 ms，之後 0.1 ms），真實大小、槍口朝 −Z、置中；做不出來時退回原本的簡易模型。
+- 驗證：`tools/out/_drops.mjs`（M4A1、AK-103、SCAR-H、K14、MP5K、P226 掉在玩家前方）截圖可辨識；`check.mjs` 倉庫和訓練場過。
+
+
+### （本機，2026-10-28）：SF2 原版的手榴彈、命中、擊殺、換槍音效
+- 使用者 10-28：手榴彈、煙霧彈、閃光彈換成 SF2 原生音效；子彈打在敵人身上、滑鼠滾輪換槍、擊殺成功的音效也套用 SF2 的。
+- 從使用者的安裝檔匯出（UModel `-export -sounds`），照 SF2 自己的 SoundCue 對應：破片 `M67_Explo_01／02`（`Cue_M67_Explo`）、閃光 `M84_Explo_01／02`、煙霧 `M18_Explo_01`、拉環 `Grenade_Pin`、投擲 `Grenade_Throw`、拿出 `Grenade_Equip`；命中 `bullet_hit_2d_03`（`HitNormal_cue`）；致命一擊 `Bullet_flesh_01–05` 降調 0.8（`HitDead_cue`）＋擊殺 `kill3_New`（`cue_kill3_new`）；換槍 `hud_switch05`（SFGame 腳本裡的名稱）。
+- `tools/sfx_sf2_fx.mjs` → `assets/sfx_sf2_fx.js`（432 KB），`src/02_audio.js` 載入後併進音效包：爆炸／煙霧改播錄音（沒有時退回原本的），`MECH_REC` 加拉環／投擲／拿出，命中音效清單新增「SF2 原版」並設為預設（舊設定一次性改過去，清單裡其他的還能選），自己換槍時多一聲 HUD 切換。
+- 驗證：`tools/out/_sfxfx.mjs` 10 組都載入、每個呼叫不報錯；`check.mjs` 過。
+
+
+### （本機，2026-10-28）：K14 狙擊鏡轉正、SF2 原版的鏡內畫面和兩段倍率
+- 使用者 10-28（SF2 K14 截圖：手持、開鏡、兩段放大）：鏡子的模型轉錯 90 度——SF2 的高低轉鈕在上、側邊轉鈕在左，我們的在左側。`scope_k14_bender` 照自己的綁定讀進來就躺了 1/4 圈；`tools/sf2_rig_build.mjs` 新增零件選項 `roll`：繞零件自己網格的長軸、經過中心轉（K14 +90°，`ROLL` 環境變數可試）。
+- 倍率：SF2 第一段是 K14 的 `fZoomedFOV` 45°，第二段 20°（`SFPawn` 的 `CamFOVSniperZoomIn2nd`；使用者截圖量到第二段約為第一段的 2.5 倍，tan 比 2.35 吻合），兩者都是 UE3 的水平角——`zoomHFovs: [45, 20]`，遊戲照螢幕比例換成垂直角。
+- 鏡內畫面（`hud_sniper` 是 Flash，UModel 匯不出來，照使用者截圖量 2000×1124）：鏡筒亮區半徑 71vh、內緣深褐色漸暗；十字：中心圓半徑 6.6vh、豎線從上方 13.8vh 到圓的底部、橫線較粗到 ±18.9vh（圓內斷開）、每 3vh 一根往上的刻度（長 4vh／短 1.3vh）、橘紅中心點。兩段倍率十字大小不變。只套在 SF2 原版狙擊槍（目前是 K14），其他狙擊槍維持原本的鏡。
+- 驗證：遊戲中 K14 腰射截圖轉鈕在上；開鏡兩段截圖和 SF2 的對照；`check.mjs` 過。
+
+
+### （本機，2026-10-28）：命中音效去掉尾段、K14 腰射位置和鏡內十字照 SF2
+- 使用者 10-28：命中音效尾段有怪笑聲。`bullet_hit_2d_03` 的音量曲線：命中聲在 0.04–0.36 秒，0.38 秒降到 −36 dB，0.40 秒開始另一段聲音（到約 0.6 秒）。遊戲只播前 0.37 秒、最後 25 ms 淡出（`AudioEngine._hitHead`）。「SF2 原版」維持預設命中音效。
+- K14 腰射：使用者的 SF2 手持截圖裡，正對鏡頭的大鏡片是**目鏡**（槍是從後方看）。`tools/out/_k14fit2.mjs` 在遊戲中用第一人稱攝影機投影瞄準鏡最靠近鏡頭的一圈，反覆調整腰射時的槍模位置，讓目鏡中心落在畫面 83.5 %／67.6 %、半徑 6.25 % 畫面寬（SF2 截圖量的）；結果寫在 `RIG_HIP.k14`，`SF2Rig` 新選項 `hipPos`（開鏡端不變）。
+- 鏡內十字（使用者兩張更清楚的 SF2 截圖，以中心圓半徑 R 量）：橫桿加粗（0.065R）、圓內補一條細橫線（紅點在上面）、豎線從上方 2.13R 一路到圓下方、圓下方加粗柱（1.43R–2.52R，寬 0.087R）；紅點不發光（純橘紅、半徑 0.087R）。
+- 驗證：同一頁投影＋截圖確認目鏡落在目標圈上；`check.mjs` 過。
+
+
+### v64m（本機，2026-10-28）：SF2 的擊殺音效分五級、換彈動畫照 SF2 的長度、Apex 訓練場拿掉沒貼圖的草叢
+- 擊殺音效（使用者：命中有聲音、擊殺沒有）：SF2 的擊殺聲由 `SFKillMessage.GetKillFeedBackSound` 決定，依這次擊殺最強的訊息分五級：
+  - `hud_kill_default`：一般擊殺、助攻。
+  - `normal`：瞬間秒殺、遠射高手、同歸於盡。
+  - `special`：命中頭部、無處可藏、背後突襲、復仇使者、刀、手榴彈。
+  - `rare`：最後一擊、首殺、捲土重來。
+  - `continuous`：2 連殺以上。
+  - 等級表照 `GetKillFeedBackType`，以及 `KillMsgStringArray`／`WeaponKillMsgStringArray` 解出來的順序。
+  - 之前只播 `kill3_New`（舊的通用音效），現在五級各播自己的錄音。`tools/sfx_sf2_fx.mjs` 加 `kfb_*`；新增 `AudioEngine.killFeedback(tier)`；`Match._killAnnounce` 依徽章選等級。只在命中音效選「SF2 原版」（預設）時播。
+  - 另外，master 之前停在 v63i，沒有 v64e 的擊殺音效，這次一起推上去。
+- 換彈（使用者：K14 換彈偏快）：
+  - 實測 K14 從按 R 到子彈補滿是 3.007 s，和 SF2 的 `ReloadTimes` 3.0 一致（`SFWeapon.GetReloadTime`、`WeaponReloading` 的 `Reloaded` 計時器）。
+  - 差別在動畫：SF2 把 Reload 片段播在 `ReloadBlendTime` 上（`GetReloadBlendTime`，K14 是 3.25 s），我們之前壓進 3.0 s，快了 8 %。
+  - 現在片段照 `sf2ReloadAnim`（= ReloadBlendTime）播完。`tools/sf2_weapon_table.py` 從 SFGameContent 讀這個值；M4A1、AK-103（2.533）和 G36C（2.5）是手寫的。
+  - 子彈仍在 reloadTime 補進，補進後就可以開槍；開槍會切掉剩下的動畫，和 SF2 一樣。換彈音效的時間點改成片段長度的比例。
+  - 實測：K14 子彈 3.0 s、動畫到 3.234 s；M4A1 子彈 2.3 s、動畫到 2.517 s。
+- Apex 訓練場的「雜訊」（使用者截圖紅圈）：
+  - 是 Apex 的草叢 `universal_grass_clump_tall／medium_01_green_01`。匯出時沒有貼圖、也沒有透明裁切，每片草卡變成灰黑色的實心三角形。
+  - 地圖上有 15 個（共 1.8k 三角形），全部不載入（`src/07w_skulltown.js`；Skull Town 用同一段程式，也適用）。
+- 狙擊槍調查（使用者 10-28 指定）：AWP、CheyTac M200、CZ700、M40A1 的槍模、貼圖、動畫、槍聲已匯出到 `tools/out/sf2/`。狙擊鏡網格不在各自的包裡（見 TODO §1）。
+- 驗證：
+  - `tools/out/_reloadtime.mjs`：K14、M4A1。
+  - `tools/out/_killsnd.mjs`：五級都載入、都播出。
+  - `tools/out/_apexfol.mjs`：草叢剩 0 個。
+  - `check-apex-full.mjs apex_full`：APEX_MAP_OK。
+  - `check.mjs`：CHECK_OK。
+
+
+### v64n（本機，2026-10-28）：Apex 扣血模式的子彈（使用者選 A＋B）
+- 起因：Apex 模式的彈匣、備彈和 SF2 模式一樣，但擊殺要的發數多了約 2.5 倍。
+- A 備彈放大：每把槍依「Apex 擊殺要的身體發數 ÷ SF2 的」放大，範圍 1–4 倍。
+  - Apex 那邊用對應的 Apex 槍的每發傷害，打滿血滿盾 200；SF2 這邊用我們的近距傷害打 100。
+  - 計算在 `def.apexReserveMult`（`src/01_core.js`），`Weapon.reserveMax` 套用。
+  - 例：M4A1 120 → 300、MP5 120 → 450、AK 120 → 400、AWP 50 → 150、Desert Eagle 28 → 56。彈匣大小不變。
+- B 擊殺補彈（像 Apex 舔包）：每擊殺一人，手上的槍補回一個彈匣到備彈，最多補到滿；得分提示多一段「彈藥 +30」（`Match._killAnnounce`）。
+- 驗證：`tools/out/_apexammo.mjs`。Apex 模式下 M4A1 開場備彈 300；先減到 250，擊殺一人後變 280；頁面沒有錯誤。
+
+
+### v64o（本機，2026-10-28）：魔術迴路 G36C（SF2 的 CircuitFX 迷彩）
+- 使用者 10-28：魔術迴路的貼圖會動，擊殺敵人後還會變色。對應的 SF2 道具：
+  - 這把槍是 `SFCItem_G36C_EOTech_Silencer_CircuitFX`：G36C、EOTech 全息瞄具、消音器，再加 `SFCItem_Func_WeaponCamo_CircuitFX` 迷彩。
+  - 迷彩類型是 ECAMOT_MATERIAL：整把槍換成迷彩自己的材質，手臂不換。
+  - 擊殺後 `ActionCamoKillTime` 為 1.5 s。
+- 材質是 `weapon_shader_base_sc` 的 `circuit_FX_m`，用三張貼圖：
+  - `FX_circuit_Base`：青綠色光帶。
+  - `FX_circuit_Shine`：電路紋路。
+  - `FX_circuit_Kill`：黃色電光。
+  - 參數 `camo_value 2`（UV ×2）、`Kill`。
+  - 烘焙後的材質只留下參數，平移節點沒了，所以流動速度是目測設的。
+- 實作：
+  - `tools/camo_sf2.py` 產生 `assets/camo_sf2.js`（186 KB，和槍包一起載入）。
+  - `SF2Camo`（`src/09c_sf2rig.js`）在槍的零件材質上加著色：槍原本的顏色壓暗、疊上流動的光帶；電路紋路發光，並有一道亮帶沿槍身跑。
+  - 擊殺時（`Match._killAnnounce`）電光 0.3 s 亮起，之後 1.2 s 淡掉。
+  - 槍的法線貼圖和打光照舊；瞄具鏡片不套迷彩。
+- 新槍 `g36c_circuit`「G36C 魔術迴路」：數值、動畫、聲音和 `g36c_eo` 相同，在倉庫的步槍類。地上的掉落模型也有迷彩（掉落快取依迷彩分開）。
+- 驗證：
+  - `tools/out/_rigshot.mjs`（GUNID=g36c_circuit，hip／ads／kill）截圖：平常是暗青綠加電路紋路，擊殺時整把亮出黃色電光。
+  - `check.mjs` CHECK_OK。
+- AWP、CheyTac、CZ700、K14 在 SF2 也有 CircuitFX 版（`SFCItem_<槍>_CircuitFX`），之後做到這些槍時，加 `camo: 'circuit'` 就能用。
+
+
+### v64p（本機，2026-10-28）：K14 狙擊鏡放正
+- 使用者 10-28（截圖加示意圖）：鏡子偏在槍的左下方，應該在正上方。
+- 原因：`scope_k14_bender` 的根骨骼綁定和 EOTech 差了剛好 1/4 圈（繞網格 x 軸，`[-0.5, 0.5, -0.5, -0.5]` 對 `[0, 0.707, 0, -0.707]`），所以 v64f 補轉 90° 的角度是對的。錯在轉軸：當時繞的是「網格外框的中心」。外框包含轉鈕和鏡座，中心不在鏡筒上，轉完鏡筒就跑到槍的側下方。
+- 修正：繞零件的根骨骼原點轉，也就是鏡座接到 `Scope` 插槽的點（`tools/sf2_rig_build.mjs`）。
+- 鏡子位置變了，腰射位置用 `tools/out/_k14fit2.mjs` 重新對 SF2 截圖：目鏡落在畫面 83.5 %／67.6 %、半徑 6.25 %，`RIG_HIP.k14` 改為 `[0.0217, -1.2026, -0.0378]`。
+- 驗證：腰射截圖鏡子在槍正上方、轉鈕朝上；`check.mjs` CHECK_OK。
+
+
+### v64q（本機，2026-10-28）：魔術迴路對比度、擊殺變色 3 倍時間、K14 準星紅點
+- 魔術迴路（使用者給了 SF2 官方圖：近黑的槍身上是鮮綠色電路紋路）：
+  - 槍身底色壓到近黑（原色 ×0.07＋光帶 ×0.06）。
+  - 紋路改成硬邊：亮度先過 `smoothstep(0.012, 0.09)` 再上色，顏色是飽和的綠 `(0.02, 1, 0.22)`，沿槍身跑的亮帶保留。
+- 擊殺變色（使用者：調成 3 倍）：SF2 的 `ActionCamoKillTime` 1.5 s 改為 4.5 s。0.3 s 亮起、持續，最後 1.5 s 淡掉。
+- K14 準星的橘紅點（使用者：小一點、周圍微微暈開、透明度 80 %）：
+  - 半徑 0.57 → 0.48。
+  - 不透明度 0.8。
+  - 外加半徑 1.05 的放射漸層暈光，中心 50 % 漸到 0（`src/00_head.html`）。
+- 驗證：
+  - `_rigshot.mjs` 截圖：魔術迴路平時是黑底綠紋、擊殺時有黃色電光；K14 開鏡放大看紅點較小、有一圈淡暈。
+  - `check.mjs` CHECK_OK。
+
+
+### v64r（本機，2026-10-28）：走路速度照 SF2 的槍重公式（使用者選 1A）
+- 公式（`SFPawn.SetGroundSpeedByWeight`、`SFInventoryManager.CalculateInventoryWeight`）：
+  - **負重** = 手上那把的裝備重量 + 另一格的收起重量。拿主武器時，另一格是副武器；拿手槍、刀或手榴彈時，另一格是主武器。SF2 的手槍、刀、手榴彈收起重量都是 0。
+  - **速度**：負重 ≤ 2 是 390 UU/s，≥ 6 是 295 UU/s，中間線性。
+- 資料：`tools/sf2_weight_table.py` 產生 `SF2_WEIGHT`（71 把，從 SFGameContent 讀；SF2 沒有對應類別的 6 把取最接近的同類，清單在註解裡）。
+- 基準：`CFG.player.sf2Speed` 6.43 m/s 對應 SF2 的 390。M4A1 單拿是 5.608 m/s，和改之前 5.9 × 0.95 相同。
+- 結果：
+
+  | 手上的槍 | 速度 |
+  |---|---|
+  | M4A1 | 5.61 m/s |
+  | M4A1 切手槍或刀 | 6.02 m/s |
+  | G36C | 5.80 m/s |
+  | AK-103 | 4.94 m/s |
+  | MP5K | 6.42 m/s |
+  | 狙擊槍（K14／M200 等） | 一律 4.83 m/s |
+  | K14 切手槍 | 5.29 m/s（被狙擊槍的收起重量 3.8 拖住） |
+
+- 程式：
+  - 玩家自己的速度每格即時算（`src/12_player.js`：`sf2Load`、`sf2Speed`）。
+  - Bot 和移動散布用 `def.moveSpeed`：主武器以單拿計算，其他以搭配收起的 M4A1 計算。
+  - 倉庫槍卡的「機動」條也改用重量算。
+- 驗證：
+  - `tools/out/_walkspeed.mjs`：各組合的負重和速度如上表；實際走路量到 AK-103 4.942、狙擊槍 4.826 m/s，和公式一致。
+  - `check.mjs` CHECK_OK。
+
+
+### v64s（本機，2026-10-28）：SF2 原版 TRG-41（使用者指定的第一把狙擊槍）
+- 模型與動畫：
+  - `sni_trg` 的槍身、槍管、彈匣、槍托，加上 SF2 原版手臂，綁在同一副骨架上。
+  - 動畫 `1st_ani_trg` 有 14 段：開槍含拉栓、換彈 91 格、開鏡、衝刺等。
+  - 狙擊鏡是 SF2 給 TRG 的 `Common_Scope_Zeiess`（`weapon_common_part01` 的 `scope_zeiess`，貼圖 `zeiss_*`）。它的根骨骼和 K14 的 Bender 鏡相同，所以一樣繞鏡座轉 1/4 圈。
+  - 建模：`tools/sf2_rig_build.mjs trg` 產生 `tools/guns/trg_sf2_rig.glb`（1061 KB）。
+- 數值（`SFCWeaponTRG`，`tools/sf2_weapon_table.py`）：
+  - 射擊間隔 1.2 s；換彈 3.3 s，動畫 3.45 s；拔槍 0.7 s。
+  - 開鏡兩段：水平視角 55°，再 20°。
+  - 重量 7.3：走路速度和其他狙擊槍相同。
+  - 傷害照 K14 的平衡。
+- 聲音：`Sound_TRG` 的三種槍聲、遠方槍聲、拉栓、退彈匣、裝彈匣、上膛、拔槍（`tools/sfx_sf2.mjs … trg`）。
+- 鏡內十字：照 SF2 的 Zeiss 鏡（`ScopeView_Reticle_03`）。
+  - 細紅十字貫穿整個鏡筒，中心是 2 px 的粉紫點。
+  - HUD 改成每把槍可指定自己的十字（`def.sf2Reticle`：K14 是 `bender`、TRG 是 `zeiss`；`#scope[data-ret]`）。
+- 倉庫：狙擊類第一把，一般清單也有。
+- 驗證：
+  - `_rigshot.mjs` 截圖：腰射時鏡在槍上方、轉鈕朝上；開鏡兩段都是 Zeiss 十字；開槍有拉栓動作。
+  - `_reloadtime.mjs`：子彈 3.3 s 補進、動畫播到 3.45 s。
+  - `check.mjs` CHECK_OK。
+- 還沒做：TRG 的腰射位置沒有對 SF2 截圖（K14 有）。目前用狙擊鏡的預設推法，需要使用者的 SF2 腰射截圖才能校。
+
+
+### v64t–u（本機，2026-10-28）：SF2 原版 M40A1、SF2 預設狙擊鏡十字；TRG-41 的鏡子放正
+- **M40A1**（槍枝迴圈第一把，`docs/loop/GUNS.md`）：
+  - `sni_m40a1` 沒有槍托零件，建模腳本新增 `partNames`。
+  - 狙擊鏡是 SF2 給它的 `Cz700_Def_Scope`（`scope_cz700`，貼圖在 `sni_cz700_texture`）。
+  - 動畫 11 段，換彈 95 格。
+  - 數值照 `SFCWeaponM40A1`：換彈 2.75 s，動畫 2.93 s；開鏡 55° 再 20°；重量 5.7。
+  - 聲音：`Sound_M40A1`，沒有單獨的拉栓開聲。
+- **SF2 預設狙擊鏡十字 `mil`**：`mic_ScopeView` 的貼圖是 `tex_scope_Crosshair_Diffuse` 加 `_dot`。M40A1、CZ700、M200、AWP 共用。
+  - 比例：用鏡片遮罩算，200 像素＝鏡筒半徑 71vh。
+  - 細線從中心 17.4vh 畫到 65.3vh。
+  - 外側粗桿畫到鏡筒邊緣。
+  - 中心是黑底紅點。
+  - 下方垂直線右側有測距刻度，從 17.4vh 到 58.6vh：每 5 格一根長刻度。
+- **TRG-41 鏡子歪掉**（使用者截圖：鏡筒偏到槍的右下方）：
+  - 原因：Zeiss 鏡的網格本來就是正的，不需要轉；我照搬了 K14 Bender 鏡的 90° 設定。
+  - 改成不轉（`roll 0`）。
+  - 建模腳本新增「放正」步驟（`SQUARE`）：所有轉過方向的鏡子，鏡片中心左右對準插槽，最低點（鏡座底）貼齊插槽高度，不受轉軸支點影響。
+  - 實際位移：K14 0.25 cm、M40A1 0.46 cm、TRG 0.43 cm（之前錯誤的狀態是 2.5／3.9 cm）。
+- 驗證：
+  - TRG、M40A1、K14 的腰射截圖：鏡子都在槍膛正上方，轉鈕朝上。
+  - `_reloadtime.mjs`：M40A1 子彈 2.75 s 補進。
+  - `check.mjs` CHECK_OK。
+
+
+### v64v（本機，2026-10-28）：SF2 原版 CZ700
+- `sni_cz700` 裝 `scope_cz700`（轉 90°，放正位移 0.46 cm）；十字 `mil`。
+- 數值照 `SFCWeaponCZ700`：彈匣 10、換彈 3.05 s（動畫 3.15 s）、開鏡 55° 再 20°、重量 7.5。
+- 聲音：`Sound_CZ700`，兩種槍聲。
+- 建模腳本：狙擊槍的槍管上沒有前準星時，POST 標記改用槍口位置。
+- 驗證：腰射截圖鏡子在正上方；`_reloadtime.mjs` 正常。
+
+
+### v64w（本機，2026-10-28）：SF2 原版 CheyTac M200
+- `sni_cheytac` 裝 `scope_cheytac`。比對轉向：轉 90° 時放正位移 0.41 cm，轉 0° 時 2.65／2.81 cm，所以用 90°。十字 `mil`。
+- 數值照 `SFCWeaponCheyTac`：換彈 3.2 s（動畫 3.48 s）、開鏡 55° 再 20°、重量 9.5。
+- 聲音：`Sound_Cheytac`。
+- 驗證：腰射截圖鏡子在正上方、有腳架；`_reloadtime.mjs` 正常。
+
+
+### v64x（本機，2026-10-28）：SF2 原版 AWP；AWP／M200／CZ700／K14 的魔術迴路版
+- AWP：
+  - `sni_awp` 裝 `scope_awp`：轉 90°，放正位移 0.41 cm（轉 0° 時是 2.57／2.83 cm）。十字 `mil`。
+  - 數值照 `SFCWeaponAWP`：彈匣 10、換彈 2.8 s（動畫 3.0 s）、重量 8.1。
+  - 聲音：`Sound_AWP_2`，有拉栓聲。
+- 魔術迴路版：SF2 也有這幾把的 CircuitFX 版（`SFCItem_<槍>_CircuitFX`）。新增 `awp_circuit`、`cheytac_m200_circuit`、`cz700_circuit`、`k14_circuit`，和原槍相同，只多了 `camo: 'circuit'`。它們在倉庫的狙擊類。
+- 驗證：
+  - AWP 腰射截圖：鏡子在正上方。
+  - `_reloadtime.mjs` 正常。
+  - AWP 魔術迴路截圖：整把槍連鏡子都是黑底綠紋。
+  - `check.mjs` CHECK_OK。
+
+
+### v64y（本機，2026-10-28）：SF2 原版 Barrett；SVD 暫停；迴圈工具
+- Barrett：
+  - `sni_barret` 裝 SF2 指定的 CZ700 鏡（`SFCItem_Barret_Def_Scope`）：轉 90°，放正位移 0.46 cm。
+  - 十字 `mil3`（`mic_ScopeView_03`）。
+  - 數值照 `SFCWeaponBarret`：換彈 3.7 s（動畫 3.88 s）、重量 9.9。
+  - 聲音：`Sound_Barret`。
+- SVD 暫停（⏸）：PSO 鏡是側掛的，接在 `Scope` 插槽上時位置和大小都不對（放正位移 13.7 cm）。遊戲裡維持原本的 SVD。
+- 新工具：
+  - `tools/sf2_export.sh`：一行匯出一把槍，或一個零件。
+  - `tools/sf2_reticle_svg.py`：SF2 的十字貼圖轉成 SVG，暗色像素合併成矩形，比例照鏡片遮罩換算。
+  - `tools/sfx_sf2.mjs` 接受 `<id>@<檔名字首>`。
+- 驗證：Barrett 腰射和開鏡截圖、`_reloadtime.mjs`、`check.mjs`。
+
+
+### v64z（本機，2026-10-28）：SF2 原版 Kar98k
+- 鏡子 `scope_kar98k` 在槍自己的包裡；不轉（左右位移 0 cm，轉 90° 時是 3.1 cm）；十字 `mil`。
+- 數值照 `SFCWeaponKar98k`：換彈 3.3 s（動畫 3.45 s）、重量 5.6。
+- 聲音：`Sound_Kar98k_new`，四種槍聲和拉栓聲。
+- 驗證：腰射截圖、`_reloadtime.mjs`、`check.mjs`。
+
+
+### v65a（本機，2026-10-28）：SF2 原版 SR-25
+- `sni_sr-25` 裝 `scope_sr25`：轉 90°，放正位移 0.41 cm；十字 `mil`。
+- 數值照 `SFCWeaponSR25`：
+  - 射擊間隔 1.15 s。原本是 0.3 s 半自動，現在依 SF2 原始資料。
+  - 換彈 3.2 s。
+  - 開鏡 `fZoomedFOV` 12°，作為第二段；第一段 20°。
+  - 重量 7.0。
+- 聲音：`Sound_SR25`。
+- 還沒做好：腰射時鏡子離鏡頭偏近，需要 SF2 截圖校正。
+- 驗證：腰射和開鏡截圖、`_reloadtime.mjs`、`check.mjs`。
+
+
+### v65b（本機，2026-10-28）：SF2 原版 PSG1
+- `sni_psg-1` 裝 `scope_psg-1`：轉 90°，放正位移 0.42 cm；十字 `mil`。
+- 數值照 `SFCWeaponPSG1`：射擊間隔 0.95 s、換彈 3.0 s、開鏡 20° 再 12°、重量 7.0。
+- 聲音：`Sound_PSG1`。
+- 還沒做好：腰射時槍離鏡頭偏近，和 SR-25 一樣。
+
+
+### v65c（本機，2026-10-28）：SF2 原版 FR-F2；十字轉換工具改進
+- FR-F2：
+  - `sni_frf2` 裝 SF2 指定的 PM2 鏡（`scope_pm2`）：轉 90°，放正位移 0.2 cm。
+  - 十字 `mil1`（`mic_ScopeView_01`）：紅色十字，四臂末端是工字線，中心留空。
+  - 數值照 `SFCWeaponFRF2`：射擊間隔 1.45 s、換彈 3.2 s、重量 6.3。
+  - 聲音：`Sound_FRF2`。
+- `tools/sf2_reticle_svg.py`：`_dot` 貼圖是十字發光的部分。`mic_ScopeView` 的只有中心一個紅點；`_01` 的是整組紅色線條，另外中心有一塊 37 × 13 的光暈。改成把紅色線條轉成紅色矩形，厚度超過 6 的色塊（光暈）不畫。
+- 驗證：開鏡截圖、`_reloadtime.mjs`、`check.mjs`。
+
+
+### v65d（本機，2026-10-28）：SF2 原版 M14 EBR（EOTech）
+- SF2 的 M14 EBR（`SFCItem_M14EBR`）裝的是 EOTech 全息瞄具（`SFCItem_Common_DotSight_EOTECH`），不是狙擊鏡。
+- 改成和 G36C EOTech 一樣的 3D 瞄具：眼距 15 cm，EOTech 圓圈十字；原本的 2D 狙擊鏡拿掉。
+- 數值照 `SFCWeaponM14EBR`：射擊間隔 0.3 s、換彈 3.5 s（動畫 3.63 s）、重量 6.1。
+- 聲音：`Sound_M14EBR`。
+- 驗證：開鏡截圖中紅色圓圈在視窗中央；`_reloadtime.mjs`、`check.mjs`。
+
+
+### v65e（本機，2026-10-28）：SF2 原版 AUG、SG 551、Type 89
+- AUG：`rif_aug` 加上 `rif_aug_sight` 的翻折覘孔，裝在 `Sight` 插槽。
+- SG 551：`rif_sig551`，用槍身上的照門和準星。
+- Type 89：`rif_type89`，用槍身上的照門和準星。`rif_type89_sight` 掛到 `Scope` 插槽時會浮離槍身，所以不用。
+- 數值照各自的 SF2 類別（`SFCWeaponAUGA3`／`SIG551`／`Type89`）：射速、換彈、拔槍、後座、重量。
+- 聲音：`Sound_AUGA3`／`SIG551`／`Type89`。
+- `tools/sfx_sf2.mjs` 修正：
+  - 認得 SF2 檔名的拼字錯誤（`Relaod`、沒有底線的 `AUGA3Equip`）。
+  - 只有第三人稱拔槍聲（`Equip_T`）時也拿來用（TRG）。
+- 還沒做好：Type 89 開鏡時，照門擋住部分視野。
+- 驗證：三把的腰射和開鏡截圖、`check.mjs`。
+
+
+### v65f（本機，2026-10-28）：SF2 原版 UMP45、MP7；P90、PP-2000、vz.61 暫停
+- UMP45：`smg_ump45` 加上照門 `smg_upm45_sight_up`（`Sight` 插槽）。
+- MP7：`smg_mp7` 加上 `smg_mp7_sight` 的照門。它的槍托貼圖叫 `mp7_stock_a`，建模腳本新增 `texMap` 可以逐零件指定貼圖。
+- 數值照 `SFCWeaponUMP45`／`MP7A1`，聲音 `Sound_UMP45`／`Sound_MP7`。
+- 暫停（⏸）：
+  - P90：環形瞄具沒有可對準的標記，開鏡時鏡頭在槍身裡。
+  - PP-2000、vz.61：在 SF2 是雙持，槍口插槽是 `flame_L`／`flame_R`。
+  - 這三把在遊戲裡維持原本的模型。
+- 驗證：UMP45、MP7 的腰射和開鏡截圖（從覘孔看出去）、`check.mjs`。
+
+
+### v65g（本機，2026-10-28）：SF2 原版 MG4、K3、HK23E；M249、RPK、L86A1 暫停
+- 三把都裝上自己的照門零件（`Sight` 插槽），數值照 SF2 類別，聲音用 `Sound_MG4`／`K3`／`HK23E`。
+- MG4 的照門貼圖只有 `mg4_sight_bw`（紅黑配色）。
+- 彈鏈不放：彈鏈零件有自己的動畫，彈匣箱照常顯示。
+- 暫停（⏸），遊戲裡維持原本的模型：
+  - M249：腰射時槍朝左上，照門貼圖缺。
+  - RPK、L86A1：開鏡時鏡頭在槍身裡。
+- 驗證：三把的腰射和開鏡截圖、`check.mjs`。
+
+
+### v65h（本機，2026-10-28）：SF2 原版 Remington 870、Benelli M4、KSG、Saiga-12；散彈槍三段換彈；AA-12 暫停
+- 四把散彈槍換成 SF2 原版：模型、動畫、聲音，數值照 `M870`／`BNLLI`／`KeltecKSG`／`SAIGA12`。KSG 裝 `sho_ksg_sight_up`。
+- 三段換彈（`src/09c_sf2rig.js`）：SF2 的管狀彈倉散彈槍沒有單一 `Reload` 片段，而是 `ReloadStart`、`ReloadLoop`、`ReloadEnd` 三段。
+  - 換彈中先播開始段一次，接著每裝一發循環一次。
+  - 停止換彈時（裝滿或開槍打斷）播結束段；開槍時不播結束段，因為開槍片段本身會上膛。
+  - `WeaponSystem` 多傳 `reloading` 給骨架。
+- 建模腳本新增 `fileMap`，可指定零件檔名（例如 AA-12 的 `body_a`）。
+- 暫停（⏸）：AA-12 開鏡時鏡頭在槍身裡。
+- 驗證：
+  - 四把的腰射和開鏡截圖。
+  - `tools/out/_shellreload.mjs`（870）：0.3 s 開始段；0.9 s 和 1.8 s 循環段，彈藥 2 → 3 → 5；裝滿 8 發後播結束段。
+  - `check.mjs`。
+
+
+### v65i（本機，2026-10-28）：SF2 原版手槍九把
+- 換成 SF2 原版的模型、動畫、聲音和數值：P226、Desert Eagle、Glock（`GLOCK17`）、M1911（`Colt1911`）、CZ 75、Jericho 941、S&W 60（轉輪）、M92FS、Infinity。
+- 零件只有槍身和彈匣（S&W 60 只有槍身），滑套是槍身的骨骼。
+- 匯出：手槍包整包 `-psk` 匯出時，UModel 會卡在動畫組。改用 `tools/out/_pistol_export.py` 逐個物件匯出。
+- 建模腳本：槍管零件不存在時，前準星搜尋也能正常執行。
+- M92FS 沒有 SF2 聲音包，維持原本的聲音。
+- 槍模檔案 `assets/guns/guns.js` 現在 59.3 MB。
+- 驗證：九把的腰射和開鏡截圖、P226 `_reloadtime.mjs`（1.3 s）、`check.mjs`。

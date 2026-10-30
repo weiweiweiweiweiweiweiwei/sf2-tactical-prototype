@@ -13,6 +13,7 @@ import { Settings, THREE, clamp, mulberry32, pick, rand } from './01_core.js';
 // v34 per-gun weight of the live sub kick (0 = none: suppressed guns)
 // v38 hit-sound audition list (ESC → 設定 → 命中音效): s = [sample group, gain] layers, synth = procedural layer
 const HIT_SOUNDS = {
+  sf2:        { label: 'SF2 原版', sf2: true }, // v64e (user 10-28) SF2's own: HitNormal_cue on a hit, HitDead_cue + the kill sound on the kill
   flesh:      { label: '真實子彈入肉', s: [['hit_flesh', 1.25]], headS: 'hit_head' },
   fleshgore:  { label: '子彈入肉＋血肉聲', s: [['hit_flesh', 1.15], ['hit_gore', 0.6]], headS: 'hit_head' },
   gore:       { label: '血肉撕裂（中頻）', s: [['hit_gore', 1.2]] },
@@ -53,6 +54,7 @@ const MECH_REC = {
   magout_p: ['mech_magout_p', 0.5, 1.05], magin_p: ['mech_magin_p', 0.7, 1.05], slide: ['mech_slide', 0.65, 1],
   boltback: ['mech_boltback', 0.65, 1], boltfwd: ['mech_boltfwd', 0.75, 1], pump: ['mech_pump', 0.8, 1], shell: ['mech_shell', 0.55, 1],
   dry: ['mech_dry', 0.45, 1.1], draw_rifle: ['mech_draw', 0.35, 1], draw_pistol: ['mech_draw', 0.3, 1.2],
+  pin: ['nade_pin', 0.8, 1], throw: ['nade_throw', 0.8, 1], draw_grenade: ['nade_equip', 0.7, 1], // v64e SF2's own Grenade_Pin / _Throw / _Equip
 };
 const GUN_PROFILES = {
   m4:   { dur: 1.0, crack: { g: 1.0, hp: 2200, tau: 0.004 }, body: { g: 1.0, f: 950, q: 0.7, tau: 0.05, drive: 3.5 },
@@ -179,8 +181,13 @@ class AudioEngine {
       if (window.SF2_SFX_ORIG) { res(); return; }
       const s = document.createElement('script'); s.src = 'assets/sfx_sf2.js'; s.async = true; s.onload = () => res(); s.onerror = () => res();
       document.head.appendChild(s);
+    })).then(() => new Promise((res) => { // v64e SF2's own effect sounds (tools/sfx_sf2_fx.mjs): grenades, hit / kill, weapon switch
+      if (window.SF2_SFX_FX) { res(); return; }
+      const s = document.createElement('script'); s.src = 'assets/sfx_sf2_fx.js'; s.async = true; s.onload = () => res(); s.onerror = () => res();
+      document.head.appendChild(s);
     })).then(async () => {
       const pack = window.SF2_SFX;
+      if (pack && window.SF2_SFX_FX) { Object.assign(pack, window.SF2_SFX_FX); delete window.SF2_SFX_FX; }
       if (pack && window.SF2_SFX_MECH) { Object.assign(pack, window.SF2_SFX_MECH); delete window.SF2_SFX_MECH; }
       if (pack && window.SF2_SFX_ORIG) { Object.assign(pack, window.SF2_SFX_ORIG); delete window.SF2_SFX_ORIG; }
       if (!pack || !window.OfflineAudioContext) { console.warn('[audio] recorded sound pack not available — procedural sounds'); return false; }
@@ -487,7 +494,9 @@ class AudioEngine {
 
   // Explosions carry across the whole map: large refDistance + an extra sub-bass rumble that barely attenuates.
   explosion(kind, pos) {
-    this.playBank(kind === 'flash' ? 'flash' : 'he', pos, { gain: kind === 'flash' ? 1.5 : 2.0, ref: kind === 'flash' ? 14 : 26, roll: 0.8, send: 0.9, lpDist: 90, lpMin: 500 });
+    const o = { gain: kind === 'flash' ? 1.5 : 2.0, ref: kind === 'flash' ? 14 : 26, roll: 0.8, send: 0.9, lpDist: 90, lpMin: 500 }, rec = this.ctx && this._s(kind === 'flash' ? 'sf2_flash' : 'sf2_he');
+    if (rec) this._playBuf(rec, pos, Object.assign(o, { gain: kind === 'flash' ? 1.4 : 1.8 })); // v64e SF2's own M67 / M84 explosions
+    else this.playBank(kind === 'flash' ? 'flash' : 'he', pos, o);
     if (!this.ctx || kind === 'flash') return;
     const d = this.listener.distanceTo(pos), t = this.ctx.currentTime + Math.min(d / 343, 0.4), out = this._bus(pos, 0.2, 60);
     this._osc('sine', t, 62, 26, 1.3, out, 0.9, 0.004); this._nb(t, out, 'lowpass', 180, 0.7, 0.8, 0.01, 1.1);
@@ -533,6 +542,12 @@ class AudioEngine {
     if (kind === 'break') { this._nb(t, out, 'highpass', 3000, 0.8, 0.5, 0.0005, 0.09); for (let i = 0; i < 4; i++) this._osc('sine', t + i * 0.018, 3200 + i * 700, 2600 + i * 500, 0.06, out, 0.12, 0.0005); this._osc('sine', t, 180, 70, 0.12, out, 0.35, 0.001); return; }
     if (kind === 'evo') { [660, 880, 1320].forEach((f, i) => this._osc('triangle', t + i * 0.07, f, f, 0.16, out, 0.16, 0.004)); return; }
     if (kind === 'helmet') { this._hit_ping(t, out, 1.1); this._osc('sine', t, 260, 120, 0.06, out, 0.25, 0.001); return; }
+    const S2 = HIT_SOUNDS[Settings.data.hitSound] && HIT_SOUNDS[Settings.data.hitSound].sf2 && this._s('sf2_hit');
+    if (S2) { // v64e SF2: bullet_hit_2d_03 (its cue: volume 1.5–2); the killing hit is HitDead_cue (Bullet_flesh_0x at pitch 0.8) and kill3_New
+      if (kind === 'kill') { const d = this._s('sf2_hitdead'), k = !this._s('kfb_default') && this._s('sf2_kill'); if (d) this._one(pick(d), out, 1.1, 0.8); if (k) this._one(pick(k), out, 0.9); } // (the kill's own sound: killFeedback)
+      else this._one(this._hitHead(S2[0]), out, 1.0, 0.98 + Math.random() * 0.04);
+      return;
+    }
     const H = HIT_SOUNDS[Settings.data.hitSound] || HIT_SOUNDS.flesh, k = (kind === 'kill' ? 1.2 : kind === 'head' ? 1.1 : 1) * (H.gain || 1);
     let played = false;
     for (const [grp, g] of H.s || []) { const l = this._s(grp); if (l) { this._one(pick(l), out, g * k, 0.94 + Math.random() * 0.12); played = true; } }
@@ -540,6 +555,22 @@ class AudioEngine {
     if (H.killS && kind === 'kill') { const l = this._s(H.killS); if (l) this._one(pick(l), out, 0.8, 0.95 + Math.random() * 0.1); }
     if (H.synth || (!played && H.s)) this['_hit_' + (H.synth || 'juice')](t, out, k);
     if (kind === 'head' && H.key !== 'none') { this._nb(t, out, 'highpass', 5200, 0.9, 0.24, 0.0003, 0.006); this._osc('triangle', t, 1300, 700, 0.028, out, 0.14, 0.0005); }
+  }
+  // v64m SF2's kill sound (SFKillMessage.GetKillFeedBackSound): hud_kill_<tier> by the kill's strongest message — default (a plain
+  // kill), normal (瞬間秒殺 / 遠射高手 / 同歸於盡), special (爆頭 / 無處可藏 / 背後突襲 / 復仇 / 刀 / 手榴彈), rare (最後一擊 / 首殺 / 捲土重來),
+  // continuous (2 連殺 and up). Only with the 'SF2 原版' hit sound, like the hit itself.
+  killFeedback(tier) {
+    if (!this.ctx || !(HIT_SOUNDS[Settings.data.hitSound] && HIT_SOUNDS[Settings.data.hitSound].sf2)) return;
+    const l = this._s('kfb_' + tier) || this._s('kfb_default'); if (!l) return;
+    const out = this.ctx.createGain(); out.gain.value = 0.7; out.connect(this.dry); this._one(l[0], out, 1.0);
+  }
+  // v64g bullet_hit_2d_03 carries a second sound after the hit (user 10-28: a man's odd laugh, from 0.40 s): only its first 0.37 s,
+  // faded out over the last 25 ms (its RMS: the hit 0.04–0.36 s, down to −36 dB at 0.38, the other sound rising again at 0.40)
+  _hitHead(buf) {
+    if (this._hitCut && this._hitCut.src === buf) return this._hitCut.buf;
+    const n = Math.min(buf.length, Math.round(buf.sampleRate * 0.37)), f = Math.round(buf.sampleRate * 0.025), out = this.ctx.createBuffer(buf.numberOfChannels, n, buf.sampleRate);
+    for (let c = 0; c < buf.numberOfChannels; c++) { const a = buf.getChannelData(c), b = out.getChannelData(c); for (let i = 0; i < n; i++) b[i] = a[i] * Math.min(1, (n - i) / f); }
+    this._hitCut = { src: buf, buf: out }; return out;
   }
   _hit_juice(t, out, k) { // v36 synthesized wet hit
     this._osc('sine', t, 170, 55, 0.08, out, 0.5 * k, 0.001);
@@ -698,6 +729,7 @@ class AudioEngine {
 
   smokeHiss(pos) {
     if (!this.ctx) return;
+    const rec = this._s('sf2_smoke'); if (rec) { this._playBuf(rec, pos, { gain: 1.2, ref: 10, roll: 0.9, send: 0.6, lpDist: 60, lpMin: 600 }); return; } // v64e SF2's own M18 (pop + hiss)
     const t = this.ctx.currentTime, out = this._bus(pos, 0.1, 3);
     const s = this._noiseSrc(t, 3.5), f = this._filter('bandpass', 2600, 0.6), g = this.ctx.createGain();
     g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.35, t + 0.15); g.gain.setTargetAtTime(0, t + 1.2, 0.8);
@@ -753,6 +785,8 @@ class AudioEngine {
 
   hurt() { if (!this.ctx) return; const t = this.ctx.currentTime, out = this._bus(null, 0.04); this._osc('sine', t, 140, 55, 0.2, out, 0.7); this._nb(t, out, 'lowpass', 500, 0.7, 0.5, 0.003, 0.12); }
   death() { if (!this.ctx) return; const t = this.ctx.currentTime, out = this._bus(null, 0.3); this._osc('sawtooth', t, 180, 40, 0.9, out, 0.25, 0.01); this._osc('sine', t, 90, 30, 1.2, out, 0.6, 0.01); }
+  // v64e SF2's HUD weapon switch tick (hud_switch05), played with every switch of your own weapon
+  weaponSwitch() { if (!this.ctx) return; const l = this._s('sf2_switch'); if (l) this._one(l[0], this._bus(null, 0), 0.6); }
   uiClick() { if (!this.ctx) return; const t = this.ctx.currentTime, out = this._bus(null, 0); this._osc('square', t, 1400, 1300, 0.03, out, 0.05); }
 
   setAmbience(kind) {

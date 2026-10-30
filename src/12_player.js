@@ -1,4 +1,4 @@
-import { APEX_STEP, CFG, LOADOUT_KEYS, Settings, THREE, TMP_V1, WEAPON_DEFS, clamp, damp, lerp, loadoutDefs, rand, wrapAngle } from './01_core.js';
+import { APEX_STEP, CFG, LOADOUT_KEYS, Settings, THREE, TMP_V1, WEAPON_DEFS, clamp, damp, lerp, loadoutDefs, rand, sf2Load, sf2Speed, wrapAngle } from './01_core.js';
 import { CharacterMotor } from './04_collision.js';
 import { BTN } from './12b_cmd.js';
 const RELOAD_MOVE = 0.8, FALL_SAFE = 3.5, FALL_LETHAL = 11; // metres: below 3.5 m no damage, then linear, 11 m+ = death
@@ -134,7 +134,8 @@ class Human extends Combatant {
     if (m.grounded) this.sprintAir = canSprint;
     this.sprinting = canSprint && m.grounded;
     m.edgeGuard = crouchKey && m.grounded; // v59 SF2: holding crouch (Ctrl / C) at a ledge keeps you on it; Shift only sprints
-    let speed = w.moveSpeed * (this.carrying ? 0.88 : 1);
+    const load = sf2Load(w, ws.weapons); // v64r SF2: the load in hand (and the other slot put away) sets the pace
+    let speed = (load != null ? sf2Speed(load) : w.moveSpeed) * (this.carrying ? 0.88 : 1);
     if (m.crouching) speed *= P.crouchMult; else if (this.sprinting || (canSprint && this.sprintAir)) speed *= P.sprintMult;
     if (ws.ads) speed *= w.adsMove ?? 1;
     if (w.reloading) speed *= RELOAD_MOVE; // v34: reloading = slower walk, no sprint

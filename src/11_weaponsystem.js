@@ -205,7 +205,7 @@ class WeaponSystem extends Arsenal {
   onInventory() { if (this.scene.environment && this.game.applyEnvIntensity) this.game.applyEnvIntensity(); this.game.app.hud.setWeapon(this); }
   onSwitch() {
     this.kickPos.set(0, 0, 0); this.kickVel.set(0, 0, 0); this.kickRot.set(0, 0, 0); this.kickRotVel.set(0, 0, 0);
-    this.game.audio.mech('draw_rifle'); this.game.audio.mech('draw'); // v37 (user): one switch sound for every item — the primary-gun one this.game.app.hud.setWeapon(this);
+    this.game.audio.mech('draw_rifle'); this.game.audio.mech('draw'); this.game.audio.weaponSwitch(); // v37 (user): one switch sound for every item — the primary-gun one this.game.app.hud.setWeapon(this);
   }
   onZoomSound() { this.game.audio.mech('zoom'); }
   onFired() { this.game.app.hud.setWeapon(this); }
@@ -267,12 +267,12 @@ class WeaponSystem extends Arsenal {
     w.animate(dt, this);
     // the 2D scope overlay follows the gameplay state (tick): one place for every way into or out of the scope
     const sc = w.scoped && this.scopedIn;
-    if (sc !== this._scopeShown || (sc && this.scopeLevel !== this._scopeLvl)) { this._scopeShown = sc; this._scopeLvl = this.scopeLevel; g.app.hud.setScope(sc, this.scopeLevel); }
+    if (sc !== this._scopeShown || (sc && this.scopeLevel !== this._scopeLvl)) { this._scopeShown = sc; this._scopeLvl = this.scopeLevel; g.app.hud.setScope(sc, this.scopeLevel, w.def.sf2Rig ? w.def.sf2Reticle || 'bender' : false); }
     w.vm.group.visible = !sc;
 
     // v62f / v62w SF2 lenses (the guns with vmAdsHFov: adsFov = SF2 fZoomedFOV) are horizontal like UE3: turned into three.js's vertical FOV for this screen (16:9: 55° → 32.6°)
     const vert = (h) => 2 * Math.atan(Math.tan(h * Math.PI / 360) / this.camera.aspect) * 180 / Math.PI;
-    const target = this.ads ? (w.scoped ? (this.scopedIn ? w.def.zoomFovs[this.zoomLevel - 1] : this.baseFov * 0.82) : w.def.vmAdsHFov ? vert(w.def.adsFov) : w.def.adsFov) : this.baseFov;
+    const target = this.ads ? (w.scoped ? (this.scopedIn ? (w.def.zoomHFovs ? vert(w.def.zoomHFovs[this.zoomLevel - 1]) : w.def.zoomFovs[this.zoomLevel - 1]) : this.baseFov * 0.82) : w.def.vmAdsHFov ? vert(w.def.adsFov) : w.def.adsFov) : this.baseFov;
     this.fov = THREE.MathUtils.lerp(this.fov, target, 1 - Math.exp(-(w.scoped ? 32 : w.def.adsSpeed * 1.4 || 28) * dt));
     if (Math.abs(this.fov - target) < 0.01 || (w.scoped && this.scopedIn)) this.fov = target; // scope zoom is instant
     const fovNow = this.fov + p.fovPunch;
@@ -347,7 +347,7 @@ class WeaponSystem extends Arsenal {
     const mk = this.game.player.mantleK || 0; if (mk > 0.01) { pos.y -= 0.09 * mk; pos.z += 0.04 * mk; ex -= 0.45 * mk; ez += 0.2 * mk; } // v15 mantle: gun dips while the hands grab the ledge
     const sk = this.game.player.slideK || 0; if (sk > 0.01) { pos.x -= 0.025 * sk * (1 - this.adsT); pos.y -= 0.015 * sk; ez += 0.32 * sk * (1 - this.adsT * 0.7); } // v14 slide tilt
     if (!rig && this.sprintT > 0.01 && w.kind !== 'knife') { const s = this.sprintT; pos.x -= 0.03 * s; pos.y -= 0.045 * s; pos.z += 0.02 * s; ex -= 0.32 * s; ey += 0.62 * s; ez += 0.28 * s; }
-    if (rig) rig.update(dt, { ads: this.adsT, sprint: this.sprintT, reload: w.reloading ? w.reloadPhase : -1, draw: this.drawT });
+    if (rig) rig.update(dt, { ads: this.adsT, sprint: this.sprintT, reloading: !!w.reloading, reload: w.reloading && !w.shellReload ? w.reloadT : -1, reloadDone: !w.reloading && w.reloadT >= w.reloadTime, reloadLen: w.def.sf2ReloadAnim || w.reloadTime, draw: this.drawT });
     if (this.drawT > 0) { this.drawT = Math.max(0, this.drawT - dt / 0.22); const e = rig ? 0 : this.drawT * this.drawT; pos.y -= 0.13 * e; ex -= 0.7 * e; ez += 0.2 * e; }
     if (!rig && w.reloading && !(w.kind === 'shotgun' && w.shellReload)) { const s = Math.sin(Math.PI * w.reloadPhase), rp = vm.reloadPose || RELOAD_POSE; ez += rp.roll * s; ex += rp.pitch * s; pos.y -= rp.drop * s; pos.x -= rp.shift * s; } // v51: per viewmodel (vm.reloadPose)
     if (w.kind === 'sniper' && w.boltPhase > 0) { // bolt cycle pose; v50: per viewmodel (vm.boltPose) — the M200 swings in so its bolt shows

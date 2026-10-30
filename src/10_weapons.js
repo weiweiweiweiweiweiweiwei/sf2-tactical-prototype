@@ -12,7 +12,7 @@ class Weapon {
   constructor(game, def, vm, owner) {
     this.game = game; this.def = def; this.vm = vm; this.owner = owner || game.player; Object.assign(this, def);
     if (vm.reloadSounds) this.reloadSounds = vm.reloadSounds; // v62 an SF2 rig times them to its own Reload clip
-    this.ammo = def.mag || 0; this.reserveAmmo = def.reserve || 0; this.shotN = 0;
+    this.ammo = def.mag || 0; this.reserveAmmo = this.reserveMax; this.shotN = 0;
     this.cooldown = 0; this.bloom = 0; this.shots = 0; this.lastShot = -10; this.sprayPhase = 0;
     this.reloading = false; this.reloadT = 0; this.reloadFired = new Set();
     this.queued = 0; this.autoReloadT = 0; this.flashT = 0; this.slideKick = 0; this.cur = 0;
@@ -23,7 +23,8 @@ class Weapon {
   }
   get local() { return this.owner === this.game.player; }
   get scoped() { return this.adsType === '2d_scope_overlay'; }
-  resetAmmo() { this.ammo = this.def.mag || 0; this.reserveAmmo = this.def.reserve || 0; this.shotN = 0; this.cooldown = 0; this.bloom = 0; this.cur = 0; this.shots = 0; this.sfV = 0; this.sfH = 0; this.sfDom = 0; }
+  get reserveMax() { return Math.round((this.def.reserve || 0) * (this.game.apex && this.def.apexReserveMult || 1)); } // v64n Apex 扣血: a bigger reserve
+  resetAmmo() { this.ammo = this.def.mag || 0; this.reserveAmmo = this.reserveMax; this.shotN = 0; this.cooldown = 0; this.bloom = 0; this.cur = 0; this.shots = 0; this.sfV = 0; this.sfH = 0; this.sfDom = 0; }
   // v47: drawing keeps a pending fire cooldown (it runs down while holstered too, see Arsenal.tick), so swapping out and
   // back can no longer skip a bolt / pump / semi-auto interval. Only respawn (resetAmmo) clears it. A negative auto-fire
   // carry is dropped so the draw never fires a catch-up burst.
@@ -233,10 +234,11 @@ class Weapon {
   }
   // magazine travel over the reload: out 0.15–0.35, away 0.35–0.55, back in 0.55–0.72
   magOff(p) { return p > 0.15 && p < 0.35 ? (p - 0.15) / 0.2 : p >= 0.35 && p < 0.55 ? 1 : p >= 0.55 && p < 0.72 ? 1 - (p - 0.55) / 0.17 : 0; }
+  // (v64m the SF2 guns' sound marks are fractions of their Reload clip, played over sf2ReloadAnim — see SF2Rig.update)
   _reload(h) {
     if (!this.reloading) return;
     this.reloadT += h;
-    for (const [t, snd] of this.reloadSounds) if (this.reloadT >= t * this.reloadTime && !this.reloadFired.has(snd)) { this.reloadFired.add(snd); this._mech(snd); }
+    for (const [t, snd] of this.reloadSounds) if (this.reloadT >= t * (this.def.sf2ReloadAnim || this.reloadTime) && !this.reloadFired.has(snd)) { this.reloadFired.add(snd); this._mech(snd); }
     if (this.reloadT >= this.reloadTime) { const take = Math.min(this.mag - this.ammo, this.reserveAmmo); this.ammo += take; this.reserveAmmo -= take; this.reloading = false; }
   }
 }

@@ -1,28 +1,15 @@
 # 雲端 ↔ 本機 工作交接
 
 > 雲端 session 做不到的事寫在「待本機」；本機 Claude Code 做完後移到「本機已完成」，並寫明輸出路徑。
-> 本機只 push 到 `local/assets` 分支，雲端每輪會把它合進 `claude/intelligent-einstein-vgvrqy`。
+> 10-28 起只剩本機一個視窗（見下）；以下 H 項目由它做。
 > 狀態：⬜ 未開始 · 🔄 進行中 · ✅ 完成 · ⏸ 需要使用者本人
 
-## ⚠️ 2026-10-28 起只剩一個本機 Claude Code（使用者決定）
-- 雲端 loop 已停止，**雲端的工作（遊戲程式 `src/`、合併、文件、TODO）全部交給本機**。
-- 開工時先把雲端分支合進來：`git fetch origin && git merge origin/claude/intelligent-einstein-vgvrqy`（最後是 v63l，含 check-apex-full 修正、Apex 碰撞補丁合併）。
-- 之後由本機自己維護 `docs/TODO.md`、`docs/CHANGELOG.md`（版號從 v63m 起）、`PROGRESS.md`、`docs/DECISIONS.md`、`docs/REVIEW.md`；工作清單：本頁的 H10（狙擊槍、魔術迴路 G36C）→ H8 → `docs/TODO.md`。
-- 使用者 10-28：魔術迴路 G36C = G36C EOTech Silencer，已做好；「配備瞄準鏡的步槍」撤回，之後重新描述。
-- 合進 `master` 一樣只在使用者明確要求時。
+## 目前只有一個 Claude Code（使用者 10-28 決定）
 
-## 誰在做什麼（每個 Claude Code 開工前先看、開工時更新自己那一行）
-
-| 視窗 | 在哪裡跑 | 分支／資料夾 | 負責 | 目前在做 |
-|---|---|---|---|---|
-| 雲端 | **已停止（使用者 10-28）**：排程任務停用，不再合併 | `claude/intelligent-einstein-vgvrqy`（最後 `v63l`） | — | 交給本機 |
-| 本機 A（loop） | 使用者電腦，原本的專案資料夾 | `local/assets` | 「待本機」的 H 項目：D 槽 SF2／Apex 匯出、真實顯卡、網頁抓取 | |
-| 本機 B（使用者直接下指令） | 使用者電腦，**另一個資料夾**（`git worktree add ../sf2-user local/user`） | `local/user` | 使用者當下要求的事 | |
-
-- **兩個本機視窗不能共用同一個資料夾**：同時改同一個工作目錄會互相蓋掉檔案、`git` 也會衝突。本機 B 用 `git worktree` 開自己的資料夾和分支。
-- 同一個檔案（尤其 `src/` 的同一個模組）同時只能一個視窗改；要改之前在上表「目前在做」寫下檔名。
-- 本機 B 做完一件事就推 `local/user`；雲端每輪會把 `local/assets` 和 `local/user` 都合進雲端分支。合進 `master` 只在使用者明確說要的時候。
-- 版本號：雲端用 `v63k` 之後的編號；本機 A／B 在 CHANGELOG 用「（本機）」標題、不佔編號，雲端合併時補上。
+- **只用本機一個 Claude Code**：原本的專案資料夾（`Desktop/Online Game`），分支 `local/assets`；要更新朋友玩的版本時合併進 `master` 再推。雲端 session 和第二個本機視窗（`local/user`、`../sf2-user`）停用。
+- 2026-10-28 合併：雲端分支（到 `57d02d6`）和 `local/user`（到 `e4adbfe`）都已合進 `local/assets`，19 張地圖 `check.mjs` 全 PASS、`_nettest`、`_fileplay` 通過。
+- 下面「待本機」的 H 項目照舊是待辦，由這一個視窗依使用者指定的順序做。
+- 之後若要再開雲端：一次交代一批不需要 D 槽和顯卡的純程式工作，做完就關；開之前先把這段改回分工表。
 
 ## 待本機（雲端寫，本機做）
 
@@ -57,6 +44,11 @@
 - 素材：兩張 Apex 地圖的 `pack/` 重新打包（碰撞 STRZ：Skull Town 10.4 → 2.3 MB、訓練場 8.9 → 2.2 MB）；`tools/pack-apex-js.mjs` 的 `strz()`。
 - 工具：`tools/_loadprof.mjs`（各載入階段計時，`LOBBY=` `PROFILE=` `RUNS=`）。
 - 驗證（合併後）：`analyze.mjs` MODULES_OK、`build.sh`、`check.mjs`、`check-apex-full` 都過。
+
+### B1 ✅（本機 B）SF2 新槍：G36C EOTech 消音、HK417 mod2A Reflex 消音、SCAR-L MK2 EOTech 消音、K14（2026-10-28）
+- 分支 `local/user`。H10 的「魔術迴路 G36C」答案：`SFCWeaponG36C_EOTech_Silencer_ButterflyFX`（槍模和 G36C 共用；烤漆貼圖還沒匯出，使用者說之後再做）。
+- 遊戲 id：`g36c_eo`、`hk417_rs`、`scarl_eo`、`k14`；rig `tools/guns/<id>_sf2_rig.glb`；配件匯出在 `tools/out/sf2/parts/`、`parts_props/`（未進 git）。詳見 CHANGELOG「本機 B」那一段。
+- 動到 `src/`：`01_core.js`（武器、SF2_WEAPONS、BOT_POOLS、BLURBS）、`09_models.js`（`fromRig` 準心、備用槍模）、`09c_sf2rig.js`（DOT、鏡片不進 AO）。
 
 ### L1 ✅ H1：apex.source.gs 29 把槍的完整頁面（2026-10-28）
 - 輸出：`docs/research/apex/source-gs-s30/<slug>.html`（原始頁面，29 個）＋ `<slug>.md`（`<main>` 逐行轉文字：標題、每個欄位和值，照網頁順序；29 個），共 6.4 MB。
