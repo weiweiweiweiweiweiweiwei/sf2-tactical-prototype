@@ -44,7 +44,7 @@
 
 ## 1b. 槍枝迴圈（`docs/loop/GUNS.md`，2026-10-28 結束）的後續
 - ❓ 暫停的 11 把要不要手動處理：SVD（側掛 PSO 鏡）、P90（環形瞄具）、AA-12、RPK、L86A1（開鏡鏡頭在槍裡）、M249（腰射歪）、PP-2000／vz.61（SF2 雙持）；MP5、Vector、Negev、PKM、MG42、M1014、USP、AK-47 沒有 SF2 包
-- ❓ `assets/guns/guns.js` 59.3 MB（GitHub 單檔警告 50 MB、上限 100 MB；首次載入變慢）：壓貼圖（1024→512）或拆成多個檔按需載入
+- ✅ `assets/guns/guns.js` 59.3 MB → 本機 v65j 改成每把槍一個檔 `assets/guns/g/<id>.js`（89 個，最大 1.8 MB），用到才載入
 - ❓ 腰射位置只有 K14 對過 SF2 截圖；SR-25、PSG1 偏近，其他把需要使用者截圖校
 - ⬜ Type 89、Saiga-12 開鏡時照門擋住部分視野
 - ⬜ SR-25 照 SF2 的射擊間隔 1.15 s（原本 0.3 s 半自動），使用者確認
