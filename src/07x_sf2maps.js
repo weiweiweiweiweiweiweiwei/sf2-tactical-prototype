@@ -98,7 +98,8 @@ function sf2Merge(list, sheets, def) {
   geo.setIndex(new THREE.BufferAttribute(I, 1)); geo.computeBoundingSphere(); geo.computeBoundingBox();
   let mat = m0.material;
   if (lit) {
-    mat = mat.clone(); const sheet = (tex && sheets[tex]) || SF2_BLACK, k = def.lmK ?? Math.PI; mat.envMapIntensity = def.lmEnv ?? 0.1; // (the bake is the ambient: the sky probe on top washed it blue)
+    mat = mat.clone(); if (mat.normalMap && !mat.userData.dxFlip) { mat.normalScale.y = -mat.normalScale.y; mat.userData.dxFlip = true; } // (v65z UE3's normal maps are DirectX-style: green points down)
+    const sheet = (tex && sheets[tex]) || SF2_BLACK, k = def.lmK ?? Math.PI; mat.envMapIntensity = def.lmEnv ?? 0.1; // (the bake is the ambient: the sky probe on top washed it blue)
     mat.onBeforeCompile = (sh) => {
       sh.uniforms.sf2Lm = { value: sheet }; sh.uniforms.sf2LmK = { value: k };
       sh.vertexShader = 'attribute vec2 lmUv;\nattribute vec3 lmc;\nattribute vec3 lms;\nvarying vec2 vLmUv;\nvarying vec3 vLmc;\nvarying vec3 vLms;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n\tvLmUv = lmUv; vLmc = lmc; vLms = lms;');
@@ -212,8 +213,8 @@ function sf2TriMap(def) {
         for (let i = 0; i + 2 < n3; i += 3) if (flip) idx.push(base + I(i), base + I(i + 2), base + I(i + 1)); else idx.push(base + I(i), base + I(i + 1), base + I(i + 2));
       });
       // v65z the map's UE3 Terrain (its ground, tower / Cannon): into the soup and the bounds; drawn in build()
-      const tgeo = d.meta.terrain ? sf2TerrainGeo(d.meta.terrain) : null;
-      if (tgeo) {
+      const TS = d.meta.terrains || (d.meta.terrain ? [d.meta.terrain] : []), tgeos = TS.map(sf2TerrainGeo); // (v65z every Terrain: Desert Camp's two outer dunes)
+      for (const tgeo of tgeos) {
         const TP = tgeo.attributes.position, TI = tgeo.index, base = pos.length / 3;
         for (let i = 0; i < TP.count; i++) pos.push(TP.getX(i), TP.getY(i), TP.getZ(i));
         for (let i = 0; i < TI.count; i++) idx.push(base + TI.getX(i));
@@ -230,7 +231,7 @@ function sf2TriMap(def) {
       await Promise.all(Object.entries(d.meta.lightmaps || {}).map(async ([k, url]) => {
         const t = await new THREE.TextureLoader().loadAsync(url); t.flipY = false; t.colorSpace = THREE.NoColorSpace; t.anisotropy = 4; lm[k] = t;
       }));
-      this._s2 = { gltf, soup, ramps, meta: d.meta, lm, terrain: tgeo && await sf2TerrainMesh(d.meta.terrain, tgeo, this) };
+      this._s2 = { gltf, soup, ramps, meta: d.meta, lm, terrains: await Promise.all(TS.map((T, i) => sf2TerrainMesh(T, tgeos[i], this))) };
       this.bounds = { minX: Math.floor(all.min.x) - 2, maxX: Math.ceil(all.max.x) + 2, minZ: Math.floor(all.min.z) - 2, maxZ: Math.ceil(all.max.z) + 2 };
       this.killY = all.min.y - 15;
       const levels = []; for (let y = Math.floor(all.min.y); y <= Math.ceil(all.max.y); y += 0.5) levels.push(y + 0.2); this.navLevels = levels; // v65v slabs every 0.5 m: NavGraph.walkable() takes a floor within ±0.25 m of the slab, so 1 m slabs missed every floor between (SF2's uneven ground: Desert Camp's graph fell into 155 pieces, no path between the bases)
@@ -279,7 +280,7 @@ function sf2TriMap(def) {
         const m = src.clone(); m.matrixWorld.copy(src.matrixWorld);
         if (stairMat && /^dc_stair_/i.test(m.name) && !Array.isArray(m.material) && !(def.stairKeep || []).includes(m.material.name)) m.material = stairMat;
         m.matrixWorld.decompose(m.position, m.quaternion, m.scale); m.matrixAutoUpdate = false; m.updateMatrix();
-        if (def.stairSides && def.stairSides.test(m.name)) { const s = stairSides(src.geometry, m.material); if (s) { s.matrix.copy(m.matrix); s.matrixAutoUpdate = false; s.castShadow = s.receiveShadow = true; b.scene.add(s); } }
+        if (def.stairSides && def.stairSides.test(m.name)) { const s = stairSides(src.geometry, m.material); if (s) { s.matrix.copy(m.matrix); b.scene.add(sf2Merge([{ m: s, src: s, L: {} }], this._s2.lm, def)); } } // (v65z lit like the rest: the bake's mean light)
         m.castShadow = !m.userData.sky; m.receiveShadow = true;
         for (const mt of Array.isArray(m.material) ? m.material : [m.material]) { mt.vertexColors = false; mt.side = THREE.DoubleSide; if (mt.map) { mt.map.anisotropy = 4; const c = mt.color; if (Math.abs(c.r - c.g) < 0.02 && Math.abs(c.g - c.b) < 0.02) c.setRGB(1, 1, 1); } } // (v65y UModel gives a plain mesh material a 0.58 grey base colour SF2 does not have — the sand mound by the square came out darker than the BSP sand around it in the same texture; a coloured one is the material's own tint, the hangars' red frames, and stays) // (v65w UModel writes SF2's vertex paint as COLOR_0: multiplied in, it striped crates and benches in rainbow colours)
         if (/ladder/i.test(m.name)) sf2Ladder(b, m, def.ladderNav);
@@ -291,7 +292,7 @@ function sf2TriMap(def) {
       // Camp in SF2's look): each placement lights differently, so the v65y instancing gives way to merging — still one draw per
       // material and sheet (nothing raycasts the drawn map: shots and bodies use the triangle soup)
       for (const list of groups.values()) b.scene.add(sf2Merge(list, this._s2.lm, def));
-      if (this._s2.terrain) b.scene.add(this._s2.terrain);
+      for (const t of this._s2.terrains || []) b.scene.add(t);
     },
   }, def);
 }
@@ -324,7 +325,7 @@ MAPS.push(sf2TriMap({
   objectives: { dom: [[-4, 0, 12], [3, 0, -7], [9, 0, -26]], relic: [3, 0, -7], domRadius: 5 },
   // v65y SF2's own light: DominantDirectionalLight_0 (Pitch −10016, Yaw −1120992 → 55° up from 322°; LightColor 251/219/199), the
   // fill turned down and warmed (the old blue-grey sky fill washed the sand-white walls out and hid every shadow), a warm haze
-  background: 0xcdbb9c, envIntensity: 0, exposure: 0.8, hemi: [0xe6d6bc, 0x6a5440, 0],
+  background: 0xcdbb9c, envIntensity: 0, exposure: 0.8, hemi: [0xe6d6bc, 0x6a5440, 0.35], // (v65z a little sky for what the bake does not light: soldiers, dropped guns)
   sun: { pos: [-32, 57, 25], color: 0xfbdbc7, intensity: 2.5, auto: false }, fog: { color: 0xcdbb9c, near: 90, far: 420 },
   lmEnv: 0, lmK: 3.14, stairMat: 'dc_stair_002_INST', stairKeep: ['dcnew_stair_001_INST'], stairSides: /^dc_stair_003/i,
 }));

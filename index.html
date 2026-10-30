@@ -16999,6 +16999,10 @@ function sf2Merge(list, sheets, def) {
   let mat = m0.material;
   if (lit) {
     mat = mat.clone();
+    if (mat.normalMap && !mat.userData.dxFlip) {
+      mat.normalScale.y = -mat.normalScale.y;
+      mat.userData.dxFlip = true;
+    }
     const sheet = tex && sheets[tex] || SF2_BLACK, k = def.lmK ?? Math.PI;
     mat.envMapIntensity = def.lmEnv ?? 0.1;
     mat.onBeforeCompile = (sh) => {
@@ -17186,8 +17190,8 @@ function sf2TriMap(def) {
         for (let i = 0; i + 2 < n3; i += 3) if (flip) idx.push(base + I(i), base + I(i + 2), base + I(i + 1));
         else idx.push(base + I(i), base + I(i + 1), base + I(i + 2));
       });
-      const tgeo = d.meta.terrain ? sf2TerrainGeo(d.meta.terrain) : null;
-      if (tgeo) {
+      const TS = d.meta.terrains || (d.meta.terrain ? [d.meta.terrain] : []), tgeos = TS.map(sf2TerrainGeo);
+      for (const tgeo of tgeos) {
         const TP = tgeo.attributes.position, TI = tgeo.index, base = pos.length / 3;
         for (let i = 0; i < TP.count; i++) pos.push(TP.getX(i), TP.getY(i), TP.getZ(i));
         for (let i = 0; i < TI.count; i++) idx.push(base + TI.getX(i));
@@ -17210,7 +17214,7 @@ function sf2TriMap(def) {
         t.anisotropy = 4;
         lm[k] = t;
       }));
-      this._s2 = { gltf, soup, ramps, meta: d.meta, lm, terrain: tgeo && await sf2TerrainMesh(d.meta.terrain, tgeo, this) };
+      this._s2 = { gltf, soup, ramps, meta: d.meta, lm, terrains: await Promise.all(TS.map((T, i) => sf2TerrainMesh(T, tgeos[i], this))) };
       this.bounds = { minX: Math.floor(all.min.x) - 2, maxX: Math.ceil(all.max.x) + 2, minZ: Math.floor(all.min.z) - 2, maxZ: Math.ceil(all.max.z) + 2 };
       this.killY = all.min.y - 15;
       const levels = [];
@@ -17279,9 +17283,7 @@ function sf2TriMap(def) {
           const s = stairSides(src.geometry, m.material);
           if (s) {
             s.matrix.copy(m.matrix);
-            s.matrixAutoUpdate = false;
-            s.castShadow = s.receiveShadow = true;
-            b.scene.add(s);
+            b.scene.add(sf2Merge([{ m: s, src: s, L: {} }], this._s2.lm, def));
           }
         }
         m.castShadow = !m.userData.sky;
@@ -17304,7 +17306,7 @@ function sf2TriMap(def) {
         (groups.get(k) || groups.set(k, []).get(k)).push({ m, src, L });
       }
       for (const list of groups.values()) b.scene.add(sf2Merge(list, this._s2.lm, def));
-      if (this._s2.terrain) b.scene.add(this._s2.terrain);
+      for (const t of this._s2.terrains || []) b.scene.add(t);
     }
   }, def);
 }
@@ -17352,7 +17354,8 @@ MAPS.push(sf2TriMap({
   background: 13482908,
   envIntensity: 0,
   exposure: 0.8,
-  hemi: [15128252, 6968384, 0],
+  hemi: [15128252, 6968384, 0.35],
+  // (v65z a little sky for what the bake does not light: soldiers, dropped guns)
   sun: { pos: [-32, 57, 25], color: 16505799, intensity: 2.5, auto: false },
   fog: { color: 13482908, near: 90, far: 420 },
   lmEnv: 0,

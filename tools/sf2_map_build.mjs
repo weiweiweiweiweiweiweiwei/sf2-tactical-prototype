@@ -12,6 +12,15 @@ const io = new NodeIO().registerExtensions(ALL_EXTENSIONS).registerDependencies(
 const files = {}; const walk = (d) => { for (const f of fs.readdirSync(d)) { const p = path.join(d, f); if (fs.statSync(p).isDirectory()) walk(p); else files[f.toLowerCase()] = p; } }; walk(DIR);
 const dump = JSON.parse(fs.readFileSync(`tools/out/sf2/maps/${MAP}.json`, 'utf8')), placed = dump.placed || dump;
 const doc = new Document(), root = doc.getRoot(), buf = doc.createBuffer(), scene = doc.createScene(MAP), meshes = new Map(), tex = new Map(); let missing = new Set();
+// v65z SF2's normal map and its strength (the MIC's normal_value, Desert Camp's walls 1.8: their stone blocks' relief)
+const normalOf = (mat) => {
+  const f = files[mat.toLowerCase() + '.mat']; if (!f) return null; const m = fs.readFileSync(f, 'utf8').match(/^Normal=(\S+)/m), png = m && files[m[1].toLowerCase() + '.png'];
+  if (!png) return null; const pf = files[mat.toLowerCase() + '.props.txt'], pt = pf ? fs.readFileSync(pf, 'utf8') : '', s = pt.match(/ParameterValue = ([\d.]+)\s+ParameterName = normal_value/);
+  return { png, scale: s ? +s[1] : 1 };
+};
+const withNormal = (mat, name) => { const n = normalOf(name); if (!n) return;
+  if (!tex.has(n.png)) tex.set(n.png, doc.createTexture(path.basename(n.png)).setImage(fs.readFileSync(n.png)).setMimeType('image/png'));
+  mat.setNormalTexture(tex.get(n.png)).setNormalScale(n.scale); };
 const diffuseOf = (mat) => { // (v65v a Material whose sheet is only an 'Other[n]' — terrain_001_Mat, door_005_Mat: the first that is no normal / spec / mask)
   const f = files[mat.toLowerCase() + '.mat']; if (!f) return null; const t = fs.readFileSync(f, 'utf8'), m = t.match(/^Diffuse=(\S+)/m);
   if (m) return files[m[1].toLowerCase() + '.png'] || null;
@@ -25,7 +34,7 @@ async function meshOf(name) {
   for (const s of src.getRoot().listScenes()) map.get(s).dispose();
   for (const pr of m.listPrimitives()) {
     const mat = pr.getMaterial(); if (!mat || mat.getBaseColorTexture()) continue;
-    const png = diffuseOf(mat.getName()); mat.setMetallicFactor(0).setRoughnessFactor(0.85);
+    const png = diffuseOf(mat.getName()); mat.setMetallicFactor(0).setRoughnessFactor(0.85); withNormal(mat, mat.getName());
     if (png) { if (!tex.has(png)) tex.set(png, doc.createTexture(path.basename(png)).setImage(fs.readFileSync(png)).setMimeType('image/png')); mat.setBaseColorTexture(tex.get(png)); }
   }
   meshes.set(name, m); return m;
@@ -60,7 +69,7 @@ if (fs.existsSync(bspFile)) {
   const bsp = JSON.parse(fs.readFileSync(bspFile, 'utf8')), mesh = doc.createMesh('bsp'), acc = (type, arr) => doc.createAccessor().setType(type).setArray(arr).setBuffer(buf);
   for (const [mname, g] of Object.entries(bsp)) {
     const [base, lmTex, lmS] = mname.split('|'); // (v65z 'material|lightmap|scale': one primitive per material and baked-light sheet)
-    const png = diffuseOf(base), mat = doc.createMaterial(base).setMetallicFactor(0).setRoughnessFactor(0.85);
+    const png = diffuseOf(base), mat = doc.createMaterial(base).setMetallicFactor(0).setRoughnessFactor(0.85); withNormal(mat, base);
     let W = 256, H = 256;
     if (png) { const md = await sharp(png).metadata(); W = md.width; H = md.height; if (!tex.has(png)) tex.set(png, doc.createTexture(path.basename(png)).setImage(fs.readFileSync(png)).setMimeType('image/png')); mat.setBaseColorTexture(tex.get(png)); }
     else { mat.setBaseColorFactor([0.55, 0.55, 0.55, 1]); missing.add(base); }
@@ -91,17 +100,17 @@ for (const t of usedLm) { const [pkg, nm] = t.split('/'), f = `tools/out/sf2/lm/
   if (fs.existsSync(f)) lightmaps[t] = 'data:image/jpeg;base64,' + (await sharp(f).jpeg({ quality: 92 }).toBuffer()).toString('base64'); else missing.add(t); }
 // v65z the UE3 Terrain (tools/sf2_map_dump.py 'terrain'), built by the game: heights in game metres (row-major i + j·nx), each vertex's
 // layer weights (alpha 0–255, RGBA = layers 0–3), its holes, each layer's diffuse (JPEG) and tiling (MappingScale quads, rotation)
-let terrain = null;
-if (dump.terrain) {
-  const T = dump.terrain, H = new Float32Array(T.h.length), W = new Uint8Array(T.h.length * 4);
+const terrains = [];
+for (const T0 of dump.terrains || (dump.terrain ? [dump.terrain] : [])) {
+  const T = T0, H = new Float32Array(T.h.length), W = new Uint8Array(T.h.length * 4);
   T.h.forEach((h, k) => { H[k] = (T.loc[2] + (h - 32768) / 128 * T.scale[2]) / 100; });
   T.layers.forEach((L, li) => { if (li < 4 && L.alpha) L.alpha.forEach((a, k) => { W[k * 4 + li] = a; }); });
   const layers = [];
   for (const L of T.layers.slice(0, 4)) { const png = L.mat && diffuseOf(L.mat);
     layers.push({ tex: png ? 'data:image/jpeg;base64,' + (await sharp(png).resize(1024, 1024, { fit: 'inside' }).jpeg({ quality: 88 }).toBuffer()).toString('base64') : null, scale: L.scale, rot: L.rot, used: !!(L.alpha && L.alpha.some((a) => a)) }); }
-  terrain = { nx: T.nx, ny: T.ny, x0: T.loc[0] / 100, z0: T.loc[1] / 100, dx: T.scale[0] / 100, dz: T.scale[1] / 100, h: Buffer.from(H.buffer).toString('base64'), w: Buffer.from(W).toString('base64'), holes: T.holes, layers };
+  terrains.push({ nx: T.nx, ny: T.ny, x0: T.loc[0] / 100, z0: T.loc[1] / 100, dx: T.scale[0] / 100, dz: T.scale[1] / 100, h: Buffer.from(H.buffer).toString('base64'), w: Buffer.from(W).toString('base64'), holes: T.holes, layers });
 }
-const meta = { lightmaps, terrain, starts: (tdm.length ? tdm : S0).map((s) => ({ team: s.team, pos: cv(s.loc), yaw: (s.yaw / 65536) * Math.PI * 2 - Math.PI / 2 })), ladders: (dump.ladders || []).map((l) => cv(l.loc)) };
+const meta = { lightmaps, terrains, starts: (tdm.length ? tdm : S0).map((s) => ({ team: s.team, pos: cv(s.loc), yaw: (s.yaw / 65536) * Math.PI * 2 - Math.PI / 2 })), ladders: (dump.ladders || []).map((l) => cv(l.loc)) };
 fs.mkdirSync(adir, { recursive: true });
 fs.writeFileSync(`${adir}/map.js`, `/* Special Force 2's ${MAP} from the user's install — tools/sf2_map_build.mjs */
 (window.SF2_MAPS || (window.SF2_MAPS = {}))['${id}'] = { meta: ${JSON.stringify(meta)}, glb: '${fs.readFileSync(OUT).toString('base64')}' };
