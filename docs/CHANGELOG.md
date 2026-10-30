@@ -1814,3 +1814,12 @@
 - 還沒處理：客人送的後座力偏移（`ay`／`ap`）房主直接採用，改成 0 等於無後座（列進 TODO）。
 - 工具：`_nettest`／`check`／`_dmgmodel`／`_ttk`／`check-apex-full` 的開頁改成等 `domcontentloaded`（大廳會在背景下載全部 89 把槍來畫倉庫卡片，`load` 事件要等它們全部下載完）；`_nettest` 改用 `tools/pw.mjs`，雲端也能跑。
 
+### v66c2（雲端，2026-10-30）：各槍傷害照 SF2 原版的相對強弱（決策 D14）
+- 核對（TODO 數值稽核「各槍相對強弱」）：用 SF2 客戶端的 `InstantHitDamage`（805 把，`docs/research/sf2/client-data/weapons.json`）比對 87 把有 SF2 類別的槍。同類型的比例大致一致（我們 ÷ SF2：步槍 0.754、衝鋒槍 0.774、機槍 0.839、狙擊 0.743、手槍 0.938，中位數），但有一批偏差超過 15%：P226 +49%、沙漠之鷹 +33%、HK417／SCAR-H +23%、SR-25 −42%、PSG1 −32%、M16A3 −19%；本機新加的槍多半直接用 28。
+- `tools/sf2_damage_table.py` → `src/01_core.js` 的 `SF2_DAMAGE`（82 把）：近距傷害、遠距傷害、衰減起點／終點 = SF2 的 `InstantHitDamage`／`InstantHitDamageMin`／`WeaponRangeDamageMax`→`Min`（÷39.37 公尺）× 該類型的比例。每類型的整體擊殺時間維持現在的水準，類型裡的強弱照 SF2。霰彈槍不套（SF2 資料沒有彈丸數，套了射程後 15 m 內一槍斃命）。Apex 模式不受影響（用對應 Apex 槍的傷害）。
+- SF2 模式擊殺發數有變的（`node tools/_ttk.mjs`，15 m 打胸、100 HP）：
+
+{tbl}
+
+- 驗證：`analyze`、`build`、`_dmgmodel.mjs` DMG_MODEL_OK、`check.mjs` CHECK_OK。
+
