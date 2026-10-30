@@ -1,6 +1,6 @@
 // Full-range bot probe: a real-time 5v5 on apex_full; counts kills, bot slides and double jumps, how far bots roam, and bots
 // that stand still for 10 s outside combat.   node tools/_apexbots.mjs [seconds=150] [rule=tdm] [map=apex_full]
-import { chromium } from 'playwright'; import http from 'node:http'; import fs from 'node:fs'; import path from 'node:path';
+import { chromiumAny as chromium } from './pw.mjs'; import http from 'node:http'; import fs from 'node:fs'; import path from 'node:path';
 const ROOT = process.cwd(), SECONDS = +(process.argv[2] || 150), RULE = process.argv[3] || 'tdm', MAP = process.argv[4] || 'apex_full';
 const T = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript' };
 const srv = http.createServer((q, s) => { const p = path.join(ROOT, decodeURIComponent(new URL(q.url, 'http://x').pathname)); if (!fs.existsSync(p) || fs.statSync(p).isDirectory()) { s.writeHead(404); s.end(); return; } s.writeHead(200, { 'Content-Type': T[path.extname(p)] || 'application/octet-stream' }); fs.createReadStream(p).pipe(s); });

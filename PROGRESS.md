@@ -6,14 +6,14 @@
 
 ## 架構現況（和新版 CLAUDE.md 的差異，**待使用者決定**要不要遷移）
 
-| 項目 | 現況（v17） | CLAUDE.md 要求 |
+| 項目 | 現況（2026-10-30 更新） | CLAUDE.md 要求 |
 |---|---|---|
-| Three.js | r160（importmap 鎖定版本） | 鎖定 r170 |
+| Three.js | ✅ r170（importmap 鎖定，v62q） | 鎖定 r170 |
 | 碰撞 | 自製 AABB 格網、坡道、地形高度場、梯子、攀爬、滑鏟、台階輔助 | Octree + Capsule |
 | 物理 | cannon-es（手榴彈、彈殼、屍體） | cannon-es 只用於手榴彈 / 彈殼 / 掉落物 ✅ |
-| 模組 | `src/` 34 個 ES 模組（`src/main.js` 依序載入），`sh src/build.sh`（esbuild）打包成單一 `index.html`，可雙擊遊玩（v62s） | 分資料夾 |
-| 檔案長度 | 5 個檔超過 600 行：07_maps 762、09_models 705、06_mapbuilder 691、16_match 685、13_bots 655 | 每檔 < 600 行 |
-| 自動檢查 | ✅ `node tools/check.mjs`（Playwright 1.63.0，驅動系統已安裝的 Chrome / Edge；雲端用預裝 Chromium，CDN 由 `npm install --no-save three@0.170.0 cannon-es@0.20.0` 的本機副本提供） | ✅ |
+| 模組 | `src/` 37 個 ES 模組（`src/main.js` 依序載入），`sh src/build.sh`（esbuild）打包成單一 `index.html`，可雙擊遊玩；槍模每把一個檔、用到才載入（`assets/guns/g/`，v65j） | 分資料夾 |
+| 檔案長度 | 11 個檔超過 600 行：07_maps 1416、01_core 1333、17_app 1199、16_match 1063、09_models 968、09b_gunparts 917、02_audio 847、03_textures 795、04_collision 735、13_bots 706、06_mapbuilder 698 | 每檔 < 600 行 |
+| 自動檢查 | ✅ `node tools/check.mjs`（Playwright 1.63.0；`tools/pw.mjs`：本機用 Chrome／Edge，雲端用預裝 Chromium，被擋的 CDN 由 `npm install --no-save three@0.170.0 cannon-es@0.20.0` 的本機副本提供；v66c5 起測試工具把 `chromium` 換成 `pw.mjs` 的 `chromiumAny` 就能在雲端跑） | ✅ |
 | 版本控制 | ✅ git（v17 起） | ✅ |
 
 ## 里程碑對照（✅ 完成 · ⚠️ 部分 · ❌ 未做 · 🔍 尚未稽核）

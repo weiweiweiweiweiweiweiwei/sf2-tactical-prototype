@@ -7,10 +7,29 @@ const CHROMIUM = process.env.PW_CHROMIUM || (fs.existsSync('/opt/pw-browsers/chr
 
 export async function launchBrowser(opts = {}) {
   for (const o of [{ channel: 'chrome' }, { channel: 'msedge' }, {}, ...(CHROMIUM ? [{ executablePath: CHROMIUM }] : [])]) {
-    try { return await chromium.launch({ ...opts, ...o }); } catch (e) { /* try next */ }
+    try { return wrap(await chromium.launch({ ...opts, ...o })); } catch (e) { /* try next */ }
   }
   return null;
 }
+
+// v66c5 every page of the browser gets the CDN fallback, and a goto with no waitUntil waits for the DOM only (the lobby streams
+// every gun for the armory cards, so 'load' can take minutes on a slow box) — so a tool only has to swap chromium.launch for this
+function wrapPage(p) {
+  const goto = p.goto.bind(p); p.goto = (url, o = {}) => goto(url, { waitUntil: 'domcontentloaded', timeout: 90000, ...o });
+  return p;
+}
+function wrap(b) {
+  const np = b.newPage.bind(b), nc = b.newContext.bind(b);
+  b.newPage = async (...a) => { const p = wrapPage(await np(...a)); await routeCdn(p); return p; };
+  b.newContext = async (...a) => {
+    const c = await nc(...a), cp = c.newPage.bind(c);
+    c.newPage = async (...x) => { const p = wrapPage(await cp(...x)); await routeCdn(p); return p; };
+    return c;
+  };
+  return b;
+}
+// a tool's `import { chromium } from 'playwright'` → `import { chromium } from './pw.mjs'`: launch() picks a browser that exists here
+export const chromiumAny = { launch: (o = {}) => { const { channel, ...rest } = o; return launchBrowser(rest); } };
 
 export function routeCdn(page, root = process.cwd()) {
   return page.route('https://cdn.jsdelivr.net/npm/**', (route) => {
