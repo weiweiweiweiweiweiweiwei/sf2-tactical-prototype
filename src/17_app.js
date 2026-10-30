@@ -707,7 +707,8 @@ class App {
     this.audio.setAcoustics(ACOUSTICS[def.acoustics] || ACOUSTICS.outdoor); this.audio.setAmbience(def.ambience);
     // cinematic "screenshot" of the real map behind the loading text
     this.state = 'shot'; this.shotT = 0; ld.classList.add('shot'); this.loadTarget = 1; this.loadLabel = '即將部署';
-    await sleep(1700);
+    // v66c4 the map picture holds 0.9 s (was 1.7 s); a key or a click skips it (decision D16)
+    await new Promise((res) => { const done = () => { removeEventListener('keydown', done, true); removeEventListener('pointerdown', done, true); clearTimeout(t); res(); }, t = setTimeout(done, 900); addEventListener('keydown', done, true); addEventListener('pointerdown', done, true); });
     if (this.state !== 'shot') return;
     ld.classList.remove('on', 'shot');
     this.hud.reset(); this.hud.show(true); this.hud.setWeapon(m.weapons);

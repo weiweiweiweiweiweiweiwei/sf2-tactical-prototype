@@ -31337,7 +31337,16 @@ var App = class {
     ld.classList.add("shot");
     this.loadTarget = 1;
     this.loadLabel = "即將部署";
-    await sleep(1700);
+    await new Promise((res) => {
+      const done = /* @__PURE__ */ __name(() => {
+        removeEventListener("keydown", done, true);
+        removeEventListener("pointerdown", done, true);
+        clearTimeout(t);
+        res();
+      }, "done"), t = setTimeout(done, 900);
+      addEventListener("keydown", done, true);
+      addEventListener("pointerdown", done, true);
+    });
     if (this.state !== "shot") return;
     ld.classList.remove("on", "shot");
     this.hud.reset();
