@@ -22051,7 +22051,7 @@ var Human = class extends Combatant {
     const traversal = !!g.def.traversal;
     if (m.grounded || m.climbing) this.airJumpUsed = false;
     if (btn & BTN.JUMP) {
-      if (traversal && !m.grounded && !m.climbing && !this.airJumpUsed && this.mantleT <= 0) {
+      if (g.apex && !m.grounded && !m.climbing && !this.airJumpUsed && this.mantleT <= 0) {
         m.vel.y = CFG.player.jumpVel;
         m.jumpBufferT = 0;
         this.airJumpUsed = true;
@@ -22556,7 +22556,7 @@ var Bot = class extends Combatant {
       ai.wantJump = false;
     }
     if (!frozen && ai.wantAirJump) {
-      if (!this.airJumpUsed && !m.grounded && !m.climbing) {
+      if (this.game.apex && !this.airJumpUsed && !m.grounded && !m.climbing) {
         m.vel.y = CFG.player.jumpVel;
         this.airJumpUsed = true;
       }

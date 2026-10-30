@@ -128,7 +128,7 @@ class Bot extends Combatant {
     m.step(h, frozen ? 0 : ai.wishX, frozen ? 0 : ai.wishZ, frozen ? 0 : ai.wishSpeed * (this.carrying ? 0.88 : 1));
     if (!frozen && ai.wantJump) { m.requestJump(); ai.wantJump = false; }
     if (!frozen && ai.wantAirJump) { // v57 double jump, same impulse as the player's
-      if (!this.airJumpUsed && !m.grounded && !m.climbing) { m.vel.y = CFG.player.jumpVel; this.airJumpUsed = true; }
+      if (this.game.apex && !this.airJumpUsed && !m.grounded && !m.climbing) { m.vel.y = CFG.player.jumpVel; this.airJumpUsed = true; } // (v65y Apex damage mode only)
       ai.wantAirJump = false;
     }
     if (m.climbing) { if (m.climbDist > 0.6) { m.climbDist = 0; this._step('ladder', 0.9); } return; }

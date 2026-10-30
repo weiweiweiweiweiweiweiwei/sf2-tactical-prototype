@@ -96,7 +96,7 @@ class Human extends Combatant {
     const traversal = !!g.def.traversal;
     if (m.grounded || m.climbing) this.airJumpUsed = false;
     if (btn & BTN.JUMP) {
-      if (traversal && !m.grounded && !m.climbing && !this.airJumpUsed && this.mantleT <= 0) {
+      if (g.apex && !m.grounded && !m.climbing && !this.airJumpUsed && this.mantleT <= 0) { // (v65y the double jump comes with the Apex damage mode, on any map — not with the Apex maps: user 10-30)
         m.vel.y = CFG.player.jumpVel; m.jumpBufferT = 0; this.airJumpUsed = true;
         this.slideT = 0;
       } else m.requestJump();
