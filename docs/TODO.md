@@ -15,6 +15,7 @@
 - ✅ M4A1 原版動畫（使用者選 A，v62）：原版手臂（`c_comm_skelet` 的 `com_1starm_b01`＋`com_1stglove_b01`，Delta Force 迷彩袖）和槍綁同一副骨架，拔槍、待機、開鏡、射擊、換彈、衝刺都播原版動畫（`tools/sf2_rig_build.mjs`、`src/09c_sf2rig.js`）
   - ⬜ 等使用者實際玩過的意見：腰射位置（v62f 起是 SF2 的鏡頭：眼在頭部、槍模水平 90°）、拔槍 0.8 s、開槍時槍口火光照亮槍模的程度
   - ⬜ 還沒用到的片段：`PutDown`（收槍）、`Steady`、`CloseCombt_equip`（近戰）、`IdleToDash`／`DashToIdle`／`Idletozoom`／`zoomtoIdle`（目前用權重混合代替）
+  - ❓ 切槍要不要加 SF2 的收槍 0.2 s（`PutDownTime`，`PutDown` 片段）：現在是刻意設計的瞬間切換（`src/11_weaponsystem.js` 的 QUICK CHANGE），等使用者決定
   - ✅ 倉庫槍卡縮圖在槍模載入前先畫成備用槍：載入後自動重畫（v62b）
 - ✅ M4A1 照門外形（v62o）：改用 SF2 預設的 A2 提把（`rif_m4a1_handle_a`＋自己的貼圖 `handle_d`），環高出護翼、下方有「0-2」；眼距、前準星距離照 SF2 截圖量
 
