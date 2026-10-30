@@ -49,14 +49,26 @@ class Pkg:
     def clsname(self, e): return self.objname(e['cls']) if e['cls'] else 'Class'
 
     # tagged properties of one export; structs are read as nested tags, unknown ones as raw hex
-    def props(self, e):
+    def props(self, e, skip=None):
         self.o = e['off']; end = e['off'] + e['size']
         self.i32()  # net index
+        # v65n a component (…Component class, not a template / default object) stores TemplateOwnerClass (4 bytes) before its tags
+        if skip is None: skip = 4 if self.clsname(e).endswith('Component') and not e['name'].startswith('Default__') else 0
+        if skip == 'auto' or (skip == 0 and not self._tagAt(self.o)): # v65o a level actor's native state frame (length varies) before its tags
+            start = self.o; skip = next((k for k in range(0, 96, 2) if self._tagAt(start + k)), 0); self.o = start
+        self.o += skip
         return self._tags(end)
+    TYPES = {'IntProperty', 'FloatProperty', 'BoolProperty', 'ByteProperty', 'NameProperty', 'StrProperty', 'ObjectProperty', 'ClassProperty', 'StructProperty', 'ArrayProperty', 'ComponentProperty', 'InterfaceProperty', 'DelegateProperty'}
+    def _tagAt(self, o):
+        if o + 16 > len(self.b): return False
+        i, n, t, tn = struct.unpack_from('<4i', self.b, o)
+        return 0 <= i < len(self.names) and n == 0 and 0 <= t < len(self.names) and tn == 0 and (self.names[t] in self.TYPES or self.names[i] == 'None')
 
     def _tags(self, end):
         out = []
         while self.o < end:
+            i0 = struct.unpack_from('<i', self.b, self.o)[0]
+            if not (0 <= i0 < len(self.names) and self.names[i0] == 'None') and not self._tagAt(self.o): break  # v65y stop at the first unreadable tag (keep what was read)
             nm = self.name()
             if nm == 'None': break
             typ = self.name(); size = self.i32(); idx = self.i32(); extra = None
@@ -81,6 +93,8 @@ class Pkg:
             if extra in ('Vector', 'Rotator') and size == 12:
                 return struct.unpack_from('<fff' if extra == 'Vector' else '<iii', b, o)
             if extra == 'Vector2D' and size == 8: return struct.unpack_from('<ff', b, o)
+            if extra == 'Color' and size == 4: bb, gg, rr, aa = b[o:o + 4]; return dict(R=rr, G=gg, B=bb, A=aa)  # v65y stored BGRA
+            if extra == 'LinearColor' and size == 16: return dict(zip('RGBA', (round(x, 4) for x in struct.unpack_from('<4f', b, o))))
             try:
                 sub = self._tags(o + size); return {f'{n}[{i}]' if i else n: v for n, i, t, v in sub}
             except Exception: return b[o:o + size].hex()

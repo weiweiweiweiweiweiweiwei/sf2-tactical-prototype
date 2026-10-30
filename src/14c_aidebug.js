@@ -11,6 +11,9 @@ class AIDebug {
     this.el = document.createElement('div');
     this.el.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:40;display:none;font:600 11px/1.25 Rajdhani,system-ui,sans-serif';
     document.body.appendChild(this.el);
+    // v65y the player's own position (map fixes: the user reads it off the screen to say where a problem is)
+    this.posEl = document.createElement('div'); this.posEl.style.cssText = 'position:absolute;left:50%;top:92px;transform:translateX(-50%);padding:2px 8px;border-radius:3px;background:rgba(0,0,0,.6);color:#ffe28a;font-size:14px';
+    this.el.appendChild(this.posEl);
   }
   toggle() { this.on = !this.on; this.el.style.display = this.on ? '' : 'none'; return this.on; }
   label(i) {
@@ -25,6 +28,8 @@ class AIDebug {
     if (!this.on) return;
     this.t -= dt; const text = this.t <= 0; if (text) this.t = 0.1;
     const w = innerWidth, h = innerHeight; let n = 0;
+    const pl = match.player;
+    if (text && pl && pl.motor) { const q = pl.motor.pos, deg = ((-pl.yaw * 180 / Math.PI) % 360 + 360) % 360; this.posEl.textContent = `座標 x ${q.x.toFixed(1)}  y ${q.y.toFixed(1)}  z ${q.z.toFixed(1)} · 朝向 ${deg.toFixed(0)}°`; }
     for (const b of match.bots) {
       if (!b.alive) continue;
       _v.copy(b.motor.pos); _v.y += 2.1; _v.project(camera);

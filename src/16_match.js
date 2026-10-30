@@ -5,7 +5,7 @@ import { Effects, PhysicsWorld } from './05_physics_fx.js';
 import { MapBuilder } from './06_mapbuilder.js';
 import { MAPS } from './07_maps.js';
 import { NavGraph } from './08_nav_input.js';
-import { TEAM_PALETTE, loadGunModels } from './09_models.js';
+import { TEAM_PALETTE, ensureGunModels, gunModelReady } from './09_models.js';
 import { BTN } from './12b_cmd.js';
 import { NET_WEAPONS, netV3 } from './12c_netutil.js';
 import { WeaponSystem } from './11_weaponsystem.js';
@@ -83,7 +83,7 @@ class Match {
     progress(0.7, '部署部隊'); await nextFrame();
     this.player = new Player(this);
     if (this.isClient) this.player.team = this.net.team === 'bravo' ? 'bravo' : 'alpha'; // a client plays on his room team, with no bots of its own
-    const tg = performance.now(); await loadGunModels(); if (window.__loadT) window.__loadT['gun models'] = Math.round(performance.now() - tg); // v45 Blender gun models (GLB) must be parsed before the viewmodels are built
+    const tg = performance.now(); await ensureGunModels(Settings.data.loadouts.flatMap((l) => loadoutDefs(this.mode, l))); // v65j only the guns of your three loadouts (F1–F3) if (window.__loadT) window.__loadT['gun models'] = Math.round(performance.now() - tg); // v45 Blender gun models (GLB) must be parsed before the viewmodels are built
     this.weapons = new WeaponSystem(this, loadoutDefs(this.mode, Settings.data.loadouts[this.loadoutIndex])); this.weapons.setEnvironment(this.vmEnv || this.scene.environment);
     this.combatants.push(this.player);
     if (!this.isClient) {
@@ -175,7 +175,7 @@ class Match {
     const set = (m, mul, env) => {
       if (!m || seen.has(m) || !('envMapIntensity' in m)) return; seen.add(m);
       if (!m.envMap || m.userData.sceneEnv) { m.envMap = env || null; m.userData.sceneEnv = true; }
-      if (m.userData.env === undefined) m.userData.env = m.envMapIntensity || 1; m.envMapIntensity = m.userData.env * k * mul;
+      if (m.userData.env === undefined) m.userData.env = m.envMapIntensity ?? 1; // (v65z ?? not ||: a material set to 0 — SF2's baked light carries its ambient — keeps 0) m.envMapIntensity = m.userData.env * k * mul;
     };
     this.scene.traverse((o) => { const ms = Array.isArray(o.material) ? o.material : [o.material]; ms.forEach((m) => set(m, 1, this.scene.environment)); });
     // viewmodel: reflections normalised to the same average brightness on every map (v19) — dark gun metal still reads as metal on dim maps
@@ -659,7 +659,8 @@ class Match {
   dropWeapon(def, ammo, reserve, pos, vel, netId = 0) {
     if (!Match.isGun(def) || !this.opts.pickup) return null; // room option: no weapon drops / pickups
     const holder = new THREE.Group(); let gun; // v64d the detailed first-person model (no arms), real size; the low-poly one if it cannot be built
-    try { gun = this.app.models.dropModel(def); } catch (e) { gun = new THREE.Mesh(this.app.models.tp(def.model), this.app.soldiers.gunMat); gun.scale.setScalar(1.25); gun.castShadow = true; }
+    if (!gunModelReady(def)) ensureGunModels([def]); // v65j (in the background: this drop shows the low-poly gun, the next one the real model)
+    try { if (!gunModelReady(def)) throw 0; gun = this.app.models.dropModel(def); } catch (e) { gun = new THREE.Mesh(this.app.models.tp(def.model), this.app.soldiers.gunMat); gun.scale.setScalar(1.25); gun.castShadow = true; }
     holder.add(gun);
     const len = ((WEAPON_DATABASE[def.id] && WEAPON_DATABASE[def.id].tp && WEAPON_DATABASE[def.id].tp.len) || (def.kind === 'pistol' ? 0.22 : 0.9)) * 0.62;
     const dyn = this.physics.addDynamic({ mesh: holder, mass: 3, shape: new CANNON.Box(new CANNON.Vec3(0.035, 0.06, Math.max(0.08, len / 2))), position: pos, velocity: vel,
@@ -888,7 +889,7 @@ class Match {
       if (!c.alive || !c.motor || (client && c !== this.player)) continue;
       const m = c.motor, p = m.pos;
       o.set(p.x, p.y + m.height - 0.05, p.z); const hit = tris.raycast(o, up, 6);
-      let under = !!(hit && hit.n[1] > 0.7);
+      let under = !!(hit && hit.n[1] > 0.7 && hit.t < (m.grounded ? 1 : 2.5)) && !(this.def.underFloorAirOnly && m.grounded); // (v65y the floor a body went through is close over its head — pressed to it on its feet, within 2.5 m half a second into the fall: Skull Town's hut roofs face up 5.6 m overhead, and a doorway's sill lifts the player off the ground for a few frames, so the huts' doorways bounced the player back — user 10-30) // (v65v SF2 maps: single-sided upper floors face up from below — standing on a floor is never 'under' it; only a body falling in the void)
       if (under && nav) { let near = false; nav.near(p, 2, (n) => { if (!near && n.ok && Math.abs(n.p.y - p.y) < 0.8 && Math.hypot(n.p.x - p.x, n.p.z - p.z) < 2) near = true; }); under = !near; }
       if (!under) { if (m.grounded && !m.climbing) (c._safe || (c._safe = new THREE.Vector3())).copy(p); c._underN = 0; continue; }
       if (++c._underN >= 2 && c._safe) { // (two checks in a row: half a second under the floor)

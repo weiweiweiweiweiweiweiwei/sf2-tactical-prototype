@@ -102,15 +102,20 @@ class LevelsPass extends Pass {
   constructor() {
     super();
     this.mat = new THREE.ShaderMaterial({
-      uniforms: { tDiffuse: { value: null }, uTime: { value: 0 }, uShadows: { value: 0 }, uHigh: { value: new THREE.Vector3(1, 1, 1) }, uMid: { value: 1 }, uContrast: { value: 1 }, uPivot: { value: 0.435 }, uDesat: { value: 0 } },
+      uniforms: { tDiffuse: { value: null }, uLut: { value: null }, uLutOn: { value: 0 }, uTime: { value: 0 }, uShadows: { value: 0 }, uHigh: { value: new THREE.Vector3(1, 1, 1) }, uMid: { value: 1 }, uContrast: { value: 1 }, uPivot: { value: 0.435 }, uDesat: { value: 0 } },
       vertexShader: GradeShader.vertexShader,
-      fragmentShader: `uniform sampler2D tDiffuse; uniform float uTime, uShadows, uMid, uContrast, uPivot, uDesat; uniform vec3 uHigh; varying vec2 vUv;
+      fragmentShader: `uniform sampler2D tDiffuse, uLut; uniform float uTime, uShadows, uMid, uContrast, uPivot, uDesat, uLutOn; uniform vec3 uHigh; varying vec2 vUv;
         void main(){
           vec3 c = clamp(texture2D(tDiffuse, vUv).rgb, 0.0, 1.0);
           c = clamp(max(c - uShadows, 0.0) / (1.0 - uShadows) * uHigh, 0.0, 1.0); // SceneShadows / SceneHighLights
           c = pow(c, vec3(uMid));                                                  // SceneMidTones
           c = mix(uPivot * pow(c / uPivot, vec3(uContrast)), 1.0 - (1.0 - uPivot) * pow((1.0 - c) / (1.0 - uPivot), vec3(uContrast)), step(uPivot, c));
           c = mix(c, vec3(dot(c, vec3(0.2126, 0.7152, 0.0722))), uDesat);          // SceneDesaturation
+          if (uLutOn > 0.5) { // v65z an SF2 map's own grading table (256 × 16: 16 blue slices of red × green), on the display colour as UE3 does
+            float b = c.b * 15.0, b0 = floor(b), b1 = min(b0 + 1.0, 15.0);
+            vec2 q = vec2((c.r * 15.0 + 0.5) / 256.0, (c.g * 15.0 + 0.5) / 16.0);
+            c = mix(texture2D(uLut, q + vec2(b0 / 16.0, 0.0)).rgb, texture2D(uLut, q + vec2(b1 / 16.0, 0.0)).rgb, b - b0);
+          }
           c += (fract(sin(dot(vUv * (uTime * 0.13 + 1.0), vec2(12.9898, 78.233))) * 43758.5453) - 0.5) / 255.0; // dither: no banding
           gl_FragColor = vec4(c, 1.0);
         }`,
@@ -195,6 +200,7 @@ class PostFX {
     this.grade = new GradePass(); c.addPass(this.grade);
     c.addPass(new OutputPass());
     this.film = new LevelsPass(); c.addPass(this.film);
+    if (match.def.lutTex) { this.film.mat.uniforms.uLut.value = match.def.lutTex; this.film.mat.uniforms.uLutOn.value = 1; } // (v65z SF2 maps: their grading table)
     if (q.smaa) c.addPass(new SMAAPass(size.x, size.y));
     c.setPixelRatio(r.getPixelRatio()); c.setSize(innerWidth, innerHeight);
     this.applyLook(resolveLook(match.def));

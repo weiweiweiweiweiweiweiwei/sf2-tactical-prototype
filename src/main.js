@@ -12,6 +12,7 @@ import './07s_skycity.js';
 import './07u_apex.js';
 import './07v_apex_full.js';
 import './07w_skulltown.js';
+import './07x_sf2maps.js';
 import './08_nav_input.js';
 import './09c_sf2rig.js';
 import './09_models.js';

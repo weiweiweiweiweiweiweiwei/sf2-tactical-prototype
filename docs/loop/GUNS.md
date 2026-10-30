@@ -11,6 +11,7 @@
 - 每輪結束前：`sh src/build.sh`、`node tools/esm/analyze.mjs`（MODULES_OK）、`node tools/check.mjs`（CHECK_OK）。
 
 ## 一把槍的做法（照 TRG-41，v64s）
+> v65k 型態（同一把槍加瞄具／消音器，`GUNS` 裡另一個 key、`dir` 指向底槍）會輸出成配件檔 `tools/guns/<id>_sf2_ovl.glb`，遊戲把它綁到底槍 rig 上（`sf2Variant`）。
 1. **匯出**：`sh tools/sf2_export.sh <id> <pkg> <Sound_pkg> [<pkg>_texture]`；鏡子 `sh tools/sf2_export.sh --part <包> <物件> [<貼圖包> <貼圖> …]`。新的十字：`python tools/sf2_reticle_svg.py <名> <Diffuse.png> [<dot.png>]` 直接轉成 SVG。聲音檔字首和 id 不同時寫 `<id>@<字首>`。（原始指令：`tools/out/umodel_win32/umodel_64.exe -game=sf2 -path=D:/SpecialForce2/SFGame/CookedPCConsole`，在該目錄執行）：
    - `-export -gltf -png -out=../sf2/<id> <pkg>`，有 `<pkg>_texture` 包時另外匯出到同一個資料夾；
    - `-export -psk -out=../sf2/<id>_anim <pkg>`（動畫 `.psa`、槍身 `.props.txt` 的插槽）；
@@ -24,7 +25,7 @@
 7. **驗證**：`GUNID=<id> ONLY=hip,ads,ads2,fire TAG=<id> node tools/out/_rigshot.mjs`（看截圖：鏡子在槍正上方、手握得住、開鏡十字對）、`GUNID=<id> node tools/out/_reloadtime.mjs`、`node tools/check.mjs`。（`_rigshot` 的 reload 步驟把彈藥設 5，狙擊槍彈匣 5 會卡住，狙擊槍不要用 reload。）
 
 聲音清單（`tools/sfx_sf2.mjs` 參數，每加一把就更新）：
-`m4a1 ak103 g36c m16a3 k2 scarh famas xm8 galil hk417 qbz97 mp5k k14 trg m40a1 cz700 cheytac awp barrett@Barret kar98k@Kar98k_new sr25 psg1 frf2 m14ebr aug@AUGA3 sg551@SIG551 type89 ump45 mp7 mg4 k3 hk23e remington870@M870 benelli_m4@Bnlli ksg saiga12 p226@SIGP226 deagle@DesertEagle glock18@Glock17 m1911@Colt911 cz75@CZ75 jericho@Jericho914 sw60@SW60 infinity@Infi g36c_eo=g36c+silence hk417_rs=hk417+silence scarl_eo=scarh+silence`
+`m4a1 ak103 g36c m16a3 k2 scarh famas xm8 galil hk417 qbz97 mp5k k14 trg m40a1 cz700 cheytac awp barrett@Barret kar98k@Kar98k_new sr25 psg1 frf2 m14ebr aug@AUGA3 sg551@SIG551 type89 ump45 mp7 mg4 k3 hk23e remington870@M870 benelli_m4@Bnlli ksg saiga12 p226@SIGP226 deagle@DesertEagle glock18@Glock17 m1911@Colt911 cz75@CZ75 jericho@Jericho914 sw60@SW60 infinity@Infi g36c_eo=g36c+silence hk417_rs=hk417+silence scarl_eo=scarh+silence acr an94 arx160 fnf2000 k2c1 mrr sar21 madsenlar@MedsenLar stg44 t65k2 tar21 bizon csls06 cz3a1 k1 mx4@Mx4Storm sigmpx uzipro fnar msr svch fnmag minimispw@spw ultimax k5 strikeone wildey magnum44@44Magnum usas12`
 
 ## 佇列（由上往下做）
 狀態：⬜ 未做 · 🔄 進行中 · ✅ 完成 · ⏸ 做不到（寫原因）

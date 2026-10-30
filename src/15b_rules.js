@@ -384,7 +384,86 @@ class DomRule extends Rule {
   }
 }
 
+/* ------------------------------------------------------------------
+   v65z CAPTURE (SF2's 佔領模式, SFCaptureGame — user 10-30, map Cannon / 邊境要塞 = SF2's `tower`): ONE capture point, closed
+   for the first DelayTimeToEnableCaptureVolume = 120 s. A team takes it by standing in it with no enemy inside (1 s); the holder's
+   CompleteCaptureTime = 60 s countdown then runs and starts again from 60 whenever the point changes hands — the team holding it when
+   the countdown ends wins. At the 10 min limit the team holding it wins (nobody: a draw). Kills score as in TDM; respawns are on.
+   ------------------------------------------------------------------ */
+const CAP_OPEN = 120, CAP_HOLD = 60, CAP_TAKE = 1;
+class CaptureRule extends Rule {
+  init() {
+    const m = this.m, o = m.def.objectives || {}, B = m.def.bounds;
+    const r = this.place(o.cap || [(B.minX + B.maxX) / 2, 0, (B.minZ + B.maxZ) / 2]);
+    this.pos = new THREE.Vector3(r.pos.x, r.base, r.pos.z); this.r = o.capRadius || 2.2;
+    this.owner = null; this.left = CAP_HOLD; this.takeT = 0; this.taker = null; this.contested = false; this.warned = 0;
+    const g = this.group = new THREE.Group(); g.position.copy(this.pos);
+    const pOff = { polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4, depthWrite: false, transparent: true };
+    this.ringMat = new THREE.MeshBasicMaterial(Object.assign({ color: TEAM_HEX.none, opacity: 0.9, side: THREE.DoubleSide }, pOff));
+    const ring = new THREE.Mesh(new THREE.RingGeometry(this.r - 0.2, this.r, 64), this.ringMat); ring.rotation.x = -Math.PI / 2; ring.position.y = 0.04;
+    this.beamMat = new THREE.MeshBasicMaterial({ color: TEAM_HEX.none, transparent: true, opacity: 0.14, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide });
+    const beam = new THREE.Mesh(new THREE.CylinderGeometry(this.r, this.r, 40, 32, 1, true), this.beamMat); beam.position.y = 20;
+    g.add(ring, beam); g.traverse((c) => { c.userData.noAO = true; }); m.scene.add(g);
+  }
+  get open() { return this.openAt !== undefined && this.m.time >= this.openAt; }
+  startRound() {}
+  inside(c) { return c.alive && Math.hypot(c.motor.pos.x - this.pos.x, c.motor.pos.z - this.pos.z) <= this.r && Math.abs(c.motor.pos.y - this.pos.y) < 1.6; }
+  _setOwner(team, by) {
+    const m = this.m, prev = this.owner; this.owner = team; this.left = CAP_HOLD; this.warned = 0;
+    const col = TEAM_HEX[team || 'none']; this.ringMat.color.setHex(col); this.beamMat.color.setHex(col);
+    if (!team || m.phase !== 'live') return;
+    const mine = team === m.player.team; m.audio.objective(mine ? 'capture' : 'lost');
+    m.app.hud.announce(mine ? '我方佔領了據點' : '敵方佔領了據點！', `${CAP_HOLD} 秒倒數結束時，佔領的一方獲勝`);
+    if (by) { by.score += POINTS.capture; m.addTeam(team, 10); if (by.isPlayer) m.app.hud.points(`+${POINTS.capture}  佔領據點`); m.app.hud.killfeed(by.name, team, '佔領據點', '', team, false, by.isPlayer); }
+    else if (prev !== team) m.app.hud.killfeed(mine ? '我方' : '敵方', team, '佔領據點', '', team, false, false);
+  }
+  netState() { const T = (t) => (t === 'alpha' ? 1 : t === 'bravo' ? 2 : 0); return { o: T(this.owner), l: +this.left.toFixed(1), c: this.contested ? 1 : 0 }; }
+  applyNet(s) {
+    const own = [null, 'alpha', 'bravo'][s.o | 0] || null;
+    if (own !== this.owner) this._setOwner(own, null);
+    this.left = clamp(+s.l || 0, 0, CAP_HOLD); this.contested = !!s.c;
+  }
+  tick(dt) {
+    const m = this.m;
+    if (this.openAt === undefined && m.phase === 'live') this.openAt = m.time + CAP_OPEN; // (counted from the start of play, after the freeze)
+    this.group.visible = this.open; this.ringMat.opacity = this.contested ? 0.55 + 0.4 * Math.sin(m.time * 9) : 0.9;
+    if (m.phase !== 'live' || !this.open) return;
+    let a = 0, b = 0, first = null; for (const c of m.combatants) if (this.inside(c)) { if (c.team === 'alpha') a++; else b++; if (!first) first = c; }
+    this.contested = a > 0 && b > 0;
+    const team = !this.contested && (a || b) ? (a ? 'alpha' : 'bravo') : null;
+    if (team && team !== this.owner) { this.takeT += dt; if (this.takeT >= CAP_TAKE) { this.takeT = 0; this._setOwner(team, first); } } else this.takeT = 0;
+    if (!this.owner) return;
+    this.left -= dt;
+    for (const w of [20, 5]) if (this.left <= w && this.warned < w && this.warned !== 5) { // (SF2: CaptureWarningTime 20, the timer's last warning at 5)
+      this.warned = w; const mine = this.owner === m.player.team; m.audio.objective('tick');
+      m.app.hud.announce(`剩 ${w} 秒！`, mine ? '守住據點' : '快奪回據點！');
+    }
+    if (this.left <= 0) { this.left = 0; m.endMatch(this.owner); }
+  }
+  timeUp() { this.m.endMatch(this.owner); }
+  botGoal(bot) {
+    if (!this.open) return { pos: this.pos, radius: 14, action: 'guard' }; // gather near the point before it opens
+    if (this.owner !== bot.team) return { pos: this.pos, radius: this.r * 0.6, action: 'capture', urgent: true };
+    return bot.idx % 2 ? { pos: this.pos, radius: this.r * 0.8, action: 'guard' } : { pos: this.pos, radius: 10, action: 'guard' };
+  }
+  markers(out) {
+    const p = this.m.player;
+    out.push({ pos: this.pos.clone().setY(this.pos.y + 2.6), label: '◎', color: TEAM_CSS[this.owner || 'none'], zone: true,
+      sub: !this.open ? `${Math.ceil((this.openAt ?? this.m.time + CAP_OPEN) - this.m.time)}s 後開放` : this.contested ? '爭奪中' : this.owner ? `${this.owner === p.team ? '我方' : '敵方'} ${Math.ceil(this.left)}s` : '中立' });
+    return out;
+  }
+  hudState() {
+    const m = this.m, p = m.player, mine = this.owner === p.team, s = (n) => { const t = Math.ceil(n); return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`; };
+    let text;
+    if (this.openAt === undefined || !this.open) text = `據點 ${s(Math.max(0, (this.openAt ?? m.time + CAP_OPEN) - m.time))} 後開放`;
+    else if (!this.owner) text = '據點已開放 · 站上據點佔領';
+    else text = `${mine ? '我方佔領中 · 守住' : '敵方佔領中 · 奪回據點'} · 倒數 ${Math.ceil(this.left)} 秒${this.contested ? '（爭奪中）' : ''}`;
+    return { kind: 'tower', text, prompt: '', role: '佔領模式' };
+  }
+}
+
 function createRule(kind, m) {
+  if (kind === 'tower') return new CaptureRule(m);
   if (kind === 'rounds') return new RoundsRule(m);
   if (kind === 'relic') return new RelicRule(m);
   if (kind === 'dom') return new DomRule(m);

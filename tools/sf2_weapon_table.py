@@ -7,9 +7,50 @@ sound times measured on its Reload clip (magazine out / in, bolt: weapon_magazin
 """
 import json
 
-GUNS = {  # id: (SF2 class, rig, sound, [magout, magin, charge])
+GUNS = {
+    'usas12': ('USAS12', 'usas12', 'usas12', [0.12, 0.4, 0.73]),  # v65q sf2_add_gun
+    'magnum44': ('44Magnum', 'magnum44', 'magnum44', [0.12, 0.4, 0.73]),  # v65q sf2_add_gun
+    'wildey': ('Wildey', 'wildey', 'wildey', [0.12, 0.4, 0.73]),  # v65q sf2_add_gun
+    'strikeone': ('StrikeOne', 'strikeone', 'strikeone', [0.12, 0.4, 0.73]),  # v65q sf2_add_gun
+    'maxim9': ('Maxim9', 'maxim9', 'maxim9', [0.12, 0.4, 0.73]),  # v65q sf2_add_gun
+    'luger': ('LUGER', 'luger', 'luger', [0.12, 0.4, 0.73]),  # v65q sf2_add_gun
+    'k5': ('K5', 'k5', 'k5', [0.12, 0.4, 0.73]),  # v65q sf2_add_gun
+    'ultimax': ('Ultimax', 'ultimax', 'ultimax', [0.12, 0.4, 0.73]),  # v65q sf2_add_gun
+    'minimispw': ('MinimiSPW', 'minimispw', 'minimispw', [0.12, 0.4, 0.73]),  # v65q sf2_add_gun
+    'fnmag': ('FNMAG', 'fnmag', 'fnmag', [0.12, 0.4, 0.73]),  # v65q sf2_add_gun
+    'svch': ('SVCh', 'svch', 'svch', [0.12, 0.4, 0.73]),  # v65q sf2_add_gun
+    'msr': ('MSR', 'msr', 'msr', [0.12, 0.4, 0.73]),  # v65q sf2_add_gun
+    'fnar': ('FNAR', 'fnar', 'fnar', [0.12, 0.4, 0.73]),  # v65q sf2_add_gun
+    'uzipro': ('UziPro', 'uzipro', 'uzipro', [0.12, 0.4, 0.73]),  # v65q sf2_add_gun
+    'sigmpx': ('SIGMPX', 'sigmpx', 'sigmpx', [0.12, 0.4, 0.73]),  # v65q sf2_add_gun
+    'mx4': ('Mx4Storm', 'mx4', 'mx4', [0.12, 0.4, 0.73]),  # v65q sf2_add_gun
+    'mp40': ('MP40', 'mp40', 'mp40', [0.12, 0.4, 0.73]),  # v65q sf2_add_gun
+    'krissv': ('KrissV', 'krissv', 'krissv', [0.12, 0.4, 0.73]),  # v65q sf2_add_gun
+    'k1': ('K1', 'k1', 'k1', [0.12, 0.4, 0.73]),  # v65q sf2_add_gun
+    'cz3a1': ('CZ3A1', 'cz3a1', 'cz3a1', [0.12, 0.4, 0.73]),  # v65q sf2_add_gun
+    'csls06': ('CSLS06', 'csls06', 'csls06', [0.12, 0.4, 0.73]),  # v65q sf2_add_gun
+    'bizon': ('Bizon', 'bizon', 'bizon', [0.12, 0.4, 0.73]),  # v65q sf2_add_gun
+    'tar21': ('TAR21', 'tar21', 'tar21', [0.12, 0.4, 0.73]),  # v65q sf2_add_gun
+    't91': ('T91', 't91', 't91', [0.12, 0.4, 0.73]),  # v65q sf2_add_gun
+    't65k2': ('T65K2', 't65k2', 't65k2', [0.12, 0.4, 0.73]),  # v65q sf2_add_gun
+    't65k1': ('T65K1', 't65k1', 't65k1', [0.12, 0.4, 0.73]),  # v65q sf2_add_gun
+    'stg44': ('STG44', 'stg44', 'stg44', [0.12, 0.4, 0.73]),  # v65q sf2_add_gun
+    'scarhdmr': ('SCARHDMR', 'scarh', 'scarh', [0.12, 0.4, 0.73]),  # v65s no own model: scarh's rig
+    'xm8cc': ('XM8CompactCarbine', 'xm8', 'xm8', [0.12, 0.27, 0.73]),  # v65v xm8's rig
+    'xm8ar': ('XM8AutomaticRifle', 'xm8', 'xm8', [0.12, 0.27, 0.73]),  # v65v xm8's rig
+    'fs2000': ('FNFS2000', 'fnf2000', 'fnf2000', [0.12, 0.4, 0.73]),  # v65s no own model: fnf2000's rig
+    'sar21': ('SAR21', 'sar21', 'sar21', [0.12, 0.4, 0.73]),  # v65q sf2_add_gun
+    'mrr': ('MRR', 'mrr', 'mrr', [0.12, 0.4, 0.73]),  # v65q sf2_add_gun
+    'madsenlar': ('MadsenLar', 'madsenlar', 'madsenlar', [0.12, 0.4, 0.73]),  # v65q sf2_add_gun
+    'k2c1': ('K2C1', 'k2c1', 'k2c1', [0.12, 0.4, 0.73]),  # v65q sf2_add_gun
+    'fnf2000': ('FNF2000', 'fnf2000', 'fnf2000', [0.12, 0.4, 0.73]),  # v65q sf2_add_gun
+    'cm901': ('CM901', 'cm901', 'cm901', [0.12, 0.4, 0.73]),  # v65q sf2_add_gun
+    'arx160': ('ARX160', 'arx160', 'arx160', [0.12, 0.4, 0.73]),  # v65q sf2_add_gun
+    'ak104': ('AK104', 'ak103', 'ak103', [0.14, 0.46, 0.82]),  # v65q no own model: the AK-103's rig and sounds
+    'an94': ('AN94', 'an94', 'an94', [0.12, 0.4, 0.73]),  # v65q sf2_add_gun  # id: (SF2 class, rig, sound, [magout, magin, charge])
     'm16a3': ('M16A3', 'm16a3', 'm16a3', [0.07, 0.35, 0.72]),  # (v62z loop H3: the M4A1's carry handle + A2 front sight on the flat-top, tools/sf2_rig_build.mjs)
     'k2': ('K2', 'k2', 'k2', [0.12, 0.35, 0.75]),
+    'acr': ('ACR', 'acr', 'acr', [0.12, 0.4, 0.73]),  # v65p
     'scarl': ('SCARL', 'scarl', 'scarh', [0.12, 0.44, 0.72]),  # (SF2 plays the SCAR-H's sounds)
     'scarh': ('SCARH', 'scarh', 'scarh', [0.12, 0.44, 0.72]),
     'famas': ('FAMAS', 'famas', 'famas', [0.2, 0.4, 0.73]),

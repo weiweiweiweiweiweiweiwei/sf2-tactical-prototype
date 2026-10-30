@@ -1573,3 +1573,236 @@
 - M92FS 沒有 SF2 聲音包，維持原本的聲音。
 - 槍模檔案 `assets/guns/guns.js` 現在 59.3 MB。
 - 驗證：九把的腰射和開鏡截圖、P226 `_reloadtime.mjs`（1.3 s）、`check.mjs`。
+
+
+### （本機，2026-10-29）：槍模按需載入
+- `assets/guns/guns.js`（60.7 MB，開遊戲就全部解析）拆成每把槍一個檔 `assets/guns/g/<id>.js`＋索引 `assets/guns/index.js`（`tools/guns/pack.mjs`）。`src/09_models.js`：`loadGunModels()` 只讀索引，`ensureGunModels(defs)` 載入並解析需要的槍，`gunModelReady(def)`。
+- 進對戰只載入你三組配裝（F1–F3）的槍；倉庫卡片等自己的槍載好才畫；地上掉的槍沒載過時先用簡易模型、背景載入。
+- 驗證：倉庫對戰開局只抓 7 個檔（約 9 MB），倉庫 72 張卡片都畫出 SF2 模型；`check.mjs`、`_fileplay` 過。
+
+
+### （本機，2026-10-29）：槍的型態在遊戲裡組裝
+- 型態（EOTech、Reflex、消音…）不再各存一整把 rig：`tools/sf2_rig_build.mjs` 遇到型態（`GUNS` 裡另一個 key、`dir` 指向底槍、有 optic／silencer）只輸出配件、標記（DOT、MUZZLE）和要藏的底槍零件（`extras.sf2Overlay.hide`，例如原廠照門）到 `tools/guns/<id>_sf2_ovl.glb`；`--full` 照舊輸出整把。
+- `src/09_models.js`：`ensureGunModels` 載入型態時連底槍一起載；`sf2Variant` 把配件依骨頭名稱綁到底槍 rig 的複本上、套上標記、藏掉被取代的零件，之後和一般 rig 一樣用。
+- G36C EOTech／HK417 Reflex／SCAR-L MK2 EOTech 改成這種方式：每個型態 1.05 MB → 0.45 MB。截圖確認腰射、開鏡的瞄具和消音器都在；標記位置和舊的整把版本完全相同。
+- ⬜ 開鏡時 EOTech 視窗佔滿畫面、紅點準心在暗處不明顯：和舊版設定相同（眼距 15 cm），待使用者試玩確認。
+
+
+### （本機，2026-10-29）：SF2 槍枝清單
+- `tools/sf2_gun_inventory.py` → `docs/research/sf2/gun-inventory.md`：SF2 的底槍是 `SFCWeapon<X>`（類別繼承到步槍／衝鋒槍／狙擊／機槍／霰彈／手槍基底），型態是道具 `SFCItem_<X>_<配件…>`（從 `SFGameContent` 9151 個道具名稱裡挑出只含配件字的：EOTech、OpenDot、Reflex、ACOG、AimPoint、Silencer、MK2–5…）；活動造型槍（貓、海豚…）和特殊模式武器排除。
+- 結果：99 把槍，遊戲裡已有 SF2 原版 46 把；要做的型態 379 個（標準＋每種瞄具＋消音＋最高 MK）。`docs/loop/SF2_ALL.md` 的 G3（53 把新槍）、G4（各槍型態，M4A1 第一）已展開。
+
+
+### （本機，2026-10-29）：SF2 地圖清單、暫停的槍重查
+- `tools/sf2_map_inventory.py` → `docs/research/sf2/map-inventory.md`：一張圖＝有自己光照檔 `Lighting_<圖>.tfc` 的包。125 個，常規對戰圖 63 張（觀戰／逃脫／停電／跳躍／節日造型／殭屍／PVE／射擊／防守／捉迷藏／六角／教學／靶場 排除）。佇列 M3 已依大小展開。
+- 暫停的槍：Vector 的包是 `smg_ksv`（併入新槍）；MP5 完整版、Negev、PKM、MG42、M1014、USP、AK-47 在安裝檔裡沒有包。SVD、P90、雙持、M249、RPK、L86A1、AA-12 維持暫停（要手動量瞄準點）。
+
+
+### （本機，2026-10-29）：SF2 地圖匯出可行（Alcatraz）
+- 地圖包是 LZO 壓縮的一般 `.upk`：`tools/sf2_unlzo.py <圖>` 解壓。UModel 匯出它的靜態網格和貼圖（Alcatraz：68 個網格、264 張貼圖）。
+- 擺放：烘焙過的關卡把物件收在 `StaticMeshCollectionActor`，每個元件的世界矩陣（64 位元組）存在屬性後面；元件自己的屬性前面多一個欄位（`tools/sf2_props.py` 現在會跳過）。`tools/sf2_map_dump.py` 讀出 876 個擺放。
+- 地板牆面是 BSP（UModel 不匯出）：`tools/sf2_map_bsp.py` 照 v904 的格式讀 Model（Vectors、Points、Nodes 64 位元組、Surfs 60 位元組、Verts 24 位元組），每個節點一個多邊形，貼圖座標用面的基準點和 U／V 向量。Alcatraz 1972 個三角形、23 種材質。
+- `tools/sf2_map_build.mjs` 把網格（每個只存一份）、擺放、BSP 組成一個 GLB（7.5 MB）；預覽截圖：屋頂、牆、地板、牢房都在，有貼圖。
+- 下一步：接進遊戲（碰撞、導航、出生點）。
+
+
+### （本機，2026-10-29）：第一張 SF2 原版地圖進遊戲：惡魔島（Alcatraz）
+- `src/07x_sf2maps.js`：`sf2TriMap` 讀 `assets/maps/sf2-<圖>/map.js`（GLB＋出生點／梯子），碰撞＝模型自己的三角形（天空罩等 > 300 m 的不算），場地範圍、掉落高度、導航層（每 1 m 一層）從模型算出，出生點圍繞 SF2 的 PlayerStart（TeamIndex 0 → 藍隊）。
+- `tools/sf2_props.py`：關卡裡的 Actor 屬性前有長度不定的原生 state frame，現在自動找屬性開頭；`tools/sf2_map_dump.py` 一併輸出出生點和梯子。
+- 驗證：`check.mjs --map 19` PASS（59 FPS）；玩家視角站在牢房走廊，地板牆面天花板都在；選圖縮圖 `assets/maps/thumbs/sf2_alcatraz.jpg`。
+- 待辦：部分物件全黑（貼圖在別的包）、繪製呼叫約 1700、梯子還不能爬、縮圖是屋頂外觀。
+
+
+### （本機，2026-10-29）：SF2 新槍 ACR
+- `rif_acr`＋照門 `rif_acr_sight`（`rif_acr_sight_up`，掛 Sight 插槽、hooded post）、`Sound_ACR`；`SFCWeaponACR` 的射速／換彈／拔槍／後座／重量；傷害照 SCAR-L。倉庫和 Bot（一般模式）都有。驗證：腰射、開鏡（綠點在照門正中）、開火截圖；`check.mjs` 過。
+
+
+### （本機，2026-10-29）：新槍自動化工具、AN-94、AK-104
+- `tools/sf2_add_gun.py`：一行指令做完一把 SF2 新槍（匯出 → 自動找槍身、貼圖前綴、動畫、照門 → 建模 → 數值表、重量、`WEAPON_DATABASE`（照類別範本，傷害照 CLAUDE.md §4.2）、Bot 清單、聲音 → 打包、建置）；Windows 上剛寫完的檔案偶爾被鎖，失敗會自動重試。
+- 建模工具：貼圖索引不分大小寫（AN-94 的檔名是 `_D.png`，之前找不到、槍身變白）。
+- AN-94（`rif_an94`＋`rif_an94_sight`、`Sound_AN94`）；AK-104：SF2 沒有獨立模型，用 AK-103 的 rig 和聲音、`SFCWeaponAK104` 的數值。
+
+
+### （本機，2026-10-29）：SF2 新槍 ARX160、CM901、F2000
+- `tools/sf2_add_gun.py` 各一行：模型、動畫、聲音、數值、重量都是 SF2 原版；腰射截圖正常。開鏡瞄準點待量（ARX160 照門擋住、CM901／F2000 鏡頭在槍身裡），記在 TODO。
+
+
+### （本機，2026-10-29）：SF2 新槍 K2C1、Madsen-LAR、MRR、SAR-21、FS2000、SCAR-H DMR
+- 前四把用 `tools/sf2_add_gun.py`（Madsen 的聲音包叫 `Sound_MedsenLar`）；FS2000、SCAR-H DMR 安裝檔裡沒有獨立模型，沿用 F2000／SCAR-H 外觀、套自己的 SF2 數值。L85A1 沒有模型包，暫停。
+- 截圖：MRR、SCAR-H DMR 腰射開鏡都正常；K2C1、SAR-21、FS2000 開鏡待量、Madsen 槍身貼圖待找（TODO）。
+
+### （本機，2026-10-29）：SF2 新槍 StG44、T65K1、T65K2、T91、TAR-21（v65t）
+- 五把都用 `tools/sf2_add_gun.py`；T65K1、T91 沒有獨立聲音包（沿用分類預設）。
+- 截圖：T65K1、T65K2 腰射開鏡正常；StG44 準星偏近、T91 開鏡被瞄具擋住、TAR-21 開鏡鏡頭在槍身裡（TODO 1a）。
+
+### （本機，2026-10-29）：SF2 衝鋒槍 Bizon、CSLS06、CZ3A1、K1、Kriss Vector、MP40、Mx4 Storm、SIG MPX、Uzi Pro（v65u）
+- 全部用 `tools/sf2_add_gun.py`；MP40 的模型在 `rif_mp40`。MAC-10 在 SF2 是雙持（flame_L／flame_R），暫停，跟雙持槍一起做。
+- 截圖：CSLS06、K1、Kriss、MP40、Mx4 正常；Bizon、CZ3A1、SIG MPX、Uzi Pro 開鏡待量，Bizon／CZ3A1 貼圖是特殊塗裝（TODO 1a）。
+
+### （本機，2026-10-29）：SF2 狙擊槍 FNAR、MSR、SVCh；XM8 Compact、XM8 AR（v65v）
+- FNAR、MSR、SVCh 用 `tools/sf2_add_gun.py`，腰射正常、狙擊鏡開鏡待接（TODO）。XM8 Compact Carbine／Automatic Rifle 安裝檔沒有獨立模型，沿用 XM8 外觀、套自己的數值，截圖正常。
+- HS50M1、Springfield 沒有模型包，暫停；P90、PP2000、Scorpion、SVD 原本就在 G2 暫停。
+
+### （本機，2026-10-29）：SF2 機槍 FN MAG、Minimi SPW、Ultimax；霰彈槍 USAS-12；手槍 K5、Luger、Maxim 9、Strike One、Wildey、.44 Magnum（v65w）
+- 全部用 `tools/sf2_add_gun.py`（.44 Magnum 的模型包叫 `pis_blackhawk`）。P7M13 在 SF2 是雙持，暫停。
+- 截圖：Ultimax、USAS-12、六把手槍正常；FN MAG 持槍角度與開鏡、Minimi SPW 開鏡待量（TODO）。
+
+
+### v65t（本機，2026-10-29）：SF2 地圖「沙漠之都」（DustCity）
+- 使用者 10-29 指定。照 `docs/loop/SF2_ALL.md` 的地圖做法：
+  1. 解壓 `DustCity.upk`（13.8 → 31.9 MB）。
+  2. UModel 匯出 145 個靜態模型、511 張貼圖。
+  3. `sf2_map_dump.py`：1829 個擺放、48 個出生點、2 個梯子。
+  4. `sf2_map_bsp.py`：BSP 21971 個三角形、33 種材質。
+  5. `sf2_map_build.mjs` → `assets/maps/sf2-dustcity/map.js`（GLB 16.3 MB）。
+- 地圖清單新增「SF2 沙漠之都」（`sf2_dustcity`）：
+  - 範圍 x −46…78、z −46…46。
+  - Alpha 從西北角出生，Bravo 從東南角出生。
+  - 佔領點三個（兩邊各一，加上中間），奪取目標在中間。
+- 還沒做好（⏸）：
+  - 遠景有幾棟大樓浮空或傾斜。
+  - 中央高塔沒有貼圖（`DefaultMaterial`）。
+  - 沒有 SF2 的烘焙光照，所以牆面偏白。
+- 效能：`check.mjs --map 20` CHECK_OK。每格中位數 16.7 ms，但渲染 CPU 平均 16.5 ms，有 14 格超過 33 ms（1829 個物件，繪製次數多）。
+- 驗證：縮圖 `assets/maps/thumbs/sf2_dustcity.jpg`、遊戲中截圖。
+
+
+### v65v（本機，2026-10-29）：SF2 沙漠營地（Desert Camp）第一輪——補資料與可玩性
+- 使用者 10-29：惡魔島、沙漠之都撤下（`SF2_LISTED = false`，檔案保留）；要 1:1 還原 Desert Camp，兩張舊圖的問題是「全部都有」（移動、外觀、效能）。
+- 匯出：
+  - UModel 整包匯出時會在立方體貼圖（`CTSFSceneCubeMapActor_0`）崩潰。改用 `-obj=` 指定物件、每批 120 個，第一批逐一重試。
+  - 地圖用到的 166 個模型全數到齊。
+- `tools/sf2_map_dump.py`：
+  - 新增 `SFStaticMeshActor`、`SFKActorNoSync`。它們的模型在原型（archetype）上，所以沿 `arch` 往上找。
+  - 舊版只讀 StaticMeshActor 等，而且建模腳本根本沒放這些。現在一律算成矩陣：2613 個擺放，原本是 2410 個。
+  - 每個擺放記錄是否有碰撞：`CollideActors`／`BlockActors` 關掉的，例如 181 叢大草和電線，不進碰撞。
+  - SF2 的 29 個阻擋體積（BlockingVolume）讀出成世界座標三角形，只做碰撞、不顯示。
+- `tools/sf2_map_bsp.py`：每個多邊形依它節點的平面法線決定繞向。原本一律反轉，結果部分地板被當成天花板，會擋住人或讓人穿過去。
+- `tools/sf2_map_build.mjs`：
+  - 材質沒有 `Diffuse=` 時，改用第一個 `Other[n]` 貼圖（地面 `terrain_001_Mat`、門、窗）。
+  - 出生點優先用 TDM 出生點。
+- `src/07x_sf2maps.js`：
+  - 每隊用自己 TDM 出生點最密集的一群當基地（Alpha 13 個在 (−15, −30)，Bravo 12 個在 (30, 45)）。原本兩隊都出生在同一個角落。
+  - 導航取樣改成每 0.5 m 一層、1 m 網格，可跨 0.45 m 的高低差，樓梯和斜坡可連到 0.7 倍的距離（`navClimb`、`navGrid`，在 `src/08_nav_input.js`）。
+- 結果（`tools/out/_sf2walk.mjs`，4 對 4 打 40 秒）：
+  - 出生點都在地面上。
+  - Bot 移動距離：之前 4–17 m；現在 Bravo 79–86 m，Alpha 16–27 m。對照組：倉庫地圖 38–140 m。
+- 還沒做好：
+  - 導航圖仍然分成好幾塊：西側地面（y 0）、東側（y −2）、Bravo 基地（y −2）。
+  - 玩家走不上 Bravo 基地邊緣那排樓梯：它的碰撞是 26° 的斜面，人卻從底下走過去（`tools/out/_sf2stairs2.mjs`）。
+  - 光照、貼花、粒子還沒做。
+- `check.mjs` CHECK_OK。
+- （v65v 續）SF2 地圖改用 SF2 原版士兵的碰撞半徑 0.25 m：`SFPawn` 的 `CollisionRadiusForPawn` 是 25 單位，我們原本是 0.34 m。SF2 的比例確認是 1 單位 = 1 cm（門 1.76 m、椅子 0.99 m、油桶 0.87 m）。地圖的設定是 `bodyRadius`，玩家、Bot 和導航都會套用。
+  - Desert Camp 的四座 1 m 寬樓梯，x 23.5 那座可以走上去；另外三座在 z 45.3 被擋住，還沒查原因。
+  - 導航圖：西側 3623 個節點、東側 1028 個、Bravo 基地 581 個，三塊仍然分開。
+- （v65v 續）找到 SF2 地圖「被拉回出生點」的原因：防掉出地板的機制（`Match._underFloor`）每 0.25 s 從頭頂往上打一條射線，打到朝上的地板、而且附近沒有可用的導航點，就把人拉回上一個安全位置。
+  - SF2 的上層樓板和屋頂常常是單面的，從下面往上打會打到它朝上的那一面；導航圖又是破碎的，附近通常沒有可用的點。
+  - 結果是在很多地方正常走路也會被拉回出生點。
+  - 修正：SF2 地圖（`underFloorAirOnly`）只有「沒有踩在任何東西上」才會觸發，真的掉出地板的人一定在往下掉。
+  - 驗證：`tools/out/_sf2stairs6.mjs` 的 `_ufLog`，剩下的觸發都是真的掉到地板下（例如 (4, −9.4) 這裡地板有缺口）。
+
+
+### v65w（本機，2026-10-29）：SF2 地圖鏡像修正、彩虹色修正、補上可破壞車輛
+- 使用者 10-29（沙漠營地截圖）：鐵皮屋位置不對，要整張地圖鏡像對調。
+  - 原因：UE3 是左手座標系。建圖腳本和 UModel 的模型匯出都用 (x, z, −y)／100，這個換法不改變手性，所以所有 SF2 地圖（含模型本身）都是 SF2 的鏡像。
+  - 驗證：同一個模型 `dc_hanger_001` 的 `.pskx`（UE 原始座標）和 glTF 對照：glTF 的 x = UE x、y = UE z、z = −UE y。
+  - 修正：載入時整個場景 z 翻一次（`mirror`，預設開啟）。碰撞三角形的繞向（行列式 < 0 的節點）、出生點的 z 和朝向（π − yaw）、梯子跟著翻。沙漠營地的範圍、佔領點、鏡頭位置也一起翻。
+- 木箱、長椅出現彩虹色：UModel 把 SF2 的頂點色（`COLOR_0`）寫進模型，three.js 會把它乘進貼圖。改成關閉頂點色。
+- 補上可破壞車輛（`SFBreakableActorByDamage`）：悍馬、金龜車、皮卡，只放完好的版本，不放燒毀的。擺放共 2618 個。
+- 還沒做好：使用者說「斜坡變成巨大斷層」的地方。目前在主包、`_Front`、`_htm`、`_AITDM` 的 BSP 和模型裡都找不到斜坡的幾何，等使用者標出 SF2 原本的樣子。
+- 驗證：
+  - 縮圖：鐵皮屋從左下移到右下。
+  - `_sf2walk.mjs`：出生點都在地面，Bot 移動 5–92 m。
+  - 倉庫地圖不受影響（55–104 m）。
+  - `check.mjs` CHECK_OK。
+
+### v65x（本機，2026-10-29）：SF2 地圖模型各自鏡像的修正（斜坡斷層、鐵皮屋位置）
+- 使用者 10-29（沙漠營地 7 張截圖＋SF2 參考照）：每個應該是斜坡的地方都是巨大斷層，鐵皮屋位置還是錯的。
+  - 原因：UModel 的 glTF 模型頂點是 (x, z, +y)，建圖腳本卻當成 (x, z, −y)。v65w 的全圖鏡像把世界座標轉對了，但每個模型仍然以自己的軸心在 Y 方向翻了一次。對稱的箱子、油桶看不出來；樓梯、鐵皮屋這類軸心在邊上的模型整個翻到軸心另一側。結果樓梯井（BSP 坑，深 2.48 m）空著變成斷層，鐵皮屋偏了 20 m。
+  - v65w 用 `.pskx` 對照得到「z = −UE y」：PSK 本身也存翻轉過的 Y，所以那次驗證不成立。
+  - 證據：`dc_stair_003` 修正後剛好填滿 4 m 寬的樓梯井。`dc_hanger_002` 坐在 z −3 的水泥台上，跟它的高度一致；Stryker 停在屋內，悍馬停在門口。之前悍馬卡在屋牆裡。
+  - 修正：`tools/sf2_map_build.mjs` 在每個模型矩陣的右邊乘上 diag(1, 1, −1)。沙漠營地重建；範圍放寬到 x −53…59、z −59…35（大鐵皮屋在 x −55…−35）。
+- 查過但不是原因：地圖包的 2 個 Terrain 在可玩範圍外，是外圍沙丘；`_ob` 子關卡是灰盒版 BSP；整張圖的 BSP 只有約 38 個斜面，SF2 的坡道和樓梯都是模型。
+- 驗證：
+  - 截圖：樓梯井、石階、高台上的小鐵皮屋都跟參考照一致。
+  - `_sf2walk.mjs`：Bot 移動 78–105 m（之前 5–92），沒有卡住或掉出地圖。
+  - 導航圖：A 隊到 B 隊找得到路。
+  - `check.mjs` CHECK_OK。
+- 隱藏中的沙漠之都、惡魔島要重建才會套用這個修正（沒列在選單上，先不動）。
+### （本機，2026-10-29）：SF2 沙漠營地光照第 1 段（v65y）
+- 照 SF2 的 DominantDirectionalLight（俯角 55°、方位 322°、顏色 251/219/199）設太陽；原本偏藍灰的環境補光調暗調暖，霧與背景改暖米色。只改沙漠營地。
+- `tools/sf2_props.py`：讀得懂 Color／LinearColor 結構；遇到讀不懂的屬性就停在那裡，保留已讀到的部分（太陽元件的屬性在約 13 萬位元組的陰影資料之後）。
+- 牆面仍偏白：原始貼圖本來就是淺色灰泥，又缺 SF2 預先烘好的光照貼圖，所以陰暗面不夠暗（第 2 段）。
+- 修正：同一次開遊戲裡第二次進 SF2 地圖會一片空白（第一局把載好的模型直接搬進場景，第二局只剩 66 個物件、只剩碰撞）。改成每局複製一份，幾何與材質共用。
+- 使用者回報（10-29）：
+  - 原點那組悍馬＋皮卡＋金龜車拿掉：它們是 SF2 預製件的「範本物件」（`humvee_01_Arc0` 等，旗標 RF_ArchetypeObject），本來就不在地圖上。`tools/sf2_map_dump.py` 改成跳過範本物件。
+  - 樓梯統一用 `dc_stair_002` 的石磚材質（`def.stairMat`），鐵欄杆 `dcnew_stair_001` 保留（`def.stairKeep`）。
+  - `dc_stair_003` 石階兩側原本是空的，依台階實際高度輪廓補上階梯形側牆（`def.stairSides`，只有畫面、沒有碰撞）。
+  - F4（AI 除錯）同時在畫面上方顯示自己的座標與朝向，方便回報地圖問題的位置。
+- 查過但沒改：
+  - 鐵皮軍營 `dc_hanger_002` 剛好包住它自己的室內擺設（屋頂木樑、吊燈、後門、裝甲車、木箱），看起來位置是對的；看起來偏，是因為後半段懸在我們還沒建的外圍沙丘地形上。
+  - 子關卡 `Desertcamp_ob` 是灰模（材質 `base_gray_dc`、`color_1F`），不採用。
+  - `tools/sf2_props.py`：讀到結尾標記 None 時不再被「讀不懂就停」的檢查擋下（之前會讓地圖匯出的位置錯 8 位元組）。
+- 使用者第二批回報（10-29，附 F4 座標）：
+  - 併入子關卡 `Desertcamp_ob`（`tools/sf2_map_dump.py --with Desertcamp_ob`）。它是 SF2 對戰時載入的修正層：坦克 `mk1_001` 車身、放大 1.33 倍的鐵皮屋 `dc_hanger_001`（屋頂水泥塊和牆上飄浮的零件因此被包回屋內）、放大的門框 `door_003`、加寬的石階和鐵樓梯。同一模型在 1 m 內的舊版本由它取代，碰撞沿用舊版本（`_ob` 的模型本身關掉了碰撞）。它的 BSP 是灰模，不採用。
+  - 模型材質不再乘 UModel 的 0.58 灰色倍率：廣場旁的沙堆和旁邊同一張貼圖的 BSP 沙地顏色一致了；道具整體也變亮。
+  - SF2 的梯子（`DC_ladder_001`、`S_ladder_004`）可以爬：依模型方向和背後平台高度自動加攀爬區與機器人路徑。實測從 (−17.8, −22.3) 爬上 2.56 m 的平台。
+  - 沙漠營地 FPS 52 → 約 40（三角形 +5 萬、繪製呼叫約 3700），合併批次仍在 TODO。
+- 效能（使用者 10-29「先救 FPS」）：同一個模型＋同一個材質的所有擺放合成一個 InstancedMesh（2607 個擺放、167 種模型）。沙漠營地繪製呼叫 3760 → 457，FPS 約 40 → 58–59（GTX 1650 Ti，1280×720 高畫質）。射擊與碰撞用的是三角形資料，不受影響。
+- 修正上一版：模型材質的底色只拿掉灰色倍率，帶顏色的保留（鐵皮屋的紅色鋼架是材質本身的色調，上一版被洗成灰色）。
+- 地下通道的木門框 `wood_003`（使用者 10-29 畫的綠框）：v65x 為了修樓梯和鐵皮屋，把每個模型都沿自身一軸翻面；這片門框翻反了，0.24 m 的厚度嵌在牆面後面，看起來縮在牆角內、比較小。`tools/sf2_map_build.mjs` 的 `NOFLIP` 讓它不翻面，門柱貼齊牆角了。
+
+### （本機，2026-10-30）：骷髏鎮小屋門口的「隱形牆」（v65y）
+- 使用者回報 (−31.1, 9.4)、(−58.3, 26.9) 走向門口會被彈回。原因不是牆，是「掉到地板下」的安全機制誤判：頭頂往上打到小屋屋頂的上表面（5.6 m 外、朝上），小屋裡又沒有導航點，跨門檻那幾格畫面腳不著地，就被當成卡在地板下拉回上一個安全點（第一個座標甚至被拉到 70 m 外）。
+- 改成：朝上的面要夠近才算——站在地上時在頭頂 1 m 內，在空中時在 2.5 m 內（穿過地板下墜半秒內地板還在頭頂附近）。實測兩處都能穿過門口一路走過去，安全機制不再觸發。
+
+### （本機，2026-10-30）：SF2 爬梯音效（v65y）
+- SF2 沒有專用的爬梯聲：爬梯動作 `Up_ladder` / `Down_ladder`（c_comm_weapon_ainm）每個循環在 0.33、0.82 秒觸發 `AnimNotify_Footstep`，播梯子材質（金屬）的腳步聲。音效包加入 `step_ladder` = `Sound_FootSteps` 的 `footstep_metal_01`～`04`，取代原本合成包裡的梯子聲；爬梯每 0.45 m 一步（原本 0.6 m）。
+
+### （本機，2026-10-30）：二段跳跟著扣血模式（v65y）
+- 使用者更正：二段跳屬於「Apex 扣血模式」，不是 Apex 地圖。玩家與機器人的二段跳改看 `match.apex`（房間設置的扣血機制），任何地圖選 Apex 模式都能二段跳，Apex 地圖選 SF2 模式則不能。摔落傷害本來就跟著扣血模式（SF2 模式有、Apex 模式沒有），沒改。
+- 實測：沙漠營地／骷髏鎮 × Apex 模式最高升 2.33 m（二段），× SF2 模式 1.17 m（一段）。
+- 地圖本身的設定仍跟著地圖：Apex 地圖的台階高度 0.8 m、攀上 2.3 m 高的邊緣（它們的碰撞是 1 m 高的柱狀格子）。
+
+### （本機，2026-10-30）：沙漠營地用 SF2 原版烘焙光照（v65z）
+- 使用者選「用 SF2 原版」：`tools/sf2_lightmap.py` 讀 SF2（UE3 v904）每個 StaticMeshComponent 的 LODData 光照，以及 BSP 的 ModelComponent 元素。
+  - 154 個物件用光照貼圖（LightMap2D：平均色／方向最大值／SimpleLightmap 三張＋縮放、CoordinateScale/Bias）。
+  - 1749 個物件用逐頂點光照（LightMap1D，每頂點 8 bytes：NormalizedAverageColor＋DirectionalMax；頂點順序與 UModel 匯出的一一對應）。
+  - BSP 17392 個三角形全部有光照（FVert 的 ShadowTexCoord）。
+- 匯出：21 張 `SimpleLightmap`（UModel `-export -png Desertcamp <名稱> LightMapTexture2D`）以 JPEG 寫進 map.js 的 meta.lightmaps。`sf2_map_dump.py` 每個擺放帶 `lm`（`_ob` 修正層沿用被取代版本的光照），`sf2_map_bsp.py` 依「材質｜光照圖」分組並輸出 uv1，`sf2_map_build.mjs` 寫成節點／primitive 的 extras，prune 保留 TEXCOORD_1。
+- 遊戲：同材質、同光照圖的擺放合併成一個網格（光照每件不同，取代 v65y 的實例化），著色器把 `(逐頂點光照 + 光照圖 × 縮放) × π` 加進間接光。SF2 的光照圖只含間接光，太陽在 SF2 是即時的主光源，所以太陽保留（強度 2.5、曝光 0.8），天空補光與環境貼圖關掉。
+- 修正：`applyEnvIntensity` 用 `||` 把材質的 0 改成 1，環境貼圖（偏藍）蓋過烘焙光照；改成 `??`。
+- 沙漠營地 59 FPS、繪製呼叫 529、約 97 萬三角形。色調查找表 `lut_desercamp` 還沒套（TODO）。
+
+### （本機，2026-10-30）：SF2 邊境要塞（Cannon）＋佔領模式（v65z）
+- 使用者要的「邊境要塞」＝ S.K.I.L.L. SF2 的 Cannon（日服カノン、韓服캐논，阿富汗反衛星基地），安裝檔裡叫 `tower`，模式子關卡 `tower_tw`。模型有 `TW_Satellite_Antenna` / `TW_Satellite_Trigger` / `TW_Watchtower`；佔領區 `SFCaptureVolume_0` 在中央建築二樓、衛星天線下方（6.2 m 平台）。
+- 規則照 SF2 的 `SFCaptureGame`：開局 `DelayTimeToEnableCaptureVolume` 120 秒後據點開放；站上據點、圈內沒有敵人 1 秒即佔領；佔領方 `CompleteCaptureTime` 60 秒倒數，易手重新從 60 秒開始，倒數結束時佔領的一方獲勝；時限 10 分鐘，到時看誰佔領（無人佔領＝平手）；剩 20 秒、5 秒時提醒；可立刻復活。新規則 `tower`（佔領模式，`src/15b_rules.js` CaptureRule），大廳勝利條件顯示「倒數結束時佔領」。
+- 場景照沙漠營地流程：模型、BSP、SF2 烘焙光照（33 張光照圖）、太陽（俯角 38°、方位 43°、亮度 3.5）。
+- 新增 UE3 地形（Terrain，111×167 頂點、每格 0.64 m）：`sf2_map_dump.py` 讀高度／挖洞／各層權重，`sf2_map_build.mjs` 寫進 meta.terrain，遊戲生成網格、加進碰撞、著色器依權重混合 4 層地表貼圖。
+- 樓梯：Cannon 的金屬樓梯每階只有 0.2 m 深，比身體窄，每階都會卡住。`def.rampStairs` 改用從踏板算出的斜坡當碰撞，並給每座樓梯一條導航連結。`tw_build_007`（二樓金屬樓板）加進 NOFLIP（原本整塊蓋在樓梯正上方）。內側樓梯比樓層高 1 m（頂端要往下踏一步），所以從樓梯頂到據點的導航用手設的 `def.navChains` 接上；機器人不走這張圖的梯子（`ladderNav: false`）。
+- BSP 匯出略過材質為 None 的面（Cannon 有 10 個關卡 Model，其中有體積的筆刷面）。
+- 實測：玩家從兩邊基地都能走上二樓進佔領區；佔領、60 秒倒數獲勝、易手重新計時都正確。59 FPS、繪製呼叫 357。
+- 已知：機器人會進入搶點狀態，但會卡在第二座樓梯口的欄杆邊，6 分鐘模擬內沒有上到二樓（TODO）。牆上徽章等貼花顯示成黑色（透明度未處理）。
+
+### （本機，2026-10-30）：沙漠營地外圍沙丘、法線貼圖（v65z）
+- 使用者問「材質和官方不一樣」：貼圖本身就是 SF2 原檔。差在 SF2 的算繪方式——方向性光照貼圖加上法線貼圖、色調查找表、高光。這輪補上法線貼圖：`sf2_map_build.mjs` 讀材質的 `Normal=` 和 MIC 的 `normal_value`（沙漠牆面 1.8），遊戲端把 UE3 的 DirectX 法線綠色通道翻過來。
+- 外圍沙丘：工具支援多塊地形（`terrains`），沙漠營地的 2 塊 17×17（每格 5.12 m）地形在北、東兩側。
+- 樓梯側牆改走烘焙光照（之前背光面全黑）；沙漠營地補一點天空光（0.35），讓角色、掉落的槍這類沒有烘焙光照的東西在陰影裡不會全黑。
+- 佔領模式說明：某一方佔領後守滿 60 秒就直接獲勝；被搶走就換對方從 60 秒重新倒數（使用者確認就是這樣）。
+
+### （本機，2026-10-30）：SF2 方向性光照、色調查找表、貼花透明（v65z）
+- 方向性烘焙光照：改用 SF2 的 NormalizedAverageColor／DirectionalMaxComponent 兩張圖（逐頂點光照用原始兩色），著色器依法線貼圖的切線空間法線，對 HL2 三個基底方向用 max(0, n·Bᵢ)² 加權，× 1.2（實測：平面處對應 SimpleLightmap，中位數 1.2、p10–p90 1.02–1.31，線性編碼）。石塊在陰影裡也有凹凸，牆面更亮、更接近官方。
+- 色調查找表：`sf2_map_dump.py` 讀 WorldInfo 的 `ColorGrading_LookupTable`（沙漠營地 `lut_desercamp`、邊境要塞 `lut_tower`），寫進 meta.lut；最後一道色階後製在顯示色上查表（256×16、16 片藍色切片）。
+- 貼花／草／樹葉：漫射貼圖有透明通道的材質用遮罩模式（alpha 0.4 截斷）。原本畫成黑色的色塊、樹（一團黑）、牆上方塊都正常了。
+- 邊境要塞調亮：曝光 0.95、天空光 0.35、地形平均補光 0.5（地形沒有烘焙光照）。
+- 兩張圖都 59 FPS（繪製呼叫 540／370）。
+
+### v66a（本機，2026-10-30）：沙漠營地的投影貼花
+- 使用者 10-30「先完成先前的任務」：沙漠營地畫面清單第 4 項剩下的牆面貼花。
+- `sf2_map_dump.py` 讀 DecalActor 的 DecalComponent：它存了放置時的命中點、法線、切線、副法線和寬高（cm）。139 個（另 4 個沒有命中資料或材質）。
+  - 烘焙過的 DecalMaterial 沒有運算式節點，貼圖從材質編譯資料尾段的 Texture2D 參照掃出來（顏色圖；`_Alpha` 圖另外當透明度）。
+- `sf2_map_build.mjs` 把貼圖寫成 WebP（≤ 512）放進 meta.decals。相乘（BLEND_Modulate）的圖先鋪在白底上，沒有 alpha 的半透明圖（`et_dcdecal_006`，近乎全白）改成相乘，不然會蓋成白色方塊。
+- 遊戲：每個貼花是一張貼在命中平面上、離表面 1.5 cm 的四邊形，同貼圖同混合模式合成一個網格（12 次繪製）。相乘的乘在後面的顏色上；半透明的依 MLM_Unlit 決定受不受光。
+- 效果：SF2 的貼花原圖平均亮度 85–92%，是淡淡的髒污、裂縫、沙痕，跟原版一樣不搶眼。地圖檔 +0.5 MB。
+- 已知：SF2 是投影到 BSP 上，四邊形在牆角或平面邊緣會超出一點。
+- 驗證：逐種貼花正面截圖有／無對照；`check.mjs` CHECK_OK。

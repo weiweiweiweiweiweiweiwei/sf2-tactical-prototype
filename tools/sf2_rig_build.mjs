@@ -47,7 +47,42 @@ const ZEISS_SCOPE = { ...PART('weapon_common_part01', 'scope_zeiess'), tex: 'zei
 // v64t the bolt guns' own scopes (weapon_common_part; SFCItem_<gun>_Def_Scope / Cz700_Def_Scope): root binds as the Bender's
 const SCOPE = (name, tex) => ({ ...PART('weapon_common_part', name), tex, noAim: true, roll: +(process.env.ROLL ?? 90) });
 const SIL = (k) => ({ ...PART('weapon_common_part', `silencer_ar_type_${k}`), tex: `silencer_type_${k}` });
-const G = {
+const GUNS = {
+  usas12: gun('usas12', { pkg: 'sho_usas12' }), // v65q tools/sf2_add_gun.py
+  magnum44: gun('magnum44', { pkg: 'pis_blackhawk', tex: 'blackhawk', anim: '1st_anim_blackhawk', partNames: ['body', 'magazine'] }), // v65q tools/sf2_add_gun.py
+  wildey: gun('wildey', { pkg: 'pis_wildey', partNames: ['body', 'magazine'] }), // v65q tools/sf2_add_gun.py
+  strikeone: gun('strikeone', { pkg: 'pis_strike_one', tex: 'strike_one', anim: '1st_anim_strike_one', partNames: ['body', 'magazine'] }), // v65q tools/sf2_add_gun.py
+  maxim9: gun('maxim9', { pkg: 'pis_maxim9', partNames: ['body', 'magazine'] }), // v65q tools/sf2_add_gun.py
+  luger: gun('luger', { pkg: 'pis_luger', partNames: ['body', 'magazine'] }), // v65q tools/sf2_add_gun.py
+  k5: gun('k5', { pkg: 'pis_k5', partNames: ['body', 'magazine'] }), // v65q tools/sf2_add_gun.py
+  ultimax: gun('ultimax', { pkg: 'mg_ultimax' }), // v65q tools/sf2_add_gun.py
+  minimispw: gun('minimispw', { pkg: 'mg_spw', tex: 'spw', anim: '1st_anim_spw' }), // v65q tools/sf2_add_gun.py
+  fnmag: gun('fnmag', { pkg: 'mg_fn_mag', tex: 'fn_mag', anim: '1st_anim_fn_mag' }), // v65q tools/sf2_add_gun.py
+  svch: gun('svch', { pkg: 'sni_svch' }), // v65q tools/sf2_add_gun.py
+  msr: gun('msr', { pkg: 'sni_msr' }), // v65q tools/sf2_add_gun.py
+  fnar: gun('fnar', { pkg: 'sni_fnar', tex: 'sni_fnar' }), // v65q tools/sf2_add_gun.py
+  uzipro: gun('uzipro', { pkg: 'smg_uzi_pro', tex: 'smg_uzipro', anim: '1st_anim_uzi_pro' }), // v65q tools/sf2_add_gun.py
+  sigmpx: gun('sigmpx', { pkg: 'smg_sigmpx', tex: 'sigmpx_gear' }), // v65q tools/sf2_add_gun.py
+  mx4: gun('mx4', { pkg: 'smg_mx4_storm', tex: 'mx4storm', anim: '1st_anim_mx4_storm' }), // v65q tools/sf2_add_gun.py
+  mp40: gun('mp40', { pkg: 'rif_mp40' }), // v65q tools/sf2_add_gun.py
+  krissv: gun('krissv', { pkg: 'smg_ksv', tex: 'ksv', anim: '1st_anim_ksv', hoodedPost: true, socketSights: sight('krissv/smg_ksv_sight/SkeletalMesh3/smg_ksv_sight_up.gltf', 'ksv_sight') }), // v65q tools/sf2_add_gun.py
+  k1: gun('k1', { pkg: 'smg_k1', tex: 'k1_8th' }), // v65q tools/sf2_add_gun.py
+  cz3a1: gun('cz3a1', { pkg: 'smg_cz_scorpion', tex: 'cz3a1_venomous', anim: '1st_anim_cz_scorpion' }), // v65q tools/sf2_add_gun.py
+  csls06: gun('csls06', { pkg: 'smg_csls06' }), // v65q tools/sf2_add_gun.py
+  bizon: gun('bizon', { pkg: 'smg_bizon', tex: 'bizon_6th' }), // v65q tools/sf2_add_gun.py
+  tar21: gun('tar21', { pkg: 'rif_tar21', hoodedPost: true, socketSights: sight('tar21/rif_tar21/SkeletalMesh3/rif_tar21_sight_up.gltf', 'tar21_sight') }), // v65q tools/sf2_add_gun.py
+  t91: gun('t91', { pkg: 'rif_t91' }), // v65q tools/sf2_add_gun.py
+  t65k2: gun('t65k2', { pkg: 'rif_t65k2', hoodedPost: true, socketSights: sight('t65k2/rif_t65k2_sight/SkeletalMesh3/rif_t65k2_sight_up.gltf', 'rif_t65k2_sight_up') }), // v65q tools/sf2_add_gun.py
+  t65k1: gun('t65k1', { pkg: 'rif_t65k1', hoodedPost: true, socketSights: sight('t65k1/rif_t65k1/SkeletalMesh3/rif_t65k1_sight_up.gltf', 't65k1_sight_up') }), // v65q tools/sf2_add_gun.py
+  stg44: gun('stg44', { pkg: 'rif_stg44' }), // v65q tools/sf2_add_gun.py
+  madsenlar: gun('madsenlar', { pkg: 'rif_madsen_lar', tex: 'rif_madsen_lar', anim: '1st_anim_madsen_lar' }), // v65q tools/sf2_add_gun.py
+  sar21: gun('sar21', { pkg: 'rif_sar21', hoodedPost: true, socketSights: sight('sar21/rif_sar21_sight/SkeletalMesh3/rif_sar21_sight_up.gltf', 'sar21_sight') }), // v65q tools/sf2_add_gun.py
+  mrr: gun('mrr', { pkg: 'rif_mrr', tex: 'mrr_hightech', hoodedPost: true, socketSights: sight('mrr/rif_mrr/SkeletalMesh3/rif_mrr_sight_up.gltf', 'rif_mrr_sight') }), // v65q tools/sf2_add_gun.py
+  k2c1: gun('k2c1', { pkg: 'rif_K2C1', stem: 'rif_k2c1', anim: '1st_anim_K2C1' }), // v65q tools/sf2_add_gun.py
+  fnf2000: gun('fnf2000', { pkg: 'rif_fnf2000', hoodedPost: true, socketSights: sight('fnf2000/rif_fnf2000/SkeletalMesh3/rif_fnf2000_sight_up.gltf', 'fnf2000_sight') }), // v65q tools/sf2_add_gun.py
+  cm901: gun('cm901', { pkg: 'rif_cm901', tex: 'rif_cm901' }), // v65q tools/sf2_add_gun.py
+  arx160: gun('arx160', { pkg: 'rif_arx160', tex: 'rif_arx160' }), // v65q tools/sf2_add_gun.py
+  an94: gun('an94', { pkg: 'rif_an94', hoodedPost: true, socketSights: sight('an94/rif_an94_sight/SkeletalMesh3/rif_an94_sight_up.gltf', 'an94_ironsight') }), // v65q tools/sf2_add_gun.py
   // v62o the rear sight is the A2 carry handle (rif_m4a1_handle_a, its own sheet handle_d / _n in weapon_common_part): SF2's ADS picture (user 10-27) has the aperture ring standing above the handle's ears; the detachable
   // rif_m4a1_rearsight (weapon_common_part01) used since v61b is an attachment, its ring sat level with its guards
   m4a1: gun('m4a1', { extraParts: [['handle', 'm4a1/rif_m4a1/SkeletalMesh3/rif_m4a1_handle_a.gltf', 'm4a1_handle']], railSights: { sight: ['m4a1/rif_m4a1_sight/SkeletalMesh3/rif_m4a1_sight_up.gltf', 'm4a1_sight'], rear: 'handle' } }),
@@ -94,6 +129,7 @@ const G = {
   frf2: gun('frf2', { pkg: 'sni_frf2', stem: 'sni_frf2', tex: 'frf2', optic: SCOPE('scope_pm2', 'scope_pm2') }), // (SFCItem_FRF2_Def_Scope: Common_Scope_PM2, reticle mic_ScopeView_01)
   m14ebr: gun('m14ebr', { optic: EOTECH }), // (SFCItem_M14EBR: SFCItem_Common_DotSight_EOTECH on its Scope socket)
   // v65e docs/loop/GUNS.md D: rifles
+  acr: gun('acr', { hoodedPost: true, socketSights: sight('acr/rif_acr_sight/SkeletalMesh3/rif_acr_sight_up.gltf', 'acr_sight') }), // v65p
   aug: gun('aug', { tex: 'rif_aug', socketSights: sight('aug/rif_aug_sight/SkeletalMesh3/rif_aug_sight_up.gltf', 'aug_sight') }),
   sg551: gun('sg551', { pkg: 'rif_sig551', tex: 'sig551', anim: '1st_anim_sig551', hoodedPost: true }), // (sights on the body)
   type89: gun('type89', { hoodedPost: true }), // (its sight package put on the Scope socket floated off the gun: the body's own sights)
@@ -128,15 +164,21 @@ const G = {
   m92fs: gun('m92fs', { pkg: 'pis_m92f', tex: 'm92f', anim: '1st_anim_m92f', partNames: ['body', 'magazine'] }),
   infinity: gun('infinity', { pkg: 'pis_infi', tex: 'infi', anim: '1st_anim_infinity', partNames: ['body', 'magazine'], texMap: { magazine: 'infi_magazine_a' } }),
   trg: gun('trg', { pkg: 'sni_trg', stem: 'sni_trg', tex: 'sni_trg', anim: '1st_ani_trg', optic: ZEISS_SCOPE }),
-}[GID];
+};
+const G = GUNS[GID];
 if (!G) throw new Error(`unknown gun ${GID}`);
+// v65k a VARIANT (another key on the same gun dir with an optic / silencer: g36c_eo …) is written as an OVERLAY — only its attachment
+// parts, the marks and the base's parts it drops (extras.hide: the iron sights) → tools/guns/<id>_sf2_ovl.glb (~0.1 MB instead of a
+// 1 MB rig per variant); the game binds it onto the base gun's rig (src/09_models.js sf2Variant). --full writes the whole rig as before.
+const BASE = G.dir !== GID && GUNS[G.dir] && (G.optic || G.silencer) && !process.argv.includes('--full') ? GUNS[G.dir] : null;
+const partNamesOf = (g) => [...g.parts, ...(g.extraParts || []), ...(g.socketSights || [])].map((p) => p[0]).concat(g.railSights ? ['sight'] : []);
 const TEX = {
   m4a1_sight: ['m4a1/rif_m4a1_sight/Texture2D/m4a1_sight'], m4a1_rearsight: ['m4a1/weapon_common_part01/Texture2D/m4a1_rearsight'], m4a1_handle: ['m4a1/weapon_common_part/Texture2D/handle'],
   sleeve: ['arms/c_delta_1st_texture/Texture2D/delm_1st_b01', 'arms/c_comm_1st_texture/Texture2D/com_1st_b01'], // the Delta Force sleeve colour, the common sleeve's normals
   glove: ['arms/c_comm_1sthand_texture/Texture2D/com_1st_glove_b01'],
 };
 const PNG = {}; // every exported texture of this gun by file name
-function walk(d) { for (const f of fs.readdirSync(d, { withFileTypes: true })) { const q = `${d}/${f.name}`; if (f.isDirectory()) walk(q); else if (f.name.endsWith('.png')) PNG[f.name.toLowerCase()] ??= q.slice(SRC.length, -4).replace(/_[dns]$/, ''); } }
+function walk(d) { for (const f of fs.readdirSync(d, { withFileTypes: true })) { const q = `${d}/${f.name}`; if (f.isDirectory()) walk(q); else if (f.name.endsWith('.png')) PNG[f.name.toLowerCase()] ??= q.slice(SRC.length, -4).replace(/_[dns]$/i, ''); } }
 walk(SRC + G.dir); if (G.optic || G.silencer) walk(SRC + 'parts'); // (v64 a variant reads its gun's folder and the attachments')
 const texDirs = (stem) => TEX[stem] || [PNG[`${stem}_d.png`.toLowerCase()] || `${GID}/missing/${stem}`];
 const ROUGH = { barrel: 0.78, stock: 0.8, magazine: 0.72, sight: 0.66, body: 0.68, sleeve: 0.9, glove: 0.82 }; // matte, dielectric (as sf2_gun_build.py)
@@ -412,7 +454,15 @@ for (const a of psa.anims) {
   });
 }
 for (const m of root.listMaterials()) if (!m.getName().startsWith('gun:')) m.dispose();
+let out = OUT;
+if (BASE) { // the overlay: the attachments and the reticle quad only, no clips
+  const keep = new Set(['optic', 'silencer', 'reticle']), hide = partNamesOf(BASE).filter((n) => !partNamesOf(G).includes(n));
+  for (const n of root.listNodes()) if (n.getMesh() && !keep.has(n.getName())) { n.getMesh().dispose(); n.dispose(); }
+  for (const a of root.listAnimations()) a.dispose();
+  root.listScenes()[0].setExtras({ sf2Overlay: { base: G.dir, hide } });
+  out = `tools/guns/${GID}_sf2_ovl.glb`;
+}
 await doc.transform(resample({ tolerance: 1e-4 }), prune({ keepLeaves: true }), dedup(), textureCompress({ encoder: sharp, targetFormat: 'webp', resize: [1024, 1024] }), draco({ method: 'edgebreaker' }));
-await io.write(OUT, doc);
-console.log('SF2RIG', GID, OUT, (fs.statSync(OUT).size / 1024).toFixed(0) + ' KB', 'clips', root.listAnimations().map((a) => a.getName()).join(' '), 'channels', channels,
+await io.write(out, doc);
+console.log('SF2RIG', GID, out, (fs.statSync(out).size / 1024).toFixed(0) + ' KB', 'clips', root.listAnimations().map((a) => a.getName()).join(' '), 'channels', channels,
   'marks', Object.fromEntries(Object.entries(marks).map(([k, p]) => [k, p.map((x) => +x.toFixed(4))])));

@@ -5,7 +5,7 @@
    Gun space: forward = -Z, up = +Y, bore axis on y = 0.
    Profile coordinates (u, v): u = distance forward, v = up.
    ===================================================================== */
-import { DRACOLoader, GLTFLoader, RoundedBoxGeometry, THREE, WEAPON_DATABASE, mergeGeometries } from './01_core.js';
+import { DRACOLoader, GLTFLoader, RoundedBoxGeometry, SkeletonUtils, THREE, WEAPON_DATABASE, mergeGeometries } from './01_core.js';
 import { SF2Camo, SF2Flash, SF2Rig } from './09c_sf2rig.js';
 class GunMats {
   constructor(tf) {
@@ -63,26 +63,65 @@ const RIG_RETICLE = { g36c_eo: [0.093, 82], m14ebr: [0.093, 82], hk417_rs: [0.06
 // v53 reload pose of the Blender guns: cant the other way (bottom toward the middle of the screen), swing in and lift, so the
 // magazine well and the left hand working it stay in view (the procedural guns keep RELOAD_POSE, which rolls them away)
 const GLB_RELOAD_POSE = { roll: -0.5, pitch: 0.32, drop: -0.09, shift: 0.08 };
+// v65j per-gun loading (guns.js had grown to 60 MB, all parsed at start): tools/guns/pack.mjs writes assets/guns/g/<glb id>.js each
+// and assets/guns/index.js (window.GUN_INDEX: the glb ids). loadGunModels() reads the index (+ SF2 flash / camo textures);
+// ensureGunModels(defs) fetches and parses only those guns' GLBs (a rig, a Blender model or both); gunModelReady(def) says if done.
+const GUN_LOAD = { parsed: new Set(), pending: new Map() }, GUN_OVL = {}; // v65k GUN_OVL: variant overlays (<id>_sf2_ovl, see sf2Variant)
+const gunScript = (src) => new Promise((res) => { const s = document.createElement('script'); s.src = src; s.async = true; s.onload = res; s.onerror = res; document.head.appendChild(s); });
 function loadGunModels() {
   if (loadGunModels.p) return loadGunModels.p;
-  return (loadGunModels.p = (async () => {
-    try {
-      const script = (src) => new Promise((res) => { const s = document.createElement('script'); s.src = src; s.async = true; s.onload = res; s.onerror = res; document.head.appendChild(s); });
-      await Promise.all([window.GUN_GLB ? null : script('assets/guns/guns.js'), window.SF2_FX ? null : script('assets/fx_sf2.js'), window.SF2_CAMO ? null : script('assets/camo_sf2.js')]); // (v64o + SF2's weapon camos) // v62m + SF2's own muzzle-flash textures
-      const L = new GLTFLoader(), D = new DRACOLoader(); // v49 gunlib exports Draco-compressed GLBs (older ones are plain; both load)
-      D.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/libs/draco/gltf/'); L.setDRACOLoader(D);
-      for (const [id, b64] of Object.entries(window.GUN_GLB || {})) {
-        const bin = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0)).buffer, gltf = await L.parseAsync(bin, ''), parts = [], marks = {};
-        if (gltf.animations.length) { GUN_RIGS[id] = gltf; continue; }
-        gltf.scene.updateMatrixWorld(true);
-        gltf.scene.traverse((o) => {
-          if (o.isMesh) { const g = o.geometry.clone(); g.applyMatrix4(o.matrixWorld); const nm = o.name.split('__'); parts.push({ node: nm[0], mat: ((o.material && o.material.name) || '').replace('gun:', '') || (nm[1] || '').replace(/_\d+$/, ''), geo: g, material: o.material }); }
-          else if (/^(SIGHT|HOOD|MUZZLE|MUZZLE_S|SUPPORT|GRIP|MAGPIV|CHARGEPIV|BOLTPIV)$/.test(o.name)) marks[o.name] = o.getWorldPosition(new THREE.Vector3());
-        });
-        GUN_MODELS[id] = { parts, marks };
-      }
-    } catch (e) { console.warn('gun GLB unavailable, procedural fallback:', e && e.message); }
+  return (loadGunModels.p = Promise.all([window.GUN_INDEX ? null : gunScript('assets/guns/index.js'), window.SF2_FX ? null : gunScript('assets/fx_sf2.js'), window.SF2_CAMO ? null : gunScript('assets/camo_sf2.js')]).then(() => {})); // (v64o SF2's weapon camos, v62m its muzzle-flash textures)
+}
+const gunGlbIds = (def) => { const I = window.GUN_INDEX || []; return [def.sf2Rig && def.sf2Rig + '_sf2_rig', def.sf2Rig && def.sf2Rig + '_sf2_ovl', def.model, def.id, def.id + '_sf2_rig', def.model + '_sf2_rig'].filter((k, i, a) => k && a.indexOf(k) === i && I.includes(k)); };
+function gunModelReady(def) { return !!def && gunGlbIds(def).every((k) => GUN_LOAD.parsed.has(k)); }
+async function parseGunGlb(id) {
+  const L = parseGunGlb.L || (parseGunGlb.L = (() => { const L = new GLTFLoader(), D = new DRACOLoader(); D.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/libs/draco/gltf/'); L.setDRACOLoader(D); return L; })()); // (v49 gunlib GLBs are Draco)
+  const b64 = window.GUN_GLB && window.GUN_GLB[id]; if (!b64) return;
+  const bin = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0)).buffer, gltf = await L.parseAsync(bin, ''), parts = [], marks = {};
+  delete window.GUN_GLB[id]; // (the base64 is not needed once parsed)
+  if (gltf.animations.length) { GUN_RIGS[id] = gltf; return; }
+  if (id.endsWith('_sf2_ovl')) { GUN_OVL[id] = gltf; const b = gltf.scene.userData.sf2Overlay; if (b && b.base) await loadGunGlb(b.base + '_sf2_rig'); return; } // (its base rig too)
+  gltf.scene.updateMatrixWorld(true);
+  gltf.scene.traverse((o) => {
+    if (o.isMesh) { const g = o.geometry.clone(); g.applyMatrix4(o.matrixWorld); const nm = o.name.split('__'); parts.push({ node: nm[0], mat: ((o.material && o.material.name) || '').replace('gun:', '') || (nm[1] || '').replace(/_\d+$/, ''), geo: g, material: o.material }); }
+    else if (/^(SIGHT|HOOD|MUZZLE|MUZZLE_S|SUPPORT|GRIP|MAGPIV|CHARGEPIV|BOLTPIV)$/.test(o.name)) marks[o.name] = o.getWorldPosition(new THREE.Vector3());
+  });
+  GUN_MODELS[id] = { parts, marks };
+}
+async function ensureGunModels(defs) {
+  await loadGunModels();
+  const ids = [...new Set(defs.filter(Boolean).flatMap(gunGlbIds))].filter((k) => !GUN_LOAD.parsed.has(k));
+  await Promise.all(ids.map(loadGunGlb));
+}
+function loadGunGlb(k) {
+  if (!GUN_LOAD.pending.has(k)) GUN_LOAD.pending.set(k, (async () => {
+    if (!(window.GUN_GLB && window.GUN_GLB[k])) await gunScript(`assets/guns/g/${k}.js`);
+    try { await parseGunGlb(k); } catch (e) { console.warn('gun GLB unavailable, procedural fallback:', k, e && e.message); }
+    GUN_LOAD.parsed.add(k);
   })());
+  return GUN_LOAD.pending.get(k);
+}
+// v65k a variant = its base gun's rig + the overlay's attachments (skinned to the same bones, by name) and marks, minus the parts it
+// drops (its iron sights); built once and kept in GUN_RIGS like any rig (SF2Rig clones it)
+function sf2Variant(rigId) {
+  const ov = GUN_OVL[rigId.replace(/_sf2_rig$/, '_sf2_ovl')], info = ov && ov.scene.userData.sf2Overlay, base = info && GUN_RIGS[info.base + '_sf2_rig'];
+  if (!base) return null;
+  const sc = SkeletonUtils.clone(base.scene), bones = {};
+  sc.traverse((o) => { if (o.isBone) bones[o.name] = o; });
+  for (const n of info.hide || []) { const o = sc.getObjectByName(n); if (o && o.parent) o.parent.remove(o); }
+  ov.scene.updateMatrixWorld(true);
+  ov.scene.traverse((o) => {
+    if (!o.isSkinnedMesh) return;
+    const m = new THREE.SkinnedMesh(o.geometry, o.material); m.name = o.parent && !o.parent.isScene && !o.parent.isBone ? o.parent.name : o.name; sc.add(m);
+    m.bind(new THREE.Skeleton(o.skeleton.bones.map((b) => bones[b.name]), o.skeleton.boneInverses), o.bindMatrix);
+  });
+  const wr = sc.getObjectByName('weapon_root'), owr = ov.scene.getObjectByName('weapon_root');
+  for (const c of owr ? owr.children : []) {
+    if (c.isBone) continue;
+    let t = wr.children.find((x) => x.name === c.name && !x.isBone); if (!t) { t = new THREE.Object3D(); t.name = c.name; wr.add(t); }
+    t.position.copy(c.position);
+  }
+  return (GUN_RIGS[rigId] = { scene: sc, animations: base.animations });
 }
 
 class GunBuilder {
@@ -339,7 +378,7 @@ class WeaponModels {
   // The muzzle flash rides the MUZZLE mark on weapon_root; the green tritium dot sits on the sight line (x = y = 0).
   // reloadSounds: when SF2's Reload clip pulls the mag (frame 5 of 75), seats it (27) and works the charging handle (55).
   fromRig(id, o = {}) {
-    const G = GUN_RIGS[id]; if (!G) return null;
+    const G = GUN_RIGS[id] || sf2Variant(id); if (!G) return null;
     const rig = new SF2Rig(G, Object.assign({}, o, { reloadSounds: o.reloadSounds || [[0.07, 'magout'], [0.36, 'magin'], [0.73, 'charge']] })), g = new THREE.Group(); g.add(rig.model);
     const V = THREE.Vector3, out = { group: g, nodes: {}, rig, mag: null, bolt: null, slide: null, charge: null, pin: null, nade: null, pump: null, cover: null, lhand: null };
     out.hipPos = new V(); out.adsPos = new V(); out.hipRot = new THREE.Euler(); out.adsRot = new THREE.Euler(); out.magMove = new V(); out.magRot = 0;
@@ -926,4 +965,4 @@ class SoldierFactory {
   }
 }
 
-export { GunBuilder, SoldierFactory, TEAM_PALETTE, WeaponModels, camoMat, loadGunModels };
+export { GunBuilder, SoldierFactory, TEAM_PALETTE, WeaponModels, camoMat, ensureGunModels, gunModelReady, loadGunModels };

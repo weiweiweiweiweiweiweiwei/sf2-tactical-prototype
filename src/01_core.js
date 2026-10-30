@@ -180,6 +180,294 @@ const WEAPON_DATABASE = {
     hipSpread: 0.072, adsSpread: 0.0019, adsFov: 52, adsType: '3d_sight', mobility: 0.94, maxAmmo: 30, reloadTime: 2.3, modelUrl: null, adsSpeed: 12,
     sound: 'scar', penetration: 1, tp: { len: 0.88, body: 'tan', mag: 'box' }, desc: '沙色模組化步槍，後座柔和、全息瞄具。', // v53 SF2 EU wiki (unverified): RPM/reload/ADS
   },
+  acr: { // v65p SF2's own ACR (G3)
+    name: 'ACR', type: 'assault', slot: 'primary', damageNear: 28, damageFar: 21, falloffStart: 25, falloffEnd: 60, fireRate: 0.1, recoilPitch: 0.011, recoilYaw: 0.008, recoilRecovery: 10,
+    hipSpread: 0.072, adsSpread: 0.0019, adsFov: 52, adsType: '3d_sight', mobility: 0.94, maxAmmo: 30, reloadTime: 2.3, modelUrl: null, adsSpeed: 12,
+    sound: 'scar', penetration: 1, tp: { len: 0.88, body: 'dark', mag: 'box' }, desc: 'SF2 原版 ACR：模組化突擊步槍，射速穩定、後座均衡。',
+  },
+  an94: { // v65q SF2's own AN94 (tools/sf2_add_gun.py)
+    name: 'AN-94', type: 'assault', slot: 'primary', damageNear: 28, damageFar: 21, falloffStart: 25, falloffEnd: 60, fireRate: 0.1, recoilPitch: 0.011, recoilYaw: 0.008, recoilRecovery: 10,
+    hipSpread: 0.072, adsSpread: 0.0019, adsFov: 52, adsType: '3d_sight', mobility: 0.94, maxAmmo: 30, reloadTime: 2.3, modelUrl: null, adsSpeed: 12,
+    sound: 'scar', penetration: 1, tp: { len: 0.88, body: 'dark', mag: 'box' },
+    desc: 'SF2 原版 AN-94。',
+  },
+  an94: { // v65q SF2's own AN94 (tools/sf2_add_gun.py)
+    name: 'AN-94', type: 'assault', slot: 'primary', damageNear: 28, damageFar: 21, falloffStart: 25, falloffEnd: 60, fireRate: 0.1, recoilPitch: 0.011, recoilYaw: 0.008, recoilRecovery: 10,
+    hipSpread: 0.072, adsSpread: 0.0019, adsFov: 52, adsType: '3d_sight', mobility: 0.94, maxAmmo: 30, reloadTime: 2.3, modelUrl: null, adsSpeed: 12,
+    sound: 'scar', penetration: 1, tp: { len: 0.88, body: 'dark', mag: 'box' },
+    desc: 'SF2 原版 AN-94。',
+  },
+  an94: { // v65q SF2's own AN94 (tools/sf2_add_gun.py)
+    name: 'AN-94', type: 'assault', slot: 'primary', damageNear: 28, damageFar: 21, falloffStart: 25, falloffEnd: 60, fireRate: 0.1, recoilPitch: 0.011, recoilYaw: 0.008, recoilRecovery: 10,
+    hipSpread: 0.072, adsSpread: 0.0019, adsFov: 52, adsType: '3d_sight', mobility: 0.94, maxAmmo: 30, reloadTime: 2.3, modelUrl: null, adsSpeed: 12,
+    sound: 'scar', penetration: 1, tp: { len: 0.88, body: 'dark', mag: 'box' },
+    desc: 'SF2 原版 AN-94。',
+  },
+  an94: { // v65q SF2's own AN94 (tools/sf2_add_gun.py)
+    name: 'AN-94', type: 'assault', slot: 'primary', damageNear: 28, damageFar: 21, falloffStart: 25, falloffEnd: 60, fireRate: 0.1, recoilPitch: 0.011, recoilYaw: 0.008, recoilRecovery: 10,
+    hipSpread: 0.072, adsSpread: 0.0019, adsFov: 52, adsType: '3d_sight', mobility: 0.94, maxAmmo: 30, reloadTime: 2.3, modelUrl: null, adsSpeed: 12,
+    sound: 'scar', penetration: 1, tp: { len: 0.88, body: 'dark', mag: 'box' },
+    desc: 'SF2 原版 AN-94。',
+  },
+  an94: { // v65q SF2's own AN94 (tools/sf2_add_gun.py)
+    name: 'AN-94', type: 'assault', slot: 'primary', damageNear: 28, damageFar: 21, falloffStart: 25, falloffEnd: 60, fireRate: 0.1, recoilPitch: 0.011, recoilYaw: 0.008, recoilRecovery: 10,
+    hipSpread: 0.072, adsSpread: 0.0019, adsFov: 52, adsType: '3d_sight', mobility: 0.94, maxAmmo: 30, reloadTime: 2.3, modelUrl: null, adsSpeed: 12,
+    sound: 'scar', penetration: 1, tp: { len: 0.88, body: 'dark', mag: 'box' },
+    desc: 'SF2 原版 AN-94。',
+  },
+  an94: { // v65q SF2's own AN94 (tools/sf2_add_gun.py)
+    name: 'AN-94', type: 'assault', slot: 'primary', damageNear: 28, damageFar: 21, falloffStart: 25, falloffEnd: 60, fireRate: 0.1, recoilPitch: 0.011, recoilYaw: 0.008, recoilRecovery: 10,
+    hipSpread: 0.072, adsSpread: 0.0019, adsFov: 52, adsType: '3d_sight', mobility: 0.94, maxAmmo: 30, reloadTime: 2.3, modelUrl: null, adsSpeed: 12,
+    sound: 'scar', penetration: 1, tp: { len: 0.88, body: 'dark', mag: 'box' },
+    desc: 'SF2 原版 AN-94。',
+  },
+  an94: { // v65q SF2's own AN94 (tools/sf2_add_gun.py)
+    name: 'AN-94', type: 'assault', slot: 'primary', damageNear: 28, damageFar: 21, falloffStart: 25, falloffEnd: 60, fireRate: 0.1, recoilPitch: 0.011, recoilYaw: 0.008, recoilRecovery: 10,
+    hipSpread: 0.072, adsSpread: 0.0019, adsFov: 52, adsType: '3d_sight', mobility: 0.94, maxAmmo: 30, reloadTime: 2.3, modelUrl: null, adsSpeed: 12,
+    sound: 'scar', penetration: 1, tp: { len: 0.88, body: 'dark', mag: 'box' },
+    desc: 'SF2 原版 AN-94。',
+  },
+  an94: { // v65q SF2's own AN94 (tools/sf2_add_gun.py)
+    name: 'AN-94', type: 'assault', slot: 'primary', damageNear: 28, damageFar: 21, falloffStart: 25, falloffEnd: 60, fireRate: 0.1, recoilPitch: 0.011, recoilYaw: 0.008, recoilRecovery: 10,
+    hipSpread: 0.072, adsSpread: 0.0019, adsFov: 52, adsType: '3d_sight', mobility: 0.94, maxAmmo: 30, reloadTime: 2.3, modelUrl: null, adsSpeed: 12,
+    sound: 'scar', penetration: 1, tp: { len: 0.88, body: 'dark', mag: 'box' },
+    desc: 'SF2 原版 AN-94。',
+  },
+  ak104: { // v65q SF2's AK-104 (its own SF2 stats on the AK-103's model and sounds — SF2 ships no separate mesh)
+    name: 'AK-104', type: 'assault', slot: 'primary', damageNear: 30, damageFar: 22, falloffStart: 22, falloffEnd: 55, fireRate: 0.1, recoilPitch: 0.012, recoilYaw: 0.009, recoilRecovery: 9,
+    hipSpread: 0.075, adsSpread: 0.002, adsFov: 52, adsType: '3d_sight', mobility: 0.93, maxAmmo: 30, reloadTime: 2.4, modelUrl: null, adsSpeed: 12,
+    sound: 'ak47', penetration: 1, tp: { len: 0.86, body: 'dark', mag: 'curved' }, desc: 'SF2 原版 AK-104：7.62mm 短槍管 AK，傷害高、後座較大。',
+  },
+  arx160: { // v65q SF2's own ARX160 (tools/sf2_add_gun.py)
+    name: 'ARX-160', type: 'assault', slot: 'primary', damageNear: 28, damageFar: 21, falloffStart: 25, falloffEnd: 60, fireRate: 0.1, recoilPitch: 0.011, recoilYaw: 0.008, recoilRecovery: 10,
+    hipSpread: 0.072, adsSpread: 0.0019, adsFov: 52, adsType: '3d_sight', mobility: 0.94, maxAmmo: 30, reloadTime: 2.3, modelUrl: null, adsSpeed: 12,
+    sound: 'scar', penetration: 1, tp: { len: 0.88, body: 'dark', mag: 'box' },
+    desc: 'SF2 原版 ARX-160。',
+  },
+  cm901: { // v65q SF2's own CM901 (tools/sf2_add_gun.py)
+    name: 'CM901', type: 'assault', slot: 'primary', damageNear: 28, damageFar: 21, falloffStart: 25, falloffEnd: 60, fireRate: 0.1, recoilPitch: 0.011, recoilYaw: 0.008, recoilRecovery: 10,
+    hipSpread: 0.072, adsSpread: 0.0019, adsFov: 52, adsType: '3d_sight', mobility: 0.94, maxAmmo: 30, reloadTime: 2.3, modelUrl: null, adsSpeed: 12,
+    sound: 'scar', penetration: 1, tp: { len: 0.88, body: 'dark', mag: 'box' },
+    desc: 'SF2 原版 CM901。',
+  },
+  fnf2000: { // v65q SF2's own FNF2000 (tools/sf2_add_gun.py)
+    name: 'F2000', type: 'assault', slot: 'primary', damageNear: 28, damageFar: 21, falloffStart: 25, falloffEnd: 60, fireRate: 0.1, recoilPitch: 0.011, recoilYaw: 0.008, recoilRecovery: 10,
+    hipSpread: 0.072, adsSpread: 0.0019, adsFov: 52, adsType: '3d_sight', mobility: 0.94, maxAmmo: 30, reloadTime: 2.3, modelUrl: null, adsSpeed: 12,
+    sound: 'scar', penetration: 1, tp: { len: 0.88, body: 'dark', mag: 'box' },
+    desc: 'SF2 原版 F2000。',
+  },
+  k2c1: { // v65q SF2's own K2C1 (tools/sf2_add_gun.py)
+    name: 'K2C1', type: 'assault', slot: 'primary', damageNear: 28, damageFar: 21, falloffStart: 25, falloffEnd: 60, fireRate: 0.1, recoilPitch: 0.011, recoilYaw: 0.008, recoilRecovery: 10,
+    hipSpread: 0.072, adsSpread: 0.0019, adsFov: 52, adsType: '3d_sight', mobility: 0.94, maxAmmo: 30, reloadTime: 2.3, modelUrl: null, adsSpeed: 12,
+    sound: 'scar', penetration: 1, tp: { len: 0.88, body: 'dark', mag: 'box' },
+    desc: 'SF2 原版 K2C1。',
+  },
+  madsenlar: { // v65q SF2's own MadsenLar (tools/sf2_add_gun.py)
+    name: 'Madsen-LAR', type: 'assault', slot: 'primary', damageNear: 28, damageFar: 21, falloffStart: 25, falloffEnd: 60, fireRate: 0.1, recoilPitch: 0.011, recoilYaw: 0.008, recoilRecovery: 10,
+    hipSpread: 0.072, adsSpread: 0.0019, adsFov: 52, adsType: '3d_sight', mobility: 0.94, maxAmmo: 30, reloadTime: 2.3, modelUrl: null, adsSpeed: 12,
+    sound: 'scar', penetration: 1, tp: { len: 0.88, body: 'dark', mag: 'box' },
+    desc: 'SF2 原版 Madsen-LAR。',
+  },
+  mrr: { // v65q SF2's own MRR (tools/sf2_add_gun.py)
+    name: 'MRR', type: 'assault', slot: 'primary', damageNear: 28, damageFar: 21, falloffStart: 25, falloffEnd: 60, fireRate: 0.1, recoilPitch: 0.011, recoilYaw: 0.008, recoilRecovery: 10,
+    hipSpread: 0.072, adsSpread: 0.0019, adsFov: 52, adsType: '3d_sight', mobility: 0.94, maxAmmo: 30, reloadTime: 2.3, modelUrl: null, adsSpeed: 12,
+    sound: 'scar', penetration: 1, tp: { len: 0.88, body: 'dark', mag: 'box' },
+    desc: 'SF2 原版 MRR。',
+  },
+  sar21: { // v65q SF2's own SAR21 (tools/sf2_add_gun.py)
+    name: 'SAR-21', type: 'assault', slot: 'primary', damageNear: 28, damageFar: 21, falloffStart: 25, falloffEnd: 60, fireRate: 0.1, recoilPitch: 0.011, recoilYaw: 0.008, recoilRecovery: 10,
+    hipSpread: 0.072, adsSpread: 0.0019, adsFov: 52, adsType: '3d_sight', mobility: 0.94, maxAmmo: 30, reloadTime: 2.3, modelUrl: null, adsSpeed: 12,
+    sound: 'scar', penetration: 1, tp: { len: 0.88, body: 'dark', mag: 'box' },
+    desc: 'SF2 原版 SAR-21。',
+  },
+  madsenlar: { // v65q SF2's own MadsenLar (tools/sf2_add_gun.py)
+    name: 'Madsen-LAR', type: 'assault', slot: 'primary', damageNear: 28, damageFar: 21, falloffStart: 25, falloffEnd: 60, fireRate: 0.1, recoilPitch: 0.011, recoilYaw: 0.008, recoilRecovery: 10,
+    hipSpread: 0.072, adsSpread: 0.0019, adsFov: 52, adsType: '3d_sight', mobility: 0.94, maxAmmo: 30, reloadTime: 2.3, modelUrl: null, adsSpeed: 12,
+    sound: 'scar', penetration: 1, tp: { len: 0.88, body: 'dark', mag: 'box' },
+    desc: 'SF2 原版 Madsen-LAR。',
+  },
+  fs2000: { // v65s
+    name: 'FS2000', type: 'assault', slot: 'primary', damageNear: 28, damageFar: 21, falloffStart: 25, falloffEnd: 60, fireRate: 0.09, recoilPitch: 0.011, recoilYaw: 0.008, recoilRecovery: 10,
+    hipSpread: 0.072, adsSpread: 0.0019, adsFov: 52, adsType: '3d_sight', mobility: 0.95, maxAmmo: 30, reloadTime: 2.3, modelUrl: null, adsSpeed: 12,
+    sound: 'scar', penetration: 1, tp: { len: 0.7, body: 'dark', mag: 'box' }, desc: 'SF2 原版 FS2000（沿用 F2000 外觀）。',
+  },
+  scarhdmr: { // v65s
+    name: 'SCAR-H DMR', type: 'assault', slot: 'primary', damageNear: 55, damageFar: 45, falloffStart: 40, falloffEnd: 90, fireRate: 0.25, recoilPitch: 0.03, recoilYaw: 0.01, recoilRecovery: 8,
+    hipSpread: 0.09, adsSpread: 0.001, adsFov: 45, adsType: '3d_sight', mobility: 0.9, maxAmmo: 20, reloadTime: 2.6, modelUrl: null, adsSpeed: 12,
+    sound: 'scar', penetration: 2, tp: { len: 0.95, body: 'tan', mag: 'box' }, desc: 'SF2 原版 SCAR-H DMR（沿用 SCAR-H 外觀）：半自動精確射手步槍。',
+  },
+  xm8cc: { // v65v no own model: the XM8's rig, SF2's own XM8 Compact Carbine stats
+    name: 'XM8 Compact', type: 'smg', slot: 'primary', damageNear: 26, damageFar: 18, falloffStart: 18, falloffEnd: 45, fireRate: 0.085, recoilPitch: 0.009, recoilYaw: 0.007, recoilRecovery: 11,
+    hipSpread: 0.06, adsSpread: 0.0025, adsFov: 55, adsType: '3d_sight', mobility: 0.98, maxAmmo: 30, reloadTime: 2.2, modelUrl: null, adsSpeed: 13,
+    sound: 'scar', penetration: 1, tp: { len: 0.6, body: 'tan', mag: 'box' }, desc: 'SF2 原版 XM8 Compact Carbine（沿用 XM8 外觀）。',
+  },
+  xm8ar: { // v65v no own model: the XM8's rig, SF2's own XM8 Automatic Rifle stats
+    name: 'XM8 AR', type: 'lmg', slot: 'primary', damageNear: 30, damageFar: 23, falloffStart: 30, falloffEnd: 70, fireRate: 0.09, recoilPitch: 0.012, recoilYaw: 0.01, recoilRecovery: 9,
+    hipSpread: 0.09, adsSpread: 0.0025, adsFov: 52, adsType: '3d_sight', mobility: 0.88, maxAmmo: 100, reloadTime: 4.2, modelUrl: null, adsSpeed: 11,
+    sound: 'scar', penetration: 2, tp: { len: 0.95, body: 'tan', mag: 'box' }, desc: 'SF2 原版 XM8 Automatic Rifle（沿用 XM8 外觀）：班用機槍型。',
+  },
+  stg44: { // v65q SF2's own STG44 (tools/sf2_add_gun.py)
+    name: 'StG44', type: 'assault', slot: 'primary', damageNear: 28, damageFar: 21, falloffStart: 25, falloffEnd: 60, fireRate: 0.1, recoilPitch: 0.011, recoilYaw: 0.008, recoilRecovery: 10,
+    hipSpread: 0.072, adsSpread: 0.0019, adsFov: 52, adsType: '3d_sight', mobility: 0.94, maxAmmo: 30, reloadTime: 2.3, modelUrl: null, adsSpeed: 12,
+    sound: 'scar', penetration: 1, tp: { len: 0.88, body: 'dark', mag: 'box' },
+    desc: 'SF2 原版 StG44。',
+  },
+  t65k1: { // v65q SF2's own T65K1 (tools/sf2_add_gun.py)
+    name: 'T65K1', type: 'assault', slot: 'primary', damageNear: 28, damageFar: 21, falloffStart: 25, falloffEnd: 60, fireRate: 0.1, recoilPitch: 0.011, recoilYaw: 0.008, recoilRecovery: 10,
+    hipSpread: 0.072, adsSpread: 0.0019, adsFov: 52, adsType: '3d_sight', mobility: 0.94, maxAmmo: 30, reloadTime: 2.3, modelUrl: null, adsSpeed: 12,
+    sound: 'scar', penetration: 1, tp: { len: 0.88, body: 'dark', mag: 'box' },
+    desc: 'SF2 原版 T65K1。',
+  },
+  t65k2: { // v65q SF2's own T65K2 (tools/sf2_add_gun.py)
+    name: 'T65K2', type: 'assault', slot: 'primary', damageNear: 28, damageFar: 21, falloffStart: 25, falloffEnd: 60, fireRate: 0.1, recoilPitch: 0.011, recoilYaw: 0.008, recoilRecovery: 10,
+    hipSpread: 0.072, adsSpread: 0.0019, adsFov: 52, adsType: '3d_sight', mobility: 0.94, maxAmmo: 30, reloadTime: 2.3, modelUrl: null, adsSpeed: 12,
+    sound: 'scar', penetration: 1, tp: { len: 0.88, body: 'dark', mag: 'box' },
+    desc: 'SF2 原版 T65K2。',
+  },
+  t91: { // v65q SF2's own T91 (tools/sf2_add_gun.py)
+    name: 'T91', type: 'assault', slot: 'primary', damageNear: 28, damageFar: 21, falloffStart: 25, falloffEnd: 60, fireRate: 0.1, recoilPitch: 0.011, recoilYaw: 0.008, recoilRecovery: 10,
+    hipSpread: 0.072, adsSpread: 0.0019, adsFov: 52, adsType: '3d_sight', mobility: 0.94, maxAmmo: 30, reloadTime: 2.3, modelUrl: null, adsSpeed: 12,
+    sound: 'scar', penetration: 1, tp: { len: 0.88, body: 'dark', mag: 'box' },
+    desc: 'SF2 原版 T91。',
+  },
+  tar21: { // v65q SF2's own TAR21 (tools/sf2_add_gun.py)
+    name: 'TAR-21', type: 'assault', slot: 'primary', damageNear: 28, damageFar: 21, falloffStart: 25, falloffEnd: 60, fireRate: 0.1, recoilPitch: 0.011, recoilYaw: 0.008, recoilRecovery: 10,
+    hipSpread: 0.072, adsSpread: 0.0019, adsFov: 52, adsType: '3d_sight', mobility: 0.94, maxAmmo: 30, reloadTime: 2.3, modelUrl: null, adsSpeed: 12,
+    sound: 'scar', penetration: 1, tp: { len: 0.88, body: 'dark', mag: 'box' },
+    desc: 'SF2 原版 TAR-21。',
+  },
+  bizon: { // v65q SF2's own Bizon (tools/sf2_add_gun.py)
+    name: 'PP-19 Bizon', type: 'smg', slot: 'primary', damageNear: 24, damageFar: 16, falloffStart: 15, falloffEnd: 40, fireRate: 0.075, recoilPitch: 0.009, recoilYaw: 0.008, recoilRecovery: 11,
+    hipSpread: 0.06, adsSpread: 0.003, adsFov: 55, adsType: '3d_sight', mobility: 1.0, maxAmmo: 30, reloadTime: 2.1, modelUrl: null, adsSpeed: 14,
+    sound: 'mp5', penetration: 1, tp: { len: 0.6, body: 'dark', mag: 'box' },
+    desc: 'SF2 原版 PP-19 Bizon。',
+  },
+  csls06: { // v65q SF2's own CSLS06 (tools/sf2_add_gun.py)
+    name: 'CS/LS06', type: 'smg', slot: 'primary', damageNear: 24, damageFar: 16, falloffStart: 15, falloffEnd: 40, fireRate: 0.075, recoilPitch: 0.009, recoilYaw: 0.008, recoilRecovery: 11,
+    hipSpread: 0.06, adsSpread: 0.003, adsFov: 55, adsType: '3d_sight', mobility: 1.0, maxAmmo: 30, reloadTime: 2.1, modelUrl: null, adsSpeed: 14,
+    sound: 'mp5', penetration: 1, tp: { len: 0.6, body: 'dark', mag: 'box' },
+    desc: 'SF2 原版 CS/LS06。',
+  },
+  cz3a1: { // v65q SF2's own CZ3A1 (tools/sf2_add_gun.py)
+    name: 'CZ Scorpion EVO3', type: 'smg', slot: 'primary', damageNear: 24, damageFar: 16, falloffStart: 15, falloffEnd: 40, fireRate: 0.075, recoilPitch: 0.009, recoilYaw: 0.008, recoilRecovery: 11,
+    hipSpread: 0.06, adsSpread: 0.003, adsFov: 55, adsType: '3d_sight', mobility: 1.0, maxAmmo: 30, reloadTime: 2.1, modelUrl: null, adsSpeed: 14,
+    sound: 'mp5', penetration: 1, tp: { len: 0.6, body: 'dark', mag: 'box' },
+    desc: 'SF2 原版 CZ Scorpion EVO3。',
+  },
+  k1: { // v65q SF2's own K1 (tools/sf2_add_gun.py)
+    name: 'K1', type: 'smg', slot: 'primary', damageNear: 24, damageFar: 16, falloffStart: 15, falloffEnd: 40, fireRate: 0.075, recoilPitch: 0.009, recoilYaw: 0.008, recoilRecovery: 11,
+    hipSpread: 0.06, adsSpread: 0.003, adsFov: 55, adsType: '3d_sight', mobility: 1.0, maxAmmo: 30, reloadTime: 2.1, modelUrl: null, adsSpeed: 14,
+    sound: 'mp5', penetration: 1, tp: { len: 0.6, body: 'dark', mag: 'box' },
+    desc: 'SF2 原版 K1。',
+  },
+  krissv: { // v65q SF2's own KrissV (tools/sf2_add_gun.py)
+    name: 'Kriss Vector', type: 'smg', slot: 'primary', damageNear: 24, damageFar: 16, falloffStart: 15, falloffEnd: 40, fireRate: 0.075, recoilPitch: 0.009, recoilYaw: 0.008, recoilRecovery: 11,
+    hipSpread: 0.06, adsSpread: 0.003, adsFov: 55, adsType: '3d_sight', mobility: 1.0, maxAmmo: 30, reloadTime: 2.1, modelUrl: null, adsSpeed: 14,
+    sound: 'mp5', penetration: 1, tp: { len: 0.6, body: 'dark', mag: 'box' },
+    desc: 'SF2 原版 Kriss Vector。',
+  },
+  mp40: { // v65q SF2's own MP40 (tools/sf2_add_gun.py)
+    name: 'MP40', type: 'smg', slot: 'primary', damageNear: 24, damageFar: 16, falloffStart: 15, falloffEnd: 40, fireRate: 0.075, recoilPitch: 0.009, recoilYaw: 0.008, recoilRecovery: 11,
+    hipSpread: 0.06, adsSpread: 0.003, adsFov: 55, adsType: '3d_sight', mobility: 1.0, maxAmmo: 30, reloadTime: 2.1, modelUrl: null, adsSpeed: 14,
+    sound: 'mp5', penetration: 1, tp: { len: 0.6, body: 'dark', mag: 'box' },
+    desc: 'SF2 原版 MP40。',
+  },
+  mx4: { // v65q SF2's own Mx4Storm (tools/sf2_add_gun.py)
+    name: 'Mx4 Storm', type: 'smg', slot: 'primary', damageNear: 24, damageFar: 16, falloffStart: 15, falloffEnd: 40, fireRate: 0.075, recoilPitch: 0.009, recoilYaw: 0.008, recoilRecovery: 11,
+    hipSpread: 0.06, adsSpread: 0.003, adsFov: 55, adsType: '3d_sight', mobility: 1.0, maxAmmo: 30, reloadTime: 2.1, modelUrl: null, adsSpeed: 14,
+    sound: 'mp5', penetration: 1, tp: { len: 0.6, body: 'dark', mag: 'box' },
+    desc: 'SF2 原版 Mx4 Storm。',
+  },
+  sigmpx: { // v65q SF2's own SIGMPX (tools/sf2_add_gun.py)
+    name: 'SIG MPX', type: 'smg', slot: 'primary', damageNear: 24, damageFar: 16, falloffStart: 15, falloffEnd: 40, fireRate: 0.075, recoilPitch: 0.009, recoilYaw: 0.008, recoilRecovery: 11,
+    hipSpread: 0.06, adsSpread: 0.003, adsFov: 55, adsType: '3d_sight', mobility: 1.0, maxAmmo: 30, reloadTime: 2.1, modelUrl: null, adsSpeed: 14,
+    sound: 'mp5', penetration: 1, tp: { len: 0.6, body: 'dark', mag: 'box' },
+    desc: 'SF2 原版 SIG MPX。',
+  },
+  uzipro: { // v65q SF2's own UziPro (tools/sf2_add_gun.py)
+    name: 'Uzi Pro', type: 'smg', slot: 'primary', damageNear: 24, damageFar: 16, falloffStart: 15, falloffEnd: 40, fireRate: 0.075, recoilPitch: 0.009, recoilYaw: 0.008, recoilRecovery: 11,
+    hipSpread: 0.06, adsSpread: 0.003, adsFov: 55, adsType: '3d_sight', mobility: 1.0, maxAmmo: 30, reloadTime: 2.1, modelUrl: null, adsSpeed: 14,
+    sound: 'mp5', penetration: 1, tp: { len: 0.6, body: 'dark', mag: 'box' },
+    desc: 'SF2 原版 Uzi Pro。',
+  },
+  fnar: { // v65q SF2's own FNAR (tools/sf2_add_gun.py)
+    name: 'FN FNAR', type: 'sniper', slot: 'primary', damageNear: 110, damageFar: 96, falloffStart: 60, falloffEnd: 200, fireRate: 1.2, recoilPitch: 0.065, recoilYaw: 0.01, recoilRecovery: 6,
+    hipSpread: 0.14, adsSpread: 0.0, adsFov: 20, adsType: '2d_scope_overlay', mobility: 0.82, maxAmmo: 5, reloadTime: 3.0, modelUrl: null, zoomFovs: [20, 9], zoomHFovs: [55, 20],
+    sound: 'm40', penetration: 2, range: 420, adsSpeed: 17, tracerEvery: 1, tp: { len: 1.15, body: 'dark', mag: 'box', scope: true },
+    desc: 'SF2 原版 FN FNAR。',
+  },
+  msr: { // v65q SF2's own MSR (tools/sf2_add_gun.py)
+    name: 'Remington MSR', type: 'sniper', slot: 'primary', damageNear: 110, damageFar: 96, falloffStart: 60, falloffEnd: 200, fireRate: 1.2, recoilPitch: 0.065, recoilYaw: 0.01, recoilRecovery: 6,
+    hipSpread: 0.14, adsSpread: 0.0, adsFov: 20, adsType: '2d_scope_overlay', mobility: 0.82, maxAmmo: 5, reloadTime: 3.0, modelUrl: null, zoomFovs: [20, 9], zoomHFovs: [55, 20],
+    sound: 'm40', penetration: 2, range: 420, adsSpeed: 17, tracerEvery: 1, tp: { len: 1.15, body: 'dark', mag: 'box', scope: true },
+    desc: 'SF2 原版 Remington MSR。',
+  },
+  svch: { // v65q SF2's own SVCh (tools/sf2_add_gun.py)
+    name: 'SVCh', type: 'sniper', slot: 'primary', damageNear: 110, damageFar: 96, falloffStart: 60, falloffEnd: 200, fireRate: 1.2, recoilPitch: 0.065, recoilYaw: 0.01, recoilRecovery: 6,
+    hipSpread: 0.14, adsSpread: 0.0, adsFov: 20, adsType: '2d_scope_overlay', mobility: 0.82, maxAmmo: 5, reloadTime: 3.0, modelUrl: null, zoomFovs: [20, 9], zoomHFovs: [55, 20],
+    sound: 'm40', penetration: 2, range: 420, adsSpeed: 17, tracerEvery: 1, tp: { len: 1.15, body: 'dark', mag: 'box', scope: true },
+    desc: 'SF2 原版 SVCh。',
+  },
+  fnmag: { // v65q SF2's own FNMAG (tools/sf2_add_gun.py)
+    name: 'FN MAG', type: 'lmg', slot: 'primary', damageNear: 30, damageFar: 23, falloffStart: 30, falloffEnd: 70, fireRate: 0.085, recoilPitch: 0.012, recoilYaw: 0.01, recoilRecovery: 8,
+    hipSpread: 0.09, adsSpread: 0.004, adsFov: 50, adsType: '3d_sight', mobility: 0.82, maxAmmo: 100, reloadTime: 4.5, modelUrl: null, adsSpeed: 10,
+    sound: 'm249', penetration: 2, tp: { len: 1.0, body: 'dark', mag: 'box' },
+    desc: 'SF2 原版 FN MAG。',
+  },
+  minimispw: { // v65q SF2's own MinimiSPW (tools/sf2_add_gun.py)
+    name: 'Minimi SPW', type: 'lmg', slot: 'primary', damageNear: 30, damageFar: 23, falloffStart: 30, falloffEnd: 70, fireRate: 0.085, recoilPitch: 0.012, recoilYaw: 0.01, recoilRecovery: 8,
+    hipSpread: 0.09, adsSpread: 0.004, adsFov: 50, adsType: '3d_sight', mobility: 0.82, maxAmmo: 100, reloadTime: 4.5, modelUrl: null, adsSpeed: 10,
+    sound: 'm249', penetration: 2, tp: { len: 1.0, body: 'dark', mag: 'box' },
+    desc: 'SF2 原版 Minimi SPW。',
+  },
+  ultimax: { // v65q SF2's own Ultimax (tools/sf2_add_gun.py)
+    name: 'Ultimax', type: 'lmg', slot: 'primary', damageNear: 30, damageFar: 23, falloffStart: 30, falloffEnd: 70, fireRate: 0.085, recoilPitch: 0.012, recoilYaw: 0.01, recoilRecovery: 8,
+    hipSpread: 0.09, adsSpread: 0.004, adsFov: 50, adsType: '3d_sight', mobility: 0.82, maxAmmo: 100, reloadTime: 4.5, modelUrl: null, adsSpeed: 10,
+    sound: 'm249', penetration: 2, tp: { len: 1.0, body: 'dark', mag: 'box' },
+    desc: 'SF2 原版 Ultimax。',
+  },
+  k5: { // v65q SF2's own K5 (tools/sf2_add_gun.py)
+    name: 'K5', type: 'pistol', slot: 'secondary', damageNear: 30, damageFar: 22, falloffStart: 12, falloffEnd: 35, fireRate: 0.16, recoilPitch: 0.02, recoilYaw: 0.008, recoilRecovery: 10,
+    hipSpread: 0.04, adsSpread: 0.004, adsFov: 60, adsType: '3d_sight', mobility: 1.0, maxAmmo: 12, reloadTime: 1.8, modelUrl: null, adsSpeed: 15,
+    sound: 'p226', penetration: 1, tp: { len: 0.2, body: 'dark', mag: 'box', pistol: true },
+    desc: 'SF2 原版 K5。',
+  },
+  luger: { // v65q SF2's own LUGER (tools/sf2_add_gun.py)
+    name: 'Luger P08', type: 'pistol', slot: 'secondary', damageNear: 30, damageFar: 22, falloffStart: 12, falloffEnd: 35, fireRate: 0.16, recoilPitch: 0.02, recoilYaw: 0.008, recoilRecovery: 10,
+    hipSpread: 0.04, adsSpread: 0.004, adsFov: 60, adsType: '3d_sight', mobility: 1.0, maxAmmo: 12, reloadTime: 1.8, modelUrl: null, adsSpeed: 15,
+    sound: 'p226', penetration: 1, tp: { len: 0.2, body: 'dark', mag: 'box', pistol: true },
+    desc: 'SF2 原版 Luger P08。',
+  },
+  maxim9: { // v65q SF2's own Maxim9 (tools/sf2_add_gun.py)
+    name: 'Maxim 9', type: 'pistol', slot: 'secondary', damageNear: 30, damageFar: 22, falloffStart: 12, falloffEnd: 35, fireRate: 0.16, recoilPitch: 0.02, recoilYaw: 0.008, recoilRecovery: 10,
+    hipSpread: 0.04, adsSpread: 0.004, adsFov: 60, adsType: '3d_sight', mobility: 1.0, maxAmmo: 12, reloadTime: 1.8, modelUrl: null, adsSpeed: 15,
+    sound: 'p226', penetration: 1, tp: { len: 0.2, body: 'dark', mag: 'box', pistol: true },
+    desc: 'SF2 原版 Maxim 9。',
+  },
+  strikeone: { // v65q SF2's own StrikeOne (tools/sf2_add_gun.py)
+    name: 'Strike One', type: 'pistol', slot: 'secondary', damageNear: 30, damageFar: 22, falloffStart: 12, falloffEnd: 35, fireRate: 0.16, recoilPitch: 0.02, recoilYaw: 0.008, recoilRecovery: 10,
+    hipSpread: 0.04, adsSpread: 0.004, adsFov: 60, adsType: '3d_sight', mobility: 1.0, maxAmmo: 12, reloadTime: 1.8, modelUrl: null, adsSpeed: 15,
+    sound: 'p226', penetration: 1, tp: { len: 0.2, body: 'dark', mag: 'box', pistol: true },
+    desc: 'SF2 原版 Strike One。',
+  },
+  wildey: { // v65q SF2's own Wildey (tools/sf2_add_gun.py)
+    name: 'Wildey', type: 'pistol', slot: 'secondary', damageNear: 30, damageFar: 22, falloffStart: 12, falloffEnd: 35, fireRate: 0.16, recoilPitch: 0.02, recoilYaw: 0.008, recoilRecovery: 10,
+    hipSpread: 0.04, adsSpread: 0.004, adsFov: 60, adsType: '3d_sight', mobility: 1.0, maxAmmo: 12, reloadTime: 1.8, modelUrl: null, adsSpeed: 15,
+    sound: 'p226', penetration: 1, tp: { len: 0.2, body: 'dark', mag: 'box', pistol: true },
+    desc: 'SF2 原版 Wildey。',
+  },
+  magnum44: { // v65q SF2's own 44Magnum (tools/sf2_add_gun.py)
+    name: '.44 Magnum', type: 'pistol', slot: 'secondary', damageNear: 30, damageFar: 22, falloffStart: 12, falloffEnd: 35, fireRate: 0.16, recoilPitch: 0.02, recoilYaw: 0.008, recoilRecovery: 10,
+    hipSpread: 0.04, adsSpread: 0.004, adsFov: 60, adsType: '3d_sight', mobility: 1.0, maxAmmo: 12, reloadTime: 1.8, modelUrl: null, adsSpeed: 15,
+    sound: 'p226', penetration: 1, tp: { len: 0.2, body: 'dark', mag: 'box', pistol: true },
+    desc: 'SF2 原版 .44 Magnum。',
+  },
+  usas12: { // v65q SF2's own USAS12 (tools/sf2_add_gun.py)
+    name: 'USAS-12', type: 'shotgun', slot: 'primary', damageNear: 16, damageFar: 6, falloffStart: 8, falloffEnd: 25, fireRate: 0.85, recoilPitch: 0.05, recoilYaw: 0.01, recoilRecovery: 7, pellets: 9,
+    hipSpread: 0.07, adsSpread: 0.05, adsFov: 60, adsType: '3d_sight', mobility: 0.9, maxAmmo: 8, reloadTime: 3.0, modelUrl: null, adsSpeed: 12,
+    sound: 'm870', penetration: 1, tp: { len: 0.95, body: 'dark', mag: 'none' },
+    desc: 'SF2 原版 USAS-12。',
+  },
   famas: {
     name: 'FAMAS', type: 'assault', slot: 'primary', damageNear: 25, damageFar: 18, falloffStart: 25, falloffEnd: 60, fireRate: 0.087, recoilPitch: 0.0105, recoilYaw: 0.013, recoilRecovery: 11,
     hipSpread: 0.07, adsSpread: 0.0028, adsFov: 56, adsType: '3d_sight', mobility: 0.96, maxAmmo: 25, reloadTime: 2.7, modelUrl: null,
@@ -507,16 +795,63 @@ const SF2_WEIGHT = {
   vz61: [2.8, 1.8], m40a1: [5.7, 2.85], k14: [7.6, 3.8], sr25: [7.0, 3.5], psg1: [7.0, 3.5], mg4: [7.8, 3.9],
   k3: [6.8, 3.4], aa12: [4.0, 2.0], m92fs: [1.0, 0.0], cz75: [1.0, 0.0], jericho: [1.0, 0.0], sw60: [1.0, 0.0],
   m14ebr: [6.1, 3.05], type89: [4.7, 2.35], l86a1: [7.2, 3.6], hk23e: [7.9, 3.95], frf2: [6.3, 3.15], cz700: [7.5, 3.75],
-  trg: [7.3, 3.65], awp_circuit: [8.1, 4.05], cheytac_m200_circuit: [9.5, 4.75], cz700_circuit: [7.5, 3.75], k14_circuit: [7.6, 3.8], infinity: [1.0, 0.0],
-  knife: [1.0, 0.0], he: [1.0, 0.0], flash: [1.0, 0.0], smoke: [1.0, 0.0],
+  trg: [7.3, 3.65], usas12: [5.4, 2.7], magnum44: [1.0, 0.0], wildey: [1.0, 0.0], strikeone: [1.0, 0.0], maxim9: [1.2, 0.0],
+  luger: [1.0, 0.0], k5: [1.0, 0.0], ultimax: [7.0, 3.5], minimispw: [7.5, 3.75], fnmag: [6.8, 3.4], svch: [5.7, 2.85],
+  msr: [7.7, 3.85], fnar: [5.7, 2.85], uzipro: [1.9, 0.95], sigmpx: [2.0, 0.98], mx4: [2.0, 1.0], mp40: [2.2, 1.1],
+  krissv: [2.0, 1.0], k1: [2.35, 1.225], cz3a1: [2.1, 1.05], csls06: [2.1, 1.1], bizon: [2.2, 1.1], tar21: [3.6, 1.8],
+  t91: [4.3, 2.35], t65k2: [4.5, 2.25], t65k1: [4.3, 2.15], stg44: [5.22, 2.61], scarhdmr: [5.76, 2.88], sar21: [4.75, 2.375],
+  mrr: [3.6, 1.5], madsenlar: [5.5, 2.75], k2c1: [4.0, 2.0], fnf2000: [3.4, 1.7], cm901: [4.0, 2.0], arx160: [3.3, 1.65],
+  ak104: [5.529, 2.764], an94: [5.2, 2.3], acr: [4.0, 2.0], awp_circuit: [8.1, 4.05], cheytac_m200_circuit: [9.5, 4.75], cz700_circuit: [7.5, 3.75],
+  k14_circuit: [7.6, 3.8], infinity: [1.0, 0.0], knife: [1.0, 0.0], he: [1.0, 0.0], flash: [1.0, 0.0], smoke: [1.0, 0.0],
 };
 // </sf2-weights>
 // <sf2-weapons>
 /* v62i SF2's own timing, lenses, zoom offsets and recoil for the guns with an SF2 rig — generated by tools/sf2_weapon_table.py from
    docs/research/sf2/client-data/weapons.json; applied onto WEAPON_DATABASE before compileWeapon. Damage stays on the balance rules. */
 const SF2_WEAPONS = {
+  usas12: {'fireRate': 0.24, 'reloadTime': 2.4, 'equipTime': 1.1, 'adsSpeed': 12, 'adsFov': 55, 'adsType': '3d_sight', 'vmHFov': 60.0, 'vmAdsHFov': 55.0, 'sf2Rig': 'usas12', 'sf2': 'usas12', 'sf2ZoomIn': [0.0, -0.01, -0.005], 'sf2ZoomOut': [0.0, 0.0, 0.0], 'sf2ReloadSounds': [[0.12, 'magout'], [0.4, 'magin'], [0.73, 'charge']], 'sf2Recoil': {'nextCrossVert': 6.5, 'maxCrossVert': 15.0, 'vertInc': 11000.0, 'vertDec': 17.0, 'crossDecreasInc': 30.0, 'incline': 0.1, 'forceCorrection': 300.0, 'domDefault': 0.6, 'domZoomDefault': 0.6, 'domInc': 0.4, 'domMax': 3.0, 'domMin': 0.6, 'domDec': 10.5, 'maxMovingValue': 0.5, 'mulValueRun': 1.0, 'mulValueJump': 2.0, 'zoomMod': 0.8, 'crouchMod': 0.6}, 'sf2ReloadAnim': 2.533}, // SFCWeaponUSAS12
+  magnum44: {'fireRate': 0.7, 'reloadTime': 0.5, 'equipTime': 0.75, 'adsSpeed': 12, 'adsFov': 55, 'adsType': '3d_sight', 'vmHFov': 60.0, 'vmAdsHFov': 32.0, 'sf2Rig': 'magnum44', 'sf2': 'magnum44', 'sf2ZoomIn': [4.0, -0.03, 0.0], 'sf2ZoomOut': [0.0, 0.0, 0.0], 'sf2ReloadSounds': [[0.12, 'magout'], [0.4, 'magin'], [0.73, 'charge']], 'sf2Recoil': {'nextCrossVert': 15.0, 'maxCrossVert': 18.0, 'vertInc': 65000.0, 'vertDec': 17.0, 'crossDecreasInc': 30.0, 'incline': 0.15, 'forceCorrection': 50.0, 'domDefault': 0.1, 'domZoomDefault': 0.0, 'domInc': 0.22, 'domMax': 1.4, 'domMin': 0.0, 'domDec': 8.0, 'maxMovingValue': 0.5, 'mulValueRun': 1.0, 'mulValueJump': 2.0, 'zoomMod': 0.8, 'crouchMod': 0.8}, 'sf2ReloadAnim': 0.53}, // SFCWeapon44Magnum
+  wildey: {'fireRate': 0.158, 'reloadTime': 2.2, 'equipTime': 0.5, 'adsSpeed': 12, 'adsFov': 55, 'adsType': '3d_sight', 'vmHFov': 60.0, 'vmAdsHFov': 32.0, 'sf2Rig': 'wildey', 'sf2': 'wildey', 'sf2ZoomIn': [12.0, 0.0, -0.45], 'sf2ZoomOut': [-1.0, -1.0, 0.0], 'sf2ReloadSounds': [[0.12, 'magout'], [0.4, 'magin'], [0.73, 'charge']], 'sf2Recoil': {'nextCrossVert': 2.5, 'maxCrossVert': 15.0, 'vertInc': 30000.0, 'vertDec': 7.0, 'crossDecreasInc': 30.0, 'incline': 0.3, 'forceCorrection': 50.0, 'domDefault': 0.1, 'domZoomDefault': 0.0, 'domInc': 0.45, 'domMax': 1.8, 'domMin': 0.2, 'domDec': 0.9, 'maxMovingValue': 0.5, 'mulValueRun': 1.0, 'mulValueJump': 2.0, 'zoomMod': 0.8, 'crouchMod': 0.8}, 'sf2ReloadAnim': 2.322}, // SFCWeaponWildey
+  strikeone: {'fireRate': 0.108, 'reloadTime': 1.675, 'equipTime': 0.38, 'adsSpeed': 12, 'adsFov': 55, 'adsType': '3d_sight', 'vmHFov': 60.0, 'vmAdsHFov': 40.0, 'sf2Rig': 'strikeone', 'sf2': 'strikeone', 'sf2ZoomIn': [12.0, -0.02, -0.15], 'sf2ZoomOut': [-0.4, 0.8, 1.2], 'sf2ReloadSounds': [[0.12, 'magout'], [0.4, 'magin'], [0.73, 'charge']], 'sf2Recoil': {'nextCrossVert': 1.3, 'maxCrossVert': 9.0, 'vertInc': 50000.0, 'vertDec': 8.0, 'crossDecreasInc': 30.0, 'incline': 0.2, 'forceCorrection': 50.0, 'domDefault': 0.2, 'domZoomDefault': 0.0, 'domInc': 0.3, 'domMax': 1.4, 'domMin': 0.3, 'domDec': 3.0, 'maxMovingValue': 0.5, 'mulValueRun': 1.5, 'mulValueJump': 2.0, 'zoomMod': 0.8, 'crouchMod': 0.8}}, // SFCWeaponStrikeOne
+  maxim9: {'fireRate': 0.115, 'reloadTime': 1.8, 'equipTime': 0.425, 'adsSpeed': 12, 'adsFov': 55, 'adsType': '3d_sight', 'vmHFov': 60.0, 'vmAdsHFov': 40.0, 'sf2Rig': 'maxim9', 'sf2': 'maxim9', 'sf2ZoomIn': [2.0, -0.01, 0.09], 'sf2ZoomOut': [-0.4, 0.8, 1.2], 'sf2ReloadSounds': [[0.12, 'magout'], [0.4, 'magin'], [0.73, 'charge']], 'sf2Recoil': {'nextCrossVert': 2.0, 'maxCrossVert': 15.0, 'vertInc': 40000.0, 'vertDec': 10.0, 'crossDecreasInc': 30.0, 'incline': 0.35, 'forceCorrection': 50.0, 'domDefault': 0.2, 'domZoomDefault': 0.5, 'domInc': 0.5, 'domMax': 1.65, 'domMin': 0.25, 'domDec': 3.0, 'maxMovingValue': 0.5, 'mulValueRun': 1.5, 'mulValueJump': 2.0, 'zoomMod': 0.8, 'crouchMod': 0.8}, 'sf2ReloadAnim': 1.908}, // SFCWeaponMaxim9
+  luger: {'fireRate': 0.119, 'reloadTime': 1.7, 'equipTime': 0.51, 'adsSpeed': 12, 'adsFov': 55, 'adsType': '3d_sight', 'vmHFov': 60.0, 'vmAdsHFov': 32.0, 'sf2Rig': 'luger', 'sf2': 'luger', 'sf2ZoomIn': [12.0, 0.0, 0.08], 'sf2ZoomOut': [-1.0, -1.0, 0.0], 'sf2ReloadSounds': [[0.12, 'magout'], [0.4, 'magin'], [0.73, 'charge']], 'sf2Recoil': {'nextCrossVert': 1.47, 'maxCrossVert': 10.0, 'vertInc': 30000.0, 'vertDec': 7.0, 'crossDecreasInc': 30.0, 'incline': 0.4, 'forceCorrection': 50.0, 'domDefault': 0.4, 'domZoomDefault': 0.5, 'domInc': 0.3, 'domMax': 1.5, 'domMin': 0.5, 'domDec': 3.0, 'maxMovingValue': 0.5, 'mulValueRun': 1.5, 'mulValueJump': 2.0, 'zoomMod': 0.8, 'crouchMod': 0.8}, 'sf2ReloadAnim': 1.85}, // SFCWeaponLUGER
+  k5: {'fireRate': 0.098, 'reloadTime': 1.6, 'equipTime': 0.43, 'adsSpeed': 12, 'adsFov': 55, 'adsType': '3d_sight', 'vmHFov': 60.0, 'vmAdsHFov': 40.0, 'sf2Rig': 'k5', 'sf2': 'k5', 'sf2ZoomIn': [0.0, 0.0, 0.1], 'sf2ZoomOut': [0.0, -0.02, 0.0], 'sf2ReloadSounds': [[0.12, 'magout'], [0.4, 'magin'], [0.73, 'charge']], 'sf2Recoil': {'nextCrossVert': 1.2, 'maxCrossVert': 9.0, 'vertInc': 30000.0, 'vertDec': 7.0, 'crossDecreasInc': 30.0, 'incline': 0.2, 'forceCorrection': 50.0, 'domDefault': 0.3, 'domZoomDefault': 0.5, 'domInc': 0.3, 'domMax': 1.5, 'domMin': 0.5, 'domDec': 3.0, 'maxMovingValue': 0.5, 'mulValueRun': 1.5, 'mulValueJump': 2.0, 'zoomMod': 0.8, 'crouchMod': 0.8}, 'sf2ReloadAnim': 1.8}, // SFCWeaponK5
+  ultimax: {'fireRate': 0.1, 'reloadTime': 3.15, 'equipTime': 1.6, 'adsSpeed': 12, 'adsFov': 55, 'adsType': '3d_sight', 'vmHFov': 65.0, 'vmAdsHFov': 35.0, 'sf2Rig': 'ultimax', 'sf2': 'ultimax', 'sf2ZoomIn': [3.0, -0.02, -0.2], 'sf2ZoomOut': [0.0, 0.0, 0.0], 'sf2ReloadSounds': [[0.12, 'magout'], [0.4, 'magin'], [0.73, 'charge']], 'sf2Recoil': {'nextCrossVert': 1.25, 'maxCrossVert': 8.0, 'vertInc': 4040.0, 'vertDec': 11.0, 'crossDecreasInc': 30.0, 'incline': 0.28, 'forceCorrection': 50.0, 'domDefault': 2.0, 'domZoomDefault': 0.5, 'domInc': 0.3, 'domMax': 1.8, 'domMin': 0.5, 'domDec': 3.5, 'maxMovingValue': 0.5, 'mulValueRun': 0.3, 'mulValueJump': 6.0, 'zoomMod': 0.7, 'crouchMod': 0.4}, 'sf2ReloadAnim': 3.26}, // SFCWeaponUltimax
+  minimispw: {'fireRate': 0.085, 'reloadTime': 4.9, 'equipTime': 1.75, 'adsSpeed': 12, 'adsFov': 55, 'adsType': '3d_sight', 'vmHFov': 60.0, 'vmAdsHFov': 35.0, 'sf2Rig': 'minimispw', 'sf2': 'minimispw', 'sf2ZoomIn': [2.0, -0.02, -0.75], 'sf2ZoomOut': [2.0, -0.04, -0.75], 'sf2ReloadSounds': [[0.12, 'magout'], [0.4, 'magin'], [0.73, 'charge']], 'sf2Recoil': {'nextCrossVert': 1.4, 'maxCrossVert': 15.0, 'vertInc': 10000.0, 'vertDec': 10.0, 'crossDecreasInc': 30.0, 'incline': 0.15, 'forceCorrection': 50.0, 'domDefault': 1.8, 'domZoomDefault': 0.6, 'domInc': 0.16, 'domMax': 1.9, 'domMin': 0.2, 'domDec': 1.4, 'maxMovingValue': 1.0, 'mulValueRun': 0.35, 'mulValueJump': 2.0, 'zoomMod': 0.7, 'crouchMod': 0.4}, 'sf2ReloadAnim': 5.0}, // SFCWeaponMinimiSPW
+  fnmag: {'fireRate': 0.106, 'reloadTime': 3.8, 'equipTime': 1.7, 'adsSpeed': 12, 'adsFov': 55, 'adsType': '3d_sight', 'vmHFov': 60.0, 'vmAdsHFov': 30.0, 'sf2Rig': 'fnmag', 'sf2': 'fnmag', 'sf2ZoomIn': [3.0, -0.02, 0.43], 'sf2ZoomOut': [0.0, 0.0, 0.0], 'sf2ReloadSounds': [[0.12, 'magout'], [0.4, 'magin'], [0.73, 'charge']], 'sf2Recoil': {'nextCrossVert': 1.45, 'maxCrossVert': 13.0, 'vertInc': 10000.0, 'vertDec': 11.0, 'crossDecreasInc': 30.0, 'incline': 0.26, 'forceCorrection': 50.0, 'domDefault': 1.4, 'domZoomDefault': 0.6, 'domInc': 0.18, 'domMax': 2.0, 'domMin': 0.28, 'domDec': 1.5, 'maxMovingValue': 1.0, 'mulValueRun': 0.35, 'mulValueJump': 2.0, 'zoomMod': 0.7, 'crouchMod': 0.7}, 'sf2ReloadAnim': 4.028}, // SFCWeaponFNMAG
+  svch: {'fireRate': 0.8, 'reloadTime': 2.9, 'equipTime': 1.4, 'adsSpeed': 12, 'adsFov': 55, 'adsType': '3d_sight', 'vmHFov': 65.0, 'vmAdsHFov': 40.0, 'sf2Rig': 'svch', 'sf2': 'svch', 'sf2ZoomIn': [1.2, -0.015, 0.015], 'sf2ZoomOut': [0.0, 0.0, -1.5], 'sf2ReloadSounds': [[0.12, 'magout'], [0.4, 'magin'], [0.73, 'charge']], 'sf2Recoil': {'nextCrossVert': 4.0, 'maxCrossVert': 3.0, 'vertInc': 30000.0, 'vertDec': 5.5, 'crossDecreasInc': 7.5, 'incline': 0.1, 'forceCorrection': 50.0, 'domDefault': 5.0, 'domZoomDefault': 0.0, 'domInc': 4.0, 'domMax': 15.0, 'domMin': 0.0, 'domDec': 12.0, 'maxMovingValue': 10.0, 'mulValueRun': 1.2, 'mulValueJump': 2.5, 'zoomMod': 0.5, 'crouchMod': 1.0}, 'sf2ReloadAnim': 3.074}, // SFCWeaponSVCh
+  msr: {'fireRate': 1.25, 'reloadTime': 3.0, 'equipTime': 0.82, 'adsSpeed': 12, 'adsFov': 55, 'adsType': '3d_sight', 'vmHFov': 70.0, 'vmAdsHFov': 40.0, 'sf2Rig': 'msr', 'sf2': 'msr', 'sf2ZoomIn': [1.2, -0.01, -0.01], 'sf2ZoomOut': [0.0, 0.0, 0.0], 'sf2ReloadSounds': [[0.12, 'magout'], [0.4, 'magin'], [0.73, 'charge']], 'sf2Recoil': {'nextCrossVert': 20.0, 'maxCrossVert': 6.0, 'vertInc': 30000.0, 'vertDec': 20.0, 'crossDecreasInc': 7.5, 'incline': 0.4, 'forceCorrection': 50.0, 'domDefault': 4.0, 'domZoomDefault': 0.0, 'domInc': 4.0, 'domMax': 15.0, 'domMin': 0.0, 'domDec': 20.0, 'maxMovingValue': 10.0, 'mulValueRun': 1.5, 'mulValueJump': 2.5, 'zoomMod': 0.5, 'crouchMod': 1.0}, 'sf2ReloadAnim': 3.18}, // SFCWeaponMSR
+  fnar: {'fireRate': 1.13, 'reloadTime': 3.1, 'equipTime': 1.5, 'adsSpeed': 12, 'adsFov': 55, 'adsType': '3d_sight', 'vmHFov': 65.0, 'vmAdsHFov': 40.0, 'sf2Rig': 'fnar', 'sf2': 'fnar', 'sf2ZoomIn': [1.2, -0.01, 0.01], 'sf2ZoomOut': [0.0, 0.0, 0.0], 'sf2ReloadSounds': [[0.12, 'magout'], [0.4, 'magin'], [0.73, 'charge']], 'sf2Recoil': {'nextCrossVert': 6.0, 'maxCrossVert': 7.0, 'vertInc': 30000.0, 'vertDec': 6.5, 'crossDecreasInc': 7.5, 'incline': 0.3, 'forceCorrection': 50.0, 'domDefault': 5.0, 'domZoomDefault': 0.0, 'domInc': 4.0, 'domMax': 15.0, 'domMin': 0.0, 'domDec': 20.0, 'maxMovingValue': 10.0, 'mulValueRun': 1.5, 'mulValueJump': 2.5, 'zoomMod': 0.5, 'crouchMod': 1.0}, 'sf2ReloadAnim': 3.392}, // SFCWeaponFNAR
+  uzipro: {'fireRate': 0.069, 'reloadTime': 1.6, 'equipTime': 0.55, 'adsSpeed': 12, 'adsFov': 55, 'adsType': '3d_sight', 'vmHFov': 60.0, 'vmAdsHFov': 35.0, 'sf2Rig': 'uzipro', 'sf2': 'uzipro', 'sf2ZoomIn': [1.8, -0.02, -0.15], 'sf2ZoomOut': [0.0, 0.0, 0.0], 'sf2ReloadSounds': [[0.12, 'magout'], [0.4, 'magin'], [0.73, 'charge']], 'sf2Recoil': {'nextCrossVert': 0.82, 'maxCrossVert': 7.0, 'vertInc': 15000.0, 'vertDec': 18.0, 'crossDecreasInc': 15.0, 'incline': 0.1, 'forceCorrection': 50.0, 'domDefault': 0.3, 'domZoomDefault': 0.0, 'domInc': 0.32, 'domMax': 1.4, 'domMin': 0.0, 'domDec': 1.2, 'maxMovingValue': 1.0, 'mulValueRun': 0.4, 'mulValueJump': 2.5, 'zoomMod': 0.6, 'crouchMod': 0.8}, 'sf2ReloadAnim': 1.696}, // SFCWeaponUziPro
+  sigmpx: {'fireRate': 0.083, 'reloadTime': 2.1, 'equipTime': 0.7, 'adsSpeed': 12, 'adsFov': 55, 'adsType': '3d_sight', 'vmHFov': 60.0, 'vmAdsHFov': 22.75, 'sf2Rig': 'sigmpx', 'sf2': 'sigmpx', 'sf2ZoomIn': [14.64, -0.01, -0.13], 'sf2ZoomOut': [0.0, 0.0, 0.0], 'sf2ReloadSounds': [[0.12, 'magout'], [0.4, 'magin'], [0.73, 'charge']], 'sf2Recoil': {'nextCrossVert': 1.07, 'maxCrossVert': 9.0, 'vertInc': 12000.0, 'vertDec': 10.0, 'crossDecreasInc': 30.0, 'incline': 0.1, 'forceCorrection': 50.0, 'domDefault': 0.45, 'domZoomDefault': 0.0, 'domInc': 0.2, 'domMax': 2.1, 'domMin': 0.12, 'domDec': 1.0, 'maxMovingValue': 1.0, 'mulValueRun': 0.35, 'mulValueJump': 2.0, 'zoomMod': 0.6, 'crouchMod': 0.8}, 'sf2ReloadAnim': 2.226}, // SFCWeaponSIGMPX
+  mx4: {'fireRate': 0.077, 'reloadTime': 1.9, 'equipTime': 0.7, 'adsSpeed': 12, 'adsFov': 55, 'adsType': '3d_sight', 'vmHFov': 60.0, 'vmAdsHFov': 22.75, 'sf2Rig': 'mx4', 'sf2': 'mx4', 'sf2ZoomIn': [14.64, -0.01, -0.13], 'sf2ZoomOut': [0.0, 0.0, 0.0], 'sf2ReloadSounds': [[0.12, 'magout'], [0.4, 'magin'], [0.73, 'charge']], 'sf2Recoil': {'nextCrossVert': 1.1, 'maxCrossVert': 12.0, 'vertInc': 7000.0, 'vertDec': 11.0, 'crossDecreasInc': 30.0, 'incline': 0.2, 'forceCorrection': 50.0, 'domDefault': 0.6, 'domZoomDefault': 0.0, 'domInc': 0.17, 'domMax': 1.55, 'domMin': 0.05, 'domDec': 1.18, 'maxMovingValue': 1.0, 'mulValueRun': 0.35, 'mulValueJump': 2.0, 'zoomMod': 0.6, 'crouchMod': 0.8}, 'sf2ReloadAnim': 2.014}, // SFCWeaponMx4Storm
+  mp40: {'fireRate': 0.086, 'reloadTime': 2.0, 'equipTime': 0.55, 'adsSpeed': 12, 'adsFov': 55, 'adsType': '3d_sight', 'vmHFov': 60.0, 'vmAdsHFov': 35.0, 'sf2Rig': 'mp40', 'sf2': 'mp40', 'sf2ZoomIn': [1.8, 0.0, -0.15], 'sf2ZoomOut': [0.0, 1.0, 0.0], 'sf2ReloadSounds': [[0.12, 'magout'], [0.4, 'magin'], [0.73, 'charge']], 'sf2Recoil': {'nextCrossVert': 1.6, 'maxCrossVert': 10.0, 'vertInc': 9000.0, 'vertDec': 11.0, 'crossDecreasInc': 15.0, 'incline': 0.17, 'forceCorrection': 50.0, 'domDefault': 0.35, 'domZoomDefault': 0.0, 'domInc': 0.2, 'domMax': 2.1, 'domMin': 0.2, 'domDec': 1.13, 'maxMovingValue': 1.0, 'mulValueRun': 0.35, 'mulValueJump': 2.0, 'zoomMod': 0.5, 'crouchMod': 0.8}, 'sf2ReloadAnim': 2.133}, // SFCWeaponMP40
+  krissv: {'fireRate': 0.07, 'reloadTime': 1.5, 'equipTime': 0.55, 'adsSpeed': 12, 'adsFov': 55, 'adsType': '3d_sight', 'vmHFov': 60.0, 'vmAdsHFov': 35.0, 'sf2Rig': 'krissv', 'sf2': 'krissv', 'sf2ZoomIn': [1.8, -0.02, -0.15], 'sf2ZoomOut': [0.0, 0.0, 0.0], 'sf2ReloadSounds': [[0.12, 'magout'], [0.4, 'magin'], [0.73, 'charge']], 'sf2Recoil': {'nextCrossVert': 1.32, 'maxCrossVert': 10.0, 'vertInc': 15000.0, 'vertDec': 20.0, 'crossDecreasInc': 15.0, 'incline': 0.2, 'forceCorrection': 50.0, 'domDefault': 0.5, 'domZoomDefault': 0.0, 'domInc': 0.15, 'domMax': 1.5, 'domMin': 0.0, 'domDec': 1.25, 'maxMovingValue': 1.0, 'mulValueRun': 0.4, 'mulValueJump': 3.0, 'zoomMod': 0.6, 'crouchMod': 0.8}, 'sf2ReloadAnim': 1.6}, // SFCWeaponKrissV
+  k1: {'fireRate': 0.077, 'reloadTime': 2.2, 'equipTime': 0.72, 'adsSpeed': 12, 'adsFov': 55, 'adsType': '3d_sight', 'vmHFov': 60.0, 'vmAdsHFov': 35.0, 'sf2Rig': 'k1', 'sf2': 'k1', 'sf2ZoomIn': [0.0, 0.0, -0.16], 'sf2ZoomOut': [0.0, 0.0, 0.0], 'sf2ReloadSounds': [[0.12, 'magout'], [0.4, 'magin'], [0.73, 'charge']], 'sf2Recoil': {'nextCrossVert': 0.64, 'maxCrossVert': 5.2, 'vertInc': 15000.0, 'vertDec': 13.0, 'crossDecreasInc': 30.0, 'incline': 0.2, 'forceCorrection': 50.0, 'domDefault': 0.74, 'domZoomDefault': 0.0, 'domInc': 0.17, 'domMax': 1.88, 'domMin': 0.05, 'domDec': 0.98, 'maxMovingValue': 1.0, 'mulValueRun': 0.35, 'mulValueJump': 1.8, 'zoomMod': 0.6, 'crouchMod': 0.8}, 'sf2ReloadAnim': 2.3}, // SFCWeaponK1
+  cz3a1: {'fireRate': 0.071, 'reloadTime': 2.0, 'equipTime': 0.7, 'adsSpeed': 12, 'adsFov': 55, 'adsType': '3d_sight', 'vmHFov': 60.0, 'vmAdsHFov': 35.0, 'sf2Rig': 'cz3a1', 'sf2': 'cz3a1', 'sf2ZoomIn': [8.0, -0.015, -0.13], 'sf2ZoomOut': [0.0, 0.0, 0.0], 'sf2ReloadSounds': [[0.12, 'magout'], [0.4, 'magin'], [0.73, 'charge']], 'sf2Recoil': {'nextCrossVert': 1.35, 'maxCrossVert': 17.0, 'vertInc': 6000.0, 'vertDec': 13.5, 'crossDecreasInc': 15.0, 'incline': 0.1, 'forceCorrection': 50.0, 'domDefault': 0.38, 'domZoomDefault': 0.0, 'domInc': 0.27, 'domMax': 1.3, 'domMin': 0.0, 'domDec': 2.5, 'maxMovingValue': 1.0, 'mulValueRun': 0.35, 'mulValueJump': 2.0, 'zoomMod': 0.6, 'crouchMod': 0.8}, 'sf2ReloadAnim': 2.12}, // SFCWeaponCZ3A1
+  csls06: {'fireRate': 0.077, 'reloadTime': 2.25, 'equipTime': 0.7, 'adsSpeed': 12, 'adsFov': 55, 'adsType': '3d_sight', 'vmHFov': 60.0, 'vmAdsHFov': 35.0, 'sf2Rig': 'csls06', 'sf2': 'csls06', 'sf2ZoomIn': [4.0, -0.02, -0.1], 'sf2ZoomOut': [0.0, 0.0, 0.0], 'sf2ReloadSounds': [[0.12, 'magout'], [0.4, 'magin'], [0.73, 'charge']], 'sf2Recoil': {'nextCrossVert': 1.45, 'maxCrossVert': 14.0, 'vertInc': 12000.0, 'vertDec': 12.0, 'crossDecreasInc': 30.0, 'incline': 0.1, 'forceCorrection': 50.0, 'domDefault': 0.65, 'domZoomDefault': 0.0, 'domInc': 0.2, 'domMax': 2.35, 'domMin': 0.15, 'domDec': 1.05, 'maxMovingValue': 1.0, 'mulValueRun': 0.35, 'mulValueJump': 2.0, 'zoomMod': 0.6, 'crouchMod': 0.8}, 'sf2ReloadAnim': 2.367}, // SFCWeaponCSLS06
+  bizon: {'fireRate': 0.09, 'reloadTime': 2.0, 'equipTime': 0.55, 'adsSpeed': 12, 'adsFov': 55, 'adsType': '3d_sight', 'vmHFov': 60.0, 'vmAdsHFov': 35.0, 'sf2Rig': 'bizon', 'sf2': 'bizon', 'sf2ZoomIn': [1.8, 0.0, -0.15], 'sf2ZoomOut': [0.0, 1.0, 0.0], 'sf2ReloadSounds': [[0.12, 'magout'], [0.4, 'magin'], [0.73, 'charge']], 'sf2Recoil': {'nextCrossVert': 2.0, 'maxCrossVert': 17.0, 'vertInc': 15000.0, 'vertDec': 12.0, 'crossDecreasInc': 30.0, 'incline': 0.15, 'forceCorrection': 50.0, 'domDefault': 0.3, 'domZoomDefault': 0.0, 'domInc': 0.16, 'domMax': 2.1, 'domMin': 0.1, 'domDec': 0.9, 'maxMovingValue': 1.0, 'mulValueRun': 0.35, 'mulValueJump': 2.0, 'zoomMod': 0.6, 'crouchMod': 0.8}, 'sf2ReloadAnim': 2.133}, // SFCWeaponBizon
+  tar21: {'fireRate': 0.09, 'reloadTime': 2.2, 'equipTime': 0.9, 'adsSpeed': 12, 'adsFov': 55, 'adsType': '3d_sight', 'vmHFov': 60.0, 'vmAdsHFov': 35.0, 'sf2Rig': 'tar21', 'sf2': 'tar21', 'sf2ZoomIn': [-5.0, -0.01, -0.23], 'sf2ZoomOut': [-1.0, 0.0, 0.0], 'sf2ReloadSounds': [[0.12, 'magout'], [0.4, 'magin'], [0.73, 'charge']], 'sf2Recoil': {'nextCrossVert': 1.3, 'maxCrossVert': 17.0, 'vertInc': 15000.0, 'vertDec': 11.0, 'crossDecreasInc': 15.0, 'incline': 0.3, 'forceCorrection': 50.0, 'domDefault': 0.35, 'domZoomDefault': 0.0, 'domInc': 0.3, 'domMax': 1.25, 'domMin': 0.0, 'domDec': 1.75, 'maxMovingValue': 0.8, 'mulValueRun': 0.6, 'mulValueJump': 6.0, 'zoomMod': 0.6, 'crouchMod': 0.9}, 'sf2ReloadAnim': 2.332}, // SFCWeaponTAR21
+  t91: {'fireRate': 0.092, 'reloadTime': 2.35, 'equipTime': 0.8, 'adsSpeed': 12, 'adsFov': 55, 'adsType': '3d_sight', 'vmHFov': 60.0, 'vmAdsHFov': 35.0, 'sf2Rig': 't91', 'sf2': 't91', 'sf2ZoomIn': [-3.0, 0.0, -0.2], 'sf2ZoomOut': [0.0, 0.0, 0.0], 'sf2ReloadSounds': [[0.12, 'magout'], [0.4, 'magin'], [0.73, 'charge']], 'sf2Recoil': {'nextCrossVert': 1.17, 'maxCrossVert': 15.0, 'vertInc': 7000.0, 'vertDec': 12.0, 'crossDecreasInc': 9.0, 'incline': 0.8, 'forceCorrection': 50.0, 'domDefault': 0.25, 'domZoomDefault': 0.0, 'domInc': 0.2, 'domMax': 2.0, 'domMin': 0.1, 'domDec': 5.0, 'maxMovingValue': 0.7, 'mulValueRun': 0.8, 'mulValueJump': 6.0, 'zoomMod': 0.5, 'crouchMod': 0.9}, 'sf2ReloadAnim': 2.5}, // SFCWeaponT91
+  t65k2: {'fireRate': 0.102, 'reloadTime': 2.35, 'equipTime': 0.8, 'adsSpeed': 12, 'adsFov': 55, 'adsType': '3d_sight', 'vmHFov': 60.0, 'vmAdsHFov': 35.0, 'sf2Rig': 't65k2', 'sf2': 't65k2', 'sf2ZoomIn': [-3.0, -0.0, -0.87], 'sf2ZoomOut': [0.0, 0.0, 0.0], 'sf2ReloadSounds': [[0.12, 'magout'], [0.4, 'magin'], [0.73, 'charge']], 'sf2Recoil': {'nextCrossVert': 1.2, 'maxCrossVert': 14.0, 'vertInc': 7000.0, 'vertDec': 12.0, 'crossDecreasInc': 9.0, 'incline': 0.5, 'forceCorrection': 50.0, 'domDefault': 0.38, 'domZoomDefault': 0.0, 'domInc': 0.1, 'domMax': 1.5, 'domMin': 0.1, 'domDec': 2.0, 'maxMovingValue': 0.7, 'mulValueRun': 0.8, 'mulValueJump': 6.0, 'zoomMod': 0.6, 'crouchMod': 0.9}, 'sf2ReloadAnim': 2.5}, // SFCWeaponT65K2
+  t65k1: {'fireRate': 0.095, 'reloadTime': 2.35, 'equipTime': 0.8, 'adsSpeed': 12, 'adsFov': 55, 'adsType': '3d_sight', 'vmHFov': 60.0, 'vmAdsHFov': 35.0, 'sf2Rig': 't65k1', 'sf2': 't65k1', 'sf2ZoomIn': [-3.0, -0.0, -0.87], 'sf2ZoomOut': [0.0, 0.0, 0.0], 'sf2ReloadSounds': [[0.12, 'magout'], [0.4, 'magin'], [0.73, 'charge']], 'sf2Recoil': {'nextCrossVert': 1.3, 'maxCrossVert': 15.0, 'vertInc': 15000.0, 'vertDec': 11.0, 'crossDecreasInc': 15.0, 'incline': 0.08, 'forceCorrection': 50.0, 'domDefault': 0.2, 'domZoomDefault': 0.0, 'domInc': 0.2, 'domMax': 1.2, 'domMin': 0.1, 'domDec': 1.3, 'maxMovingValue': 0.8, 'mulValueRun': 0.4, 'mulValueJump': 6.0, 'zoomMod': 0.7, 'crouchMod': 0.9}, 'sf2ReloadAnim': 2.5}, // SFCWeaponT65K1
+  stg44: {'fireRate': 0.11, 'reloadTime': 2.3, 'equipTime': 0.8, 'adsSpeed': 12, 'adsFov': 55, 'adsType': '3d_sight', 'vmHFov': 60.0, 'vmAdsHFov': 35.0, 'sf2Rig': 'stg44', 'sf2': 'stg44', 'sf2ZoomIn': [-0.5, 0.0, -0.13], 'sf2ZoomOut': [-1.0, 0.0, 0.0], 'sf2ReloadSounds': [[0.12, 'magout'], [0.4, 'magin'], [0.73, 'charge']], 'sf2Recoil': {'nextCrossVert': 2.2, 'maxCrossVert': 13.0, 'vertInc': 15000.0, 'vertDec': 13.0, 'crossDecreasInc': 15.0, 'incline': 0.15, 'forceCorrection': 50.0, 'domDefault': 0.1, 'domZoomDefault': 0.0, 'domInc': 0.32, 'domMax': 2.3, 'domMin': 0.0, 'domDec': 1.48, 'maxMovingValue': 1.2, 'mulValueRun': 0.1, 'mulValueJump': 6.0, 'zoomMod': 0.3, 'crouchMod': 0.8}, 'sf2ReloadAnim': 2.533}, // SFCWeaponSTG44
+  scarhdmr: {'fireRate': 0.23, 'reloadTime': 2.45, 'equipTime': 0.92, 'adsSpeed': 12, 'adsFov': 55, 'adsType': '3d_sight', 'vmHFov': 60.0, 'vmAdsHFov': 35.0, 'sf2Rig': 'scarh', 'sf2': 'scarh', 'sf2ZoomIn': [0.0, -0.01, -0.2], 'sf2ZoomOut': [-1.0, 0.0, 0.0], 'sf2ReloadSounds': [[0.12, 'magout'], [0.4, 'magin'], [0.73, 'charge']], 'sf2Recoil': {'nextCrossVert': 3.7, 'maxCrossVert': 20.0, 'vertInc': 30000.0, 'vertDec': 7.0, 'crossDecreasInc': 9.0, 'incline': 0.35, 'forceCorrection': 50.0, 'domDefault': 0.3, 'domZoomDefault': 0.0, 'domInc': 0.5, 'domMax': 2.8, 'domMin': 0.1, 'domDec': 1.0, 'maxMovingValue': 1.2, 'mulValueRun': 0.7, 'mulValueJump': 8.0, 'zoomMod': 0.99, 'crouchMod': 0.6}, 'sf2ReloadAnim': 2.533}, // SFCWeaponSCARHDMR
+  xm8cc: {'fireRate': 0.08, 'reloadTime': 2.25, 'equipTime': 0.79, 'adsSpeed': 12, 'adsFov': 55, 'adsType': '3d_sight', 'vmHFov': 60.0, 'vmAdsHFov': 35.0, 'sf2Rig': 'xm8', 'sf2': 'xm8', 'sf2ZoomIn': [6.0, 0.0, 0.35], 'sf2ZoomOut': [0.0, 0.0, 0.0], 'sf2ReloadSounds': [[0.12, 'magout'], [0.27, 'magin'], [0.73, 'charge']], 'sf2Recoil': {'nextCrossVert': 1.14, 'maxCrossVert': 12.0, 'vertInc': 15000.0, 'vertDec': 12.0, 'crossDecreasInc': 30.0, 'incline': 0.3, 'forceCorrection': 50.0, 'domDefault': 0.45, 'domZoomDefault': 0.0, 'domInc': 0.23, 'domMax': 1.5, 'domMin': 0.2, 'domDec': 1.4, 'maxMovingValue': 1.0, 'mulValueRun': 0.35, 'mulValueJump': 2.0, 'zoomMod': 0.6, 'crouchMod': 0.8}, 'sf2ReloadAnim': 2.533}, // SFCWeaponXM8CompactCarbine
+  xm8ar: {'fireRate': 0.106, 'reloadTime': 4.65, 'equipTime': 2.0, 'adsSpeed': 12, 'adsFov': 55, 'adsType': '3d_sight', 'vmHFov': 60.0, 'vmAdsHFov': 35.0, 'sf2Rig': 'xm8', 'sf2': 'xm8', 'sf2ZoomIn': [6.0, 0.0, 0.04], 'sf2ZoomOut': [0.0, 0.0, 0.0], 'sf2ReloadSounds': [[0.12, 'magout'], [0.27, 'magin'], [0.73, 'charge']], 'sf2Recoil': {'nextCrossVert': 1.7, 'maxCrossVert': 25.0, 'vertInc': 10000.0, 'vertDec': 11.0, 'crossDecreasInc': 30.0, 'incline': 0.25, 'forceCorrection': 50.0, 'domDefault': 1.7, 'domZoomDefault': 0.3, 'domInc': 0.2, 'domMax': 2.1, 'domMin': 0.35, 'domDec': 1.5, 'maxMovingValue': 1.0, 'mulValueRun': 3.0, 'mulValueJump': 6.0, 'zoomMod': 0.7, 'crouchMod': 0.4}, 'sf2ReloadAnim': 4.9}, // SFCWeaponXM8AutomaticRifle
+  fs2000: {'fireRate': 0.08, 'reloadTime': 2.2, 'equipTime': 0.9, 'adsSpeed': 12, 'adsFov': 55, 'adsType': '3d_sight', 'vmHFov': 60.0, 'vmAdsHFov': 15.0, 'sf2Rig': 'fnf2000', 'sf2': 'fnf2000', 'sf2ZoomIn': [25.0, -0.01, 1.135], 'sf2ZoomOut': [0.0, 0.0, 0.0], 'sf2ReloadSounds': [[0.12, 'magout'], [0.4, 'magin'], [0.73, 'charge']], 'sf2Recoil': {'nextCrossVert': 2.0, 'maxCrossVert': 20.0, 'vertInc': 15000.0, 'vertDec': 13.0, 'crossDecreasInc': 9.0, 'incline': 0.7, 'forceCorrection': 50.0, 'domDefault': 0.2, 'domZoomDefault': 0.0, 'domInc': 0.23, 'domMax': 1.2, 'domMin': 0.0, 'domDec': 1.3, 'maxMovingValue': 0.8, 'mulValueRun': 0.4, 'mulValueJump': 6.0, 'zoomMod': 0.6, 'crouchMod': 0.9}, 'sf2ReloadAnim': 2.332}, // SFCWeaponFNFS2000
+  sar21: {'fireRate': 0.113, 'reloadTime': 2.4, 'equipTime': 0.9, 'adsSpeed': 12, 'adsFov': 55, 'adsType': '3d_sight', 'vmHFov': 60.0, 'vmAdsHFov': 35.0, 'sf2Rig': 'sar21', 'sf2': 'sar21', 'sf2ZoomIn': [0.0, -0.01, -0.18], 'sf2ZoomOut': [-1.0, 0.0, 0.0], 'sf2ReloadSounds': [[0.12, 'magout'], [0.4, 'magin'], [0.73, 'charge']], 'sf2Recoil': {'nextCrossVert': 0.8, 'maxCrossVert': 8.0, 'vertInc': 15000.0, 'vertDec': 5.0, 'crossDecreasInc': 15.0, 'incline': 0.4, 'forceCorrection': 50.0, 'domDefault': 0.4, 'domZoomDefault': 0.0, 'domInc': 0.3, 'domMax': 1.6, 'domMin': 0.0, 'domDec': 1.4, 'maxMovingValue': 0.8, 'mulValueRun': 0.7, 'mulValueJump': 6.0, 'zoomMod': 0.6, 'crouchMod': 0.9}, 'sf2ReloadAnim': 2.533}, // SFCWeaponSAR21
+  mrr: {'fireRate': 0.099, 'reloadTime': 2.1, 'equipTime': 0.8, 'adsSpeed': 12, 'adsFov': 55, 'adsType': '3d_sight', 'vmHFov': 60.0, 'vmAdsHFov': 35.0, 'sf2Rig': 'mrr', 'sf2': 'mrr', 'sf2ZoomIn': [-4.0, -0.01, -0.1], 'sf2ZoomOut': [-1.0, 0.0, 0.0], 'sf2ReloadSounds': [[0.12, 'magout'], [0.4, 'magin'], [0.73, 'charge']], 'sf2Recoil': {'nextCrossVert': 1.5, 'maxCrossVert': 13.0, 'vertInc': 15000.0, 'vertDec': 8.0, 'crossDecreasInc': 15.0, 'incline': 0.38, 'forceCorrection': 50.0, 'domDefault': 0.28, 'domZoomDefault': 0.0, 'domInc': 0.26, 'domMax': 1.18, 'domMin': 0.0, 'domDec': 1.38, 'maxMovingValue': 0.8, 'mulValueRun': 0.4, 'mulValueJump': 6.0, 'zoomMod': 0.8, 'crouchMod': 0.9}, 'sf2ReloadAnim': 2.226}, // SFCWeaponMRR
+  madsenlar: {'fireRate': 0.124, 'reloadTime': 2.1, 'equipTime': 0.83, 'adsSpeed': 12, 'adsFov': 55, 'adsType': '3d_sight', 'vmHFov': 60.0, 'vmAdsHFov': 25.0, 'sf2Rig': 'madsenlar', 'sf2': 'madsenlar', 'sf2ZoomIn': [10.0, -0.02, 0.0], 'sf2ZoomOut': [0.0, 0.0, 0.0], 'sf2ReloadSounds': [[0.12, 'magout'], [0.4, 'magin'], [0.73, 'charge']], 'sf2Recoil': {'nextCrossVert': 2.3, 'maxCrossVert': 19.0, 'vertInc': 15000.0, 'vertDec': 13.0, 'crossDecreasInc': 15.0, 'incline': 0.15, 'forceCorrection': 50.0, 'domDefault': 0.0, 'domZoomDefault': 0.0, 'domInc': 0.37, 'domMax': 2.5, 'domMin': 0.0, 'domDec': 1.3, 'maxMovingValue': 1.2, 'mulValueRun': 0.1, 'mulValueJump': 6.0, 'zoomMod': 0.4, 'crouchMod': 0.9}, 'sf2ReloadAnim': 2.226}, // SFCWeaponMadsenLar
+  k2c1: {'fireRate': 0.09, 'reloadTime': 2.2, 'equipTime': 0.75, 'adsSpeed': 12, 'adsFov': 55, 'adsType': '3d_sight', 'vmHFov': 60.0, 'vmAdsHFov': 35.0, 'sf2Rig': 'k2c1', 'sf2': 'k2c1', 'sf2ZoomIn': [0.0, -0.01, 0.0], 'sf2ZoomOut': [0.0, 0.0, 0.0], 'sf2ReloadSounds': [[0.12, 'magout'], [0.4, 'magin'], [0.73, 'charge']], 'sf2Recoil': {'nextCrossVert': 0.6, 'maxCrossVert': 7.0, 'vertInc': 15000.0, 'vertDec': 13.0, 'crossDecreasInc': 15.0, 'incline': 0.05, 'forceCorrection': 50.0, 'domDefault': 0.2, 'domZoomDefault': 0.0, 'domInc': 0.33, 'domMax': 1.0, 'domMin': 0.0, 'domDec': 1.25, 'maxMovingValue': 0.8, 'mulValueRun': 0.4, 'mulValueJump': 6.0, 'zoomMod': 0.8, 'crouchMod': 0.9}, 'sf2ReloadAnim': 2.4}, // SFCWeaponK2C1
+  fnf2000: {'fireRate': 0.08, 'reloadTime': 2.2, 'equipTime': 0.9, 'adsSpeed': 12, 'adsFov': 55, 'adsType': '3d_sight', 'vmHFov': 60.0, 'vmAdsHFov': 4.5, 'sf2Rig': 'fnf2000', 'sf2': 'fnf2000', 'sf2ZoomIn': [15.0, -0.001, -0.18], 'sf2ZoomOut': [0.0, 0.0, 0.0], 'sf2ReloadSounds': [[0.12, 'magout'], [0.4, 'magin'], [0.73, 'charge']], 'sf2Recoil': {'nextCrossVert': 2.0, 'maxCrossVert': 20.0, 'vertInc': 15000.0, 'vertDec': 13.0, 'crossDecreasInc': 9.0, 'incline': 0.7, 'forceCorrection': 50.0, 'domDefault': 0.2, 'domZoomDefault': 0.0, 'domInc': 0.23, 'domMax': 1.2, 'domMin': 0.0, 'domDec': 1.3, 'maxMovingValue': 0.8, 'mulValueRun': 0.4, 'mulValueJump': 6.0, 'zoomMod': 0.6, 'crouchMod': 0.9}, 'sf2ReloadAnim': 2.332}, // SFCWeaponFNF2000
+  cm901: {'fireRate': 0.093, 'reloadTime': 2.2, 'equipTime': 0.7, 'adsSpeed': 12, 'adsFov': 55, 'adsType': '3d_sight', 'vmHFov': 60.0, 'vmAdsHFov': 30.0, 'sf2Rig': 'cm901', 'sf2': 'cm901', 'sf2ZoomIn': [15.0, -0.02, 0.25], 'sf2ZoomOut': [0.0, 0.0, 0.0], 'sf2ReloadSounds': [[0.12, 'magout'], [0.4, 'magin'], [0.73, 'charge']], 'sf2Recoil': {'nextCrossVert': 1.8, 'maxCrossVert': 18.0, 'vertInc': 15000.0, 'vertDec': 12.0, 'crossDecreasInc': 15.0, 'incline': 0.4, 'forceCorrection': 50.0, 'domDefault': 0.15, 'domZoomDefault': 0.0, 'domInc': 0.29, 'domMax': 1.1, 'domMin': 0.0, 'domDec': 1.95, 'maxMovingValue': 0.8, 'mulValueRun': 0.4, 'mulValueJump': 6.0, 'zoomMod': 0.5, 'crouchMod': 0.9}, 'sf2ReloadAnim': 2.332}, // SFCWeaponCM901
+  arx160: {'fireRate': 0.097, 'reloadTime': 2.1, 'equipTime': 0.7, 'adsSpeed': 12, 'adsFov': 55, 'adsType': '3d_sight', 'vmHFov': 60.0, 'vmAdsHFov': 35.0, 'sf2Rig': 'arx160', 'sf2': 'arx160', 'sf2ZoomIn': [5.0, -0.015, -0.18], 'sf2ZoomOut': [0.0, 0.0, 0.0], 'sf2ReloadSounds': [[0.12, 'magout'], [0.4, 'magin'], [0.73, 'charge']], 'sf2Recoil': {'nextCrossVert': 1.48, 'maxCrossVert': 12.0, 'vertInc': 15000.0, 'vertDec': 12.0, 'crossDecreasInc': 15.0, 'incline': 0.25, 'forceCorrection': 50.0, 'domDefault': 0.18, 'domZoomDefault': 0.0, 'domInc': 0.37, 'domMax': 1.8, 'domMin': 0.0, 'domDec': 1.24, 'maxMovingValue': 0.8, 'mulValueRun': 0.4, 'mulValueJump': 4.0, 'zoomMod': 0.5, 'crouchMod': 0.9}, 'sf2ReloadAnim': 2.223}, // SFCWeaponARX160
+  ak104: {'fireRate': 0.112, 'reloadTime': 2.4, 'equipTime': 0.9, 'adsSpeed': 12, 'adsFov': 55, 'adsType': '3d_sight', 'vmHFov': 60.0, 'vmAdsHFov': 40.0, 'sf2Rig': 'ak103', 'sf2': 'ak103', 'sf2ZoomIn': [-3.0, 0.02, -0.28], 'sf2ZoomOut': [0.0, 0.0, -0.5], 'sf2ReloadSounds': [[0.14, 'magout'], [0.46, 'magin'], [0.82, 'charge']], 'sf2Recoil': {'nextCrossVert': 2.12, 'maxCrossVert': 13.0, 'vertInc': 15000.0, 'vertDec': 13.0, 'crossDecreasInc': 15.0, 'incline': 0.15, 'forceCorrection': 50.0, 'domDefault': 0.1, 'domZoomDefault': 0.0, 'domInc': 0.412, 'domMax': 2.575, 'domMin': 0.0, 'domDec': 1.391, 'maxMovingValue': 1.2, 'mulValueRun': 0.1, 'mulValueJump': 6.0, 'zoomMod': 0.3, 'crouchMod': 0.8}, 'sf2ReloadAnim': 2.533}, // SFCWeaponAK104
+  an94: {'fireRate': 0.07, 'reloadTime': 2.3, 'equipTime': 1.1, 'adsSpeed': 12, 'adsFov': 55, 'adsType': '3d_sight', 'vmHFov': 65.0, 'vmAdsHFov': 40.0, 'sf2Rig': 'an94', 'sf2': 'an94', 'sf2ZoomIn': [-0.05, -0.02, -0.27], 'sf2ZoomOut': [0.0, 0.0, 0.0], 'sf2ReloadSounds': [[0.12, 'magout'], [0.4, 'magin'], [0.73, 'charge']], 'sf2Recoil': {'nextCrossVert': 1.5, 'maxCrossVert': 10.0, 'vertInc': 20000.0, 'vertDec': 11.0, 'crossDecreasInc': 15.0, 'incline': 0.2, 'forceCorrection': 50.0, 'domDefault': 0.2, 'domZoomDefault': 0.0, 'domInc': 0.25, 'domMax': 1.8, 'domMin': 0.0, 'domDec': 0.9, 'maxMovingValue': 0.9, 'mulValueRun': 0.1, 'mulValueJump': 6.0, 'zoomMod': 0.25, 'crouchMod': 0.7}, 'sf2ReloadAnim': 2.45}, // SFCWeaponAN94
   m16a3: {'fireRate': 0.098, 'reloadTime': 2.3, 'equipTime': 0.8, 'adsSpeed': 12, 'adsFov': 55, 'adsType': '3d_sight', 'vmHFov': 60.0, 'vmAdsHFov': 35.0, 'sf2Rig': 'm16a3', 'sf2': 'm16a3', 'sf2ZoomIn': [2.0, 0.0, -0.89], 'sf2ZoomOut': [0.0, 0.0, 0.0], 'sf2ReloadSounds': [[0.07, 'magout'], [0.35, 'magin'], [0.72, 'charge']], 'sf2Recoil': {'nextCrossVert': 1.7, 'maxCrossVert': 15.0, 'vertInc': 7000.0, 'vertDec': 11.0, 'crossDecreasInc': 9.0, 'incline': 0.15, 'forceCorrection': 50.0, 'domDefault': 0.08, 'domZoomDefault': 0.0, 'domInc': 0.1, 'domMax': 1.3, 'domMin': 0.1, 'domDec': 6.0, 'maxMovingValue': 0.7, 'mulValueRun': 0.8, 'mulValueJump': 6.0, 'zoomMod': 0.6, 'crouchMod': 0.9}, 'sf2ReloadAnim': 2.533}, // SFCWeaponM16A3
   k2: {'fireRate': 0.1, 'reloadTime': 2.2, 'equipTime': 0.75, 'adsSpeed': 12, 'adsFov': 55, 'adsType': '3d_sight', 'vmHFov': 60.0, 'vmAdsHFov': 35.0, 'sf2Rig': 'k2', 'sf2': 'k2', 'sf2ZoomIn': [0.0, -0.01, -0.17], 'sf2ZoomOut': [0.0, 0.0, 0.0], 'sf2ReloadSounds': [[0.12, 'magout'], [0.35, 'magin'], [0.75, 'charge']], 'sf2Recoil': {'nextCrossVert': 0.6, 'maxCrossVert': 7.0, 'vertInc': 15000.0, 'vertDec': 13.0, 'crossDecreasInc': 15.0, 'incline': 0.05, 'forceCorrection': 50.0, 'domDefault': 0.28, 'domZoomDefault': 0.0, 'domInc': 0.3, 'domMax': 1.0, 'domMin': 0.0, 'domDec': 1.25, 'maxMovingValue': 0.8, 'mulValueRun': 0.4, 'mulValueJump': 6.0, 'zoomMod': 0.8, 'crouchMod': 0.9}, 'sf2ReloadAnim': 2.4}, // SFCWeaponK2
+  acr: {'fireRate': 0.095, 'reloadTime': 2.0, 'equipTime': 0.7, 'adsSpeed': 12, 'adsFov': 55, 'adsType': '3d_sight', 'vmHFov': 60.0, 'vmAdsHFov': 35.0, 'sf2Rig': 'acr', 'sf2': 'acr', 'sf2ZoomIn': [4.0, -0.02, -0.69], 'sf2ZoomOut': [0.0, 0.0, 0.0], 'sf2ReloadSounds': [[0.12, 'magout'], [0.4, 'magin'], [0.73, 'charge']], 'sf2Recoil': {'nextCrossVert': 1.55, 'maxCrossVert': 8.0, 'vertInc': 15000.0, 'vertDec': 10.5, 'crossDecreasInc': 15.0, 'incline': 0.1, 'forceCorrection': 50.0, 'domDefault': 0.25, 'domZoomDefault': 0.0, 'domInc': 0.22, 'domMax': 2.2, 'domMin': 0.05, 'domDec': 1.3, 'maxMovingValue': 1.0, 'mulValueRun': 0.7, 'mulValueJump': 6.0, 'zoomMod': 0.4, 'crouchMod': 0.9}, 'sf2ReloadAnim': 2.12}, // SFCWeaponACR
   scarl: {'fireRate': 0.107, 'reloadTime': 2.35, 'equipTime': 0.9, 'adsSpeed': 12, 'adsFov': 55, 'adsType': '3d_sight', 'vmHFov': 60.0, 'vmAdsHFov': 35.0, 'sf2Rig': 'scarl', 'sf2': 'scarh', 'sf2ZoomIn': [0.0, -0.01, -0.2], 'sf2ZoomOut': [-1.0, 0.0, 0.0], 'sf2ReloadSounds': [[0.12, 'magout'], [0.44, 'magin'], [0.72, 'charge']], 'sf2Recoil': {'nextCrossVert': 2.1, 'maxCrossVert': 15.0, 'vertInc': 15000.0, 'vertDec': 12.0, 'crossDecreasInc': 9.0, 'incline': 0.35, 'forceCorrection': 50.0, 'domDefault': 0.15, 'domZoomDefault': 0.0, 'domInc': 0.22, 'domMax': 2.4, 'domMin': 0.1, 'domDec': 2.0, 'maxMovingValue': 0.7, 'mulValueRun': 0.7, 'mulValueJump': 6.0, 'zoomMod': 0.99, 'crouchMod': 0.85}, 'sf2ReloadAnim': 2.45}, // SFCWeaponSCARL
   scarh: {'fireRate': 0.105, 'reloadTime': 2.45, 'equipTime': 0.92, 'adsSpeed': 12, 'adsFov': 55, 'adsType': '3d_sight', 'vmHFov': 60.0, 'vmAdsHFov': 35.0, 'sf2Rig': 'scarh', 'sf2': 'scarh', 'sf2ZoomIn': [0.0, -0.01, -0.2], 'sf2ZoomOut': [-1.0, 0.0, 0.0], 'sf2ReloadSounds': [[0.12, 'magout'], [0.44, 'magin'], [0.72, 'charge']], 'sf2Recoil': {'nextCrossVert': 2.1, 'maxCrossVert': 15.0, 'vertInc': 15000.0, 'vertDec': 12.0, 'crossDecreasInc': 9.0, 'incline': 0.35, 'forceCorrection': 50.0, 'domDefault': 0.15, 'domZoomDefault': 0.0, 'domInc': 0.22, 'domMax': 2.4, 'domMin': 0.1, 'domDec': 2.0, 'maxMovingValue': 0.7, 'mulValueRun': 0.7, 'mulValueJump': 6.0, 'zoomMod': 0.99, 'crouchMod': 0.85}, 'sf2ReloadAnim': 2.533}, // SFCWeaponSCARH
   famas: {'fireRate': 0.085, 'reloadTime': 2.35, 'equipTime': 0.8, 'adsSpeed': 12, 'adsFov': 55, 'adsType': '3d_sight', 'vmHFov': 60.0, 'vmAdsHFov': 35.0, 'sf2Rig': 'famas', 'sf2': 'famas', 'sf2ZoomIn': [0.0, -0.02, -0.17], 'sf2ZoomOut': [0.0, 0.0, 0.0], 'sf2ReloadSounds': [[0.2, 'magout'], [0.4, 'magin'], [0.73, 'charge']], 'sf2Recoil': {'nextCrossVert': 1.1, 'maxCrossVert': 12.0, 'vertInc': 15000.0, 'vertDec': 13.0, 'crossDecreasInc': 15.0, 'incline': 0.1, 'forceCorrection': 50.0, 'domDefault': 0.3, 'domZoomDefault': 0.2, 'domInc': 0.3, 'domMax': 1.5, 'domMin': 0.0, 'domDec': 1.25, 'maxMovingValue': 0.8, 'mulValueRun': 0.4, 'mulValueJump': 6.0, 'zoomMod': 0.99, 'crouchMod': 0.9}, 'sf2ReloadAnim': 2.5}, // SFCWeaponFAMAS
@@ -745,9 +1080,9 @@ const MODES = {
   knife: { name: '小刀戰', desc: '全員只能拿刀，貼身肉搏', slots: ['knife'] },
 };
 const BOT_POOLS = {
-  general: ['m4a1', 'ak47', 'g36c', 'g36c_gold', 'g36c_eo', 'g36c_circuit', 'hk417_rs', 'scarl_eo', 'scarl', 'famas', 'aug', 'mp5', 'mp5k', 'p90', 'ump45', 'vector', 'mp7', 'remington870', 'benelli_m4', 'saiga12', 'm249', 'rpk', 'negev', 'pkm', 'trg', 'cheytac_m200', 'k14', 'awp', 'svd', 'kar98k', 'm16a3', 'k2', 'xm8', 'galil', 'sg551', 'hk417', 'scarh', 'qbz97', 'pp2000', 'vz61', 'aa12', 'mg4', 'k3', 'm40a1', 'sr25', 'psg1', 'm14ebr', 'type89', 'l86a1', 'hk23e', 'frf2', 'cz700'],
+  general: ['usas12', 'ultimax', 'minimispw', 'fnmag', 'uzipro', 'sigmpx', 'mx4', 'mp40', 'krissv', 'k1', 'cz3a1', 'csls06', 'bizon', 'tar21', 't91', 't65k2', 't65k1', 'stg44', 'madsenlar', 'sar21', 'mrr', 'madsenlar', 'k2c1', 'fnf2000', 'cm901', 'arx160', 'ak104', 'an94', 'an94', 'an94', 'an94', 'an94', 'an94', 'an94', 'an94', 'm4a1', 'acr', 'ak47', 'g36c', 'g36c_gold', 'g36c_eo', 'g36c_circuit', 'hk417_rs', 'scarl_eo', 'scarl', 'famas', 'aug', 'mp5', 'mp5k', 'p90', 'ump45', 'vector', 'mp7', 'remington870', 'benelli_m4', 'saiga12', 'm249', 'rpk', 'negev', 'pkm', 'trg', 'cheytac_m200', 'k14', 'awp', 'svd', 'kar98k', 'm16a3', 'k2', 'xm8', 'galil', 'sg551', 'hk417', 'scarh', 'qbz97', 'pp2000', 'vz61', 'aa12', 'mg4', 'k3', 'm40a1', 'sr25', 'psg1', 'm14ebr', 'type89', 'l86a1', 'hk23e', 'frf2', 'cz700'],
   rifle: ['m4a1', 'ak47', 'g36c', 'g36c_gold', 'g36c_eo', 'g36c_circuit', 'hk417_rs', 'scarl_eo', 'scarl', 'famas', 'aug', 'mp5', 'mp5k', 'p90', 'ump45', 'vector', 'mp7', 'm249', 'rpk', 'negev', 'pkm', 'mg42', 'm16a3', 'k2', 'xm8', 'galil', 'sg551', 'hk417', 'scarh', 'qbz97', 'pp2000', 'vz61', 'mg4', 'k3', 'type89', 'l86a1', 'hk23e'],
-  sniper: ['trg', 'cheytac_m200', 'cheytac_m200_circuit', 'k14', 'k14_circuit', 'awp_circuit', 'cz700_circuit', 'awp', 'barrett', 'kar98k', 'svd', 'm40a1', 'sr25', 'psg1', 'm14ebr', 'frf2', 'cz700'], pistol: ['p226', 'deagle', 'glock18', 'usp', 'm1911', 'm92fs', 'cz75', 'jericho', 'sw60', 'infinity'], knife: ['knife'],
+  sniper: ['svch', 'msr', 'fnar', 'trg', 'cheytac_m200', 'cheytac_m200_circuit', 'k14', 'k14_circuit', 'awp_circuit', 'cz700_circuit', 'awp', 'barrett', 'kar98k', 'svd', 'm40a1', 'sr25', 'psg1', 'm14ebr', 'frf2', 'cz700'], pistol: ['p226', 'deagle', 'glock18', 'usp', 'm1911', 'm92fs', 'cz75', 'jericho', 'sw60', 'infinity'], knife: ['knife'],
 };
 
 // Match rules (state-machine classes live in the match module).
@@ -755,6 +1090,7 @@ const RULES = {
   tdm: { name: '團隊死鬥', desc: '陣亡 3 秒復活 · 先達到目標分數獲勝（爆頭 50 · 擊殺 30）', unit: '分', targets: [500, 1000, 1500, 2500], times: [0], timeUnit: 'min', def: { target: 1000, time: 0 } }, // v45: no time limit
   rounds: { name: '回合殲滅', desc: '陣亡本回合不復活 · 先贏得指定回合數', unit: '勝', targets: [5, 6, 7, 8, 9], times: [600], timeUnit: 'sec', def: { target: 6, time: 600 } }, // v45: SF2 先勝 rounds, 10 min a round
   relic: { name: '奪取戰', desc: '藍隊進攻奪取山丘聖物並運回撤離點 · 紅隊防守 · 回合制', unit: '勝', targets: [5, 6, 7, 8, 9], times: [600], timeUnit: 'sec', def: { target: 6, time: 600 } },
+  tower: { name: '佔領模式', desc: 'SF2 原版 · 單一據點，開局 2 分鐘後開放 · 站上據點即佔領，佔領方 60 秒倒數，易手重新計時 · 倒數結束時佔領的一方獲勝 · 10 分鐘時限到看誰佔領', unit: '分', targets: [0], targetText: '倒數結束時佔領', times: [600], timeUnit: 'sec', def: { target: 0, time: 600 } }, // v65z SFCaptureGame
   dom: { name: '佔領戰', desc: '按住 E 6 秒佔領 A/B/C · 佔點隨時間得分 · 全佔封鎖對手得分', unit: '分', targets: [150, 250, 400], times: [0], timeUnit: 'min', def: { target: 250, time: 0 } },
 };
 const FREEZE_TIME = 5;
