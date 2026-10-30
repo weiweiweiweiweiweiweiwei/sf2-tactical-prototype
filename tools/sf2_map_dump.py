@@ -2,7 +2,7 @@
 tags) with the LocalToWorld matrix the actor serializes after its tags (64 bytes per component, UE3 row-vector, cm, Z up), plus
 stand-alone StaticMeshActors (Location / Rotation / DrawScale(3D)). -> tools/out/sf2/maps/<map>.json
   python tools/sf2_unlzo.py <map>  then  python tools/sf2_map_dump.py <map>"""
-import sys, struct, json, math
+import sys, struct, json, math, re
 sys.path.insert(0, 'tools')
 from sf2_props import Pkg
 from sf2_lightmap import mesh_lightmap, vertex_irradiance
@@ -139,6 +139,30 @@ for e in p.exports:
     if p.clsname(e) == 'WorldInfo' and not e['name'].startswith('Default__'):
         pp = {n: v for n, i, t, v in p.props(e)}.get('DefaultPostProcessSettings') or {}
         if isinstance(pp, dict) and pp.get('ColorGrading_LookupTable') not in (None, 'None'): lut = pp['ColorGrading_LookupTable']; print('lut', lut)
-json.dump({'placed': out, 'starts': starts, 'ladders': ladders, 'blocks': blocks, 'terrains': terrains, 'lut': lut}, open(f'tools/out/sf2/maps/{name}.json', 'w'))
+# v66a SF2's projected decals (DecalActor → DecalComponent): stains, posters, ground patches cast on the BSP. The component keeps the hit
+# it was placed with (HitLocation / Normal / Tangent / Binormal, Width × Height cm), so a quad on that plane stands in for the projection.
+# A cooked DecalMaterial keeps no expressions: its sheets are the Texture2D refs in its compiled tail (colour, a separate '_Alpha' sheet)
+decals = []; tex_of = {}
+def decal_tex(mi):
+    if mi not in tex_of:
+        me = p.exports[mi - 1]; p.props(me); refs = []
+        for q in range(p.o, me['off'] + me['size'] - 3):
+            v = struct.unpack_from('<i', p.b, q)[0]
+            if 0 < v <= len(p.exports) and p.clsname(p.exports[v - 1]) == 'Texture2D' and p.exports[v - 1]['name'] not in refs: refs.append(p.exports[v - 1]['name'])
+        mpr = {n: v for n, i, t, v in p.props(me)}
+        tex_of[mi] = {'tex': next((r for r in refs if not re.search(r'(_n|normal|_mask|alpha)', r, re.I)), None),
+                      'alpha': next((r for r in refs if re.search(r'alpha', r, re.I)), None), 'blend': str(mpr.get('BlendMode', 'BLEND_Translucent')),
+                      'unlit': str(mpr.get('LightingModel', '')) == 'MLM_Unlit'}
+    return tex_of[mi]
+for e in p.exports:
+    if p.clsname(e) != 'DecalComponent' or e['name'].startswith('Default__'): continue
+    pr = {n: v for n, i, t, v in p.props(e)}; mn = pr.get('DecalMaterial')
+    mi = next((i + 1 for i, x in enumerate(p.exports) if x['name'] == mn and p.clsname(x) == 'DecalMaterial'), None) if mn else None
+    if not mi or 'HitLocation' not in pr: continue
+    d = dict(decal_tex(mi)); d.update(w=float(pr.get('Width', 200)), h=float(pr.get('Height', 200)), loc=vec(pr['HitLocation']), n=vec(pr.get('HitNormal'), (0, 0, 1)),
+                                      t=vec(pr.get('HitTangent'), (1, 0, 0)), b=vec(pr.get('HitBinormal'), (0, 1, 0)))
+    if d['tex']: decals.append(d)
+print('decals', len(decals))
+json.dump({'placed': out, 'starts': starts, 'ladders': ladders, 'blocks': blocks, 'terrains': terrains, 'lut': lut, 'decals': decals}, open(f'tools/out/sf2/maps/{name}.json', 'w'))
 print('starts', [(s['cls'], s['team']) for s in starts], 'ladders', len(ladders))
 print(name, len(out), 'placements,', len({o['mesh'] for o in out}), 'meshes,', sum(not o['col'] for o in out), 'without collision,', len(blocks), 'blocking volumes;', __import__('collections').Counter(o.get('actor', 'collection') for o in out))

@@ -113,7 +113,24 @@ for (const T0 of dump.terrains || (dump.terrain ? [dump.terrain] : [])) {
   terrains.push({ nx: T.nx, ny: T.ny, x0: T.loc[0] / 100, z0: T.loc[1] / 100, dx: T.scale[0] / 100, dz: T.scale[1] / 100, h: Buffer.from(H.buffer).toString('base64'), w: Buffer.from(W).toString('base64'), holes: T.holes, layers });
 }
 const lutPng = dump.lut && files[dump.lut.toLowerCase() + '.png']; // (v65z SF2's colour grading strip, lossless)
-const meta = { lightmaps, terrains, lut: lutPng ? 'data:image/png;base64,' + fs.readFileSync(lutPng).toString('base64') : null, starts: (tdm.length ? tdm : S0).map((s) => ({ team: s.team, pos: cv(s.loc), yaw: (s.yaw / 65536) * Math.PI * 2 - Math.PI / 2 })), ladders: (dump.ladders || []).map((l) => cv(l.loc)) };
+// v66a SF2's projected decals (tools/sf2_map_dump.py 'decals'): each sheet once (WebP, ≤ 512, a separate '_Alpha' sheet joined as its
+// alpha), each decal in game metres before the load-time mirror — at (x, z, −y) like the starts, its tangent / binormal / normal the same way
+const decalTex = {}, decals = [];
+for (const d of dump.decals || []) {
+  const f = files[d.tex.toLowerCase() + '.png']; if (!f) { missing.add(d.tex); continue; }
+  if (d.blend !== 'BLEND_Modulate' && !d.alpha && (await sharp(f).metadata()).channels < 4) d.blend = 'BLEND_Modulate'; // (a translucent sheet with no alpha — et_dcdecal_006, near white — would cover its square: multiplied instead)
+  const mod = d.blend === 'BLEND_Modulate', key = d.tex + (d.alpha ? '+' + d.alpha : '') + (mod ? '*' : ''); // (a modulating sheet: over white, no alpha — dst × colour)
+  if (!decalTex[key]) {
+    let img = sharp(f).resize(512, 512, { fit: 'inside', withoutEnlargement: true });
+    const af = d.alpha && files[d.alpha.toLowerCase() + '.png'];
+    if (af) { const md = await sharp(f).metadata(), a = await sharp(af).resize(Math.min(512, md.width), Math.min(512, md.height), { fit: 'fill' }).greyscale().raw().toBuffer(); img = sharp(f).resize(Math.min(512, md.width), Math.min(512, md.height), { fit: 'fill' }).removeAlpha().joinChannel(a, { raw: { width: Math.min(512, md.width), height: Math.min(512, md.height), channels: 1 } }); }
+    if (mod) img = sharp(await img.png().toBuffer()).flatten({ background: '#ffffff' });
+    decalTex[key] = 'data:image/webp;base64,' + (await img.webp({ quality: 88, alphaQuality: 90 }).toBuffer()).toString('base64');
+  }
+  const r = (v) => Math.round(v * 1000) / 1000;
+  decals.push({ tex: key, blend: d.blend.replace('BLEND_', ''), unlit: d.unlit, w: r(d.w / 100), h: r(d.h / 100), p: cv(d.loc).map(r), n: cv(d.n).map(r), t: cv(d.t).map(r), b: cv(d.b).map(r) });
+}
+const meta = { lightmaps, terrains, decals: decals.length ? { tex: decalTex, list: decals } : null,lut: lutPng ? 'data:image/png;base64,' + fs.readFileSync(lutPng).toString('base64') : null, starts: (tdm.length ? tdm : S0).map((s) => ({ team: s.team, pos: cv(s.loc), yaw: (s.yaw / 65536) * Math.PI * 2 - Math.PI / 2 })), ladders: (dump.ladders || []).map((l) => cv(l.loc)) };
 fs.mkdirSync(adir, { recursive: true });
 fs.writeFileSync(`${adir}/map.js`, `/* Special Force 2's ${MAP} from the user's install — tools/sf2_map_build.mjs */
 (window.SF2_MAPS || (window.SF2_MAPS = {}))['${id}'] = { meta: ${JSON.stringify(meta)}, glb: '${fs.readFileSync(OUT).toString('base64')}' };

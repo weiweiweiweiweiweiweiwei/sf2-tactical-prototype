@@ -201,6 +201,30 @@ async function sf2TerrainMesh(T, geo, def) {
   return mesh;
 }
 
+// v66a SF2's projected decals (DecalActor, 139 on Desert Camp: stains, posters, sand patches) as quads on the plane they were cast on
+// (the component's stored hit: point, normal, tangent along the width, binormal along the height), 1.5 cm off it; one mesh per sheet and
+// blend. UE3's BLEND_Modulate multiplies what is behind (its sheet is over white, so its clear part changes nothing); BLEND_Translucent
+// blends over it, unlit (MLM_Unlit) or lit by the sun and sky
+function sf2Decals(list, dtex) {
+  const by = new Map(), out = [];
+  for (const q of list) { const k = q.tex + '|' + q.blend + '|' + (q.unlit ? 1 : 0); (by.get(k) || by.set(k, []).get(k)).push(q); }
+  for (const [k, qs] of by) {
+    const tex = dtex[qs[0].tex]; if (!tex) continue;
+    const P = new Float32Array(qs.length * 12), U = new Float32Array(qs.length * 8), I = [], v = new THREE.Vector3();
+    qs.forEach((q, i) => {
+      const p = new THREE.Vector3(...q.p).addScaledVector(new THREE.Vector3(...q.n), 0.015), t = new THREE.Vector3(...q.t).multiplyScalar(q.w / 2), bn = new THREE.Vector3(...q.b).multiplyScalar(q.h / 2);
+      [[-1, -1, 0, 0], [1, -1, 1, 0], [1, 1, 1, 1], [-1, 1, 0, 1]].forEach(([sx, sy, u, w], j) => { v.copy(p).addScaledVector(t, sx).addScaledVector(bn, sy); P.set([v.x, v.y, v.z], i * 12 + j * 3); U.set([u, w], i * 8 + j * 2); });
+      I.push(i * 4, i * 4 + 1, i * 4 + 2, i * 4, i * 4 + 2, i * 4 + 3);
+    });
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(P, 3)); g.setAttribute('uv', new THREE.BufferAttribute(U, 2)); g.setIndex(I); g.computeVertexNormals();
+    const base = { map: tex, transparent: true, depthWrite: false, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 };
+    const mod = qs[0].blend === 'Modulate', mt = mod ? new THREE.MeshBasicMaterial({ ...base, fog: false, blending: THREE.CustomBlending, blendEquation: THREE.AddEquation, blendSrc: THREE.DstColorFactor, blendDst: THREE.ZeroFactor })
+      : qs[0].unlit ? new THREE.MeshBasicMaterial(base) : new THREE.MeshStandardMaterial({ ...base, roughness: 1, metalness: 0 });
+    const m = new THREE.Mesh(g, mt); m.name = 'decal_' + k; m.renderOrder = 1; m.receiveShadow = !mod; m.userData.noRay = true; out.push(m);
+  }
+  return out;
+}
+
 function sf2TriMap(def) {
   return Object.assign({
     indoor: false, killOutside: false, traversal: false, navClimb: 0.45, navGrid: 1, bodyRadius: 0.25, underFloorAirOnly: true, acoustics: 'indoor', ambience: 'warehouse',
@@ -243,6 +267,7 @@ function sf2TriMap(def) {
       if (this.mirror !== false && !d.meta.mirrored) { // (once per page: the starts' z and facing, the ladders' z)
         for (const st of d.meta.starts) { st.pos[2] = -st.pos[2]; st.yaw = Math.PI - st.yaw; }
         for (const l of d.meta.ladders || []) l[2] = -l[2];
+        for (const q of (d.meta.decals && d.meta.decals.list) || []) for (const v of [q.p, q.n, q.t, q.b]) v[2] = -v[2]; // (v66a the decals' planes too)
         d.meta.mirrored = true;
       }
       // v65z SF2's baked light (tools/sf2_lightmap.py): its SimpleLightmap sheets, linear, uv as UE stores it (no flip)
@@ -251,7 +276,9 @@ function sf2TriMap(def) {
         const t = await new THREE.TextureLoader().loadAsync(url); t.flipY = false; t.colorSpace = THREE.NoColorSpace; t.anisotropy = 4; lm[k] = t;
       }));
       if (d.meta.lut && !this.lutTex) { const t = await new THREE.TextureLoader().loadAsync(d.meta.lut); t.flipY = false; t.colorSpace = THREE.NoColorSpace; t.generateMipmaps = false; t.minFilter = t.magFilter = THREE.LinearFilter; this.lutTex = t; } // (v65z read by the post pass)
-      this._s2 = { gltf, soup, ramps, meta: d.meta, lm, terrains: await Promise.all(TS.map((T, i) => sf2TerrainMesh(T, tgeos[i], this))) };
+      const dtex = {}; // v66a the decal sheets (sRGB colour; tools/sf2_map_build.mjs meta.decals)
+      await Promise.all(Object.entries((d.meta.decals && d.meta.decals.tex) || {}).map(async ([k, url]) => { const t = await new THREE.TextureLoader().loadAsync(url); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; dtex[k] = t; }));
+      this._s2 = { gltf, soup, ramps, meta: d.meta, lm, dtex, terrains: await Promise.all(TS.map((T, i) => sf2TerrainMesh(T, tgeos[i], this))) };
       this.bounds = { minX: Math.floor(all.min.x) - 2, maxX: Math.ceil(all.max.x) + 2, minZ: Math.floor(all.min.z) - 2, maxZ: Math.ceil(all.max.z) + 2 };
       this.killY = all.min.y - 15;
       const levels = []; for (let y = Math.floor(all.min.y); y <= Math.ceil(all.max.y); y += 0.5) levels.push(y + 0.2); this.navLevels = levels; // v65v slabs every 0.5 m: NavGraph.walkable() takes a floor within ±0.25 m of the slab, so 1 m slabs missed every floor between (SF2's uneven ground: Desert Camp's graph fell into 155 pieces, no path between the bases)
@@ -313,6 +340,7 @@ function sf2TriMap(def) {
       // material and sheet (nothing raycasts the drawn map: shots and bodies use the triangle soup)
       for (const list of groups.values()) b.scene.add(sf2Merge(list, this._s2.lm, def));
       for (const t of this._s2.terrains || []) b.scene.add(t);
+      if (this._s2.meta.decals) for (const m of sf2Decals(this._s2.meta.decals.list, this._s2.dtex)) b.scene.add(m);
     },
   }, def);
 }
