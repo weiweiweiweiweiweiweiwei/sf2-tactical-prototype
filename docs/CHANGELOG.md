@@ -1815,3 +1815,10 @@
 ### （本機，2026-10-30）：內紅點準星、沙漠營地沙丘位置（v65z）
 - 使用者回報 HK417 mod2A、G36C 魔術迴路開鏡沒有紅色準星：執行時組合配件（`sf2Variant`）時，直接掛在 glTF 根節點下的模型被改成根節點的名字（空字串），找不到 `reticle` 準星面，就沒建出 SF2 的 EOTech 圓環／Reflex 紅點。改成根節點下的模型保留自己的名字；只綁一根骨頭的普通模型也一起搬過去。G36C EOTech、HK417 Reflex、魔術迴路開鏡截圖都有紅色準星了。
 - 沙漠營地「頭上多了沙灘」：南邊那塊沙丘在 SF2 裡旋轉了 180°（Rotation yaw −32767），之前沒套旋轉，蓋進了營地東半邊（也讓一座樓梯看起來壞掉）。地形現在照 Rotation 擺放。
+
+### v66b（本機，2026-10-31）：地圖原始檔集中到 maps/、SF2 狙擊槍切槍研究
+- 使用者 10-31：整理專案資料夾，地圖彙整到同一個資料夾，保留每張地圖的 Blender 檔。
+  - `maps/<地圖>/` 放原始檔，`assets/maps/` 只放遊戲讀的成品。Apex 骷髏鎮、訓練場的工作資料夾（含 .blend）從 `tools/out/apex/` 搬到 `maps/apex-skulltown/work/`、`maps/apex-range/work/`；`tools/blender/apex_maps.py`、`skulltown_*.py` 路徑跟著改。`maps/*/work/` 加進 `.gitignore`。
+  - `maps/README.md` 改成地圖總目錄：每張圖的原始檔、成品、程式在哪裡。
+  - 沒有刪任何檔案；可刪的清單交給使用者決定。
+- 研究：SF2 開槍間隔中切槍會直接取消剩下的間隔（`SFWeapon.WeaponFiring.TryPutDown` 清掉 RefireCheckTimer 並立刻收槍）。AWP 1.4 秒 → 切手槍再切回約 0.95–1.05 秒；Barrett 切槍反而更慢。細節見 `docs/research/sf2/sniper-quickswitch.md`。

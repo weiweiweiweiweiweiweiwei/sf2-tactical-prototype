@@ -1,9 +1,9 @@
 """Skull Town (mp_rr_freedm_skulltown) from the user's own Apex install: BSP world + static props + textures -> one .blend.
 
-Inputs (local only, see .gitignore): tools/out/apex/skulltown/wrap/maps (RSX 'wrap' export: BSP lumps + .ent),
-tools/out/apex/skulltown/full/mdl (CAST LOD0 per model), tools/out/apex/rsx-2.4.0/exported_files/material (textures).
+Inputs (local only, see .gitignore): maps/apex-skulltown/work/wrap/maps (RSX 'wrap' export: BSP lumps + .ent),
+maps/apex-skulltown/work/full/mdl (CAST LOD0 per model), tools/out/apex/rsx-2.4.0/exported_files/material (textures).
   blender -b -P tools/blender/skulltown_build.py
-Output: tools/out/apex/skulltown/skulltown.blend (+ skulltown_build.json report, skulltown_overview.png)
+Output: maps/apex-skulltown/work/skulltown.blend (+ skulltown_build.json report, skulltown_overview.png)
 World: model 0 meshes with UV0, original vertex normals and the vertex colour (blend weights) as attribute 'blend'; TOOLS
 surfaces dropped. Everything is cropped to a box around the play area and moved so its centre is the origin.
 """

@@ -1,11 +1,11 @@
-"""Quick look at tools/out/apex/skulltown/skulltown.blend: an overhead and a street-level view (EEVEE).
+"""Quick look at maps/apex-skulltown/work/skulltown.blend: an overhead and a street-level view (EEVEE).
   blender -b -P tools/blender/skulltown_preview.py -- [blend] [tag]"""
 import bpy, math, sys
 from pathlib import Path
 from mathutils import Vector
 ROOT = Path(__file__).resolve().parents[2]
 args = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else []
-WORK = ROOT / 'tools/out/apex/skulltown'
+WORK = ROOT / 'maps/apex-skulltown/work'
 bpy.ops.wm.open_mainfile(filepath=str(args[0] if args else WORK / 'skulltown.blend'))
 tag = args[1] if len(args) > 1 else 'preview'
 sc = next(s for s in bpy.data.scenes if s.name != 'prototypes'); bpy.context.window.scene = sc

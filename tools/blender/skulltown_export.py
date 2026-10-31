@@ -1,6 +1,6 @@
-"""Skull Town: baked lighting, collision triangles and the runtime glTF from tools/out/apex/skulltown/skulltown.blend.
+"""Skull Town: baked lighting, collision triangles and the runtime glTF from maps/apex-skulltown/work/skulltown.blend.
   blender -b -P tools/blender/skulltown_export.py -- [--samples N] [--skip-bake]
-Writes tools/out/apex/skulltown/export/: scene.gltf (+ .bin, textures/), lm_inner.png / lm_outer.png (8-bit sRGB of
+Writes maps/apex-skulltown/work/export/: scene.gltf (+ .bin, textures/), lm_inner.png / lm_outer.png (8-bit sRGB of
 irradiance / max, max in manifest.json), collision.bin, manifest.json.
 Lighting: the world is split into the play area (4096² lightmap) and the scenery around it (2048²); Cycles bakes direct +
 indirect diffuse (sun from the map's light_environment, sky, bounces, every prop's shadow) into a second UV set ('Lightmap',

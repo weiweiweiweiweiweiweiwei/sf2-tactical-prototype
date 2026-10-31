@@ -9,6 +9,7 @@ tools/ryokan/ryokan.glb
 
 # walkable .blend copies of the maps + their exported textures (tools/_matexport.mjs, glb_to_blend.py, blend_sky.py) — large, local only
 maps/*/view/
+maps/*/work/
 
 # Blender python caches; Satellite Base intermediates (rebuilt by tools/satellite/export_plan.mjs + tools/blender/sat_build.py; the game ships assets/maps/satellite.js)
 __pycache__/
