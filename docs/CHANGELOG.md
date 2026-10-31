@@ -1828,3 +1828,13 @@
 - 實測（`tools/out/_qswitch.mjs`）：不切槍／開槍後連切兩下 — AWP 1.41／1.06 秒、TRG-41 1.21／1.11、CheyTac 1.61／1.36、Barrett 1.31／1.71（拔槍 1.3 秒，切了更慢，跟 SF2 一樣）。
 - 使用者 10-31 選 A：刪除 `tools/out/sf2/`（4.7 GB，可從 SF2 安裝檔重新匯出）和 `tools/out/` 裡沒被任何文件或工具引用的探測腳本、截圖（共 332 項），以及 `_v61c_test.html`、`notify.log`。被引用的工具（`umodel_win32`、`_rigshot.mjs`、`_reloadtime.mjs`、`_sf2cam.mjs`、`_us_dis.py` 等 25 項）和 Apex 原始匯出保留。.blend1 備份保留。
   - 之後要重建 SF2 地圖或槍，先照 `docs/loop/SF2_ALL.md` 重新解壓、匯出（`sf2_unlzo.py`、UModel）。
+
+### v66d（本機，2026-10-31）：沙漠營地的環境粒子特效
+- 使用者 10-31 選 A：沙漠營地補粒子特效。
+- `tools/sf2_fx.py`：讀地圖上會自己啟動的 Emitter／SFEmitterNoSync（模板在原型上的順著 archetype 找），每個粒子系統第一層 LOD 的模組（生成、壽命、大小、速度、加速度、顏色／透明度隨壽命、旋轉、位置圓柱／球、SubUV）。UE3 烘焙的 RawDistribution 是 `[最小, 最大, 各時間點…]`，Op 2 是在每點的 min／max 之間隨機。
+  - 模組名稱（`ParticleModuleRequired_4`…）每個系統都有同名的，要在該系統底下找，不然材質會對錯。
+  - 材質在 `SF2_Env_fx` 包的，讀那個包；貼圖從編譯後的著色器參照挑名字對得上的（`New_subBlood_02`、`T_TORCH_08` 是每個材質都有的占位圖）。UModel 匯出 23 張貼圖。
+- `tools/sf2_fx_meta.mjs`（建圖和 `sf2_fx_patch.mjs` 共用）：只放會持續播放的系統（開場那次車輛爆炸 `Car_Explo_03` 不放）、略過扭曲和網格粒子。沒有 alpha 的黑底圖用亮度當透明度；單格、邊緣不透明的雲霧底圖加圓形淡出。
+- 遊戲 `src/07y_sf2fx.js`：CPU 模擬、面向鏡頭的四邊形，同貼圖同混合一個網格（12 批）；PSA_Velocity（火花、風沙）沿速度方向拉長；開局先預跑 6 秒，煙已經在飄。生成速率乘上隨發射器週期變化的 RateScale（陣風）。
+- 實測：33 個發射器、約 400 顆粒子，4v4 仍 60 FPS（p95 20 ms）；燃燒的悍馬有火焰和飄煙、卡車車頭冒煙。
+- 中間檔（`tools/out/sf2/`）10-31 清掉了，這次只把特效補進現有的 map.js（`node tools/sf2_fx_patch.mjs Desertcamp`），模型沒有重建。

@@ -3,6 +3,7 @@ import { TriSoup } from './04_collision.js';
 import { MAPS } from './07_maps.js';
 import { apexGLTF } from './07u_apex.js';
 import { TriGround } from './07w_skulltown.js';
+import { sf2Fx } from './07y_sf2fx.js';
 /* =====================================================================
    v65o SPECIAL FORCE 2'S OWN MAPS (user 10-29: every regular SF2 map) — built from the user's install by tools/sf2_map_build.mjs:
    the level's static meshes at their own matrices plus its BSP floors / walls in one GLB, and a meta (player starts, ladders),
@@ -279,7 +280,9 @@ function sf2TriMap(def) {
       if (d.meta.lut && !this.lutTex) { const t = await new THREE.TextureLoader().loadAsync(d.meta.lut); t.flipY = false; t.colorSpace = THREE.NoColorSpace; t.generateMipmaps = false; t.minFilter = t.magFilter = THREE.LinearFilter; this.lutTex = t; } // (v65z read by the post pass)
       const dtex = {}; // v66a the decal sheets (sRGB colour; tools/sf2_map_build.mjs meta.decals)
       await Promise.all(Object.entries((d.meta.decals && d.meta.decals.tex) || {}).map(async ([k, url]) => { const t = await new THREE.TextureLoader().loadAsync(url); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; dtex[k] = t; }));
-      this._s2 = { gltf, soup, ramps, meta: d.meta, lm, dtex, terrains: await Promise.all(TS.map((T, i) => sf2TerrainMesh(T, tgeos[i], this))) };
+      const ftex = {}; // v66d the particle sheets (sRGB; meta.fx)
+      await Promise.all(Object.entries((d.meta.fx && d.meta.fx.tex) || {}).map(async ([k, url]) => { const t = await new THREE.TextureLoader().loadAsync(url); t.colorSpace = THREE.SRGBColorSpace; ftex[k] = t; }));
+      this._s2 = { gltf, soup, ramps, meta: d.meta, lm, dtex, ftex, terrains: await Promise.all(TS.map((T, i) => sf2TerrainMesh(T, tgeos[i], this))) };
       this.bounds = { minX: Math.floor(all.min.x) - 2, maxX: Math.ceil(all.max.x) + 2, minZ: Math.floor(all.min.z) - 2, maxZ: Math.ceil(all.max.z) + 2 };
       this.killY = all.min.y - 15;
       const levels = []; for (let y = Math.floor(all.min.y); y <= Math.ceil(all.max.y); y += 0.5) levels.push(y + 0.2); this.navLevels = levels; // v65v slabs every 0.5 m: NavGraph.walkable() takes a floor within ±0.25 m of the slab, so 1 m slabs missed every floor between (SF2's uneven ground: Desert Camp's graph fell into 155 pieces, no path between the bases)
@@ -342,6 +345,7 @@ function sf2TriMap(def) {
       for (const list of groups.values()) b.scene.add(sf2Merge(list, this._s2.lm, def));
       for (const t of this._s2.terrains || []) b.scene.add(t);
       if (this._s2.meta.decals) for (const m of sf2Decals(this._s2.meta.decals.list, this._s2.dtex)) b.scene.add(m);
+      const fxStep = sf2Fx(this._s2.meta.fx, this._s2.ftex, b.scene); if (fxStep) b.animated.push(fxStep); // v66d SF2's dust, smoke, fires, bugs, paper (src/07y_sf2fx.js)
     },
   }, def);
 }
