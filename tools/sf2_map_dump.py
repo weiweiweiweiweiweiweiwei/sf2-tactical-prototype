@@ -25,6 +25,12 @@ def actor_matrix(pr):  # v65v UE3 FRotationMatrix rows × DrawScale(3D), Locatio
     m = []
     for r, k in zip(rows, s3): m += [x * s * k for x in r] + [0.0]
     return [round(x, 4) for x in m + loc + [1.0]]
+def comp_scaled(m, cp):  # v66e a component's own Scale3D × Scale (UE3: LocalToWorld = its scale · the actor's transform) — the 64 bytes a
+    # StaticMeshCollectionActor keeps per component carry no scale (Cannon: 865 components, its stairs 0.6 × 0.7 × 0.755, came out at full
+    # size through the floors — user 10-31), nor does an actor's Location / Rotation / DrawScale
+    c = comp_scale(cp); return [round(x * c[i // 4], 4) if i < 12 else x for i, x in enumerate(m)]
+def comp_scale(cp):
+    s = float(cp.get('Scale', 1.0)); return [round(x * s, 5) for x in vec(cp.get('Scale3D'), (1.0, 1.0, 1.0))]
 def collides(cp):  # v65v a component switched off for collision (grass, wires, decor) stays out of the game's triangle soup
     return not (cp.get('CollideActors') is False or cp.get('BlockActors') is False or str(cp.get('CollideActors')) == 'False' or str(cp.get('BlockActors')) == 'False')
 ACTORS = ('StaticMeshActor', 'SFStaticMeshActor', 'InterpActor', 'KActor', 'SFKActorNoSync', 'SFKActor', 'SFBreakableActorByDamage')  # (v65w + SF2's breakable cars: the intact mesh, not the burnt one)
@@ -45,7 +51,7 @@ def place(out):  # v65y one package's placed meshes (the global p), appended to 
             for j, ci in enumerate(comps['i']):
                 if ci <= 0: continue
                 m = list(struct.unpack_from('<16f', p.b, at + 64 * j)); mesh, cp = mesh_of(p.exports[ci - 1])
-                if mesh and mesh != 'None': out.append({'mesh': mesh, 'm': [round(x, 4) for x in m], 'col': collides(cp), 'lm': lm_of(p.exports[ci - 1])})
+                if mesh and mesh != 'None': out.append({'mesh': mesh, 'm': comp_scaled([round(x, 4) for x in m], cp), 'cs': comp_scale(cp), 'col': collides(cp), 'lm': lm_of(p.exports[ci - 1])})
         elif c in ACTORS or (c.endswith('Actor') and 'KActor' in c):
             if e['flags'] & 0x400000000: continue  # v65y RF_ArchetypeObject: a prefab's template (humvee_01_Arc0 …) at the origin, not placed
             pr = {n: v for n, i, t, v in p.props(e)}
@@ -56,7 +62,7 @@ def place(out):  # v65y one package's placed meshes (the global p), appended to 
                 ce = next((x for x in by_outer.get(k, []) if p.clsname(x) == 'StaticMeshComponent' and (mesh_of(x)[0] or '').lower().find('fire') < 0 and mesh_of(x)[0] not in (None, 'None')), None)
                 if not ce: continue
                 mesh, cp = mesh_of(ce)
-            if mesh and mesh != 'None': out.append({'mesh': mesh, 'm': actor_matrix(pr), 'col': collides(cp), 'actor': c, 'lm': lm_of(ce)})
+            if mesh and mesh != 'None': out.append({'mesh': mesh, 'm': comp_scaled(actor_matrix(pr), cp), 'cs': comp_scale(cp), 'col': collides(cp), 'actor': c, 'lm': lm_of(ce)})
     return by_outer
 by_outer = place(out)
 # v65y --with <sublevel>…: the sublevels SF2 streams in for play (Desert Camp: Desertcamp_ob — the tank hull, the scaled-up hangar, door

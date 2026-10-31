@@ -6,7 +6,7 @@ import fs from 'node:fs'; import path from 'node:path';
 import { Document, NodeIO } from '@gltf-transform/core';
 import { ALL_EXTENSIONS } from '@gltf-transform/extensions';
 import { mergeDocuments, prune, dedup, textureCompress, draco } from '@gltf-transform/functions';
-import draco3d from 'draco3dgltf'; import sharp from 'sharp'; import { sf2FxMeta } from './sf2_fx_meta.mjs';
+import draco3d from 'draco3dgltf'; import sharp from 'sharp';
 const MAP = process.argv[2] || 'Alcatraz', DIR = `tools/out/sf2/maps/${MAP}`, OUT = process.argv[3] || `tools/out/sf2/maps/${MAP}.glb`;
 const io = new NodeIO().registerExtensions(ALL_EXTENSIONS).registerDependencies({ 'draco3d.encoder': await draco3d.createEncoderModule(), 'draco3d.decoder': await draco3d.createDecoderModule() });
 const files = {}; const walk = (d) => { for (const f of fs.readdirSync(d)) { const p = path.join(d, f); if (fs.statSync(p).isDirectory()) walk(p); else files[f.toLowerCase()] = p; } }; walk(DIR);
@@ -130,8 +130,7 @@ for (const d of dump.decals || []) {
   const r = (v) => Math.round(v * 1000) / 1000;
   decals.push({ tex: key, blend: d.blend.replace('BLEND_', ''), unlit: d.unlit, w: r(d.w / 100), h: r(d.h / 100), p: cv(d.loc).map(r), n: cv(d.n).map(r), t: cv(d.t).map(r), b: cv(d.b).map(r) });
 }
-const fx = await sf2FxMeta(MAP); // v66d SF2's ambient particle effects (tools/sf2_fx_meta.mjs)
-const meta = { lightmaps, terrains, fx, decals: decals.length ? { tex: decalTex, list: decals } : null,lut: lutPng ? 'data:image/png;base64,' + fs.readFileSync(lutPng).toString('base64') : null, starts: (tdm.length ? tdm : S0).map((s) => ({ team: s.team, pos: cv(s.loc), yaw: (s.yaw / 65536) * Math.PI * 2 - Math.PI / 2 })), ladders: (dump.ladders || []).map((l) => cv(l.loc)) };
+const meta = { lightmaps, terrains, decals: decals.length ? { tex: decalTex, list: decals } : null,lut: lutPng ? 'data:image/png;base64,' + fs.readFileSync(lutPng).toString('base64') : null, starts: (tdm.length ? tdm : S0).map((s) => ({ team: s.team, pos: cv(s.loc), yaw: (s.yaw / 65536) * Math.PI * 2 - Math.PI / 2 })), ladders: (dump.ladders || []).map((l) => cv(l.loc)) };
 fs.mkdirSync(adir, { recursive: true });
 fs.writeFileSync(`${adir}/map.js`, `/* Special Force 2's ${MAP} from the user's install — tools/sf2_map_build.mjs */
 (window.SF2_MAPS || (window.SF2_MAPS = {}))['${id}'] = { meta: ${JSON.stringify(meta)}, glb: '${fs.readFileSync(OUT).toString('base64')}' };

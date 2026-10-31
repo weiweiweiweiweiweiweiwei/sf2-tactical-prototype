@@ -34,7 +34,7 @@
 - ✅（v65o）用 Alcatraz 試成功。**每張圖的做法（M3 照這個）**：
   1. `python tools/sf2_unlzo.py <圖>`（解壓到 `tools/out/sf2/<圖>_dec.upk`）
   2. `tools/out/umodel_win32/umodel_64.exe -game=sf2 -path=D:/SpecialForce2/SFGame/CookedPCConsole -export -gltf -png -nooverwrite -out=tools/out/sf2/maps/<圖> <圖>`（地圖引用別的包的網格時，那些包也要匯出到同一資料夾）
-  3. `python tools/sf2_map_dump.py <圖>`、`python tools/sf2_map_bsp.py <圖>`、`python tools/sf2_fx.py <圖>`（粒子特效，v66d）、`node tools/sf2_map_build.mjs <圖>` → `assets/maps/sf2-<圖小寫>/map.js`。只補特效、不重建模型：`node tools/sf2_fx_patch.mjs <圖>`
+  3. `python tools/sf2_map_dump.py <圖>`、`python tools/sf2_map_bsp.py <圖>`、`node tools/sf2_map_build.mjs <圖>` → `assets/maps/sf2-<圖小寫>/map.js`。只補物件縮放、不重建模型：`node tools/sf2_scale_patch.mjs <圖>`（v66e）
   4. `src/07x_sf2maps.js` 加一個 `MAPS.push(sf2TriMap({ id: 'sf2_<圖小寫>', name, en, desc, slogan, indoor, shot, thumb, objectives }))`（bounds、killY、出生點、導航層自動）
   5. `node tools/_mapthumbs.mjs sf2_<圖小寫>`；`node tools/check.mjs --map <編號>`（CHECK_OK）；`MAP=<編號> ONLY=hip node tools/out/_rigshot.mjs` 看玩家視角
 

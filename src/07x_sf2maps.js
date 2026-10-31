@@ -3,7 +3,6 @@ import { TriSoup } from './04_collision.js';
 import { MAPS } from './07_maps.js';
 import { apexGLTF } from './07u_apex.js';
 import { TriGround } from './07w_skulltown.js';
-import { sf2Fx } from './07y_sf2fx.js';
 /* =====================================================================
    v65o SPECIAL FORCE 2'S OWN MAPS (user 10-29: every regular SF2 map) — built from the user's install by tools/sf2_map_build.mjs:
    the level's static meshes at their own matrices plus its BSP floors / walls in one GLB, and a meta (player starts, ladders),
@@ -39,9 +38,22 @@ function stairSides(g, mat) {
 // v65y an SF2 ladder mesh made climbable (user 10-29, Desert Camp: DC_ladder_001 / S_ladder_004 were scenery): the thin horizontal
 // axis of its box is the climb direction, the side that is blocked at mid height is the wall, the floor found on top of the wall
 // is the platform; a climb volume and a nav link as MapBuilder.ladder() makes them, without its own rungs
+// v66e (user 10-31, Cannon: its two long ladders broke halfway) a long SF2 ladder is several pieces stacked — climbed as one: the
+// pieces in one column (same thin axis, centres within 0.3 m, heights touching) become one box, its top the floor found above the last
 const _lb = new THREE.Box3(), _lc = new THREE.Vector3();
-function sf2Ladder(b, m, nav = true) {
-  m.updateMatrixWorld(true); _lb.setFromObject(m); _lb.getCenter(_lc); const sx = _lb.max.x - _lb.min.x, sz = _lb.max.z - _lb.min.z, col = b.col;
+function sf2Ladders(b, meshes, nav) {
+  const boxes = meshes.map((m) => { m.updateMatrixWorld(true); return new THREE.Box3().setFromObject(m); });
+  const thin = (q) => q.max.x - q.min.x < q.max.z - q.min.z, cx = (q) => (q.min.x + q.max.x) / 2, cz = (q) => (q.min.z + q.max.z) / 2;
+  boxes.sort((p, q) => p.min.y - q.min.y);
+  const cols = [];
+  for (const q of boxes) {
+    const c = cols.find((k) => thin(k) === thin(q) && Math.abs(cx(k) - cx(q)) < 0.3 && Math.abs(cz(k) - cz(q)) < 0.3 && q.min.y <= k.max.y + 0.5);
+    if (c) c.union(q); else cols.push(q.clone());
+  }
+  for (const q of cols) sf2Ladder(b, q, nav);
+}
+function sf2Ladder(b, box, nav = true) {
+  _lb.copy(box); _lb.getCenter(_lc); const sx = _lb.max.x - _lb.min.x, sz = _lb.max.z - _lb.min.z, col = b.col;
   const y0 = _lb.min.y, hw = Math.max(sx, sz) / 2;
   // (the platform lies behind the ladder, −normal: the side whose floor, looked for from above the ladder's top, is the higher one —
   // the triangle collision has no inside, so a 'blocked' test says nothing)
@@ -247,7 +259,7 @@ function sf2TriMap(def) {
       gltf.scene.traverse((o) => {
         if (!o.isMesh) return;
         const ex = (k) => o.userData[k] || (o.parent && o.parent.userData[k]); // (glTF node extras: on the node, or its group)
-        if (ex('colOnly')) o.userData.colOnly = true; else if (ex('nocol')) { o.userData.nocol = true; return; } // v65v SF2's collision: off where it turned it off, its blocking volumes in
+        if (ex('colOnly')) o.userData.colOnly = true; else if (ex('nocol')) { o.userData.nocol = true; return; }
         box.setFromObject(o); if (box.getSize(size).length() > 300) { o.userData.sky = true; return; }
         all.union(box);
         if (this.rampStairs && this.rampStairs.test(o.name)) { const q = sf2StairRamp(o); if (q) { // (v65z this stair's ramp, both windings: up whichever way the mesh faces)
@@ -280,9 +292,7 @@ function sf2TriMap(def) {
       if (d.meta.lut && !this.lutTex) { const t = await new THREE.TextureLoader().loadAsync(d.meta.lut); t.flipY = false; t.colorSpace = THREE.NoColorSpace; t.generateMipmaps = false; t.minFilter = t.magFilter = THREE.LinearFilter; this.lutTex = t; } // (v65z read by the post pass)
       const dtex = {}; // v66a the decal sheets (sRGB colour; tools/sf2_map_build.mjs meta.decals)
       await Promise.all(Object.entries((d.meta.decals && d.meta.decals.tex) || {}).map(async ([k, url]) => { const t = await new THREE.TextureLoader().loadAsync(url); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; dtex[k] = t; }));
-      const ftex = {}; // v66d the particle sheets (sRGB; meta.fx)
-      await Promise.all(Object.entries((d.meta.fx && d.meta.fx.tex) || {}).map(async ([k, url]) => { const t = await new THREE.TextureLoader().loadAsync(url); t.colorSpace = THREE.SRGBColorSpace; ftex[k] = t; }));
-      this._s2 = { gltf, soup, ramps, meta: d.meta, lm, dtex, ftex, terrains: await Promise.all(TS.map((T, i) => sf2TerrainMesh(T, tgeos[i], this))) };
+      this._s2 = { gltf, soup, ramps, meta: d.meta, lm, dtex, terrains: await Promise.all(TS.map((T, i) => sf2TerrainMesh(T, tgeos[i], this))) };
       this.bounds = { minX: Math.floor(all.min.x) - 2, maxX: Math.ceil(all.max.x) + 2, minZ: Math.floor(all.min.z) - 2, maxZ: Math.ceil(all.max.z) + 2 };
       this.killY = all.min.y - 15;
       const levels = []; for (let y = Math.floor(all.min.y); y <= Math.ceil(all.max.y); y += 0.5) levels.push(y + 0.2); this.navLevels = levels; // v65v slabs every 0.5 m: NavGraph.walkable() takes a floor within ±0.25 m of the slab, so 1 m slabs missed every floor between (SF2's uneven ground: Desert Camp's graph fell into 155 pieces, no path between the bases)
@@ -325,6 +335,7 @@ function sf2TriMap(def) {
       // its iron rails (def.stairKeep materials) left as they are
       const stairMat = def.stairMat && meshes.map((o) => o.material).find((mt) => mt && mt.name === def.stairMat);
       const groups = new Map();
+      const ladders = [];
       for (const src of meshes) {
         if (src.userData.colOnly) continue; // (a blocking volume: in the triangle soup, not drawn)
         // v65y a clone per match (geometry / materials shared): moving the loaded meshes themselves left the map's second match empty
@@ -334,7 +345,7 @@ function sf2TriMap(def) {
         if (def.stairSides && def.stairSides.test(m.name)) { const s = stairSides(src.geometry, m.material); if (s) { s.matrix.copy(m.matrix); b.scene.add(sf2Merge([{ m: s, src: s, L: {} }], this._s2.lm, def)); } } // (v65z lit like the rest: the bake's mean light)
         m.castShadow = !m.userData.sky; m.receiveShadow = true;
         for (const mt of Array.isArray(m.material) ? m.material : [m.material]) { mt.vertexColors = false; mt.side = THREE.DoubleSide; if (mt.map) { mt.map.anisotropy = 4; const c = mt.color; if (Math.abs(c.r - c.g) < 0.02 && Math.abs(c.g - c.b) < 0.02) c.setRGB(1, 1, 1); } } // (v65y UModel gives a plain mesh material a 0.58 grey base colour SF2 does not have — the sand mound by the square came out darker than the BSP sand around it in the same texture; a coloured one is the material's own tint, the hangars' red frames, and stays) // (v65w UModel writes SF2's vertex paint as COLOR_0: multiplied in, it striped crates and benches in rainbow colours)
-        if (/ladder/i.test(m.name)) sf2Ladder(b, m, def.ladderNav);
+        if (/ladder/i.test(m.name)) ladders.push(m);
         if (Array.isArray(m.material) || m.userData.sky) { b.scene.add(m); continue; }
         const L = sf2LightOf(src), k = m.material.uuid + '|' + (L.tex || '') + '|' + (L.max || '');
         (groups.get(k) || groups.set(k, []).get(k)).push({ m, src, L });
@@ -342,10 +353,10 @@ function sf2TriMap(def) {
       // v65z every placement of one material on one baked-light sheet merged into one mesh carrying SF2's own light (user 10-30: Desert
       // Camp in SF2's look): each placement lights differently, so the v65y instancing gives way to merging — still one draw per
       // material and sheet (nothing raycasts the drawn map: shots and bodies use the triangle soup)
+      sf2Ladders(b, ladders, def.ladderNav);
       for (const list of groups.values()) b.scene.add(sf2Merge(list, this._s2.lm, def));
       for (const t of this._s2.terrains || []) b.scene.add(t);
       if (this._s2.meta.decals) for (const m of sf2Decals(this._s2.meta.decals.list, this._s2.dtex)) b.scene.add(m);
-      const fxStep = sf2Fx(this._s2.meta.fx, this._s2.ftex, b.scene); if (fxStep) b.animated.push(fxStep); // v66d SF2's dust, smoke, fires, bugs, paper (src/07y_sf2fx.js)
     },
   }, def);
 }
