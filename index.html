@@ -9419,6 +9419,7 @@ var CharacterMotor = class {
       }
     } else if (hasInput) this._accelerate(wishX, wishZ, wishSpeed, P.airAccel, dt, P.airCap);
     this._unwedgeRamps();
+    this._unwedgeTris();
     const wasGrounded = this.grounded;
     if (!this.grounded) this.vel.y += CFG.gravity * dt;
     else this.vel.y = Math.min(this.vel.y, 0);
@@ -9452,6 +9453,25 @@ var CharacterMotor = class {
     this.stepOffset = damp(this.stepOffset, 0, 16, dt);
   }
   // v23 safety net: a body below a ramp's surface inside its footprint (knock-back, teleport, old saves) is pushed out through the nearest side.
+  // v66e a body inside the triangles (it brushed a slanted face — Cannon's Jersey barriers, wire coils) creeps on at 1.4 m/s: each
+  // frame the move in is refused, the speed zeroed, the small re-accelerated move let through as 'not deeper' — quicksand (user 10-31).
+  // Out first, to the nearest free spot (sideways before up, so a face is never climbed): the walk then stops or rises cleanly
+  _unwedgeTris() {
+    const w = this.world, p = this.pos, r = this.radius, h = this.height;
+    if (!w.tris || !this.grounded || !w.tris.blocks(p.x, p.y, p.z, r, h)) return;
+    for (const d of [0.02, 0.05, 0.1]) for (const [dx, dz] of TRI_SLIDE) {
+      const k = d / 0.05;
+      if (w.fits(p.x + dx * k, p.y, p.z + dz * k, r, h)) {
+        p.x += dx * k;
+        p.z += dz * k;
+        return;
+      }
+    }
+    for (let s = 0.02; s <= this.stepHeight + 1e-6; s += 0.02) if (w.fits(p.x, p.y + s, p.z, r, h)) {
+      p.y += s;
+      return;
+    }
+  }
   _unwedgeRamps() {
     const w = this.world, p = this.pos, r = this.radius, h = this.height;
     for (const rp of w.ramps) {
@@ -16963,7 +16983,9 @@ var SF2_LMD = `#include <lights_fragment_maps>
 	vec3 sf2nac = vLmN, sf2mx = vLmM;
 	if ( vLmT > 0.5 ) { sf2nac *= texture2D( sf2Nac, vLmUv ).rgb; sf2mx *= texture2D( sf2Max, vLmUv ).rgb; }
 	vec3 sf2d = max( vec3( dot( sf2n, vec3( -0.408248, 0.707107, 0.577350 ) ), dot( sf2n, vec3( -0.408248, -0.707107, 0.577350 ) ), dot( sf2n, vec3( 0.816497, 0.0, 0.577350 ) ) ), 0.0 );
-	irradiance += sf2nac * dot( sf2mx, sf2d * sf2d ) * sf2LmK;`;
+	vec3 sf2L = sf2nac * dot( sf2mx, sf2d * sf2d ) * sf2LmK;
+	if ( sf2Cap > 0.0 ) sf2L /= 1.0 + sf2L / sf2Cap; // v66e def.lmCap: a bake far above the rest rolls off (Cannon's capture room, scale 7-10)
+	irradiance += sf2L;`;
 function sf2Merge(list, sheets, def) {
   const lit = Object.keys(sheets).length > 0, m0 = list[0].m, tex = list[0].L.tex, tmax = list[0].L.max;
   let nv = 0, ni = 0;
@@ -17048,8 +17070,9 @@ function sf2Merge(list, sheets, def) {
       sh.uniforms.sf2Nac = { value: sN };
       sh.uniforms.sf2Max = { value: sM };
       sh.uniforms.sf2LmK = { value: k };
+      sh.uniforms.sf2Cap = { value: def.lmCap || 0 };
       sh.vertexShader = "attribute vec2 lmUv;\nattribute vec3 lmN;\nattribute vec3 lmM;\nattribute float lmT;\nvarying vec2 vLmUv;\nvarying vec3 vLmN;\nvarying vec3 vLmM;\nvarying float vLmT;\n" + sh.vertexShader.replace("#include <begin_vertex>", "#include <begin_vertex>\n	vLmUv = lmUv; vLmN = lmN; vLmM = lmM; vLmT = lmT;");
-      sh.fragmentShader = "uniform sampler2D sf2Nac;\nuniform sampler2D sf2Max;\nuniform float sf2LmK;\nvarying vec2 vLmUv;\nvarying vec3 vLmN;\nvarying vec3 vLmM;\nvarying float vLmT;\n" + sh.fragmentShader.replace("#include <lights_fragment_maps>", SF2_LMD);
+      sh.fragmentShader = "uniform sampler2D sf2Nac;\nuniform sampler2D sf2Max;\nuniform float sf2LmK;\nuniform float sf2Cap;\nvarying vec2 vLmUv;\nvarying vec3 vLmN;\nvarying vec3 vLmM;\nvarying float vLmT;\n" + sh.fragmentShader.replace("#include <lights_fragment_maps>", SF2_LMD);
     };
     mat.customProgramCacheKey = () => "sf2lmd";
   }
@@ -17485,6 +17508,8 @@ MAPS.push(sf2TriMap({
   lmEnv: 0,
   lmK: 3.14,
   rampStairs: /^ms_stair/i,
+  lmCap: 5,
+  // (v66e user 10-31: the capture room's bake, scale 7–10 against 3.4 below, burnt white through the map's steep LUT — rolled off)
   ladderNav: false
   // (its tower ladders: bots stuck at their heads)
 }));

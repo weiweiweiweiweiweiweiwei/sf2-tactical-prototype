@@ -95,7 +95,9 @@ const SF2_LMD = `#include <lights_fragment_maps>
 	vec3 sf2nac = vLmN, sf2mx = vLmM;
 	if ( vLmT > 0.5 ) { sf2nac *= texture2D( sf2Nac, vLmUv ).rgb; sf2mx *= texture2D( sf2Max, vLmUv ).rgb; }
 	vec3 sf2d = max( vec3( dot( sf2n, vec3( -0.408248, 0.707107, 0.577350 ) ), dot( sf2n, vec3( -0.408248, -0.707107, 0.577350 ) ), dot( sf2n, vec3( 0.816497, 0.0, 0.577350 ) ) ), 0.0 );
-	irradiance += sf2nac * dot( sf2mx, sf2d * sf2d ) * sf2LmK;`;
+	vec3 sf2L = sf2nac * dot( sf2mx, sf2d * sf2d ) * sf2LmK;
+	if ( sf2Cap > 0.0 ) sf2L /= 1.0 + sf2L / sf2Cap; // v66e def.lmCap: a bake far above the rest rolls off (Cannon's capture room, scale 7-10)
+	irradiance += sf2L;`;
 function sf2Merge(list, sheets, def) {
   const lit = Object.keys(sheets).length > 0, m0 = list[0].m, tex = list[0].L.tex, tmax = list[0].L.max;
   let nv = 0, ni = 0; for (const { src } of list) { const g = src.geometry; nv += g.attributes.position.count; ni += g.index ? g.index.count : g.attributes.position.count; }
@@ -131,10 +133,10 @@ function sf2Merge(list, sheets, def) {
     mat = mat.clone(); if (mat.normalMap && !mat.userData.dxFlip) { mat.normalScale.y = -mat.normalScale.y; mat.userData.dxFlip = true; } // (v65z UE3's normal maps are DirectX-style: green points down)
     const sN = (tex && sheets[tex]) || SF2_WHITE, sM = (tmax && sheets[tmax]) || SF2_WHITE, k = (def.lmK ?? Math.PI) * 1.2; mat.envMapIntensity = def.lmEnv ?? 0.1; // (the bake is the ambient: the sky probe on top washed it blue)
     mat.onBeforeCompile = (sh) => {
-      sh.uniforms.sf2Nac = { value: sN }; sh.uniforms.sf2Max = { value: sM }; sh.uniforms.sf2LmK = { value: k };
+      sh.uniforms.sf2Nac = { value: sN }; sh.uniforms.sf2Max = { value: sM }; sh.uniforms.sf2LmK = { value: k }; sh.uniforms.sf2Cap = { value: def.lmCap || 0 };
       sh.vertexShader = 'attribute vec2 lmUv;\nattribute vec3 lmN;\nattribute vec3 lmM;\nattribute float lmT;\nvarying vec2 vLmUv;\nvarying vec3 vLmN;\nvarying vec3 vLmM;\nvarying float vLmT;\n'
         + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n\tvLmUv = lmUv; vLmN = lmN; vLmM = lmM; vLmT = lmT;');
-      sh.fragmentShader = 'uniform sampler2D sf2Nac;\nuniform sampler2D sf2Max;\nuniform float sf2LmK;\nvarying vec2 vLmUv;\nvarying vec3 vLmN;\nvarying vec3 vLmM;\nvarying float vLmT;\n'
+      sh.fragmentShader = 'uniform sampler2D sf2Nac;\nuniform sampler2D sf2Max;\nuniform float sf2LmK;\nuniform float sf2Cap;\nvarying vec2 vLmUv;\nvarying vec3 vLmN;\nvarying vec3 vLmM;\nvarying float vLmT;\n'
         + sh.fragmentShader.replace('#include <lights_fragment_maps>', SF2_LMD);
     };
     mat.customProgramCacheKey = () => 'sf2lmd';
@@ -404,5 +406,6 @@ MAPS.push(sf2TriMap({
   objectives: { cap: [-3.2, 6.3, 7.68], capRadius: 2.4, dom: [[-3, 0, -20], [-3.2, 6.3, 7.68], [-6, 0, 36]], relic: [-3.2, 6.3, 7.68], domRadius: 4 },
   background: 0xc9c2b4, envIntensity: 0, exposure: 0.95, hemi: [0xe6dcc8, 0x6a5a48, 0.35], lmFallback: [0.5, 0.48, 0.45], // (v65z brighter: its terrain has no bake, the mean light carries it)
   sun: { pos: [-40, 43, -38], color: 0xfff0d8, intensity: 1.75, auto: false }, fog: { color: 0xc9c2b4, near: 90, far: 420 },
-  lmEnv: 0, lmK: 3.14, rampStairs: /^ms_stair/i, ladderNav: false, // (its tower ladders: bots stuck at their heads)
+  lmEnv: 0, lmK: 3.14, rampStairs: /^ms_stair/i, lmCap: 5, // (v66e user 10-31: the capture room's bake, scale 7–10 against 3.4 below, burnt white through the map's steep LUT — rolled off)
+  ladderNav: false, // (its tower ladders: bots stuck at their heads)
 }));

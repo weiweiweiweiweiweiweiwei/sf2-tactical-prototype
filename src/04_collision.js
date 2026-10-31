@@ -579,7 +579,7 @@ class CharacterMotor {
       }
     } else if (hasInput) this._accelerate(wishX, wishZ, wishSpeed, P.airAccel, dt, P.airCap);
 
-    this._unwedgeRamps();
+    this._unwedgeRamps(); this._unwedgeTris();
     const wasGrounded = this.grounded;
     if (!this.grounded) this.vel.y += CFG.gravity * dt; else this.vel.y = Math.min(this.vel.y, 0);
     const fallSpeed = -this.vel.y;
@@ -607,6 +607,16 @@ class CharacterMotor {
   }
 
   // v23 safety net: a body below a ramp's surface inside its footprint (knock-back, teleport, old saves) is pushed out through the nearest side.
+  // v66e a body inside the triangles (it brushed a slanted face — Cannon's Jersey barriers, wire coils) creeps on at 1.4 m/s: each
+  // frame the move in is refused, the speed zeroed, the small re-accelerated move let through as 'not deeper' — quicksand (user 10-31).
+  // Out first, to the nearest free spot (sideways before up, so a face is never climbed): the walk then stops or rises cleanly
+  _unwedgeTris() {
+    const w = this.world, p = this.pos, r = this.radius, h = this.height;
+    if (!w.tris || !this.grounded || !w.tris.blocks(p.x, p.y, p.z, r, h)) return;
+    for (const d of [0.02, 0.05, 0.1]) for (const [dx, dz] of TRI_SLIDE) { const k = d / 0.05; if (w.fits(p.x + dx * k, p.y, p.z + dz * k, r, h)) { p.x += dx * k; p.z += dz * k; return; } }
+    for (let s = 0.02; s <= this.stepHeight + 1e-6; s += 0.02) if (w.fits(p.x, p.y + s, p.z, r, h)) { p.y += s; return; }
+  }
+
   _unwedgeRamps() {
     const w = this.world, p = this.pos, r = this.radius, h = this.height;
     for (const rp of w.ramps) {
