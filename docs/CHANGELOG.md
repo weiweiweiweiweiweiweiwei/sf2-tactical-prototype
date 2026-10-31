@@ -1822,3 +1822,9 @@
   - `maps/README.md` 改成地圖總目錄：每張圖的原始檔、成品、程式在哪裡。
   - 沒有刪任何檔案；可刪的清單交給使用者決定。
 - 研究：SF2 開槍間隔中切槍會直接取消剩下的間隔（`SFWeapon.WeaponFiring.TryPutDown` 清掉 RefireCheckTimer 並立刻收槍）。AWP 1.4 秒 → 切手槍再切回約 0.95–1.05 秒；Barrett 切槍反而更慢。細節見 `docs/research/sf2/sniper-quickswitch.md`。
+
+### v66c（本機，2026-10-31）：照 SF2 的切槍規則、清理暫存檔
+- 使用者 10-31 選 A：切槍照 SF2。收槍會取消剩下的開槍間隔（`Weapon.holster`，原本 v47 是收起來繼續倒數）；新槍要等「舊槍收槍 0.2 秒＋新槍拔槍時間」才能開火；連按兩下時，上一次沒收完的收槍時間接著算（`WeaponSystem.putT`）。
+- 實測（`tools/out/_qswitch.mjs`）：不切槍／開槍後連切兩下 — AWP 1.41／1.06 秒、TRG-41 1.21／1.11、CheyTac 1.61／1.36、Barrett 1.31／1.71（拔槍 1.3 秒，切了更慢，跟 SF2 一樣）。
+- 使用者 10-31 選 A：刪除 `tools/out/sf2/`（4.7 GB，可從 SF2 安裝檔重新匯出）和 `tools/out/` 裡沒被任何文件或工具引用的探測腳本、截圖（共 332 項），以及 `_v61c_test.html`、`notify.log`。被引用的工具（`umodel_win32`、`_rigshot.mjs`、`_reloadtime.mjs`、`_sf2cam.mjs`、`_us_dis.py` 等 25 項）和 Apex 原始匯出保留。.blend1 備份保留。
+  - 之後要重建 SF2 地圖或槍，先照 `docs/loop/SF2_ALL.md` 重新解壓、匯出（`sf2_unlzo.py`、UModel）。

@@ -20802,7 +20802,10 @@ var Weapon = class _Weapon {
     if (this.vm.cover) this.vm.cover.rotation.x = 0;
     if (this.ammo === 0 && this.reserveAmmo > 0) this.autoReloadT = 0.2;
   }
+  // v66c SF2 (SFWeapon.WeaponFiring.TryPutDown clears RefireCheckTimer, then puts the gun down at once): holstering drops what is left
+  // of the fire interval — a sniper's bolt included; the draw time is charged by WeaponSystem.switchTo
   holster() {
+    this.cooldown = 0;
     this.reloading = false;
     this.queued = 0;
     this.autoReloadT = 0;
@@ -21673,9 +21676,12 @@ var Arsenal = class {
     this.scopedIn = false;
     this.scopeLevel = 0;
   }
-  // QUICK CHANGE: instant swap, cancels the reload (no refill) and the bolt / pump animation. v47: a pending fire cooldown
-  // is NOT cancelled; it keeps running down while the gun is holstered. v48: neither is recoil: the camera kick recovers
-  // as usual (Player.update) and each gun's spread / spray index keeps recovering while holstered (Weapon.recover).
+  // QUICK CHANGE: instant swap, cancels the reload (no refill) and the bolt / pump animation. v48: recoil is not reset: the
+  // camera kick recovers as usual (Player.update) and each gun's spread / spray index keeps recovering while holstered.
+  // v66c SF2's switch (docs/research/sf2/sniper-quickswitch.md, user 10-31): holstering cancels the rest of the fire interval
+  // (Weapon.holster — was v47's "keeps running down"), and the new gun fires only after the old one's PutDownTime (0.2 s, SF2's
+  // base for every class) plus its own EquipTime. A gun swapped away again mid-draw goes down at once, so switching back
+  // also waits out what was left of the previous put-down: AWP fire → Q → Q ≈ 0.2 + 0.2 + 0.65 s, against its 1.4 s bolt.
   switchTo(i) {
     if (i === this.index || !this.selectable(i) || !this.owner.alive) return;
     this.exitADS();
@@ -21689,6 +21695,9 @@ var Arsenal = class {
     w.vm.group.visible = true;
     this.drawT = 1;
     this.trigger = false;
+    const put = old.def.putDownTime ?? 0.2, left = Math.max(0, this.putT || 0);
+    this.putT = put;
+    w.cooldown = Math.max(w.cooldown, left + put + (w.def.equipTime || 0));
     this.onSwitch();
   }
   quickSwitch() {
@@ -21820,6 +21829,7 @@ var Arsenal = class {
       if (o.cooldown > 0) o.cooldown = Math.max(0, o.cooldown - h);
       o.recover(h, this);
     }
+    if (this.putT > 0) this.putT -= h;
     if (this.grabCd > 0) this.grabCd -= h;
     if (this.grabT > 0) {
       this.grabT += h;

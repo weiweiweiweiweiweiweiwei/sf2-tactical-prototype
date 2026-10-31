@@ -36,7 +36,9 @@ class Weapon {
     if (this.vm.cover) this.vm.cover.rotation.x = 0;
     if (this.ammo === 0 && this.reserveAmmo > 0) this.autoReloadT = 0.2; // auto reload an empty gun on draw
   }
-  holster() { this.reloading = false; this.queued = 0; this.autoReloadT = 0; if (this.vm.flash) this.vm.flash.visible = false; if (this.vm.sf2flash) this.vm.sf2flash.hide(); }
+  // v66c SF2 (SFWeapon.WeaponFiring.TryPutDown clears RefireCheckTimer, then puts the gun down at once): holstering drops what is left
+  // of the fire interval — a sniper's bolt included; the draw time is charged by WeaponSystem.switchTo
+  holster() { this.cooldown = 0; this.reloading = false; this.queued = 0; this.autoReloadT = 0; if (this.vm.flash) this.vm.flash.visible = false; if (this.vm.sf2flash) this.vm.sf2flash.hide(); }
   get reloadPhase() { return this.reloading ? clamp(this.reloadT / this.reloadTime, 0, 1) : 0; }
   // mechanical sounds: in your head for your own gun, positional for anyone else's
   _mech(name) { this.game.audio.mech(name, this.local ? null : this.owner.motor.pos, this.sf2); }

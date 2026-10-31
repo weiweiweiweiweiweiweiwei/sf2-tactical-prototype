@@ -58,15 +58,20 @@ class Arsenal {
   // Force-leave ADS on the CURRENT weapon.
   exitADS() { this.zoomLevel = 0; this.ads = false; this.adsT = 0; this.unscopeT = 0; this.scopedIn = false; this.scopeLevel = 0; }
 
-  // QUICK CHANGE: instant swap, cancels the reload (no refill) and the bolt / pump animation. v47: a pending fire cooldown
-  // is NOT cancelled; it keeps running down while the gun is holstered. v48: neither is recoil: the camera kick recovers
-  // as usual (Player.update) and each gun's spread / spray index keeps recovering while holstered (Weapon.recover).
+  // QUICK CHANGE: instant swap, cancels the reload (no refill) and the bolt / pump animation. v48: recoil is not reset: the
+  // camera kick recovers as usual (Player.update) and each gun's spread / spray index keeps recovering while holstered.
+  // v66c SF2's switch (docs/research/sf2/sniper-quickswitch.md, user 10-31): holstering cancels the rest of the fire interval
+  // (Weapon.holster — was v47's "keeps running down"), and the new gun fires only after the old one's PutDownTime (0.2 s, SF2's
+  // base for every class) plus its own EquipTime. A gun swapped away again mid-draw goes down at once, so switching back
+  // also waits out what was left of the previous put-down: AWP fire → Q → Q ≈ 0.2 + 0.2 + 0.65 s, against its 1.4 s bolt.
   switchTo(i) {
     if (i === this.index || !this.selectable(i) || !this.owner.alive) return;
     this.exitADS(); // scope bug fix: leave ADS BEFORE the index changes (wheel / number keys / Q)
     const old = this.current; old.holster(); old.vm.group.visible = false;
     this.lastIndex = this.index; this.index = i;
     const w = this.current; w.equip(); w.vm.group.visible = true; this.drawT = 1; this.trigger = false;
+    const put = old.def.putDownTime ?? 0.2, left = Math.max(0, this.putT || 0); this.putT = put;
+    w.cooldown = Math.max(w.cooldown, left + put + (w.def.equipTime || 0));
     this.onSwitch();
   }
   quickSwitch() { this.switchTo(this.lastIndex); }
@@ -148,6 +153,7 @@ class Arsenal {
     const w = this.current;
     w.tick(h, this);
     for (const o of this.weapons) if (o !== w) { if (o.cooldown > 0) o.cooldown = Math.max(0, o.cooldown - h); o.recover(h, this); } // holstered guns still finish their cooldown and recover
+    if (this.putT > 0) this.putT -= h; // (v66c the last switch's put-down still running)
     if (this.grabCd > 0) this.grabCd -= h;
     if (this.grabT > 0) { this.grabT += h; if (!this.grabHit && this.grabT >= 0.12) { this.grabHit = true; this._grabHit(); } if (this.grabT >= 0.45) this.grabT = 0; }
     if (w.kind !== 'knife' && w.kind !== 'grenade' && this.grabT <= 0) {
