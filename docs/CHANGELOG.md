@@ -1956,3 +1956,8 @@
 - 使用者 11-01 選 2A：持槍晃動照 SF2 每把槍的參數（`fBobSpeedMux`、`fBobWidth`、`fBobHeight`、`BobDamping`、開鏡倍率 `fBobDecRateForZoom`／`fBobZDecRateForZoom`；`tools/sf2_weapon_table.py` 產生 `sf2Bob`，M4A1 手動補）。公式在加殼的 `sf2.exe` 裡讀不到，用 UE3 原生的晃動形狀：時間以 0.3 + 0.7 × 速度比 推進，左右 sin(倍率·t)、上下 sin(2·倍率·t)，幅度 × 速度比。衝刺時的擺動維持衝刺動畫；沒有 SF2 參數的槍和 Apex 跑酷地圖維持舊的晃動。
   - 實測（`tools/out/_bobcheck.mjs`，走 3.3 m/s）：M4A1 腰射左右 1.17 cm、上下 0.29 cm、上下每秒 2.5 次，開鏡 0.39／0.14 cm；AWP 開鏡 0.08／0.03 cm。
 - 驗證：MODULES_OK、CHECK_OK。
+
+### v66p（本機，2026-11-01）：狙擊切槍改回 SF2 的時間
+- 使用者 11-01：v66n「切回就能立刻開槍」不是官方的做法，切回來還要等一點時間。撤回 v66n 的立即開火，回到 v66c 的 SF2 規則（收槍取消剩下的開槍間隔；切回要等收槍 0.2 s＋收槍 0.2 s＋拔槍時間）。v66m 的「拔槍途中按住開火、拔完就開」保留。
+  - 實測：AWP 不切槍 1.41 s，開槍後切兩下 1.06 s（`tools/out/_qswitch.mjs`）；按住開火切回，1.058 s 開出下一槍（`tools/out/_heldfire.mjs`）。
+- 驗證：MODULES_OK、CHECK_OK。

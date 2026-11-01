@@ -67,9 +67,7 @@ class Arsenal {
   switchTo(i) {
     if (i === this.index || !this.selectable(i) || !this.owner.alive) return;
     this.exitADS(); // scope bug fix: leave ADS BEFORE the index changes (wheel / number keys / Q)
-    const held = this.trigger, old = this.current;
-    if (old.def.bolt && old.cooldown > 0) old.quickBackT = this.game.time; // (v66n swapped away mid-bolt: see below)
-    old.holster(); old.vm.group.visible = false;
+    const held = this.trigger, old = this.current; old.holster(); old.vm.group.visible = false;
     this.lastIndex = this.index; this.index = i;
     const w = this.current; w.equip(); w.vm.group.visible = true; this.drawT = 1; this.trigger = false;
     const put = old.def.putDownTime ?? 0.2, left = Math.max(0, this.putT || 0); this.putT = put;
@@ -78,11 +76,6 @@ class Arsenal {
     // PendingFire, which outlives the switch) and Active.BeginState fires it the moment the draw ends — if the button is still down;
     // letting go clears it (StopFire). So holding fire through Q, Q fires the sniper as soon as it is up.
     w.drawing = true; w.pendingFire = held;
-    // v66n the SF2 quick-switch the user plays (11-01: fire, wheel to the pistol, wheel straight back — the next shot at once): a bolt gun
-    // swapped away while its bolt was still cycling and brought back within 2 s fires straight away — no bolt, no put-down, no draw
-    // (SF2's client data alone would still charge 0.2 + 0.2 s and its EquipTime; the rest lives in the packed sf2.exe)
-    if (w.def.bolt && w.quickBackT != null && this.game.time - w.quickBackT < 2) { w.cooldown = 0; this.putT = 0; }
-    w.quickBackT = null;
     this.onSwitch();
   }
   quickSwitch() { this.switchTo(this.lastIndex); }
