@@ -33,7 +33,8 @@
 ## 4. 扭蛋選擇畫面出現的「無塗裝」獎品圖示（原型槍、近戰、投擲）
 判斷方式：圖名只有槍名（或槍名加瞄具、消音器等配件），沒有塗裝名（gold、chrome、skull、…fx、tiger2、proleague…）。
 - 步槍：ACR、AN-94、FN F2000、Galil、G36C、K2、M16A3、M4A1、M4A1 GL（槍掛榴彈）、QBZ-97、SIG 551、STG44、XM8、K14（SFWC）
-- 衝鋒槍：Bizon、MAC-10、MP40、PP-2000、Scorpion、UMP45、K5（手槍）
+- 衝鋒槍：Bizon、MAC-10、MP40、PP-2000、Scorpion、UMP45
+- 手槍：K5
 - 狙擊／精準：Barrett、Dragunov、FR-F2、Kar98k、M14 EBR EOTech、M40A1、SR-25、CSLS06
 - 機槍：M249 SPW、MG4、RPK-74、K3
 - 霰彈：SAIGA-12、USAS-12
