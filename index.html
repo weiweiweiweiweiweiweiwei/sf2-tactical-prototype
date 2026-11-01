@@ -21820,6 +21820,7 @@ var Arsenal = class {
     if (i === this.index || !this.selectable(i) || !this.owner.alive) return;
     this.exitADS();
     const held = this.trigger, old = this.current;
+    if (old.def.bolt && old.cooldown > 0) old.quickBackT = this.game.time;
     old.holster();
     old.vm.group.visible = false;
     this.lastIndex = this.index;
@@ -21834,6 +21835,11 @@ var Arsenal = class {
     w.cooldown = Math.max(w.cooldown, left + put + (w.def.equipTime || 0));
     w.drawing = true;
     w.pendingFire = held;
+    if (w.def.bolt && w.quickBackT != null && this.game.time - w.quickBackT < 2) {
+      w.cooldown = 0;
+      this.putT = 0;
+    }
+    w.quickBackT = null;
     this.onSwitch();
   }
   quickSwitch() {
