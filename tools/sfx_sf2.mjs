@@ -5,18 +5,24 @@
 // v64 a variant `<id>=<gun>[+silence]` (g36c_eo=g36c+silence) borrows <gun>'s banks by reference (no second copy): with +silence its
 // fire / far are SF2's own suppressed rifle shot (Sound_Silence AR_Silence / _T → tools/out/sf2/silence/), its reload and draw the gun's.
 // A bolt gun's Fire_Slide is its sf2_<id>_boltback.
+// v66h `+smg` is SF2's suppressed SMG shot (SMG_Silence / _T). --append adds the given ids to the existing assets/sfx_sf2.js
+// (the other guns' exports need not be on disk): new banks and aliases as extra assignments after it.
 //   node tools/sfx_sf2.mjs m4a1 ak103 g36c … g36c_eo=g36c+silence
+//   node tools/sfx_sf2.mjs --append p90 p90_grinch=p90+smg
 import fs from 'node:fs'; import path from 'node:path';
-const args = process.argv.slice(2).length ? process.argv.slice(2) : ['m4a1'], out = {}, alias = [];
+const APPEND = process.argv.includes('--append'), args0 = process.argv.slice(2).filter((a) => a !== '--append');
+const args = args0.length ? args0 : ['m4a1'], out = {}, alias = [];
 const ids = args.filter((a) => !a.includes('=')).map((a) => a.split('@')); // v64y <id>@<file prefix> when the waves are named otherwise (svd@DragunovSVD)
 for (const a of args.filter((a) => a.includes('='))) {
   const [id, spec] = a.split('='), [gun, silence] = spec.split('+');
   for (const r of ['magout', 'magin', 'charge', 'draw', 'boltback']) alias.push([`sf2_${id}_${r}`, `sf2_${gun}_${r}`]);
   if (silence) {
-    const d = 'tools/out/sf2/silence/Sound_Silence/SoundNodeWave';
-    out[`sf2_silence_ar_fire`] ??= [fs.readFileSync(`${d}/AR_Silence.ogg`).toString('base64')];
-    out[`sf2_silence_ar_far`] ??= [fs.readFileSync(`${d}/AR_Silence_T.ogg`).toString('base64')];
-    alias.push([`sf2_${id}_fire`, 'sf2_silence_ar_fire'], [`sf2_${id}_far`, 'sf2_silence_ar_far']);
+    const d = 'tools/out/sf2/silence/Sound_Silence/SoundNodeWave', k = silence === 'smg' ? 'smg' : 'ar', f = silence === 'smg' ? 'SMG_Silence' : 'AR_Silence';
+    if (!(APPEND && k === 'ar')) { // (appending: the AR shot is in the file already)
+      out[`sf2_silence_${k}_fire`] ??= [fs.readFileSync(`${d}/${f}.ogg`).toString('base64')];
+      out[`sf2_silence_${k}_far`] ??= [fs.readFileSync(`${d}/${f}_T.ogg`).toString('base64')];
+    }
+    alias.push([`sf2_${id}_fire`, `sf2_silence_${k}_fire`], [`sf2_${id}_far`, `sf2_silence_${k}_far`]);
   } else alias.push([`sf2_${id}_fire`, `sf2_${gun}_fire`], [`sf2_${id}_far`, `sf2_${gun}_far`]);
 }
 const role = (f) => /WeaponFire\d*_T(_\d+)?\./i.test(f) ? 'far' : /WeaponFire\d*(_\d+)?\./i.test(f) ? 'fire' : // (M4A1 / AK-103: WeaponFire1.._T; G36C: WeaponFire, _01, _T, _T_01)
@@ -30,8 +36,17 @@ for (const [id, pre] of ids) {
     (out[`sf2_${id}_${r}`] ||= []).push(fs.readFileSync(path.join(dir, f)).toString('base64'));
   }
 }
-let js = `/* Special Force 2 original gun sounds from the user's own install — tools/sfx_sf2.mjs */\nwindow.SF2_SFX_ORIG = ${JSON.stringify(out)};\n`;
 const S = 'window.SF2_SFX_ORIG';
-for (const [k, from] of alias) if (out[from]) js += `${S}['${k}'] = ${S}['${from}'];\n`;
-fs.writeFileSync('assets/sfx_sf2.js', js);
+let js;
+if (APPEND) {
+  const old = fs.readFileSync('assets/sfx_sf2.js', 'utf8'), has = (k) => old.includes(`"${k}":`) || old.includes(`${S}['${k}'] =`);
+  js = `/* v66h appended: ${args.join(' ')} */\n`;
+  for (const [k, v] of Object.entries(out)) js += `${S}['${k}'] = ${JSON.stringify(v)};\n`;
+  for (const [k, from] of alias) if (out[from] || has(from)) js += `${S}['${k}'] = ${S}['${from}'];\n`;
+  fs.appendFileSync('assets/sfx_sf2.js', js);
+} else {
+  js = `/* Special Force 2 original gun sounds from the user's own install — tools/sfx_sf2.mjs */\nwindow.SF2_SFX_ORIG = ${JSON.stringify(out)};\n`;
+  for (const [k, from] of alias) if (out[from]) js += `${S}['${k}'] = ${S}['${from}'];\n`;
+  fs.writeFileSync('assets/sfx_sf2.js', js);
+}
 console.log('assets/sfx_sf2.js', Object.fromEntries(Object.entries(out).map(([k, v]) => [k, v.length])), (js.length / 1024).toFixed(0) + ' KB');

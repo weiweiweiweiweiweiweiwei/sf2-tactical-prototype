@@ -19,6 +19,10 @@
 - ✅ M4A1 照門外形（v62o）：改用 SF2 預設的 A2 提把（`rif_m4a1_handle_a`＋自己的貼圖 `handle_d`），環高出護翼、下方有「0-2」；眼距、前準星距離照 SF2 截圖量
 
 ## 1. SF2 原版槍枝素材（UModel，`D:\SpecialForce2`）
+- ✅ 扭蛋槍（使用者 11-01，v66h）：炙炎 FAMAS、鬼靈精 P90、雷神 M4A1（動態電光烤漆）、黃金 MG4
+  - ⬜ 等使用者實際玩過的意見：雷神電光的亮度與流動速度（SF2 的平移速度被烘掉，照眼睛調）、ACOG 開鏡放大倍率（世界視角 40）、P90 開放式瞄具的紅點位置
+  - ⬜ 另外三把的原版烤漆（FissureFX 紅色裂紋、SilentNight 聖誕、Gold 金色）：使用者這次說不要；貼圖都在 SF2 安裝檔裡，要的話可以加
+  - ⬜ P90 換彈音效的時間點沿用衝鋒槍的通用值，沒有照動畫量
 - 🔄 **使用者 10-28 指定優先（最優先）**：魔術迴路 G36C、AWP、CheyTac M200（SF2 類別 `SFCWeaponCheyTac`）、M40A1、CZ 700，以及配備瞄準鏡的步槍（清單待使用者確認）
   - 🔄 本機（HANDOFF H10）：四把狙擊槍已匯出到 `tools/out/sf2/<awp|cheytac|cz700|m40a1>`（槍身／槍管／彈匣／槍托 glTF、貼圖含所有造型、`1st_anim_<槍>.psa` 動畫、槍聲）。**狙擊鏡模型不在 `sni_*` 包裡**（類別預設的 `SightComponent` 沒指定網格，貼圖有 `*_scope_*`）：要在 `weapon_common_part.upk`（54 MB）裡找 `*_scope*` 網格，像 K14 的 `scope_k14_bender`
   - ✅ 「魔術迴路 G36C」（v64o，`g36c_circuit`）＝ SF2 的 CircuitFX 迷彩（`SFCItem_G36C_EOTech_Silencer_CircuitFX`：G36C EOTech 消音＋`WeaponCamo_CircuitFX`）。材質 `weapon_shader_base_sc` 的 `circuit_FX_m`（貼圖 `FX_circuit_Base／Shine／Kill`，擊殺後 1.5 s 變色）；AWP、CheyTac、CZ700、K14 也有 CircuitFX 版

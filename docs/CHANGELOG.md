@@ -1875,3 +1875,19 @@
   - 原本把梯子後方的天花板（7.15 m）當成出口平台，玩家一直頂著天花板上不去。
   - 改法：出口地板最高只能到梯頂再加 0.6 m，梯子前方的地板也算出口。爬到頂時，在後方 0.6 m 到前方 0.6 m 之間找能站的地板，直接站上去；原本往後翻上平台的抬升動作，在矮艙室裡做不出來。
   - 驗證：兩座瞭望塔都能爬到 5.28 m 的艙室地板並站穩；其他梯子到頂後都能在平台高度走開。沙漠營地 5.1→8.3 m 那座到頂後仍懸著，改之前就是這樣，已記在 TODO。
+
+### v66h（本機，2026-11-01）：扭蛋槍——炙炎 FAMAS、鬼靈精 P90、雷神 M4A1（動態烤漆）、黃金 MG4
+- 使用者 11-01 給了四張圖，要找出這四把並做出來；雷神 M4A1 要有雷神的動態烤漆，其他三把不要烤漆。
+- 在 `SFGameContent.upk` 找到的對應道具（看配件和圖片比對；中文名稱存在加密的 `SFGameItem.twn`，客戶端讀不到）：
+  - 炙炎 FAMAS ＝ `SFCItem_FAMAS_ACOG_Silencer_FissureFX`：FAMAS＋ACOG（導軌版 `dot_acog_rail`）＋步槍消音器 A，迷彩 FissureFX（紅色裂紋；台服道具名「滅世隕星FX彩漆」）。
+  - 鬼靈精 P90 ＝ `SFCItem_P90_OpenDot_Silencer_SilentNight`：P90＋開放式瞄具（`P90_TypeB_DotSight` ＝ `smg_p90_dot_b`）＋衝鋒槍消音器 A，迷彩 SilentNight（聖誕圖案）。
+  - 雷神 M4A1 ＝ `SFCItem_M4A1_EOTech_GoldFX`：M4A1＋EOTech，迷彩 `LightningGoldFX`（材質 `electric_gold_m`）。
+  - 黃金 MG4 ＝ `SFCItem_MG4_Opendot_Gold`：MG4＋OpenDot，迷彩 Gold。
+- 新槍（倉庫照類別自動列出；也加進電腦的步槍池）：`famas_blaze` 炙炎 FAMAS、`p90_grinch` 鬼靈精 P90、`m4a1_thor` 雷神 M4A1、`mg4_gold` 黃金 MG4。傷害照原槍；FAMAS、P90 有消音（不上雷達、SF2 消音槍聲：P90 用 `SMG_Silence`）。
+- 槍模（`tools/sf2_rig_build.mjs`）：
+  - FAMAS、M4A1、MG4 是原槍加配件的覆蓋檔（`*_sf2_ovl.glb`）。M4A1 拿掉提把，保留 A2 前準星（和圖一樣）；MG4 拿掉原本的照門。
+  - P90 遊戲裡原本沒有 SF2 槍模（v65f 環形瞄具沒有瞄準點而暫停），這次做完整的 `p90_od_sf2_rig.glb`：只裝開放式瞄具，瞄準點手量在瞄具框中心（`tools/out/_p90dot3.mjs`）。
+  - 準心：OpenDot、ACOG 用 SF2 預設的 `DotDot` 紅點。ACOG 的瞄準點在鏡座前 32 cm，所以眼睛放在它後方 47 cm（鏡尾後約 15 cm）；開鏡世界視角 40、槍模視角 20。
+- 雷神烤漆（`src/09c_sf2rig.js` 的 `SF2Camo`，貼圖 `tools/camo_sf2.py` → `assets/camo_sf2.js`）：SF2 材質是 `electricity_gold_d` 取樣兩次（UV ×2.1、EffectIntensity 2），平移速度在客戶端被烘掉了，照眼睛調：兩層電光錯開流動、會閃爍，槍身原色保留、只有電光發亮。沒有擊殺特效（這個迷彩沒有 `ActionCamoKillTime`）。
+- 槍聲：`tools/sfx_sf2.mjs` 新增 `--append`（其他槍的匯出檔已不在磁碟上，整包重建會把它們弄丟），把 P90 的 SF2 槍聲和兩把消音槍的別名接在 `assets/sfx_sf2.js` 後面。
+- 驗證：`tools/out/_rigshot.mjs` 四把的腰射／開鏡截圖（瞄具在槍上方、紅點在畫面中央、ACOG 開鏡是鏡筒內視野）、`node tools/esm/analyze.mjs` MODULES_OK、`node tools/check.mjs` CHECK_OK。

@@ -743,6 +743,15 @@ const WEAPON_DATABASE = {
     sound: 'm1911', rate: 1.06, range: 170, tp: { len: 0.24, body: 'steel', pistol: true }, desc: '競賽級手槍，射速快、精準度高、後座小。',
   },
 };
+// v66h the gacha guns (user 11-01, docs/research/sf2/gacha-weapons.md): SF2's items with their own attachments (tools/sf2_rig_build.mjs
+// famas_acog / p90_od / m4a1_eo / mg4_od), the base guns' stats; only 雷神 keeps its camo (LightningGoldFX, src/09c_sf2rig.js SF2Camo)
+// — the user asked the others without theirs (FissureFX, SilentNight, Gold). Timing and lenses: SF2_WEAPONS below.
+for (const [id, base, o] of [
+  ['famas_blaze', 'famas', { name: '炙炎 FAMAS', suppressed: true, tracerEvery: 0, adsFov: 40, desc: 'SF2 扭蛋槍 FAMAS ACOG 消音（炙炎）：ACOG 放大瞄具 + 消音器，槍聲小、不上敵方雷達。' }],
+  ['p90_grinch', 'p90', { name: '鬼靈精 P90', suppressed: true, tracerEvery: 0, adsType: '3d_sight', desc: 'SF2 扭蛋槍 P90 OpenDot 消音（鬼靈精）：開放式內紅點 + 消音器，50 發。' }],
+  ['m4a1_thor', 'm4a1', { name: '雷神 M4A1', camo: 'lightning_gold', model: undefined, desc: 'SF2 扭蛋槍 M4A1 EOTech（雷神）：全息瞄具，金色電光在槍身流竄閃爍。' }],
+  ['mg4_gold', 'mg4', { name: '黃金 MG4', adsType: '3d_sight', desc: 'SF2 扭蛋槍 MG4 OpenDot（黃金）：開放式內紅點，100 發。' }],
+]) WEAPON_DATABASE[id] = Object.assign({}, WEAPON_DATABASE[base], o);
 
 const TYPE_TUNING = { // spread growth / movement penalties per weapon family
   assault: { kind: 'rifle', bloomPerShot: 0.0042, bloomMax: 0.028, spreadMove: 0.045, adsMoveSpread: 0.03, spreadSprint: 0.1, spreadAir: 0.18, spreadPerShot: 0.008, spreadMax: 0.06, adsBloomMult: 0.3, spreadRecover: 5, noise: 40, reloadSounds: [[0.18, 'magout'], [0.58, 'magin'], [0.82, 'charge']], kick: { z: 0.042, y: 0.01, rx: 0.06 }, adsMove: 0.75 },
@@ -785,24 +794,25 @@ function compileWeapon(id, s) {
    (src/12_player.js sf2Speed). No SF2 class of their own: mp5 ≈ MP7A1, ak47 ≈ AK103, negev ≈ Ultimax, pkm ≈ FNMAG, mg42 ≈ MG4, m1014 ≈ BNLLI, usp ≈ P226. */
 const SF2_WEIGHT = {
   m4a1: [4.1, 2.05], g36c: [3.5, 1.75], g36c_gold: [3.5, 1.75], g36c_sf2: [3.5, 1.75], g36c_eo: [3.5, 1.75], g36c_circuit: [3.5, 1.75],
-  mp5: [2.25, 1.25], mp5k: [1.9, 0.9], p90: [2.4, 1.4], remington870: [2.8, 1.8], m249: [7.5, 3.75], cheytac_m200: [9.5, 4.75],
-  p226: [1.0, 0.0], deagle: [1.0, 0.0], ak47: [5.7, 2.85], ak103: [5.7, 2.85], scarl: [4.6, 2.3], scarl_eo: [4.6, 2.3],
-  famas: [3.4, 1.7], aug: [4.3, 2.15], ump45: [1.96, 0.98], vector: [2.0, 1.0], mp7: [2.25, 1.25], rpk: [7.7, 3.85],
-  negev: [7.0, 3.5], pkm: [6.8, 3.4], mg42: [7.8, 3.9], benelli_m4: [2.5, 1.5], m1014: [2.5, 1.5], saiga12: [3.0, 2.0],
-  ksg: [2.4, 1.2], awp: [8.1, 4.05], barrett: [9.9, 4.95], kar98k: [5.6, 2.8], svd: [5.8, 2.9], glock18: [1.0, 0.0],
-  usp: [1.0, 0.0], m1911: [1.0, 0.0], m16a3: [5.8, 2.9], k2: [4.0, 2.0], xm8: [3.2, 1.6], galil: [5.6, 2.8],
-  sg551: [4.2, 2.1], hk417: [4.5, 2.25], scarh: [4.8, 2.4], hk417_rs: [4.2, 2.1], qbz97: [4.3, 2.15], pp2000: [2.9, 1.9],
-  vz61: [2.8, 1.8], m40a1: [5.7, 2.85], k14: [7.6, 3.8], sr25: [7.0, 3.5], psg1: [7.0, 3.5], mg4: [7.8, 3.9],
-  k3: [6.8, 3.4], aa12: [4.0, 2.0], m92fs: [1.0, 0.0], cz75: [1.0, 0.0], jericho: [1.0, 0.0], sw60: [1.0, 0.0],
-  m14ebr: [6.1, 3.05], type89: [4.7, 2.35], l86a1: [7.2, 3.6], hk23e: [7.9, 3.95], frf2: [6.3, 3.15], cz700: [7.5, 3.75],
-  trg: [7.3, 3.65], usas12: [5.4, 2.7], magnum44: [1.0, 0.0], wildey: [1.0, 0.0], strikeone: [1.0, 0.0], maxim9: [1.2, 0.0],
-  luger: [1.0, 0.0], k5: [1.0, 0.0], ultimax: [7.0, 3.5], minimispw: [7.5, 3.75], fnmag: [6.8, 3.4], svch: [5.7, 2.85],
-  msr: [7.7, 3.85], fnar: [5.7, 2.85], uzipro: [1.9, 0.95], sigmpx: [2.0, 0.98], mx4: [2.0, 1.0], mp40: [2.2, 1.1],
-  krissv: [2.0, 1.0], k1: [2.35, 1.225], cz3a1: [2.1, 1.05], csls06: [2.1, 1.1], bizon: [2.2, 1.1], tar21: [3.6, 1.8],
-  t91: [4.3, 2.35], t65k2: [4.5, 2.25], t65k1: [4.3, 2.15], stg44: [5.22, 2.61], scarhdmr: [5.76, 2.88], sar21: [4.75, 2.375],
-  mrr: [3.6, 1.5], madsenlar: [5.5, 2.75], k2c1: [4.0, 2.0], fnf2000: [3.4, 1.7], cm901: [4.0, 2.0], arx160: [3.3, 1.65],
-  ak104: [5.529, 2.764], an94: [5.2, 2.3], acr: [4.0, 2.0], awp_circuit: [8.1, 4.05], cheytac_m200_circuit: [9.5, 4.75], cz700_circuit: [7.5, 3.75],
-  k14_circuit: [7.6, 3.8], infinity: [1.0, 0.0], knife: [1.0, 0.0], he: [1.0, 0.0], flash: [1.0, 0.0], smoke: [1.0, 0.0],
+  famas_blaze: [3.4, 1.7], p90_grinch: [2.4, 1.4], m4a1_thor: [4.1, 2.05], mg4_gold: [7.8, 3.9], mp5: [2.25, 1.25], mp5k: [1.9, 0.9],
+  p90: [2.4, 1.4], remington870: [2.8, 1.8], m249: [7.5, 3.75], cheytac_m200: [9.5, 4.75], p226: [1.0, 0.0], deagle: [1.0, 0.0],
+  ak47: [5.7, 2.85], ak103: [5.7, 2.85], scarl: [4.6, 2.3], scarl_eo: [4.6, 2.3], famas: [3.4, 1.7], aug: [4.3, 2.15],
+  ump45: [1.96, 0.98], vector: [2.0, 1.0], mp7: [2.25, 1.25], rpk: [7.7, 3.85], negev: [7.0, 3.5], pkm: [6.8, 3.4],
+  mg42: [7.8, 3.9], benelli_m4: [2.5, 1.5], m1014: [2.5, 1.5], saiga12: [3.0, 2.0], ksg: [2.4, 1.2], awp: [8.1, 4.05],
+  barrett: [9.9, 4.95], kar98k: [5.6, 2.8], svd: [5.8, 2.9], glock18: [1.0, 0.0], usp: [1.0, 0.0], m1911: [1.0, 0.0],
+  m16a3: [5.8, 2.9], k2: [4.0, 2.0], xm8: [3.2, 1.6], galil: [5.6, 2.8], sg551: [4.2, 2.1], hk417: [4.5, 2.25],
+  scarh: [4.8, 2.4], hk417_rs: [4.2, 2.1], qbz97: [4.3, 2.15], pp2000: [2.9, 1.9], vz61: [2.8, 1.8], m40a1: [5.7, 2.85],
+  k14: [7.6, 3.8], sr25: [7.0, 3.5], psg1: [7.0, 3.5], mg4: [7.8, 3.9], k3: [6.8, 3.4], aa12: [4.0, 2.0],
+  m92fs: [1.0, 0.0], cz75: [1.0, 0.0], jericho: [1.0, 0.0], sw60: [1.0, 0.0], m14ebr: [6.1, 3.05], type89: [4.7, 2.35],
+  l86a1: [7.2, 3.6], hk23e: [7.9, 3.95], frf2: [6.3, 3.15], cz700: [7.5, 3.75], trg: [7.3, 3.65], usas12: [5.4, 2.7],
+  magnum44: [1.0, 0.0], wildey: [1.0, 0.0], strikeone: [1.0, 0.0], maxim9: [1.2, 0.0], luger: [1.0, 0.0], k5: [1.0, 0.0],
+  ultimax: [7.0, 3.5], minimispw: [7.5, 3.75], fnmag: [6.8, 3.4], svch: [5.7, 2.85], msr: [7.7, 3.85], fnar: [5.7, 2.85],
+  uzipro: [1.9, 0.95], sigmpx: [2.0, 0.98], mx4: [2.0, 1.0], mp40: [2.2, 1.1], krissv: [2.0, 1.0], k1: [2.35, 1.225],
+  cz3a1: [2.1, 1.05], csls06: [2.1, 1.1], bizon: [2.2, 1.1], tar21: [3.6, 1.8], t91: [4.3, 2.35], t65k2: [4.5, 2.25],
+  t65k1: [4.3, 2.15], stg44: [5.22, 2.61], scarhdmr: [5.76, 2.88], sar21: [4.75, 2.375], mrr: [3.6, 1.5], madsenlar: [5.5, 2.75],
+  k2c1: [4.0, 2.0], fnf2000: [3.4, 1.7], cm901: [4.0, 2.0], arx160: [3.3, 1.65], ak104: [5.529, 2.764], an94: [5.2, 2.3],
+  acr: [4.0, 2.0], awp_circuit: [8.1, 4.05], cheytac_m200_circuit: [9.5, 4.75], cz700_circuit: [7.5, 3.75], k14_circuit: [7.6, 3.8], infinity: [1.0, 0.0],
+  knife: [1.0, 0.0], he: [1.0, 0.0], flash: [1.0, 0.0], smoke: [1.0, 0.0],
 };
 // </sf2-weights>
 // <sf2-weapons>
@@ -863,6 +873,10 @@ const SF2_WEAPONS = {
   g36c_eo: {'fireRate': 0.109, 'reloadTime': 2.28, 'equipTime': 0.85, 'adsSpeed': 12, 'adsFov': 55, 'adsType': '3d_sight', 'vmHFov': 50.0, 'vmAdsHFov': 20, 'sf2Rig': 'g36c_eo', 'sf2': 'g36c_eo', 'sf2ZoomIn': [2.4, -0.002, 0.3], 'sf2ZoomOut': [0.0, 0.0, 0.0], 'sf2ReloadSounds': [[0.12, 'magout'], [0.32, 'magin'], [0.76, 'charge']], 'sf2Recoil': {'nextCrossVert': 1.78, 'maxCrossVert': 10.6, 'vertInc': 15000.0, 'vertDec': 13.0, 'crossDecreasInc': 15.0, 'incline': 0.05, 'forceCorrection': 50.0, 'domDefault': 0.15, 'domZoomDefault': 0.0, 'domInc': 0.3, 'domMax': 2.2, 'domMin': 0.0, 'domDec': 1.4, 'maxMovingValue': 0.8, 'mulValueRun': 0.4, 'mulValueJump': 6.0, 'zoomMod': 0.35, 'crouchMod': 0.9}, 'sf2ReloadAnim': 2.5}, // SFCWeaponG36C_EOTech_Silencer_ButterflyFX
   hk417_rs: {'fireRate': 0.102, 'reloadTime': 2.18, 'equipTime': 0.85, 'adsSpeed': 12, 'adsFov': 55, 'adsType': '3d_sight', 'vmHFov': 60.0, 'vmAdsHFov': 15, 'sf2Rig': 'hk417_rs', 'sf2': 'hk417_rs', 'sf2ZoomIn': [-4.0, -0.02, -0.2], 'sf2ZoomOut': [0.0, 0.0, 0.0], 'sf2ReloadSounds': [[0.16, 'magout'], [0.37, 'magin'], [0.77, 'charge']], 'sf2Recoil': {'nextCrossVert': 1.63, 'maxCrossVert': 7.9, 'vertInc': 11700.0, 'vertDec': 15.86, 'crossDecreasInc': 15.0, 'incline': 0.05, 'forceCorrection': 50.0, 'domDefault': 0.2, 'domZoomDefault': 0.0, 'domInc': 0.23, 'domMax': 1.848, 'domMin': 0.0, 'domDec': 1.539, 'maxMovingValue': 0.8, 'mulValueRun': 0.4, 'mulValueJump': 6.0, 'zoomMod': 0.35, 'crouchMod': 0.9}, 'sf2ReloadAnim': 2.3}, // SFCWeaponHK417_mod2A
   scarl_eo: {'fireRate': 0.095, 'reloadTime': 2.35, 'equipTime': 0.9, 'adsSpeed': 12, 'adsFov': 55, 'adsType': '3d_sight', 'vmHFov': 60.0, 'vmAdsHFov': 20, 'sf2Rig': 'scarl_eo', 'sf2': 'scarl_eo', 'sf2ZoomIn': [0.0, -0.01, -0.2], 'sf2ZoomOut': [-1.0, 0.0, 0.0], 'sf2ReloadSounds': [[0.12, 'magout'], [0.44, 'magin'], [0.72, 'charge']], 'sf2Recoil': {'nextCrossVert': 2.1, 'maxCrossVert': 15.0, 'vertInc': 15000.0, 'vertDec': 12.0, 'crossDecreasInc': 9.0, 'incline': 0.35, 'forceCorrection': 50.0, 'domDefault': 0.15, 'domZoomDefault': 0.0, 'domInc': 0.22, 'domMax': 2.4, 'domMin': 0.1, 'domDec': 2.0, 'maxMovingValue': 0.7, 'mulValueRun': 0.7, 'mulValueJump': 6.0, 'zoomMod': 0.99, 'crouchMod': 0.85}, 'sf2ReloadAnim': 2.45}, // SFCWeaponSCARL_MK2
+  famas_blaze: {'fireRate': 0.085, 'reloadTime': 2.35, 'equipTime': 0.8, 'adsSpeed': 12, 'adsFov': 40, 'adsType': '3d_sight', 'vmHFov': 60.0, 'vmAdsHFov': 20, 'sf2Rig': 'famas_acog', 'sf2': 'famas_blaze', 'sf2ZoomIn': [0.0, -0.02, -0.17], 'sf2ZoomOut': [0.0, 0.0, 0.0], 'sf2ReloadSounds': [[0.2, 'magout'], [0.4, 'magin'], [0.73, 'charge']], 'sf2Recoil': {'nextCrossVert': 1.1, 'maxCrossVert': 12.0, 'vertInc': 15000.0, 'vertDec': 13.0, 'crossDecreasInc': 15.0, 'incline': 0.1, 'forceCorrection': 50.0, 'domDefault': 0.3, 'domZoomDefault': 0.2, 'domInc': 0.3, 'domMax': 1.5, 'domMin': 0.0, 'domDec': 1.25, 'maxMovingValue': 0.8, 'mulValueRun': 0.4, 'mulValueJump': 6.0, 'zoomMod': 0.99, 'crouchMod': 0.9}, 'sf2ReloadAnim': 2.5}, // SFCWeaponFAMAS
+  p90_grinch: {'fireRate': 0.081, 'reloadTime': 2.25, 'equipTime': 0.821, 'adsSpeed': 12, 'adsFov': 55, 'adsType': '3d_sight', 'vmHFov': 60.0, 'vmAdsHFov': 35, 'sf2Rig': 'p90_od', 'sf2': 'p90_grinch', 'sf2ZoomIn': [8.0, -0.01, -0.22], 'sf2ZoomOut': [2.0, 0.0, -1.0], 'sf2ReloadSounds': [[0.15, 'magout'], [0.45, 'magin'], [0.75, 'charge']], 'sf2Recoil': {'nextCrossVert': 1.15, 'maxCrossVert': 12.0, 'vertInc': 10000.0, 'vertDec': 10.0, 'crossDecreasInc': 30.0, 'incline': 0.1, 'forceCorrection': 50.0, 'domDefault': 0.9, 'domZoomDefault': 0.0, 'domInc': 0.17, 'domMax': 2.3, 'domMin': 0.2, 'domDec': 1.0, 'maxMovingValue': 1.0, 'mulValueRun': 0.35, 'mulValueJump': 2.0, 'zoomMod': 0.6, 'crouchMod': 0.8}, 'sf2ReloadAnim': 2.367}, // SFCWeaponP90
+  m4a1_thor: {'fireRate': 0.096, 'reloadTime': 2.3, 'equipTime': 0.8, 'adsSpeed': 12, 'adsFov': 55, 'adsType': '3d_sight', 'vmHFov': 60.0, 'vmAdsHFov': 20, 'sf2Rig': 'm4a1_eo', 'sf2': 'm4a1', 'sf2ZoomIn': [-3.0, 0.0, -0.87], 'sf2ZoomOut': [-1.0, 0.0, 0.0], 'sf2ReloadSounds': [[0.07, 'magout'], [0.36, 'magin'], [0.73, 'charge']], 'sf2Recoil': {'nextCrossVert': 1.26, 'maxCrossVert': 14.0, 'vertInc': 9000.0, 'vertDec': 12.0, 'crossDecreasInc': 9.0, 'incline': 0.5, 'forceCorrection': 50.0, 'domDefault': 0.25, 'domZoomDefault': 0.0, 'domInc': 0.13, 'domMax': 2.0, 'domMin': 0.1, 'domDec': 6.0, 'maxMovingValue': 0.7, 'mulValueRun': 0.8, 'mulValueJump': 6.0, 'zoomMod': 0.6, 'crouchMod': 0.9}, 'sf2ReloadAnim': 2.533}, // SFCWeaponM4A1
+  mg4_gold: {'fireRate': 0.1, 'reloadTime': 6.15, 'equipTime': 1.9, 'adsSpeed': 12, 'adsFov': 55, 'adsType': '3d_sight', 'vmHFov': 60.0, 'vmAdsHFov': 35, 'sf2Rig': 'mg4_od', 'sf2': 'mg4', 'sf2ZoomIn': [5.0, 0.0, 0.06], 'sf2ZoomOut': [1.2, 0.0, 0.0], 'sf2ReloadSounds': [[0.15, 'magout'], [0.45, 'magin'], [0.8, 'charge']], 'sf2Recoil': {'nextCrossVert': 1.1, 'maxCrossVert': 7.0, 'vertInc': 10000.0, 'vertDec': 10.0, 'crossDecreasInc': 30.0, 'incline': 0.1, 'forceCorrection': 50.0, 'domDefault': 1.0, 'domZoomDefault': 0.1, 'domInc': 0.2, 'domMax': 1.9, 'domMin': 0.2, 'domDec': 1.5, 'maxMovingValue': 1.0, 'mulValueRun': 0.35, 'mulValueJump': 2.0, 'zoomMod': 0.7, 'crouchMod': 0.8}, 'sf2ReloadAnim': 6.5}, // SFCWeaponMG4
   k14: {'fireRate': 1.2, 'reloadTime': 3.0, 'equipTime': 0.8, 'adsSpeed': 17, 'adsFov': 20, 'adsType': '2d_scope_overlay', 'vmHFov': 70.0, 'sf2Rig': 'k14', 'sf2': 'k14', 'sf2ZoomIn': [1.2, -0.01, -0.01], 'sf2ZoomOut': [0.0, 0.0, 0.0], 'sf2ReloadSounds': [[0.14, 'boltback'], [0.31, 'magout'], [0.48, 'magin'], [0.75, 'charge']], 'sf2ReloadAnim': 3.25}, // SFCWeaponK14
   m40a1: {'fireRate': 1.3, 'reloadTime': 2.75, 'equipTime': 0.7, 'adsSpeed': 17, 'adsFov': 20, 'adsType': '2d_scope_overlay', 'vmHFov': 65.0, 'sf2Rig': 'm40a1', 'sf2': 'm40a1', 'sf2ZoomIn': [1.2, -0.015, 0.015], 'sf2ZoomOut': [0.5, 1.0, 1.0], 'sf2ReloadSounds': [[0.14, 'boltback'], [0.31, 'magout'], [0.48, 'magin'], [0.75, 'charge']], 'sf2ReloadAnim': 2.95, 'sf2Reticle': 'mil', 'zoomHFovs': [55, 20]}, // SFCWeaponM40A1
   cz700: {'fireRate': 1.3, 'reloadTime': 3.05, 'equipTime': 0.8, 'adsSpeed': 17, 'adsFov': 20, 'adsType': '2d_scope_overlay', 'vmHFov': 60.0, 'sf2Rig': 'cz700', 'sf2': 'cz700', 'sf2ZoomIn': [1.2, -0.01, 0.01], 'sf2ZoomOut': [0.0, 0.0, 0.0], 'sf2ReloadSounds': [[0.14, 'charge'], [0.31, 'magout'], [0.48, 'magin'], [0.75, 'charge']], 'sf2ReloadAnim': 3.166, 'sf2Reticle': 'mil', 'zoomHFovs': [55, 20]}, // SFCWeaponCZ700
@@ -990,6 +1004,7 @@ const WEAPON_BLURBS = {
   mp5k: '短槍管 MP5，射速快、近距離靈活。',
   g36c_eo: '緊湊型步槍加全息瞄具與消音器，不上敵方雷達。',
   g36c_circuit: '魔術迴路迷彩的 G36C EOTech 消音：電路紋路流動，擊殺時閃出電光。',
+  famas_blaze: 'FAMAS 加 ACOG 放大瞄具與消音器，不上敵方雷達。', p90_grinch: 'P90 加開放式內紅點與消音器。', m4a1_thor: '雷神：金色電光流竄的 M4A1 EOTech。', mg4_gold: 'MG4 加開放式內紅點。',
   awp_circuit: '魔術迴路迷彩的 AWP。', cheytac_m200_circuit: '魔術迴路迷彩的 CheyTac M200。', cz700_circuit: '魔術迴路迷彩的 CZ 700。', k14_circuit: '魔術迴路迷彩的 K14。',
   hk417_rs: '7.62mm 戰鬥步槍加內紅點與消音器，單發傷害高。',
   scarl_eo: '高射速的 SCAR-L 加全息瞄具與消音器。',
@@ -1081,7 +1096,7 @@ const MODES = {
 };
 const BOT_POOLS = {
   general: ['usas12', 'ultimax', 'minimispw', 'fnmag', 'uzipro', 'sigmpx', 'mx4', 'mp40', 'krissv', 'k1', 'cz3a1', 'csls06', 'bizon', 'tar21', 't91', 't65k2', 't65k1', 'stg44', 'madsenlar', 'sar21', 'mrr', 'madsenlar', 'k2c1', 'fnf2000', 'cm901', 'arx160', 'ak104', 'an94', 'an94', 'an94', 'an94', 'an94', 'an94', 'an94', 'an94', 'm4a1', 'acr', 'ak47', 'g36c', 'g36c_gold', 'g36c_eo', 'g36c_circuit', 'hk417_rs', 'scarl_eo', 'scarl', 'famas', 'aug', 'mp5', 'mp5k', 'p90', 'ump45', 'vector', 'mp7', 'remington870', 'benelli_m4', 'saiga12', 'm249', 'rpk', 'negev', 'pkm', 'trg', 'cheytac_m200', 'k14', 'awp', 'svd', 'kar98k', 'm16a3', 'k2', 'xm8', 'galil', 'sg551', 'hk417', 'scarh', 'qbz97', 'pp2000', 'vz61', 'aa12', 'mg4', 'k3', 'm40a1', 'sr25', 'psg1', 'm14ebr', 'type89', 'l86a1', 'hk23e', 'frf2', 'cz700'],
-  rifle: ['m4a1', 'ak47', 'g36c', 'g36c_gold', 'g36c_eo', 'g36c_circuit', 'hk417_rs', 'scarl_eo', 'scarl', 'famas', 'aug', 'mp5', 'mp5k', 'p90', 'ump45', 'vector', 'mp7', 'm249', 'rpk', 'negev', 'pkm', 'mg42', 'm16a3', 'k2', 'xm8', 'galil', 'sg551', 'hk417', 'scarh', 'qbz97', 'pp2000', 'vz61', 'mg4', 'k3', 'type89', 'l86a1', 'hk23e'],
+  rifle: ['m4a1', 'ak47', 'g36c', 'g36c_gold', 'g36c_eo', 'g36c_circuit', 'famas_blaze', 'p90_grinch', 'm4a1_thor', 'mg4_gold', 'hk417_rs', 'scarl_eo', 'scarl', 'famas', 'aug', 'mp5', 'mp5k', 'p90', 'ump45', 'vector', 'mp7', 'm249', 'rpk', 'negev', 'pkm', 'mg42', 'm16a3', 'k2', 'xm8', 'galil', 'sg551', 'hk417', 'scarh', 'qbz97', 'pp2000', 'vz61', 'mg4', 'k3', 'type89', 'l86a1', 'hk23e'],
   sniper: ['svch', 'msr', 'fnar', 'trg', 'cheytac_m200', 'cheytac_m200_circuit', 'k14', 'k14_circuit', 'awp_circuit', 'cz700_circuit', 'awp', 'barrett', 'kar98k', 'svd', 'm40a1', 'sr25', 'psg1', 'm14ebr', 'frf2', 'cz700'], pistol: ['p226', 'deagle', 'glock18', 'usp', 'm1911', 'm92fs', 'cz75', 'jericho', 'sw60', 'infinity'], knife: ['knife'],
 };
 

@@ -7,7 +7,7 @@ src/12_player.js sf2Speed. Guns SF2 has no class for take the nearest one (marke
 import re, sf2_props as S
 
 MAP = {  # our id: SF2 class (~ = no class of its own in SF2, the nearest kind)
-    'm4a1': 'M4A1', 'g36c': 'G36C', 'g36c_gold': 'G36C', 'g36c_sf2': 'G36C', 'g36c_eo': 'G36C', 'g36c_circuit': 'G36C', 'mp5': '~MP7A1',
+    'm4a1': 'M4A1', 'g36c': 'G36C', 'g36c_gold': 'G36C', 'g36c_sf2': 'G36C', 'g36c_eo': 'G36C', 'g36c_circuit': 'G36C', 'famas_blaze': 'FAMAS', 'p90_grinch': 'P90', 'm4a1_thor': 'M4A1', 'mg4_gold': 'MG4', 'mp5': '~MP7A1',
     'mp5k': 'MP5K', 'p90': 'P90', 'remington870': 'M870', 'm249': 'MinimiSPW', 'cheytac_m200': 'CheyTac', 'p226': 'P226',
     'deagle': 'DESERTEAGLE', 'ak47': '~AK103', 'ak103': 'AK103', 'scarl': 'SCARL', 'scarl_eo': 'SCARL', 'famas': 'FAMAS', 'aug': 'AUGA3',
     'ump45': 'UMP45', 'vector': 'KrissV', 'mp7': 'MP7A1', 'rpk': 'RPK74', 'negev': '~Ultimax', 'pkm': '~FNMAG', 'mg42': '~MG4',

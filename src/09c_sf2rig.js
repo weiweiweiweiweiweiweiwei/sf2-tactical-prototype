@@ -162,6 +162,27 @@ class SF2Flash {
 // 'Kill' parameter for ActionCamoKillTime 1.5 s and the yellow lightning FX_circuit_Kill flares up. The cooked material lost its
 // panner nodes: the speeds below are set by eye. Textures: assets/camo_sf2.js (tools/camo_sf2.py). The gun's own normal map and
 // its shading stay; its colour goes dark under the camo.
+// v66h 雷神 M4A1 (user 11-01: SFCItem_M4A1_EOTech_GoldFX): LightningGoldFX is electric_gold_m — the gun keeps its own colours, the gold
+// lightning electricity_gold_d sampled twice ('Camo' and 'FX Texture', UV ×2.1) and added at EffectIntensity 2; the cooked material
+// lost its panners, so the two layers drift against each other and flicker (by eye). No kill flash (no ActionCamoKillTime).
+const SF2_CAMO_GLSL = {
+  circuit: [`
+    vec2 cu = vMapUv * 2.0; // camo_value 2
+    vec3 cb = texture2D(uCamoBase, vec2(cu.x + uTime * 0.12, cu.y)).rgb;
+    diffuseColor.rgb = diffuseColor.rgb * 0.07 + cb * 0.06; // v64q (user, SF2's own picture): near-black under bright lines`, `
+    float sweep = texture2D(uCamoBase, vec2(cu.x * 0.5 - uTime * 0.3, 0.5)).g; // a brighter band running along the lines
+    vec3 cs = texture2D(uCamoShine, cu + vec2(uTime * 0.05, 0.0)).rgb;
+    float ln = smoothstep(0.012, 0.09, dot(cs, vec3(0.3, 0.6, 0.1))); // v64q contrast (user, SF2's own picture): the lines cut hard, bright green on near-black
+    totalEmissiveRadiance += ln * vec3(0.02, 1.0, 0.22) * (0.75 + 0.9 * sweep) * (1.0 - 0.6 * uKill);
+    totalEmissiveRadiance += texture2D(uCamoKill, cu * 0.75 + vec2(0.0, uTime * 0.35)).rgb * uKill * 1.4;`],
+  lightning_gold: [`
+    vec2 cu = vMapUv * 2.1;
+    vec3 la = texture2D(uCamoFx, cu + vec2(uTime * 0.035, uTime * 0.015)).rgb, lb = texture2D(uCamoFx, cu * 1.37 + vec2(0.31 - uTime * 0.02, 0.17 + uTime * 0.03)).rgb;
+    float ea = smoothstep(0.42, 0.8, dot(la, vec3(0.5, 0.45, 0.05))), eb = smoothstep(0.42, 0.8, dot(lb, vec3(0.5, 0.45, 0.05))); // the bolts only, not the dark-gold haze between them
+    diffuseColor.rgb = diffuseColor.rgb * 0.8 + la * ea * 0.2;`, `
+    float flick = 0.65 + 0.35 * sin(uTime * 19.0) * sin(uTime * 6.3 + 1.7); // a crackle
+    totalEmissiveRadiance += vec3(1.0, 0.62, 0.1) * (ea * 0.9 + eb * ea * 1.4 + eb * 0.35) * flick * 2.0 * 0.75 + la * la * 0.35 * flick; // EffectIntensity 2; the haze round the bolts`],
+};
 class SF2Camo {
   static tex(id) {
     const C = SF2Camo._t || (SF2Camo._t = {}); if (C[id] || !window.SF2_CAMO || !window.SF2_CAMO[id]) return C[id] || null;
@@ -170,8 +191,8 @@ class SF2Camo {
     return t;
   }
   constructor(model, id, isArm) {
-    const T = SF2Camo.tex(id); this.ok = !!T; this.killT = 0; if (!T) return;
-    this.u = { uTime: { value: 0 }, uKill: { value: 0 }, uCamoBase: { value: T.base }, uCamoShine: { value: T.shine }, uCamoKill: { value: T.kill } };
+    const T = SF2Camo.tex(id), G = SF2_CAMO_GLSL[id]; this.ok = !!(T && G); this.killT = 0; if (!this.ok) return;
+    this.u = { uTime: { value: 0 }, uKill: { value: 0 }, uCamoBase: { value: T.base || null }, uCamoShine: { value: T.shine || null }, uCamoKill: { value: T.kill || null }, uCamoFx: { value: T.fx || null } };
     const done = new Map();
     model.traverse((o) => {
       if (!o.isMesh || isArm(o) || o.userData.noAO || !o.material || !o.material.map) return; // (a lens keeps its glass)
@@ -179,17 +200,9 @@ class SF2Camo {
         const m = o.material.clone(); m.name = o.material.name + ':camo_' + id;
         m.onBeforeCompile = (sh) => {
           Object.assign(sh.uniforms, this.u);
-          sh.fragmentShader = 'uniform float uTime, uKill; uniform sampler2D uCamoBase, uCamoShine, uCamoKill;\n' + sh.fragmentShader
-            .replace('#include <map_fragment>', `#include <map_fragment>
-              vec2 cu = vMapUv * 2.0; // camo_value 2
-              vec3 cb = texture2D(uCamoBase, vec2(cu.x + uTime * 0.12, cu.y)).rgb;
-              diffuseColor.rgb = diffuseColor.rgb * 0.07 + cb * 0.06; // v64q (user, SF2's own picture): near-black under bright lines`)
-            .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
-              float sweep = texture2D(uCamoBase, vec2(cu.x * 0.5 - uTime * 0.3, 0.5)).g; // a brighter band running along the lines
-              vec3 cs = texture2D(uCamoShine, cu + vec2(uTime * 0.05, 0.0)).rgb;
-              float ln = smoothstep(0.012, 0.09, dot(cs, vec3(0.3, 0.6, 0.1))); // v64q contrast (user, SF2's own picture): the lines cut hard, bright green on near-black
-              totalEmissiveRadiance += ln * vec3(0.02, 1.0, 0.22) * (0.75 + 0.9 * sweep) * (1.0 - 0.6 * uKill);
-              totalEmissiveRadiance += texture2D(uCamoKill, cu * 0.75 + vec2(0.0, uTime * 0.35)).rgb * uKill * 1.4;`);
+          sh.fragmentShader = 'uniform float uTime, uKill; uniform sampler2D uCamoBase, uCamoShine, uCamoKill, uCamoFx;\n' + sh.fragmentShader
+            .replace('#include <map_fragment>', '#include <map_fragment>' + G[0])
+            .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>' + G[1]);
         };
         m.customProgramCacheKey = () => 'sf2camo_' + id;
         done.set(o.material, m);

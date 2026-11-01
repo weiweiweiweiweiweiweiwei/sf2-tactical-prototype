@@ -65,6 +65,13 @@ GUNS = {
     'g36c_eo': ('G36C_EOTech_Silencer_ButterflyFX', 'g36c_eo', 'g36c_eo', [0.12, 0.32, 0.76], {'vmAdsHFov': 20}),
     'hk417_rs': ('HK417_mod2A', 'hk417_rs', 'hk417_rs', [0.16, 0.37, 0.77], {'vmAdsHFov': 15}),
     'scarl_eo': ('SCARL_MK2', 'scarl_eo', 'scarl_eo', [0.12, 0.44, 0.72], {'vmAdsHFov': 20}),
+    # v66h the gacha guns (user 11-01): the base guns' classes on their attachment rigs. Aimed lenses: SF2's AlignmentInfo fZoomedMeshFOV
+    # where it lists the gun (FAMAS on the ACOG rail 5.05 — a magnified scope: 20 here, with the world at adsFov 40; MG4 / P90 on the open
+    # dot 35), the M4A1 EOTech as the G36C's (20). Reload marks as the base guns'; the P90's the SMGs' usual (not measured)
+    'famas_blaze': ('FAMAS', 'famas_acog', 'famas_blaze', [0.2, 0.4, 0.73], {'vmAdsHFov': 20, 'adsFov': 40}),
+    'p90_grinch': ('P90', 'p90_od', 'p90_grinch', [0.15, 0.45, 0.75], {'vmAdsHFov': 35}),
+    'm4a1_thor': ('M4A1', 'm4a1_eo', 'm4a1', [0.07, 0.36, 0.73], {'vmAdsHFov': 20}),
+    'mg4_gold': ('MG4', 'mg4_od', 'mg4', [0.15, 0.45, 0.8], {'vmAdsHFov': 35}),
     # v64 the K14 bolt action: its Reload clip (91 frames) opens the bolt at 13, the mag out at 28 / in at 44, the bolt shut at 68;
     # the 2D scope stays the game's (zoom levels like the M40A1), and SF2's 20° kick block is left out (the bolt drops the scope anyway)
     'k14': ('K14', 'k14', 'k14', [0.31, 0.48, 0.75], {'adsType': '2d_scope_overlay', 'adsFov': 20, 'adsSpeed': 17, 'vmAdsHFov': None, 'sf2Recoil': None,

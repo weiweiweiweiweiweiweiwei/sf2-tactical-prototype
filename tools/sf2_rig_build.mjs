@@ -47,6 +47,13 @@ const ZEISS_SCOPE = { ...PART('weapon_common_part01', 'scope_zeiess'), tex: 'zei
 // v64t the bolt guns' own scopes (weapon_common_part; SFCItem_<gun>_Def_Scope / Cz700_Def_Scope): root binds as the Bender's
 const SCOPE = (name, tex) => ({ ...PART('weapon_common_part', name), tex, noAim: true, roll: +(process.env.ROLL ?? 90) });
 const SIL = (k) => ({ ...PART('weapon_common_part', `silencer_ar_type_${k}`), tex: `silencer_type_${k}` });
+// v66h the gacha guns (user 11-01): SF2's ACOG on a rail (Common_DotSight_ACOG_Rail, sheet acog_rail; the FAMAS's), the open dot
+// (Common_DotSight_OPENDot, sheet opendot) and the SMG silencer (silencer_smg_type_a: its SFMeshParts sheet is silencer_type_mp7);
+// their reticle is the dot_point default DotForSight_M's DotDot (SightCrosshair unset on these items)
+const DOTDOT = 'parts/dot_point/Texture2D/DotDot.png';
+const ACOG_RAIL = { ...PART('weapon_common_part', 'dot_acog_rail'), tex: 'acog_rail', reticle: DOTDOT };
+const OPENDOT = { ...PART('weapon_common_part', 'dot_opendot'), tex: 'opendot', reticle: DOTDOT };
+const SIL_SMG = { ...PART('weapon_common_part', 'silencer_smg_type_a'), tex: 'silencer_type_mp7' };
 const GUNS = {
   usas12: gun('usas12', { pkg: 'sho_usas12' }), // v65q tools/sf2_add_gun.py
   magnum44: gun('magnum44', { pkg: 'pis_blackhawk', tex: 'blackhawk', anim: '1st_anim_blackhawk', partNames: ['body', 'magazine'] }), // v65q tools/sf2_add_gun.py
@@ -112,6 +119,17 @@ const GUNS = {
   g36c_eo: gun('g36c', { optic: EOTECH, silencer: SIL('a') }),
   hk417_rs: gun('hk417', { optic: REFLEX, silencer: SIL('b') }),
   scarl_eo: gun('scarl', { pkg: 'rif_scar_L', tex: 'scar_L', anim: '1st_anim_scar_L', optic: EOTECH, silencer: SIL('c') }),
+  // v66h the gacha guns (user 11-01, docs/research/sf2/gacha-weapons.md): 炙炎 FAMAS = SFCItem_FAMAS_ACOG_Silencer_FissureFX, 鬼靈精 P90 =
+  // SFCItem_P90_OpenDot_Silencer_SilentNight, 雷神 M4A1 = SFCItem_M4A1_EOTech_GoldFX (camo LightningGoldFX), 黃金 MG4 = SFCItem_MG4_Opendot_Gold;
+  // only the M4A1 keeps its camo (the user: the others without). The M4A1's EOTech drops the carry handle, the A2 front sight stays.
+  // The P90 has no base rig in the game (its ring sight had no aim mark, v65f): a full rig with SF2's open sight (P90_TypeB_DotSight =
+  // smg_p90_dot_b, the default dot_a left off) and the dot measured on that part's window (tools/out/_p90dot3.mjs: the open frame
+  // over the housing at z 0.28–0.31, x −0.062…−0.038, y 1.208…1.228)
+  famas_acog: gun('famas', { optic: ACOG_RAIL, silencer: SIL('a') }),
+  p90_od: gun('p90', { pkg: 'smg_p90', extraParts: [['dot_b', 'p90/smg_p90/SkeletalMesh3/smg_p90_dot_b.gltf', 'p90_dot_b']], silencer: SIL_SMG,
+    reticle: DOTDOT, sightMarks: { DOT: [-0.05005, 1.218, 0.295] } }),
+  m4a1_eo: gun('m4a1', { optic: EOTECH }),
+  mg4_od: gun('mg4', { pkg: 'mg_mg4', optic: OPENDOT }),
   // v64 the K14 bolt-action sniper (sni_k14); v64b its scope on the body's Scope socket (K14_SCOPE)
   k14: gun('k14', { pkg: 'sni_k14', stem: 'sni_k14', optic: K14_SCOPE }),
   // v64s the TRG-41 (sni_trg; its animset is 1st_ani_trg) on the Zeiss scope
@@ -363,9 +381,10 @@ for (const [key, socket, own, mark] of [['optic', 'Scope', 'ZoomCrosshair', 'DOT
   V[key] = await addPart(key, A.file, A.tex, { p: (v) => xf(M, v), n: rot3(M, 1) });
   if (!A.noAim) marks[mark] = xf(S, partSock(A.props, own));
 }
-if (G.optic && G.optic.reticle) { // SF2's reticle (dot_point's DotTexture) on a 2 cm quad at the DOT, riveted to weapon_root: the game takes its texture for the sight's sprite
+if (G.sightMarks && G.sightMarks.DOT) marks.DOT = G.sightMarks.DOT; // (v66h a hand-measured aim point is needed by the reticle quad below)
+if ((G.optic && G.optic.reticle) || G.reticle) { // SF2's reticle (dot_point's DotTexture) on a 2 cm quad at the DOT, riveted to weapon_root: the game takes its texture for the sight's sprite
   const d = marks.DOT, h = 0.01, acc = (type, arr) => doc.createAccessor().setType(type).setArray(arr).setBuffer(buf);
-  const img = await sharp(SRC + G.optic.reticle).png().toBuffer();
+  const img = await sharp(SRC + ((G.optic && G.optic.reticle) || G.reticle)).png().toBuffer(); // (v66h G.reticle: a sight built into the gun's own parts, its DOT in sightMarks)
   const mat = doc.createMaterial('gun:reticle').setBaseColorTexture(doc.createTexture('reticle').setImage(img).setMimeType('image/png')).setAlphaMode('BLEND').setMetallicFactor(0).setRoughnessFactor(1);
   const pos = new Float32Array([d[0] - h, d[1] - h, d[2], d[0] + h, d[1] - h, d[2], d[0] + h, d[1] + h, d[2], d[0] - h, d[1] + h, d[2]]);
   const prim = doc.createPrimitive().setMaterial(mat).setIndices(acc('SCALAR', new Uint32Array([0, 1, 2, 0, 2, 3])))

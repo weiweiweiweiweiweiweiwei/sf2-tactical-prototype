@@ -4354,6 +4354,12 @@ var WEAPON_DATABASE = {
     desc: "競賽級手槍，射速快、精準度高、後座小。"
   }
 };
+for (const [id, base, o] of [
+  ["famas_blaze", "famas", { name: "炙炎 FAMAS", suppressed: true, tracerEvery: 0, adsFov: 40, desc: "SF2 扭蛋槍 FAMAS ACOG 消音（炙炎）：ACOG 放大瞄具 + 消音器，槍聲小、不上敵方雷達。" }],
+  ["p90_grinch", "p90", { name: "鬼靈精 P90", suppressed: true, tracerEvery: 0, adsType: "3d_sight", desc: "SF2 扭蛋槍 P90 OpenDot 消音（鬼靈精）：開放式內紅點 + 消音器，50 發。" }],
+  ["m4a1_thor", "m4a1", { name: "雷神 M4A1", camo: "lightning_gold", model: void 0, desc: "SF2 扭蛋槍 M4A1 EOTech（雷神）：全息瞄具，金色電光在槍身流竄閃爍。" }],
+  ["mg4_gold", "mg4", { name: "黃金 MG4", adsType: "3d_sight", desc: "SF2 扭蛋槍 MG4 OpenDot（黃金）：開放式內紅點，100 發。" }]
+]) WEAPON_DATABASE[id] = Object.assign({}, WEAPON_DATABASE[base], o);
 var TYPE_TUNING = {
   // spread growth / movement penalties per weapon family
   assault: { kind: "rifle", bloomPerShot: 42e-4, bloomMax: 0.028, spreadMove: 0.045, adsMoveSpread: 0.03, spreadSprint: 0.1, spreadAir: 0.18, spreadPerShot: 8e-3, spreadMax: 0.06, adsBloomMult: 0.3, spreadRecover: 5, noise: 40, reloadSounds: [[0.18, "magout"], [0.58, "magin"], [0.82, "charge"]], kick: { z: 0.042, y: 0.01, rx: 0.06 }, adsMove: 0.75 },
@@ -4454,6 +4460,10 @@ var SF2_WEIGHT = {
   g36c_sf2: [3.5, 1.75],
   g36c_eo: [3.5, 1.75],
   g36c_circuit: [3.5, 1.75],
+  famas_blaze: [3.4, 1.7],
+  p90_grinch: [2.4, 1.4],
+  m4a1_thor: [4.1, 2.05],
+  mg4_gold: [7.8, 3.9],
   mp5: [2.25, 1.25],
   mp5k: [1.9, 0.9],
   p90: [2.4, 1.4],
@@ -4672,6 +4682,14 @@ var SF2_WEAPONS = {
   // SFCWeaponHK417_mod2A
   scarl_eo: { "fireRate": 0.095, "reloadTime": 2.35, "equipTime": 0.9, "adsSpeed": 12, "adsFov": 55, "adsType": "3d_sight", "vmHFov": 60, "vmAdsHFov": 20, "sf2Rig": "scarl_eo", "sf2": "scarl_eo", "sf2ZoomIn": [0, -0.01, -0.2], "sf2ZoomOut": [-1, 0, 0], "sf2ReloadSounds": [[0.12, "magout"], [0.44, "magin"], [0.72, "charge"]], "sf2Recoil": { "nextCrossVert": 2.1, "maxCrossVert": 15, "vertInc": 15e3, "vertDec": 12, "crossDecreasInc": 9, "incline": 0.35, "forceCorrection": 50, "domDefault": 0.15, "domZoomDefault": 0, "domInc": 0.22, "domMax": 2.4, "domMin": 0.1, "domDec": 2, "maxMovingValue": 0.7, "mulValueRun": 0.7, "mulValueJump": 6, "zoomMod": 0.99, "crouchMod": 0.85 }, "sf2ReloadAnim": 2.45 },
   // SFCWeaponSCARL_MK2
+  famas_blaze: { "fireRate": 0.085, "reloadTime": 2.35, "equipTime": 0.8, "adsSpeed": 12, "adsFov": 40, "adsType": "3d_sight", "vmHFov": 60, "vmAdsHFov": 20, "sf2Rig": "famas_acog", "sf2": "famas_blaze", "sf2ZoomIn": [0, -0.02, -0.17], "sf2ZoomOut": [0, 0, 0], "sf2ReloadSounds": [[0.2, "magout"], [0.4, "magin"], [0.73, "charge"]], "sf2Recoil": { "nextCrossVert": 1.1, "maxCrossVert": 12, "vertInc": 15e3, "vertDec": 13, "crossDecreasInc": 15, "incline": 0.1, "forceCorrection": 50, "domDefault": 0.3, "domZoomDefault": 0.2, "domInc": 0.3, "domMax": 1.5, "domMin": 0, "domDec": 1.25, "maxMovingValue": 0.8, "mulValueRun": 0.4, "mulValueJump": 6, "zoomMod": 0.99, "crouchMod": 0.9 }, "sf2ReloadAnim": 2.5 },
+  // SFCWeaponFAMAS
+  p90_grinch: { "fireRate": 0.081, "reloadTime": 2.25, "equipTime": 0.821, "adsSpeed": 12, "adsFov": 55, "adsType": "3d_sight", "vmHFov": 60, "vmAdsHFov": 35, "sf2Rig": "p90_od", "sf2": "p90_grinch", "sf2ZoomIn": [8, -0.01, -0.22], "sf2ZoomOut": [2, 0, -1], "sf2ReloadSounds": [[0.15, "magout"], [0.45, "magin"], [0.75, "charge"]], "sf2Recoil": { "nextCrossVert": 1.15, "maxCrossVert": 12, "vertInc": 1e4, "vertDec": 10, "crossDecreasInc": 30, "incline": 0.1, "forceCorrection": 50, "domDefault": 0.9, "domZoomDefault": 0, "domInc": 0.17, "domMax": 2.3, "domMin": 0.2, "domDec": 1, "maxMovingValue": 1, "mulValueRun": 0.35, "mulValueJump": 2, "zoomMod": 0.6, "crouchMod": 0.8 }, "sf2ReloadAnim": 2.367 },
+  // SFCWeaponP90
+  m4a1_thor: { "fireRate": 0.096, "reloadTime": 2.3, "equipTime": 0.8, "adsSpeed": 12, "adsFov": 55, "adsType": "3d_sight", "vmHFov": 60, "vmAdsHFov": 20, "sf2Rig": "m4a1_eo", "sf2": "m4a1", "sf2ZoomIn": [-3, 0, -0.87], "sf2ZoomOut": [-1, 0, 0], "sf2ReloadSounds": [[0.07, "magout"], [0.36, "magin"], [0.73, "charge"]], "sf2Recoil": { "nextCrossVert": 1.26, "maxCrossVert": 14, "vertInc": 9e3, "vertDec": 12, "crossDecreasInc": 9, "incline": 0.5, "forceCorrection": 50, "domDefault": 0.25, "domZoomDefault": 0, "domInc": 0.13, "domMax": 2, "domMin": 0.1, "domDec": 6, "maxMovingValue": 0.7, "mulValueRun": 0.8, "mulValueJump": 6, "zoomMod": 0.6, "crouchMod": 0.9 }, "sf2ReloadAnim": 2.533 },
+  // SFCWeaponM4A1
+  mg4_gold: { "fireRate": 0.1, "reloadTime": 6.15, "equipTime": 1.9, "adsSpeed": 12, "adsFov": 55, "adsType": "3d_sight", "vmHFov": 60, "vmAdsHFov": 35, "sf2Rig": "mg4_od", "sf2": "mg4", "sf2ZoomIn": [5, 0, 0.06], "sf2ZoomOut": [1.2, 0, 0], "sf2ReloadSounds": [[0.15, "magout"], [0.45, "magin"], [0.8, "charge"]], "sf2Recoil": { "nextCrossVert": 1.1, "maxCrossVert": 7, "vertInc": 1e4, "vertDec": 10, "crossDecreasInc": 30, "incline": 0.1, "forceCorrection": 50, "domDefault": 1, "domZoomDefault": 0.1, "domInc": 0.2, "domMax": 1.9, "domMin": 0.2, "domDec": 1.5, "maxMovingValue": 1, "mulValueRun": 0.35, "mulValueJump": 2, "zoomMod": 0.7, "crouchMod": 0.8 }, "sf2ReloadAnim": 6.5 },
+  // SFCWeaponMG4
   k14: { "fireRate": 1.2, "reloadTime": 3, "equipTime": 0.8, "adsSpeed": 17, "adsFov": 20, "adsType": "2d_scope_overlay", "vmHFov": 70, "sf2Rig": "k14", "sf2": "k14", "sf2ZoomIn": [1.2, -0.01, -0.01], "sf2ZoomOut": [0, 0, 0], "sf2ReloadSounds": [[0.14, "boltback"], [0.31, "magout"], [0.48, "magin"], [0.75, "charge"]], "sf2ReloadAnim": 3.25 },
   // SFCWeaponK14
   m40a1: { "fireRate": 1.3, "reloadTime": 2.75, "equipTime": 0.7, "adsSpeed": 17, "adsFov": 20, "adsType": "2d_scope_overlay", "vmHFov": 65, "sf2Rig": "m40a1", "sf2": "m40a1", "sf2ZoomIn": [1.2, -0.015, 0.015], "sf2ZoomOut": [0.5, 1, 1], "sf2ReloadSounds": [[0.14, "boltback"], [0.31, "magout"], [0.48, "magin"], [0.75, "charge"]], "sf2ReloadAnim": 2.95, "sf2Reticle": "mil", "zoomHFovs": [55, 20] },
@@ -4843,6 +4861,10 @@ var WEAPON_BLURBS = {
   mp5k: "短槍管 MP5，射速快、近距離靈活。",
   g36c_eo: "緊湊型步槍加全息瞄具與消音器，不上敵方雷達。",
   g36c_circuit: "魔術迴路迷彩的 G36C EOTech 消音：電路紋路流動，擊殺時閃出電光。",
+  famas_blaze: "FAMAS 加 ACOG 放大瞄具與消音器，不上敵方雷達。",
+  p90_grinch: "P90 加開放式內紅點與消音器。",
+  m4a1_thor: "雷神：金色電光流竄的 M4A1 EOTech。",
+  mg4_gold: "MG4 加開放式內紅點。",
   awp_circuit: "魔術迴路迷彩的 AWP。",
   cheytac_m200_circuit: "魔術迴路迷彩的 CheyTac M200。",
   cz700_circuit: "魔術迴路迷彩的 CZ 700。",
@@ -4937,7 +4959,7 @@ var MODES = {
 };
 var BOT_POOLS = {
   general: ["usas12", "ultimax", "minimispw", "fnmag", "uzipro", "sigmpx", "mx4", "mp40", "krissv", "k1", "cz3a1", "csls06", "bizon", "tar21", "t91", "t65k2", "t65k1", "stg44", "madsenlar", "sar21", "mrr", "madsenlar", "k2c1", "fnf2000", "cm901", "arx160", "ak104", "an94", "an94", "an94", "an94", "an94", "an94", "an94", "an94", "m4a1", "acr", "ak47", "g36c", "g36c_gold", "g36c_eo", "g36c_circuit", "hk417_rs", "scarl_eo", "scarl", "famas", "aug", "mp5", "mp5k", "p90", "ump45", "vector", "mp7", "remington870", "benelli_m4", "saiga12", "m249", "rpk", "negev", "pkm", "trg", "cheytac_m200", "k14", "awp", "svd", "kar98k", "m16a3", "k2", "xm8", "galil", "sg551", "hk417", "scarh", "qbz97", "pp2000", "vz61", "aa12", "mg4", "k3", "m40a1", "sr25", "psg1", "m14ebr", "type89", "l86a1", "hk23e", "frf2", "cz700"],
-  rifle: ["m4a1", "ak47", "g36c", "g36c_gold", "g36c_eo", "g36c_circuit", "hk417_rs", "scarl_eo", "scarl", "famas", "aug", "mp5", "mp5k", "p90", "ump45", "vector", "mp7", "m249", "rpk", "negev", "pkm", "mg42", "m16a3", "k2", "xm8", "galil", "sg551", "hk417", "scarh", "qbz97", "pp2000", "vz61", "mg4", "k3", "type89", "l86a1", "hk23e"],
+  rifle: ["m4a1", "ak47", "g36c", "g36c_gold", "g36c_eo", "g36c_circuit", "famas_blaze", "p90_grinch", "m4a1_thor", "mg4_gold", "hk417_rs", "scarl_eo", "scarl", "famas", "aug", "mp5", "mp5k", "p90", "ump45", "vector", "mp7", "m249", "rpk", "negev", "pkm", "mg42", "m16a3", "k2", "xm8", "galil", "sg551", "hk417", "scarh", "qbz97", "pp2000", "vz61", "mg4", "k3", "type89", "l86a1", "hk23e"],
   sniper: ["svch", "msr", "fnar", "trg", "cheytac_m200", "cheytac_m200_circuit", "k14", "k14_circuit", "awp_circuit", "cz700_circuit", "awp", "barrett", "kar98k", "svd", "m40a1", "sr25", "psg1", "m14ebr", "frf2", "cz700"],
   pistol: ["p226", "deagle", "glock18", "usp", "m1911", "m92fs", "cz75", "jericho", "sw60", "infinity"],
   knife: ["knife"]
@@ -18223,6 +18245,24 @@ var SF2Flash = class _SF2Flash {
     if (this.ok) for (const m of ["hip", "ads"]) for (const L of this.layers[m]) L.s.visible = false;
   }
 };
+var SF2_CAMO_GLSL = {
+  circuit: [`
+    vec2 cu = vMapUv * 2.0; // camo_value 2
+    vec3 cb = texture2D(uCamoBase, vec2(cu.x + uTime * 0.12, cu.y)).rgb;
+    diffuseColor.rgb = diffuseColor.rgb * 0.07 + cb * 0.06; // v64q (user, SF2's own picture): near-black under bright lines`, `
+    float sweep = texture2D(uCamoBase, vec2(cu.x * 0.5 - uTime * 0.3, 0.5)).g; // a brighter band running along the lines
+    vec3 cs = texture2D(uCamoShine, cu + vec2(uTime * 0.05, 0.0)).rgb;
+    float ln = smoothstep(0.012, 0.09, dot(cs, vec3(0.3, 0.6, 0.1))); // v64q contrast (user, SF2's own picture): the lines cut hard, bright green on near-black
+    totalEmissiveRadiance += ln * vec3(0.02, 1.0, 0.22) * (0.75 + 0.9 * sweep) * (1.0 - 0.6 * uKill);
+    totalEmissiveRadiance += texture2D(uCamoKill, cu * 0.75 + vec2(0.0, uTime * 0.35)).rgb * uKill * 1.4;`],
+  lightning_gold: [`
+    vec2 cu = vMapUv * 2.1;
+    vec3 la = texture2D(uCamoFx, cu + vec2(uTime * 0.035, uTime * 0.015)).rgb, lb = texture2D(uCamoFx, cu * 1.37 + vec2(0.31 - uTime * 0.02, 0.17 + uTime * 0.03)).rgb;
+    float ea = smoothstep(0.42, 0.8, dot(la, vec3(0.5, 0.45, 0.05))), eb = smoothstep(0.42, 0.8, dot(lb, vec3(0.5, 0.45, 0.05))); // the bolts only, not the dark-gold haze between them
+    diffuseColor.rgb = diffuseColor.rgb * 0.8 + la * ea * 0.2;`, `
+    float flick = 0.65 + 0.35 * sin(uTime * 19.0) * sin(uTime * 6.3 + 1.7); // a crackle
+    totalEmissiveRadiance += vec3(1.0, 0.62, 0.1) * (ea * 0.9 + eb * ea * 1.4 + eb * 0.35) * flick * 2.0 * 0.75 + la * la * 0.35 * flick; // EffectIntensity 2; the haze round the bolts`]
+};
 var SF2Camo = class _SF2Camo {
   static {
     __name(this, "SF2Camo");
@@ -18239,11 +18279,11 @@ var SF2Camo = class _SF2Camo {
     return t;
   }
   constructor(model, id, isArm) {
-    const T = _SF2Camo.tex(id);
-    this.ok = !!T;
+    const T = _SF2Camo.tex(id), G = SF2_CAMO_GLSL[id];
+    this.ok = !!(T && G);
     this.killT = 0;
-    if (!T) return;
-    this.u = { uTime: { value: 0 }, uKill: { value: 0 }, uCamoBase: { value: T.base }, uCamoShine: { value: T.shine }, uCamoKill: { value: T.kill } };
+    if (!this.ok) return;
+    this.u = { uTime: { value: 0 }, uKill: { value: 0 }, uCamoBase: { value: T.base || null }, uCamoShine: { value: T.shine || null }, uCamoKill: { value: T.kill || null }, uCamoFx: { value: T.fx || null } };
     const done = /* @__PURE__ */ new Map();
     model.traverse((o) => {
       if (!o.isMesh || isArm(o) || o.userData.noAO || !o.material || !o.material.map) return;
@@ -18252,15 +18292,7 @@ var SF2Camo = class _SF2Camo {
         m.name = o.material.name + ":camo_" + id;
         m.onBeforeCompile = (sh) => {
           Object.assign(sh.uniforms, this.u);
-          sh.fragmentShader = "uniform float uTime, uKill; uniform sampler2D uCamoBase, uCamoShine, uCamoKill;\n" + sh.fragmentShader.replace("#include <map_fragment>", `#include <map_fragment>
-              vec2 cu = vMapUv * 2.0; // camo_value 2
-              vec3 cb = texture2D(uCamoBase, vec2(cu.x + uTime * 0.12, cu.y)).rgb;
-              diffuseColor.rgb = diffuseColor.rgb * 0.07 + cb * 0.06; // v64q (user, SF2's own picture): near-black under bright lines`).replace("#include <emissivemap_fragment>", `#include <emissivemap_fragment>
-              float sweep = texture2D(uCamoBase, vec2(cu.x * 0.5 - uTime * 0.3, 0.5)).g; // a brighter band running along the lines
-              vec3 cs = texture2D(uCamoShine, cu + vec2(uTime * 0.05, 0.0)).rgb;
-              float ln = smoothstep(0.012, 0.09, dot(cs, vec3(0.3, 0.6, 0.1))); // v64q contrast (user, SF2's own picture): the lines cut hard, bright green on near-black
-              totalEmissiveRadiance += ln * vec3(0.02, 1.0, 0.22) * (0.75 + 0.9 * sweep) * (1.0 - 0.6 * uKill);
-              totalEmissiveRadiance += texture2D(uCamoKill, cu * 0.75 + vec2(0.0, uTime * 0.35)).rgb * uKill * 1.4;`);
+          sh.fragmentShader = "uniform float uTime, uKill; uniform sampler2D uCamoBase, uCamoShine, uCamoKill, uCamoFx;\n" + sh.fragmentShader.replace("#include <map_fragment>", "#include <map_fragment>" + G[0]).replace("#include <emissivemap_fragment>", "#include <emissivemap_fragment>" + G[1]);
         };
         m.customProgramCacheKey = () => "sf2camo_" + id;
         done.set(o.material, m);
@@ -18338,9 +18370,9 @@ var GunMats = class {
 };
 var GUN_MODELS = {};
 var GUN_RIGS = {};
-var RIG_EYE = { m16a3: 0.055, qbz97: 0.06, g36c_eo: 0.15, m14ebr: 0.15, hk417_rs: 0.15, scarl_eo: 0.15 };
+var RIG_EYE = { m16a3: 0.055, qbz97: 0.06, g36c_eo: 0.15, m14ebr: 0.15, hk417_rs: 0.15, scarl_eo: 0.15, famas_acog: 0.47, p90_od: 0.15, m4a1_eo: 0.15, mg4_od: 0.15 };
 var RIG_HIP = { k14: [0.0217, -1.2026, -0.0378] };
-var RIG_RETICLE = { g36c_eo: [0.093, 82], m14ebr: [0.093, 82], hk417_rs: [0.06, 32], scarl_eo: [0.093, 82] };
+var RIG_RETICLE = { g36c_eo: [0.093, 82], m14ebr: [0.093, 82], hk417_rs: [0.06, 32], scarl_eo: [0.093, 82], m4a1_eo: [0.093, 82], famas_acog: [6e-3, 64], p90_od: [6e-3, 64], mg4_od: [6e-3, 64] };
 var GLB_RELOAD_POSE = { roll: -0.5, pitch: 0.32, drop: -0.09, shift: 0.08 };
 var GUN_LOAD = { parsed: /* @__PURE__ */ new Set(), pending: /* @__PURE__ */ new Map() };
 var GUN_OVL = {};
