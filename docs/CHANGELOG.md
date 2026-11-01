@@ -1900,3 +1900,15 @@
 - 三種都是整把上色：SF2 用每把槍的遮罩決定哪些零件保留原色（握把、腳架等），這裡沒讀遮罩（和魔術迴路一樣）。
 - 貼圖：`tools/camo_sf2.py` → `assets/camo_sf2.js`（變成約 1 MB）；著色器 `src/09c_sf2rig.js` 的 `SF2_CAMO_GLSL`。
 - 驗證：三把腰射截圖、MODULES_OK、CHECK_OK。
+
+### v66j（本機，2026-11-01）：移動、重力、跳躍、身高照 SF2 原版
+- 使用者 11-01 選 1A、3A（照原版）。數值從安裝檔讀：`SFGame.upk` 的 `Default__SFPawn`（`tools/sf2_unlzo.py SFGame` 解壓後 `tools/sf2_props.py`）、`Engine` 的 `Default__WorldInfo`、角色骨架 `c_deltaforce_skelet`（`tools/out/_charheight.mjs`）。地圖換算 1 UU = 1 cm。
+  - 跑：MaxSpeed 390（照負重，M4A1 約 3.3 m/s）；衝刺 ×1.45；蹲走 ×0.3；後退 ×0.6、側移 ×0.8、斜後 ×0.7（SpeedDirPct）；梯子 2.0 m/s。
+  - 重力 −970（9.7 m/s²）、JumpZ 500（跳高約 1.29 m）。
+  - 碰撞圓柱半高 68／半徑 32（高 1.36 m、半徑 0.32 m），蹲下半高 45.5（0.91 m）；眼高 BaseEyeHeight 55 → 站 1.23 m、蹲 1.005 m。
+  - 角色模型（Delta Force 身體＋頭盔）高 1.56 m：第三人稱士兵和命中框照 1.56／1.8 縮小。
+- 遊戲裡原本是跑 6.43 m/s、重力 20：現在整體慢約四成、比較「重」。
+- 例外：Apex 跑酷地圖（`def.traversal`）維持舊的速度、重力、跳躍、身高（那些跳台照舊手感設計）；手榴彈和碎片的物理世界維持舊重力（`CFG.physGravity`，投擲弧線照舊）。
+- 修正：蹲走只剩 0.24 m/s——摩擦的最低停止速度 3.2 m/s 比 SF2 的蹲走速度高，加速贏不過摩擦。改成有方向輸入時摩擦照實際速度算。
+- 台階高度維持 0.45 m（SF2 是 0.26）：怕現有地圖的樓梯、斜坡卡住，沒動。
+- 驗證：`tools/out/_movemeasure.mjs`（前進 3.40、後退 2.04、側移 2.72、衝刺 4.93、蹲走 1.02 m/s，跳 1.25 m，眼高 1.23，士兵 1.59 m）、MODULES_OK、CHECK_OK（倉庫、第二張圖）。

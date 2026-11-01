@@ -94,7 +94,7 @@ class Match {
     this.combatants.forEach((c, i) => { c.netId = i + 1; this.refit(c); }); this.netSeq = this.combatants.length; // v25: stable ids (network snapshots, seeded spread)
     this.spawns = { alpha: this.makeSpawns('alpha'), bravo: this.makeSpawns('bravo') }; this.pruneSpawnLOS();
     this.spawnLOS = this.checkSpawnLOS(); window.__debug = Object.assign(window.__debug || {}, { map: def.id, spawnLOS: this.spawnLOS.visible > 0, spawnLOSPairs: this.spawnLOS });
-    this.playerModel = app.soldiers.create(this.player.team, 'm4'); this.playerModel.root.visible = false; this.scene.add(this.playerModel.root); // third-person you, for killcams
+    this.playerModel = app.soldiers.create(this.player.team, 'm4'); this.playerModel.root.scale.setScalar(this.def.traversal ? 1 : CFG.player.bodyScale); this.playerModel.root.visible = false; this.scene.add(this.playerModel.root); // third-person you, for killcams
     this.rules.init();
     const proxy = new THREE.Mesh(new THREE.CapsuleGeometry(0.26, 0.9, 4, 10), new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false }));
     proxy.castShadow = true; proxy.userData.noAO = true; this.scene.add(proxy); this.shadowProxy = proxy;
@@ -188,7 +188,7 @@ class Match {
     const pts = [];
     for (let x = z.x0 + 0.6; x <= z.x1 - 0.6; x += 1.15) for (let zz = z.z0 + 0.6; zz <= z.z1 - 0.6; zz += 1.15) {
       const base = this.collision.terrain ? this.collision.terrain.heightAt(x, zz) : 0, g = this.collision.groundBelow(x, base + 1.5, zz, 0.3, 3, 0);
-      if (g && g.y < base + 0.5 && !g.steep && this.collision.fits(x, g.y + 0.05, zz, 0.42, 1.8)) { const p = new THREE.Vector3(x, g.y, zz); p.spawnYaw = z.yaw; pts.push(p); }
+      if (g && g.y < base + 0.5 && !g.steep && this.collision.fits(x, g.y + 0.05, zz, 0.42, CFG.player.height)) { const p = new THREE.Vector3(x, g.y, zz); p.spawnYaw = z.yaw; pts.push(p); }
     }
     return pts;
   }
@@ -201,7 +201,7 @@ class Match {
     const z = this.builder.zones[team], pts = [];
     for (let x = z.x0 + 0.6; x <= z.x1 - 0.6; x += 1.15) for (let zz = z.z0 + 0.6; zz <= z.z1 - 0.6; zz += 1.15) {
       const base = this.collision.terrain ? this.collision.terrain.heightAt(x, zz) : 0, g = this.collision.groundBelow(x, base + 1.5, zz, 0.3, 3, 0);
-      if (g && g.y < base + 0.5 && !g.steep && this.collision.fits(x, g.y + 0.05, zz, 0.42, 1.8)) pts.push(new THREE.Vector3(x, g.y, zz));
+      if (g && g.y < base + 0.5 && !g.steep && this.collision.fits(x, g.y + 0.05, zz, 0.42, CFG.player.height)) pts.push(new THREE.Vector3(x, g.y, zz));
     }
     for (let i = pts.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [pts[i], pts[j]] = [pts[j], pts[i]]; }
     return { pts, yaw: z.yaw };
@@ -214,7 +214,7 @@ class Match {
     if (!A.length || !B.length || A.length * B.length > 40000) return;
     const a = new THREE.Vector3(), b = new THREE.Vector3(), seeA = new Set(), seeB = new Set();
     for (const p of A) for (const q of B) {
-      a.set(p.x, p.y + 1.6, p.z); b.set(q.x, q.y + 1.6, q.z);
+      a.set(p.x, p.y + CFG.player.eye, p.z); b.set(q.x, q.y + CFG.player.eye, q.z);
       if (this.collision.segmentClear(a, b)) { seeA.add(p); seeB.add(q); }
     }
     if (seeA.size && seeA.size <= A.length / 2) this.spawns.alpha.pts = A.filter((p) => !seeA.has(p));
@@ -228,7 +228,7 @@ class Match {
     const pick = (pts) => all ? pts : pts.filter((_, i) => i % Math.max(1, Math.floor(pts.length / 16)) === 0).slice(0, 16), A = pick(this.spawns.alpha.pts), B = pick(this.spawns.bravo.pts);
     const a = new THREE.Vector3(), b = new THREE.Vector3(); let visible = 0, minDist = Infinity;
     for (const p of A) for (const q of B) {
-      a.set(p.x, p.y + 1.6, p.z); b.set(q.x, q.y + 1.6, q.z); minDist = Math.min(minDist, a.distanceTo(b));
+      a.set(p.x, p.y + CFG.player.eye, p.z); b.set(q.x, q.y + CFG.player.eye, q.z); minDist = Math.min(minDist, a.distanceTo(b));
       if (this.collision.segmentClear(a, b)) visible++;
     }
     return { visible, pairs: A.length * B.length, minDist: Math.round(minDist) };
@@ -249,7 +249,7 @@ class Match {
       let safe = true;
       for (const e of foes) {
         const de = e.motor.pos.distanceTo(f.c); if (de < 45) { safe = false; break; }
-        if (de < 110 && this.collision.segmentClear(e.eyePos(eye), tgt.set(f.c.x, f.c.y + 1.6, f.c.z))) { safe = false; break; }
+        if (de < 110 && this.collision.segmentClear(e.eyePos(eye), tgt.set(f.c.x, f.c.y + CFG.player.eye, f.c.z))) { safe = false; break; }
       }
       if (safe) { best = f; bd = d; }
     }
@@ -493,7 +493,7 @@ class Match {
       const hy = cr ? 0.52 : 0.92; M.legs[0].hip.position.y = M.legs[1].hip.position.y = hy; M.torso.position.y = hy; M.torso.rotation.set(0, 0, 0);
     });
     // over the killer's shoulder, looking where he aimed
-    const o = K.ki * 7, kx = lerp(a.f[o], b.f[o], k), ky = lerp(a.f[o + 1], b.f[o + 1], k) + (b.f[o + 5] ? 1.06 : 1.64), kz = lerp(a.f[o + 2], b.f[o + 2], k);
+    const o = K.ki * 7, kx = lerp(a.f[o], b.f[o], k), ky = lerp(a.f[o + 1], b.f[o + 1], k) + (b.f[o + 5] ? CFG.player.crouchEye : CFG.player.eye), kz = lerp(a.f[o + 2], b.f[o + 2], k);
     const yaw = a.f[o + 3] + wrapAngle(b.f[o + 3] - a.f[o + 3]) * k, pit = lerp(a.f[o + 4], b.f[o + 4], k), cp = Math.cos(pit);
     const fx = -Math.sin(yaw) * cp, fy = Math.sin(pit), fz = -Math.cos(yaw) * cp, rx = Math.cos(yaw), rz = -Math.sin(yaw);
     cam.position.set(kx - fx * 1.8 + rx * 0.72, ky - fy * 1.8 + 0.32, kz - fz * 1.8 + rz * 0.72);

@@ -19,7 +19,7 @@ class NetPlayer extends Human {
     this.hipMode = opts.hipMode === 'shotgun' ? 'shotgun' : 'precise';
     this.loadout = NetPlayer.validLoadout(opts.loadout); this.nextLoadout = null;
     this.arsenal = new Arsenal(game, this); this.arsenal.remote = true; this.arsenal.init(loadoutDefs(game.mode, this.loadout));
-    this.model = game.app.soldiers.create(team, this.def.model || this.def.id); game.scene.add(this.model.root); this.modelGun = this.def.id;
+    this.model = game.app.soldiers.create(team, this.def.model || this.def.id); this.model.root.scale.setScalar(game.def.traversal ? 1 : CFG.player.bodyScale); // (v66j SF2's 1.56 m soldier) game.scene.add(this.model.root); this.modelGun = this.def.id;
     if (team === game.player.team) this.tag = Bot.prototype._makeTag.call(this);
     this.pending = new Map(); this.ackSeq = 0; this.holeT = 0; this.respawnT = 0;
   }
@@ -104,7 +104,7 @@ class Ghost extends Combatant {
     super(game, info.team === 'bravo' ? 'bravo' : 'alpha', safeName(info.name), false);
     this.netId = info.id; this.kind = info.kind; this.isBot = info.kind === 'bot'; this.isNet = info.kind !== 'bot';
     this.aimPitch = 0; this.walkPhase = Math.random() * 6; this.buf = []; this.speed = 0; this.weaponId = NET_WEAPONS[info.w] || 'm4a1';
-    this.model = game.app.soldiers.create(info.team, WEAPON_DEFS[this.weaponId].model || this.weaponId); game.scene.add(this.model.root);
+    this.model = game.app.soldiers.create(info.team, WEAPON_DEFS[this.weaponId].model || this.weaponId); this.model.root.scale.setScalar(game.def.traversal ? 1 : CFG.player.bodyScale); // (v66j SF2's 1.56 m soldier) game.scene.add(this.model.root);
     this.alive = false; this.model.root.visible = false; this.life = -1;
     if (info.team === game.player.team) this.tag = Bot.prototype._makeTag.call(this);
   }

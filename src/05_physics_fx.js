@@ -45,7 +45,7 @@ class StaticHashBroadphase extends CANNON.Broadphase {
 class PhysicsWorld {
   constructor(scene, audio) {
     this.scene = scene; this.audio = audio;
-    this.world = new CANNON.World({ gravity: new CANNON.Vec3(0, CFG.gravity, 0) });
+    this.world = new CANNON.World({ gravity: new CANNON.Vec3(0, CFG.physGravity, 0) });
     this.world.broadphase = new StaticHashBroadphase(); this.world.broadphase.world = this.world;
     // sparse pair matrix: the dense one is N² for ~1000 static boxes (cleared every step, reallocated on every add/remove)
     if (CANNON.ObjectCollisionMatrix) { this.world.collisionMatrix = new CANNON.ObjectCollisionMatrix(); this.world.collisionMatrixPrevious = new CANNON.ObjectCollisionMatrix(); }

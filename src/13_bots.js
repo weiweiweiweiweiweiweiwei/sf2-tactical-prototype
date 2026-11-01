@@ -44,7 +44,7 @@ class Bot extends Combatant {
     super(game, team, BOT_NAMES[team][idx % BOT_NAMES[team].length], false);
     this.airJumpUsed = false; // v57 traversal maps (double jump)
     this.idx = idx; this.isBot = true; this.aimPitch = 0; this.walkPhase = Math.random() * 6; this.stepDist = 0; this.spottedT = -10; this.stepPitch = rand(0.9, 1.12);
-    this.model = game.app.soldiers.create(team, WEAPON_DEFS[weaponId].model || weaponId);
+    this.model = game.app.soldiers.create(team, WEAPON_DEFS[weaponId].model || weaponId); this.model.root.scale.setScalar(game.def.traversal ? 1 : CFG.player.bodyScale); // (v66j SF2's 1.56 m soldier)
     game.scene.add(this.model.root);
     this.setWeapon(weaponId);
     if (team === game.player.team) this.tag = this._makeTag();
@@ -125,10 +125,10 @@ class Bot extends Combatant {
     const ai = this.ai, frozen = !this.game.canMove(), m = this.motor;
     if (m.grounded || m.climbing) this.airJumpUsed = false;
     if (!m.climbing) m.setCrouch(!frozen && ai.crouchT > 0);
-    m.step(h, frozen ? 0 : ai.wishX, frozen ? 0 : ai.wishZ, frozen ? 0 : ai.wishSpeed * (this.carrying ? 0.88 : 1));
+    m.step(h, frozen ? 0 : ai.wishX, frozen ? 0 : ai.wishZ, frozen ? 0 : ai.wishSpeed * (this.carrying ? 0.88 : 1) * (this.pace ? this.pace.speedK : 1)); // (v66j the Apex traversal maps: the old pace)
     if (!frozen && ai.wantJump) { m.requestJump(); ai.wantJump = false; }
     if (!frozen && ai.wantAirJump) { // v57 double jump, same impulse as the player's
-      if (this.game.apex && !this.airJumpUsed && !m.grounded && !m.climbing) { m.vel.y = CFG.player.jumpVel; this.airJumpUsed = true; } // (v65y Apex damage mode only)
+      if (this.game.apex && !this.airJumpUsed && !m.grounded && !m.climbing) { m.vel.y = m.jumpVel; this.airJumpUsed = true; } // (v65y Apex damage mode only)
       ai.wantAirJump = false;
     }
     if (m.climbing) { if (m.climbDist > 0.6) { m.climbDist = 0; this._step('ladder', 0.9); } return; }
@@ -636,7 +636,7 @@ class BotAI {
     let th = 0.62, den = 2 * Math.cos(th) ** 2 * (d * Math.tan(th) - h);
     if (den <= 0) { th = 0.95; den = 2 * Math.cos(th) ** 2 * (d * Math.tan(th) - h); }
     if (den <= 0) return;
-    const v = Math.min(22, Math.sqrt(-CFG.gravity * d * d / den));
+    const v = Math.min(22, Math.sqrt(-CFG.physGravity * d * d / den)); // (v66j the grenades' own world)
     const vel = new THREE.Vector3(dx / d * v * Math.cos(th), v * Math.sin(th), dz / d * v * Math.cos(th));
     bot.nades[type]--;
     g.throwGrenade(bot, WEAPON_DEFS[type], origin.addScaledVector(TMP_V1.set(dx / d, 0, dz / d), 0.4), vel);

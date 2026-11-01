@@ -12,9 +12,10 @@ class Combatant {
   constructor(game, team, name, isPlayer) {
     this.game = game; this.team = team; this.name = name; this.isPlayer = isPlayer;
     // v24: bots accelerate / brake at ~60 % of the player's rate — with the player's instant stops their A-D strafes and dodges looked like teleports
+    const L = game.def.traversal ? CFG.player.legacy : null; this.pace = L; // (v66j SF2's pawn; the Apex traversal maps the old one)
     this.motor = new CharacterMotor(game.collision, { radius: game.def.bodyRadius ?? CFG.player.radius, // (v65v def.bodyRadius: SF2's maps are built round its 0.25 m pawn — CollisionRadiusForPawn 25)
-       height: CFG.player.height, crouchHeight: CFG.player.crouchHeight, accelK: isPlayer ? 1 : 0.6, frictionK: isPlayer ? 1 : 0.6,
-      stepHeight: game.def.traversal ? APEX_STEP : undefined });
+       height: L ? L.height : CFG.player.height, crouchHeight: L ? L.crouchHeight : CFG.player.crouchHeight, accelK: isPlayer ? 1 : 0.6, frictionK: isPlayer ? 1 : 0.6,
+      stepHeight: game.def.traversal ? APEX_STEP : undefined, gravity: L ? L.gravity : undefined, jumpVel: L ? L.jumpVel : undefined, climbSpeed: L ? L.climbSpeed : undefined });
     this.alive = true; this.hp = 100; this.spawnProtect = 0; this.respawnT = 0; this.yaw = 0;
     this.helmet = true; this.shield = 0; this.maxShield = 0; this.evo = 0; this.hurtT = -99; // v58 damage models (Match.refit)
     this.kills = 0; this.deaths = 0; this.assists = 0; this.score = 0; this.headshots = 0;
@@ -23,25 +24,27 @@ class Combatant {
   }
   get enemyTeam() { return this.team === 'alpha' ? 'bravo' : 'alpha'; }
   forward(out) { return out.set(-Math.sin(this.yaw), 0, -Math.cos(this.yaw)); }
-  eyeHeight() { return this.motor.crouching ? CFG.player.crouchEye : CFG.player.eye; }
+  eyeHeight() { const P = this.pace || CFG.player; return this.motor.crouching ? P.crouchEye : P.eye; }
+  modelEye() { const k = this.pace ? 1 : CFG.player.bodyScale; return (this.motor.crouching ? 1.06 : 1.64) * k; } // v66j the soldier model's own eyes (the hitboxes; SF2's camera sits lower, at 1.23)
   eyePos(out) { return out.set(this.motor.pos.x, this.motor.pos.y + this.eyeHeight(), this.motor.pos.z); }
-  chestPos(out) { return out.set(this.motor.pos.x, this.motor.pos.y + (this.motor.crouching ? 0.8 : 1.25), this.motor.pos.z); }
+  chestPos(out) { const k = this.pace ? 1 : CFG.player.bodyScale; return out.set(this.motor.pos.x, this.motor.pos.y + (this.motor.crouching ? 0.8 : 1.25) * k, this.motor.pos.z); }
   onAttack() { this.spawnProtect = 0; this.lastAttackT = this.game.time; }
   resetStats() { this.kills = 0; this.deaths = 0; this.assists = 0; this.score = 0; this.headshots = 0; this.damageLog.clear(); }
 
   updateHitboxes() {
-    const p = this.motor.pos, H = this.motor.crouching ? CFG.player.crouchHeight / CFG.player.height : 1, eye = this.eyeHeight();
+    // v66j on the soldier model (bodyScale: SF2's 1.56 m soldier), not the camera's eye
+    const k = this.pace ? 1 : CFG.player.bodyScale, p = this.motor.pos, H = (this.motor.crouching ? 1.2 / 1.8 : 1) * k, eye = this.modelEye();
     const set = (hb, r, y0, y1, fwd = 0) => {
       const fx = -Math.sin(this.yaw) * fwd, fz = -Math.cos(this.yaw) * fwd;
       hb.min.set(p.x - r + Math.min(0, fx), p.y + y0, p.z - r + Math.min(0, fz)); hb.max.set(p.x + r + Math.max(0, fx), p.y + y1, p.z + r + Math.max(0, fz));
     };
     const [hd, ch, st, th, sh, ft] = this.hitboxes;
-    set(hd, 0.14, eye - 0.13, eye + 0.16);
-    set(ch, 0.26, 1.12 * H, eye - 0.13);
-    set(st, 0.24, 0.86 * H, 1.12 * H);
-    set(th, 0.21, 0.47 * H, 0.86 * H);
-    set(sh, 0.18, 0.11 * H, 0.47 * H);
-    set(ft, 0.17, 0, 0.11 * H, 0.1);
+    set(hd, 0.14 * k, eye - 0.13 * k, eye + 0.16 * k);
+    set(ch, 0.26 * k, 1.12 * H, eye - 0.13 * k);
+    set(st, 0.24 * k, 0.86 * H, 1.12 * H);
+    set(th, 0.21 * k, 0.47 * H, 0.86 * H);
+    set(sh, 0.18 * k, 0.11 * H, 0.47 * H);
+    set(ft, 0.17 * k, 0, 0.11 * H, 0.1 * k);
   }
 }
 
@@ -97,7 +100,7 @@ class Human extends Combatant {
     if (m.grounded || m.climbing) this.airJumpUsed = false;
     if (btn & BTN.JUMP) {
       if (g.apex && !m.grounded && !m.climbing && !this.airJumpUsed && this.mantleT <= 0) { // (v65y the double jump comes with the Apex damage mode, on any map — not with the Apex maps: user 10-30)
-        m.vel.y = CFG.player.jumpVel; m.jumpBufferT = 0; this.airJumpUsed = true;
+        m.vel.y = m.jumpVel; m.jumpBufferT = 0; this.airJumpUsed = true;
         this.slideT = 0;
       } else m.requestJump();
     }
@@ -136,8 +139,10 @@ class Human extends Combatant {
     this.sprinting = canSprint && m.grounded;
     m.edgeGuard = crouchKey && m.grounded; // v59 SF2: holding crouch (Ctrl / C) at a ledge keeps you on it; Shift only sprints
     const load = sf2Load(w, ws.weapons); // v64r SF2: the load in hand (and the other slot put away) sets the pace
-    let speed = (load != null ? sf2Speed(load) : w.moveSpeed) * (this.carrying ? 0.88 : 1);
-    if (m.crouching) speed *= P.crouchMult; else if (this.sprinting || (canSprint && this.sprintAir)) speed *= P.sprintMult;
+    const Q = this.pace; // (v66j the Apex traversal maps: the old pace)
+    let speed = (load != null ? sf2Speed(load) : w.moveSpeed) * (this.carrying ? 0.88 : 1) * (Q ? Q.speedK : 1);
+    if (m.crouching) speed *= Q ? Q.crouchMult : P.crouchMult; else if (this.sprinting || (canSprint && this.sprintAir)) speed *= Q ? Q.sprintMult : P.sprintMult;
+    if (!Q && (f || r)) speed *= f > 0 ? 1 : f < 0 ? (r ? P.dirPct[3] : P.dirPct[1]) : P.dirPct[2]; // v66j SF2's SpeedDirPct: back 0.6, sideways 0.8, back-diagonal 0.7
     if (ws.ads) speed *= w.adsMove ?? 1;
     if (w.reloading) speed *= RELOAD_MOVE; // v34: reloading = slower walk, no sprint
     m.step(h, wx, wz, len > 0 ? speed : 0);
@@ -150,7 +155,7 @@ class Human extends Combatant {
     } else if (!m.grounded) this.stepDist = 1.4;
     if (m.landSpeed > 3.5) { this._sfx('land', m.surface, m.landSpeed / 9); this.punchV += Math.min(m.landSpeed, 14) * -0.012; g.emitNoise(m.pos, 14, this.team); }
     // v34 fall damage (Source / UE-style, fixed HP): drop height h = v² / 2g; safe up to FALL_SAFE m, lethal at FALL_LETHAL m — none in Apex mode (v60; falling out of the map still kills)
-    if (m.landSpeed > 11 && this.alive && !g.apex) { const hgt = m.landSpeed * m.landSpeed / (-2 * CFG.gravity), dmg = Math.round((hgt - FALL_SAFE) / (FALL_LETHAL - FALL_SAFE) * 100);
+    if (m.landSpeed > Math.sqrt(-2 * m.gravity * FALL_SAFE) && this.alive && !g.apex) { const hgt = m.landSpeed * m.landSpeed / (-2 * m.gravity), dmg = Math.round((hgt - FALL_SAFE) / (FALL_LETHAL - FALL_SAFE) * 100); // (v66j by the drop's height, whatever the gravity)
       if (dmg > 0) { g.applyDamage(this, dmg, 'legs', this, WEAPON_DEFS.fall, null, null, { fall: true }); if (this.isPlayer) g.audio.land(null, m.surface, 1.4); } }
   }
 }

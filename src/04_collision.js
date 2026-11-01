@@ -486,6 +486,7 @@ class CharacterMotor {
     this.stepHeight = o.stepHeight ?? CFG.player.stepHeight; // v59: 0.8 m on the Apex maps, whose terrain collision is 1 m columns
     this.climbInput = 0; this.ladder = null; this.ladderCd = 0; this.climbing = false; this.climbDist = 0;
     this.onTerrain = false; this.sliding = false;
+    this.gravity = o.gravity ?? CFG.gravity; this.jumpVel = o.jumpVel ?? CFG.player.jumpVel; this.climbSpeed = o.climbSpeed ?? CFG.player.climbSpeed; // (v66j the Apex traversal maps keep the old ones)
     this.accelK = o.accelK ?? 1; this.frictionK = o.frictionK ?? 1; // v24: bots get momentum (players keep the snappy Quake-style values)
     this._c = [];
   }
@@ -511,7 +512,7 @@ class CharacterMotor {
     const P = CFG.player, l = this.ladder, ci = this.climbInput, top = this.pos.y >= l.top - 0.03;
     const tx = -l.nz, tz = l.nx, strafe = (wishX * tx + wishZ * tz) * (Math.abs(ci) > 0 ? 0.6 : 1);
     this.vel.x = tx * strafe * 1.6 - l.nx * (ci > 0 ? 1.4 : 0.35); this.vel.z = tz * strafe * 1.6 - l.nz * (ci > 0 ? 1.4 : 0.35);
-    this.vel.y = ci * P.climbSpeed;
+    this.vel.y = ci * this.climbSpeed;
     if (top && ci > 0) { // (v66g at the top, a floor to stand on within 0.6 m — the furthest behind first, the mount's way, then where the body is, then in front:
       // Cannon's watchtower ladders come up through a hatch into a cabin 1.87 m high, too low for the mount's lift)
       const w = this.world, p = this.pos;
@@ -543,7 +544,7 @@ class CharacterMotor {
     const v = this.vel, sp = Math.hypot(v.x, v.z);
     if (sp < 0.02) { v.x = 0; v.z = 0; return; }
     const P = CFG.player, fr = (hasInput ? P.friction : P.brakeFriction) * this.frictionK;
-    const drop = Math.max(sp, P.stopSpeed) * fr * dt, ns = Math.max(sp - drop, 0) / sp;
+    const drop = (hasInput ? sp : Math.max(sp, P.stopSpeed)) * fr * dt, ns = Math.max(sp - drop, 0) / sp; // (v66j the stop-speed floor only when braking: SF2's crouch walk, 1 m/s, sat under it and stalled at 0.24)
     v.x *= ns; v.z *= ns;
   }
 
@@ -575,7 +576,7 @@ class CharacterMotor {
     if (this.jumpBufferT > 0) this.jumpBufferT -= dt;
     if (this.grounded) {
       if (this.jumpBufferT > 0) {
-        this.jumpBufferT = 0; this.vel.y = P.jumpVel; this.grounded = false; this.jumped = true;
+        this.jumpBufferT = 0; this.vel.y = this.jumpVel; this.grounded = false; this.jumped = true;
         const hs = this.horizontalSpeed(), cap = Math.max(wishSpeed, 1) * 1.2;
         if (hs > cap) { this.vel.x *= cap / hs; this.vel.z *= cap / hs; }
         this._accelerate(wishX, wishZ, wishSpeed, P.airAccel, dt, P.airCap);
@@ -587,7 +588,7 @@ class CharacterMotor {
 
     this._unwedgeRamps(); this._unwedgeTris();
     const wasGrounded = this.grounded;
-    if (!this.grounded) this.vel.y += CFG.gravity * dt; else this.vel.y = Math.min(this.vel.y, 0);
+    if (!this.grounded) this.vel.y += this.gravity * dt; else this.vel.y = Math.min(this.vel.y, 0);
     const fallSpeed = -this.vel.y;
     const guard = this.edgeGuard && wasGrounded && !this.jumped;
     this._moveAxis('x', this.vel.x * dt, guard);

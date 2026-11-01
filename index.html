@@ -1008,18 +1008,28 @@ import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 import { SMAAPass } from "three/addons/postprocessing/SMAAPass.js";
 import { Pass, FullScreenQuad } from "three/addons/postprocessing/Pass.js";
 var CFG = {
-  gravity: -20,
+  // v66j SF2's own pawn and world (user 11-01: 照原版 — SFGame.upk Default__SFPawn, Engine Default__WorldInfo; 1 UU = 1 cm as the maps):
+  // gravity DefaultGravityZ −970; cylinder half-height 68 / radius 32 (1.36 m tall), crouched half-height 45.5; the eye BaseEyeHeight 55
+  // over the cylinder's centre (1.23 m, crouched 1.005); JumpZ 500 (a 1.29 m rise); MaxSpeed 390 (by the load, tools/sf2_weight_table.py),
+  // SprintingPct 1.45, CrouchedPct 0.3, LadderSpeed 200 (Engine Pawn), SpeedDirPct front / back / side / diagonal 1 / 0.6 / 0.8 / 0.7.
+  // The soldier's model (c_deltaforce_skelet delm_body_s01 + helmet) stands 1.56 m — the hitboxes and the third-person soldier scale to it
+  // (bodyScale against the old 1.8 m). The Apex traversal maps keep the old pace (legacy: their jumps were laid out for it).
+  gravity: -9.7,
+  physGravity: -20,
+  // (v66j physGravity: grenades and debris keep the throw arcs they were tuned on)
   fixedStep: 1 / 60,
   // v63g the whole simulation (Match.tick) — was 1/120 for movement, weapons and physics only
   player: {
-    radius: 0.34,
-    height: 1.8,
-    crouchHeight: 1.2,
-    eye: 1.64,
-    crouchEye: 1.06,
+    radius: 0.32,
+    height: 1.36,
+    crouchHeight: 0.91,
+    eye: 1.23,
+    crouchEye: 1.005,
+    bodyScale: 1.56 / 1.8,
+    dirPct: [1, 0.6, 0.8, 0.7],
     stepHeight: 0.45,
     airStep: 0.36,
-    jumpVel: 7,
+    jumpVel: 5,
     jumpBuffer: 0.12,
     groundAccel: 14,
     airAccel: 10,
@@ -1027,15 +1037,17 @@ var CFG = {
     friction: 8,
     brakeFriction: 18,
     stopSpeed: 3.2,
-    sprintMult: 1.3,
-    crouchMult: 0.36,
+    sprintMult: 1.45,
+    crouchMult: 0.3,
     hp: 100,
-    climbSpeed: 3.4,
-    baseSpeed: 5.9,
-    sf2Speed: 6.43
-    // v64r sf2Speed: SF2's MaxSpeed 390 UU/s in m/s — the M4A1 alone (load 4.1 → 340.1) walks the old 5.9 × 0.95
+    climbSpeed: 2,
+    baseSpeed: 3.58,
+    sf2Speed: 3.9,
+    legacy: { gravity: -20, jumpVel: 7, speedK: 6.43 / 3.9, sprintMult: 1.3, crouchMult: 0.36, climbSpeed: 3.4, height: 1.8, crouchHeight: 1.2, eye: 1.64, crouchEye: 1.06 }
+    // (v66j the Apex traversal maps) // v64r sf2Speed: SF2's MaxSpeed 390 UU/s in m/s — the M4A1 alone (load 4.1 → 340.1) walks the old 5.9 × 0.95
   },
-  bot: { eye: 1.6, runSpeed: 4.9, patrolSpeed: 3.3 },
+  bot: { eye: 1.23, runSpeed: 3, patrolSpeed: 2 },
+  // (v66j SF2's pace: 4.9 / 3.3 × 3.9 / 6.43)
   spawnProtect: 3.5,
   respawn: 3,
   assistWindow: 10
@@ -9289,6 +9301,9 @@ var CharacterMotor = class {
     this.climbDist = 0;
     this.onTerrain = false;
     this.sliding = false;
+    this.gravity = o.gravity ?? CFG.gravity;
+    this.jumpVel = o.jumpVel ?? CFG.player.jumpVel;
+    this.climbSpeed = o.climbSpeed ?? CFG.player.climbSpeed;
     this.accelK = o.accelK ?? 1;
     this.frictionK = o.frictionK ?? 1;
     this._c = [];
@@ -9325,7 +9340,7 @@ var CharacterMotor = class {
     const tx = -l.nz, tz = l.nx, strafe = (wishX * tx + wishZ * tz) * (Math.abs(ci) > 0 ? 0.6 : 1);
     this.vel.x = tx * strafe * 1.6 - l.nx * (ci > 0 ? 1.4 : 0.35);
     this.vel.z = tz * strafe * 1.6 - l.nz * (ci > 0 ? 1.4 : 0.35);
-    this.vel.y = ci * P.climbSpeed;
+    this.vel.y = ci * this.climbSpeed;
     if (top && ci > 0) {
       const w = this.world, p = this.pos;
       for (const d of [-0.6, -0.4, -0.2, 0, 0.2, 0.4, 0.6]) {
@@ -9396,7 +9411,7 @@ var CharacterMotor = class {
       return;
     }
     const P = CFG.player, fr = (hasInput ? P.friction : P.brakeFriction) * this.frictionK;
-    const drop = Math.max(sp, P.stopSpeed) * fr * dt, ns = Math.max(sp - drop, 0) / sp;
+    const drop = (hasInput ? sp : Math.max(sp, P.stopSpeed)) * fr * dt, ns = Math.max(sp - drop, 0) / sp;
     v.x *= ns;
     v.z *= ns;
   }
@@ -9440,7 +9455,7 @@ var CharacterMotor = class {
     if (this.grounded) {
       if (this.jumpBufferT > 0) {
         this.jumpBufferT = 0;
-        this.vel.y = P.jumpVel;
+        this.vel.y = this.jumpVel;
         this.grounded = false;
         this.jumped = true;
         const hs = this.horizontalSpeed(), cap = Math.max(wishSpeed, 1) * 1.2;
@@ -9457,7 +9472,7 @@ var CharacterMotor = class {
     this._unwedgeRamps();
     this._unwedgeTris();
     const wasGrounded = this.grounded;
-    if (!this.grounded) this.vel.y += CFG.gravity * dt;
+    if (!this.grounded) this.vel.y += this.gravity * dt;
     else this.vel.y = Math.min(this.vel.y, 0);
     const fallSpeed = -this.vel.y;
     const guard = this.edgeGuard && wasGrounded && !this.jumped;
@@ -9772,7 +9787,7 @@ var PhysicsWorld = class {
   constructor(scene, audio) {
     this.scene = scene;
     this.audio = audio;
-    this.world = new CANNON.World({ gravity: new CANNON.Vec3(0, CFG.gravity, 0) });
+    this.world = new CANNON.World({ gravity: new CANNON.Vec3(0, CFG.physGravity, 0) });
     this.world.broadphase = new StaticHashBroadphase();
     this.world.broadphase.world = this.world;
     if (CANNON.ObjectCollisionMatrix) {
@@ -22385,14 +22400,19 @@ var Combatant = class {
     this.team = team;
     this.name = name;
     this.isPlayer = isPlayer;
+    const L = game.def.traversal ? CFG.player.legacy : null;
+    this.pace = L;
     this.motor = new CharacterMotor(game.collision, {
       radius: game.def.bodyRadius ?? CFG.player.radius,
       // (v65v def.bodyRadius: SF2's maps are built round its 0.25 m pawn — CollisionRadiusForPawn 25)
-      height: CFG.player.height,
-      crouchHeight: CFG.player.crouchHeight,
+      height: L ? L.height : CFG.player.height,
+      crouchHeight: L ? L.crouchHeight : CFG.player.crouchHeight,
       accelK: isPlayer ? 1 : 0.6,
       frictionK: isPlayer ? 1 : 0.6,
-      stepHeight: game.def.traversal ? APEX_STEP : void 0
+      stepHeight: game.def.traversal ? APEX_STEP : void 0,
+      gravity: L ? L.gravity : void 0,
+      jumpVel: L ? L.jumpVel : void 0,
+      climbSpeed: L ? L.climbSpeed : void 0
     });
     this.alive = true;
     this.hp = 100;
@@ -22422,13 +22442,20 @@ var Combatant = class {
     return out.set(-Math.sin(this.yaw), 0, -Math.cos(this.yaw));
   }
   eyeHeight() {
-    return this.motor.crouching ? CFG.player.crouchEye : CFG.player.eye;
+    const P = this.pace || CFG.player;
+    return this.motor.crouching ? P.crouchEye : P.eye;
   }
+  modelEye() {
+    const k = this.pace ? 1 : CFG.player.bodyScale;
+    return (this.motor.crouching ? 1.06 : 1.64) * k;
+  }
+  // v66j the soldier model's own eyes (the hitboxes; SF2's camera sits lower, at 1.23)
   eyePos(out) {
     return out.set(this.motor.pos.x, this.motor.pos.y + this.eyeHeight(), this.motor.pos.z);
   }
   chestPos(out) {
-    return out.set(this.motor.pos.x, this.motor.pos.y + (this.motor.crouching ? 0.8 : 1.25), this.motor.pos.z);
+    const k = this.pace ? 1 : CFG.player.bodyScale;
+    return out.set(this.motor.pos.x, this.motor.pos.y + (this.motor.crouching ? 0.8 : 1.25) * k, this.motor.pos.z);
   }
   onAttack() {
     this.spawnProtect = 0;
@@ -22443,19 +22470,19 @@ var Combatant = class {
     this.damageLog.clear();
   }
   updateHitboxes() {
-    const p = this.motor.pos, H = this.motor.crouching ? CFG.player.crouchHeight / CFG.player.height : 1, eye = this.eyeHeight();
+    const k = this.pace ? 1 : CFG.player.bodyScale, p = this.motor.pos, H = (this.motor.crouching ? 1.2 / 1.8 : 1) * k, eye = this.modelEye();
     const set = /* @__PURE__ */ __name((hb, r, y0, y1, fwd = 0) => {
       const fx = -Math.sin(this.yaw) * fwd, fz = -Math.cos(this.yaw) * fwd;
       hb.min.set(p.x - r + Math.min(0, fx), p.y + y0, p.z - r + Math.min(0, fz));
       hb.max.set(p.x + r + Math.max(0, fx), p.y + y1, p.z + r + Math.max(0, fz));
     }, "set");
     const [hd, ch, st, th, sh, ft] = this.hitboxes;
-    set(hd, 0.14, eye - 0.13, eye + 0.16);
-    set(ch, 0.26, 1.12 * H, eye - 0.13);
-    set(st, 0.24, 0.86 * H, 1.12 * H);
-    set(th, 0.21, 0.47 * H, 0.86 * H);
-    set(sh, 0.18, 0.11 * H, 0.47 * H);
-    set(ft, 0.17, 0, 0.11 * H, 0.1);
+    set(hd, 0.14 * k, eye - 0.13 * k, eye + 0.16 * k);
+    set(ch, 0.26 * k, 1.12 * H, eye - 0.13 * k);
+    set(st, 0.24 * k, 0.86 * H, 1.12 * H);
+    set(th, 0.21 * k, 0.47 * H, 0.86 * H);
+    set(sh, 0.18 * k, 0.11 * H, 0.47 * H);
+    set(ft, 0.17 * k, 0, 0.11 * H, 0.1 * k);
   }
 };
 var Human = class extends Combatant {
@@ -22539,7 +22566,7 @@ var Human = class extends Combatant {
     if (m.grounded || m.climbing) this.airJumpUsed = false;
     if (btn & BTN.JUMP) {
       if (g.apex && !m.grounded && !m.climbing && !this.airJumpUsed && this.mantleT <= 0) {
-        m.vel.y = CFG.player.jumpVel;
+        m.vel.y = m.jumpVel;
         m.jumpBufferT = 0;
         this.airJumpUsed = true;
         this.slideT = 0;
@@ -22600,9 +22627,11 @@ var Human = class extends Combatant {
     this.sprinting = canSprint && m.grounded;
     m.edgeGuard = crouchKey && m.grounded;
     const load = sf2Load(w, ws.weapons);
-    let speed = (load != null ? sf2Speed(load) : w.moveSpeed) * (this.carrying ? 0.88 : 1);
-    if (m.crouching) speed *= P.crouchMult;
-    else if (this.sprinting || canSprint && this.sprintAir) speed *= P.sprintMult;
+    const Q = this.pace;
+    let speed = (load != null ? sf2Speed(load) : w.moveSpeed) * (this.carrying ? 0.88 : 1) * (Q ? Q.speedK : 1);
+    if (m.crouching) speed *= Q ? Q.crouchMult : P.crouchMult;
+    else if (this.sprinting || canSprint && this.sprintAir) speed *= Q ? Q.sprintMult : P.sprintMult;
+    if (!Q && (f || r)) speed *= f > 0 ? 1 : f < 0 ? r ? P.dirPct[3] : P.dirPct[1] : P.dirPct[2];
     if (ws.ads) speed *= w.adsMove ?? 1;
     if (w.reloading) speed *= RELOAD_MOVE;
     m.step(h, wx, wz, len > 0 ? speed : 0);
@@ -22628,8 +22657,8 @@ var Human = class extends Combatant {
       this.punchV += Math.min(m.landSpeed, 14) * -0.012;
       g.emitNoise(m.pos, 14, this.team);
     }
-    if (m.landSpeed > 11 && this.alive && !g.apex) {
-      const hgt = m.landSpeed * m.landSpeed / (-2 * CFG.gravity), dmg = Math.round((hgt - FALL_SAFE) / (FALL_LETHAL - FALL_SAFE) * 100);
+    if (m.landSpeed > Math.sqrt(-2 * m.gravity * FALL_SAFE) && this.alive && !g.apex) {
+      const hgt = m.landSpeed * m.landSpeed / (-2 * m.gravity), dmg = Math.round((hgt - FALL_SAFE) / (FALL_LETHAL - FALL_SAFE) * 100);
       if (dmg > 0) {
         g.applyDamage(this, dmg, "legs", this, WEAPON_DEFS.fall, null, null, { fall: true });
         if (this.isPlayer) g.audio.land(null, m.surface, 1.4);
@@ -22888,6 +22917,7 @@ var Bot = class extends Combatant {
     this.spottedT = -10;
     this.stepPitch = rand(0.9, 1.12);
     this.model = game.app.soldiers.create(team, WEAPON_DEFS[weaponId].model || weaponId);
+    this.model.root.scale.setScalar(game.def.traversal ? 1 : CFG.player.bodyScale);
     game.scene.add(this.model.root);
     this.setWeapon(weaponId);
     if (team === game.player.team) this.tag = this._makeTag();
@@ -23037,14 +23067,14 @@ var Bot = class extends Combatant {
     const ai = this.ai, frozen = !this.game.canMove(), m = this.motor;
     if (m.grounded || m.climbing) this.airJumpUsed = false;
     if (!m.climbing) m.setCrouch(!frozen && ai.crouchT > 0);
-    m.step(h, frozen ? 0 : ai.wishX, frozen ? 0 : ai.wishZ, frozen ? 0 : ai.wishSpeed * (this.carrying ? 0.88 : 1));
+    m.step(h, frozen ? 0 : ai.wishX, frozen ? 0 : ai.wishZ, frozen ? 0 : ai.wishSpeed * (this.carrying ? 0.88 : 1) * (this.pace ? this.pace.speedK : 1));
     if (!frozen && ai.wantJump) {
       m.requestJump();
       ai.wantJump = false;
     }
     if (!frozen && ai.wantAirJump) {
       if (this.game.apex && !this.airJumpUsed && !m.grounded && !m.climbing) {
-        m.vel.y = CFG.player.jumpVel;
+        m.vel.y = m.jumpVel;
         this.airJumpUsed = true;
       }
       ai.wantAirJump = false;
@@ -23896,7 +23926,7 @@ var BotAI = class {
       den = 2 * Math.cos(th) ** 2 * (d * Math.tan(th) - h);
     }
     if (den <= 0) return;
-    const v = Math.min(22, Math.sqrt(-CFG.gravity * d * d / den));
+    const v = Math.min(22, Math.sqrt(-CFG.physGravity * d * d / den));
     const vel = new THREE.Vector3(dx / d * v * Math.cos(th), v * Math.sin(th), dz / d * v * Math.cos(th));
     bot.nades[type]--;
     g.throwGrenade(bot, WEAPON_DEFS[type], origin.addScaledVector(TMP_V1.set(dx / d, 0, dz / d), 0.4), vel);
@@ -24037,8 +24067,7 @@ var NetPlayer = class _NetPlayer extends Human {
     this.arsenal.remote = true;
     this.arsenal.init(loadoutDefs(game.mode, this.loadout));
     this.model = game.app.soldiers.create(team, this.def.model || this.def.id);
-    game.scene.add(this.model.root);
-    this.modelGun = this.def.id;
+    this.model.root.scale.setScalar(game.def.traversal ? 1 : CFG.player.bodyScale);
     if (team === game.player.team) this.tag = Bot.prototype._makeTag.call(this);
     this.pending = /* @__PURE__ */ new Map();
     this.ackSeq = 0;
@@ -24197,7 +24226,7 @@ var Ghost = class extends Combatant {
     this.speed = 0;
     this.weaponId = NET_WEAPONS[info.w] || "m4a1";
     this.model = game.app.soldiers.create(info.team, WEAPON_DEFS[this.weaponId].model || this.weaponId);
-    game.scene.add(this.model.root);
+    this.model.root.scale.setScalar(game.def.traversal ? 1 : CFG.player.bodyScale);
     this.alive = false;
     this.model.root.visible = false;
     this.life = -1;
@@ -26689,6 +26718,7 @@ var Match = class _Match {
     this.spawnLOS = this.checkSpawnLOS();
     window.__debug = Object.assign(window.__debug || {}, { map: def.id, spawnLOS: this.spawnLOS.visible > 0, spawnLOSPairs: this.spawnLOS });
     this.playerModel = app.soldiers.create(this.player.team, "m4");
+    this.playerModel.root.scale.setScalar(this.def.traversal ? 1 : CFG.player.bodyScale);
     this.playerModel.root.visible = false;
     this.scene.add(this.playerModel.root);
     this.rules.init();
@@ -26835,7 +26865,7 @@ var Match = class _Match {
     const pts = [];
     for (let x = z.x0 + 0.6; x <= z.x1 - 0.6; x += 1.15) for (let zz = z.z0 + 0.6; zz <= z.z1 - 0.6; zz += 1.15) {
       const base = this.collision.terrain ? this.collision.terrain.heightAt(x, zz) : 0, g = this.collision.groundBelow(x, base + 1.5, zz, 0.3, 3, 0);
-      if (g && g.y < base + 0.5 && !g.steep && this.collision.fits(x, g.y + 0.05, zz, 0.42, 1.8)) {
+      if (g && g.y < base + 0.5 && !g.steep && this.collision.fits(x, g.y + 0.05, zz, 0.42, CFG.player.height)) {
         const p = new THREE.Vector3(x, g.y, zz);
         p.spawnYaw = z.yaw;
         pts.push(p);
@@ -26852,7 +26882,7 @@ var Match = class _Match {
     const z = this.builder.zones[team], pts = [];
     for (let x = z.x0 + 0.6; x <= z.x1 - 0.6; x += 1.15) for (let zz = z.z0 + 0.6; zz <= z.z1 - 0.6; zz += 1.15) {
       const base = this.collision.terrain ? this.collision.terrain.heightAt(x, zz) : 0, g = this.collision.groundBelow(x, base + 1.5, zz, 0.3, 3, 0);
-      if (g && g.y < base + 0.5 && !g.steep && this.collision.fits(x, g.y + 0.05, zz, 0.42, 1.8)) pts.push(new THREE.Vector3(x, g.y, zz));
+      if (g && g.y < base + 0.5 && !g.steep && this.collision.fits(x, g.y + 0.05, zz, 0.42, CFG.player.height)) pts.push(new THREE.Vector3(x, g.y, zz));
     }
     for (let i = pts.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
@@ -26867,8 +26897,8 @@ var Match = class _Match {
     if (!A.length || !B.length || A.length * B.length > 4e4) return;
     const a = new THREE.Vector3(), b = new THREE.Vector3(), seeA = /* @__PURE__ */ new Set(), seeB = /* @__PURE__ */ new Set();
     for (const p of A) for (const q of B) {
-      a.set(p.x, p.y + 1.6, p.z);
-      b.set(q.x, q.y + 1.6, q.z);
+      a.set(p.x, p.y + CFG.player.eye, p.z);
+      b.set(q.x, q.y + CFG.player.eye, q.z);
       if (this.collision.segmentClear(a, b)) {
         seeA.add(p);
         seeB.add(q);
@@ -26885,8 +26915,8 @@ var Match = class _Match {
     const a = new THREE.Vector3(), b = new THREE.Vector3();
     let visible = 0, minDist = Infinity;
     for (const p of A) for (const q of B) {
-      a.set(p.x, p.y + 1.6, p.z);
-      b.set(q.x, q.y + 1.6, q.z);
+      a.set(p.x, p.y + CFG.player.eye, p.z);
+      b.set(q.x, q.y + CFG.player.eye, q.z);
       minDist = Math.min(minDist, a.distanceTo(b));
       if (this.collision.segmentClear(a, b)) visible++;
     }
@@ -26914,7 +26944,7 @@ var Match = class _Match {
           safe = false;
           break;
         }
-        if (de < 110 && this.collision.segmentClear(e.eyePos(eye), tgt.set(f.c.x, f.c.y + 1.6, f.c.z))) {
+        if (de < 110 && this.collision.segmentClear(e.eyePos(eye), tgt.set(f.c.x, f.c.y + CFG.player.eye, f.c.z))) {
           safe = false;
           break;
         }
@@ -27298,7 +27328,7 @@ var Match = class _Match {
       M.torso.position.y = hy;
       M.torso.rotation.set(0, 0, 0);
     });
-    const o = K.ki * 7, kx = lerp(a.f[o], b.f[o], k), ky = lerp(a.f[o + 1], b.f[o + 1], k) + (b.f[o + 5] ? 1.06 : 1.64), kz = lerp(a.f[o + 2], b.f[o + 2], k);
+    const o = K.ki * 7, kx = lerp(a.f[o], b.f[o], k), ky = lerp(a.f[o + 1], b.f[o + 1], k) + (b.f[o + 5] ? CFG.player.crouchEye : CFG.player.eye), kz = lerp(a.f[o + 2], b.f[o + 2], k);
     const yaw = a.f[o + 3] + wrapAngle(b.f[o + 3] - a.f[o + 3]) * k, pit = lerp(a.f[o + 4], b.f[o + 4], k), cp = Math.cos(pit);
     const fx = -Math.sin(yaw) * cp, fy = Math.sin(pit), fz = -Math.cos(yaw) * cp, rx = Math.cos(yaw), rz = -Math.sin(yaw);
     cam.position.set(kx - fx * 1.8 + rx * 0.72, ky - fy * 1.8 + 0.32, kz - fz * 1.8 + rz * 0.72);
