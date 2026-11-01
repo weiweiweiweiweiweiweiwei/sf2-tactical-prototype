@@ -1891,3 +1891,12 @@
 - 雷神烤漆（`src/09c_sf2rig.js` 的 `SF2Camo`，貼圖 `tools/camo_sf2.py` → `assets/camo_sf2.js`）：SF2 材質是 `electricity_gold_d` 取樣兩次（UV ×2.1、EffectIntensity 2），平移速度在客戶端被烘掉了，照眼睛調：兩層電光錯開流動、會閃爍，槍身原色保留、只有電光發亮。沒有擊殺特效（這個迷彩沒有 `ActionCamoKillTime`）。
 - 槍聲：`tools/sfx_sf2.mjs` 新增 `--append`（其他槍的匯出檔已不在磁碟上，整包重建會把它們弄丟），把 P90 的 SF2 槍聲和兩把消音槍的別名接在 `assets/sfx_sf2.js` 後面。
 - 驗證：`tools/out/_rigshot.mjs` 四把的腰射／開鏡截圖（瞄具在槍上方、紅點在畫面中央、ACOG 開鏡是鏡筒內視野）、`node tools/esm/analyze.mjs` MODULES_OK、`node tools/check.mjs` CHECK_OK。
+
+### v66i（本機，2026-11-01）：另外三把扭蛋槍也上原版烤漆
+- 使用者 11-01 選 1B（加上烤漆）、2B（雷神和 ACOG 維持現狀）。
+- 炙炎 FAMAS：FissureFX（`ai_camo_fissure`）——槍身壓暗、`camo_ai_bluefissure` 的紅色裂紋（名字是藍、圖是紅），裂紋的光隨 `effect_mask2` 流動忽明忽暗。
+- 鬼靈精 P90：SilentNight（貼圖迷彩 `christmas_silentnight`），聖誕圖案蓋滿槍身，明暗保留原槍貼圖的層次。
+- 黃金 MG4：GOLD（`weapon_gold_m`，沒有貼圖）——金色、偏金屬、較光滑。
+- 三種都是整把上色：SF2 用每把槍的遮罩決定哪些零件保留原色（握把、腳架等），這裡沒讀遮罩（和魔術迴路一樣）。
+- 貼圖：`tools/camo_sf2.py` → `assets/camo_sf2.js`（變成約 1 MB）；著色器 `src/09c_sf2rig.js` 的 `SF2_CAMO_GLSL`。
+- 驗證：三把腰射截圖、MODULES_OK、CHECK_OK。

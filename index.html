@@ -4355,10 +4355,10 @@ var WEAPON_DATABASE = {
   }
 };
 for (const [id, base, o] of [
-  ["famas_blaze", "famas", { name: "炙炎 FAMAS", suppressed: true, tracerEvery: 0, adsFov: 40, desc: "SF2 扭蛋槍 FAMAS ACOG 消音（炙炎）：ACOG 放大瞄具 + 消音器，槍聲小、不上敵方雷達。" }],
-  ["p90_grinch", "p90", { name: "鬼靈精 P90", suppressed: true, tracerEvery: 0, adsType: "3d_sight", desc: "SF2 扭蛋槍 P90 OpenDot 消音（鬼靈精）：開放式內紅點 + 消音器，50 發。" }],
+  ["famas_blaze", "famas", { name: "炙炎 FAMAS", camo: "fissure", suppressed: true, tracerEvery: 0, adsFov: 40, desc: "SF2 扭蛋槍 FAMAS ACOG 消音（炙炎）：ACOG 放大瞄具 + 消音器，槍聲小、不上敵方雷達。" }],
+  ["p90_grinch", "p90", { name: "鬼靈精 P90", camo: "silentnight", suppressed: true, tracerEvery: 0, adsType: "3d_sight", desc: "SF2 扭蛋槍 P90 OpenDot 消音（鬼靈精）：開放式內紅點 + 消音器，50 發。" }],
   ["m4a1_thor", "m4a1", { name: "雷神 M4A1", camo: "lightning_gold", model: void 0, desc: "SF2 扭蛋槍 M4A1 EOTech（雷神）：全息瞄具，金色電光在槍身流竄閃爍。" }],
-  ["mg4_gold", "mg4", { name: "黃金 MG4", adsType: "3d_sight", desc: "SF2 扭蛋槍 MG4 OpenDot（黃金）：開放式內紅點，100 發。" }]
+  ["mg4_gold", "mg4", { name: "黃金 MG4", camo: "gold", adsType: "3d_sight", desc: "SF2 扭蛋槍 MG4 OpenDot（黃金）：開放式內紅點，100 發。" }]
 ]) WEAPON_DATABASE[id] = Object.assign({}, WEAPON_DATABASE[base], o);
 var TYPE_TUNING = {
   // spread growth / movement penalties per weapon family
@@ -18261,7 +18261,28 @@ var SF2_CAMO_GLSL = {
     float ea = smoothstep(0.42, 0.8, dot(la, vec3(0.5, 0.45, 0.05))), eb = smoothstep(0.42, 0.8, dot(lb, vec3(0.5, 0.45, 0.05))); // the bolts only, not the dark-gold haze between them
     diffuseColor.rgb = diffuseColor.rgb * 0.8 + la * ea * 0.2;`, `
     float flick = 0.65 + 0.35 * sin(uTime * 19.0) * sin(uTime * 6.3 + 1.7); // a crackle
-    totalEmissiveRadiance += vec3(1.0, 0.62, 0.1) * (ea * 0.9 + eb * ea * 1.4 + eb * 0.35) * flick * 2.0 * 0.75 + la * la * 0.35 * flick; // EffectIntensity 2; the haze round the bolts`]
+    totalEmissiveRadiance += vec3(1.0, 0.62, 0.1) * (ea * 0.9 + eb * ea * 1.4 + eb * 0.35) * flick * 2.0 * 0.75 + la * la * 0.35 * flick; // EffectIntensity 2; the haze round the bolts`],
+  // v66h (user 11-01 B) the other gacha guns' camos, from their SF2 materials (tools/camo_sf2.py); the guns' camo masks (which parts keep
+  // their own finish) are not read: the whole gun takes them, as CircuitFX. A third chunk, when there is one, goes after the
+  // metalness map (the surface's roughness / metalness).
+  // FissureFX (炙炎 FAMAS) — ai_camo_fissure: the red cracks of camo_ai_bluefissure on a darkened gun, their glow swelling under the
+  // panned mask effect_mask2 (EffectIntensity 50 against SF2's own exposure: by eye here)
+  fissure: [`
+    vec2 cu = vMapUv * 1.5;
+    vec3 fc = texture2D(uCamoTex, cu).rgb;
+    float fm = texture2D(uCamoFx, cu * 0.6 + vec2(uTime * 0.06, -uTime * 0.04)).r;
+    diffuseColor.rgb = diffuseColor.rgb * 0.22 + fc * 0.6;`, `
+    totalEmissiveRadiance += fc * fc * vec3(2.4, 1.0, 0.5) * (0.35 + 1.6 * fm);`],
+  // SilentNight (鬼靈精 P90) — a texture camo (ECAMOT_TEXTURE weapon_camo.christmas_silentnight): the print over the gun, its own shading
+  // kept from the gun sheet's brightness
+  silentnight: [`
+    vec3 sc = texture2D(uCamoTex, vMapUv * 1.5).rgb;
+    diffuseColor.rgb = sc * clamp(0.45 + 1.6 * dot(diffuseColor.rgb, vec3(0.3, 0.59, 0.11)), 0.0, 1.15);`, ``],
+  // GOLD (黃金 MG4) — weapon_gold_m: a gold colour, Glossiness 0.3, a gold cube map's sheen (here: a metal gold and its specular)
+  gold: [`
+    diffuseColor.rgb = vec3(0.95, 0.62, 0.16) * clamp(0.3 + 1.3 * dot(diffuseColor.rgb, vec3(0.3, 0.59, 0.11)), 0.0, 1.0);`, `
+    totalEmissiveRadiance += diffuseColor.rgb * 0.08;`, `
+    metalnessFactor = 0.55; roughnessFactor = 0.3;`]
 };
 var SF2Camo = class _SF2Camo {
   static {
@@ -18283,7 +18304,7 @@ var SF2Camo = class _SF2Camo {
     this.ok = !!(T && G);
     this.killT = 0;
     if (!this.ok) return;
-    this.u = { uTime: { value: 0 }, uKill: { value: 0 }, uCamoBase: { value: T.base || null }, uCamoShine: { value: T.shine || null }, uCamoKill: { value: T.kill || null }, uCamoFx: { value: T.fx || null } };
+    this.u = { uTime: { value: 0 }, uKill: { value: 0 }, uCamoBase: { value: T.base || null }, uCamoShine: { value: T.shine || null }, uCamoKill: { value: T.kill || null }, uCamoFx: { value: T.fx || null }, uCamoTex: { value: T.camo || null } };
     const done = /* @__PURE__ */ new Map();
     model.traverse((o) => {
       if (!o.isMesh || isArm(o) || o.userData.noAO || !o.material || !o.material.map) return;
@@ -18292,7 +18313,7 @@ var SF2Camo = class _SF2Camo {
         m.name = o.material.name + ":camo_" + id;
         m.onBeforeCompile = (sh) => {
           Object.assign(sh.uniforms, this.u);
-          sh.fragmentShader = "uniform float uTime, uKill; uniform sampler2D uCamoBase, uCamoShine, uCamoKill, uCamoFx;\n" + sh.fragmentShader.replace("#include <map_fragment>", "#include <map_fragment>" + G[0]).replace("#include <emissivemap_fragment>", "#include <emissivemap_fragment>" + G[1]);
+          sh.fragmentShader = "uniform float uTime, uKill; uniform sampler2D uCamoBase, uCamoShine, uCamoKill, uCamoFx, uCamoTex;\n" + sh.fragmentShader.replace("#include <map_fragment>", "#include <map_fragment>" + G[0]).replace("#include <emissivemap_fragment>", "#include <emissivemap_fragment>" + G[1]).replace("#include <metalnessmap_fragment>", "#include <metalnessmap_fragment>" + (G[2] || ""));
         };
         m.customProgramCacheKey = () => "sf2camo_" + id;
         done.set(o.material, m);

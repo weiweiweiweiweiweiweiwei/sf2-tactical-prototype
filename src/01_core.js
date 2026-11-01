@@ -744,13 +744,13 @@ const WEAPON_DATABASE = {
   },
 };
 // v66h the gacha guns (user 11-01, docs/research/sf2/gacha-weapons.md): SF2's items with their own attachments (tools/sf2_rig_build.mjs
-// famas_acog / p90_od / m4a1_eo / mg4_od), the base guns' stats; only 雷神 keeps its camo (LightningGoldFX, src/09c_sf2rig.js SF2Camo)
-// — the user asked the others without theirs (FissureFX, SilentNight, Gold). Timing and lenses: SF2_WEAPONS below.
+// famas_acog / p90_od / m4a1_eo / mg4_od), the base guns' stats, with their camos (src/09c_sf2rig.js SF2Camo): 雷神 LightningGoldFX;
+// FissureFX, SilentNight, Gold added after (user 11-01 B). Timing and lenses: SF2_WEAPONS below.
 for (const [id, base, o] of [
-  ['famas_blaze', 'famas', { name: '炙炎 FAMAS', suppressed: true, tracerEvery: 0, adsFov: 40, desc: 'SF2 扭蛋槍 FAMAS ACOG 消音（炙炎）：ACOG 放大瞄具 + 消音器，槍聲小、不上敵方雷達。' }],
-  ['p90_grinch', 'p90', { name: '鬼靈精 P90', suppressed: true, tracerEvery: 0, adsType: '3d_sight', desc: 'SF2 扭蛋槍 P90 OpenDot 消音（鬼靈精）：開放式內紅點 + 消音器，50 發。' }],
+  ['famas_blaze', 'famas', { name: '炙炎 FAMAS', camo: 'fissure', suppressed: true, tracerEvery: 0, adsFov: 40, desc: 'SF2 扭蛋槍 FAMAS ACOG 消音（炙炎）：ACOG 放大瞄具 + 消音器，槍聲小、不上敵方雷達。' }],
+  ['p90_grinch', 'p90', { name: '鬼靈精 P90', camo: 'silentnight', suppressed: true, tracerEvery: 0, adsType: '3d_sight', desc: 'SF2 扭蛋槍 P90 OpenDot 消音（鬼靈精）：開放式內紅點 + 消音器，50 發。' }],
   ['m4a1_thor', 'm4a1', { name: '雷神 M4A1', camo: 'lightning_gold', model: undefined, desc: 'SF2 扭蛋槍 M4A1 EOTech（雷神）：全息瞄具，金色電光在槍身流竄閃爍。' }],
-  ['mg4_gold', 'mg4', { name: '黃金 MG4', adsType: '3d_sight', desc: 'SF2 扭蛋槍 MG4 OpenDot（黃金）：開放式內紅點，100 發。' }],
+  ['mg4_gold', 'mg4', { name: '黃金 MG4', camo: 'gold', adsType: '3d_sight', desc: 'SF2 扭蛋槍 MG4 OpenDot（黃金）：開放式內紅點，100 發。' }],
 ]) WEAPON_DATABASE[id] = Object.assign({}, WEAPON_DATABASE[base], o);
 
 const TYPE_TUNING = { // spread growth / movement penalties per weapon family

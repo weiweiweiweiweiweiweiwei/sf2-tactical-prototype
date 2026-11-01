@@ -12,7 +12,12 @@ from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[1]; SRC = ROOT / 'tools/out/sf2/camo'
 CAMO = {'circuit': {'base': ('weapon_camo01/FX_circuit_Base', 256), 'shine': ('weapon_camo01/FX_circuit_Shine', 512), 'kill': ('weapon_camo01/FX_circuit_Kill', 512)},
-        'lightning_gold': {'fx': ('weapon_camo/electricity_gold_d', 512)}}
+        'lightning_gold': {'fx': ('weapon_camo/electricity_gold_d', 512)},
+        # v66h (user 11-01 B) the other gacha guns' camos: FissureFX = ai_camo_fissure (Camo camo_ai_bluefissure — red cracks despite the
+        # name — and the panned glow mask effect_mask2, EffectIntensity 50); SilentNight = the texture camo christmas_silentnight;
+        # GOLD = weapon_gold_m (no texture: a gold colour, Glossiness 0.3, the gold_cube reflection — SF2Camo makes it)
+        'fissure': {'camo': ('weapon_camo/camo_ai_bluefissure', 1024), 'fx': ('weapon_camo/effect_mask2', 256)},
+        'silentnight': {'camo': ('weapon_camo/christmas_silentnight', 1024)}, 'gold': {}}
 out = {}
 for c, tex in CAMO.items():
     out[c] = {}
