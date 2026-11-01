@@ -150,10 +150,10 @@ class Human extends Combatant {
       m.climbDist = 0; this._sfx('step', 'ladder', 0.6); g.emitNoise(m.pos, 9, this.team); } return; }
     const hs = m.horizontalSpeed();
     this.sprintTime = this.sprinting ? (this.sprintTime || 0) + h : 0; // (v66o SF2's SprintingTime, for the breathing)
-    if (m.grounded && hs > (this.pace ? 3.0 : 1.8) && !m.crouching) {
+    if (m.grounded && hs > 3.0 && !m.crouching) {
       this.stepDist += hs * h;
       // v66o SF2's slower pace (v66j): the stride shortened with it (2.1 / 2.5 m at 6.4 m/s → × 3.9 / 6.43), the cadence as before
-      const sk = this.pace ? 1 : 0.61;
+      const sk = 1; // (v66q the old pace: the old stride)
       if (this.stepDist > (this.sprinting ? 2.5 : 2.1) * sk) { this.stepDist = 0; this._sfx('step', m.surface, this.sprinting ? 0.7 : 0.55, this.sprinting);
         // v66o SF2's breathing (SFPawnFX.PlayFootStepSound): from 3 s of sprint, volume (t − 3) / 5 × speed / 2 m/s, the local player only
         if (this.isPlayer && this.sprinting && this.sprintTime > 3) g.audio.breath(clamp((this.sprintTime - 3) / 5, 0, 1) * clamp(hs / 2, 0, 1)); g.emitNoise(m.pos, this.sprinting ? 17 : 11, this.team); }

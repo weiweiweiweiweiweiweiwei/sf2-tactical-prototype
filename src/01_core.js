@@ -26,17 +26,17 @@ const CFG = {
   // SprintingPct 1.45, CrouchedPct 0.3, LadderSpeed 200 (Engine Pawn), SpeedDirPct front / back / side / diagonal 1 / 0.6 / 0.8 / 0.7.
   // The soldier's model (c_deltaforce_skelet delm_body_s01 + helmet) stands 1.56 m — the hitboxes and the third-person soldier scale to it
   // (bodyScale against the old 1.8 m). The Apex traversal maps keep the old pace (legacy: their jumps were laid out for it).
-  gravity: -9.7, physGravity: -20, // (v66j physGravity: grenades and debris keep the throw arcs they were tuned on)
+  gravity: -20, physGravity: -20, // v66q (user 11-01) walking, running and the jump's airtime back to before v66j: gravity 20, jump 7 m/s, the old pace // (v66j physGravity: grenades and debris keep the throw arcs they were tuned on)
   fixedStep: 1 / 60, // v63g the whole simulation (Match.tick) — was 1/120 for movement, weapons and physics only
   player: {
-    radius: 0.32, height: 1.36, crouchHeight: 0.91, eye: 1.23, crouchEye: 1.005, bodyScale: 1.56 / 1.8, dirPct: [1, 0.6, 0.8, 0.7],
-    stepHeight: 0.45, airStep: 0.36, jumpVel: 5.0, jumpBuffer: 0.12,
+    radius: 0.32, height: 1.36, crouchHeight: 0.91, eye: 1.23, crouchEye: 1.005, bodyScale: 1.56 / 1.8, dirPct: [1, 1, 1, 1], // (v66q SF2's SpeedDirPct 1 / 0.6 / 0.8 / 0.7 withdrawn with the pace)
+    stepHeight: 0.45, airStep: 0.36, jumpVel: 7.0, jumpBuffer: 0.12,
     groundAccel: 14, airAccel: 10, airCap: 0.85,
     friction: 8, brakeFriction: 18, stopSpeed: 3.2,
-    sprintMult: 1.45, crouchMult: 0.3, hp: 100, climbSpeed: 2.0, baseSpeed: 3.58, sf2Speed: 3.9,
+    sprintMult: 1.3, crouchMult: 0.36, hp: 100, climbSpeed: 2.0, baseSpeed: 5.9, sf2Speed: 6.43,
     legacy: { gravity: -20, jumpVel: 7.0, speedK: 6.43 / 3.9, sprintMult: 1.3, crouchMult: 0.36, climbSpeed: 3.4, height: 1.8, crouchHeight: 1.2, eye: 1.64, crouchEye: 1.06 }, // (v66j the Apex traversal maps) // v64r sf2Speed: SF2's MaxSpeed 390 UU/s in m/s — the M4A1 alone (load 4.1 → 340.1) walks the old 5.9 × 0.95
   },
-  bot: { eye: 1.23, runSpeed: 3.0, patrolSpeed: 2.0 }, // (v66j SF2's pace: 4.9 / 3.3 × 3.9 / 6.43)
+  bot: { eye: 1.23, runSpeed: 4.9, patrolSpeed: 3.3 }, // (v66q the pace before v66j)
   spawnProtect: 3.5,
   respawn: 3.0,
   assistWindow: 10,

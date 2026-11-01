@@ -133,9 +133,9 @@ class Bot extends Combatant {
     }
     if (m.climbing) { if (m.climbDist > 0.6) { m.climbDist = 0; this._step('ladder', 0.9); } return; }
     const hs = m.horizontalSpeed();
-    if (m.grounded && hs > (this.pace ? 2.4 : 1.5) && !m.crouching) { // (v66o SF2's pace: its 2 m/s patrol walk is heard too)
+    if (m.grounded && hs > 2.4 && !m.crouching) {
       this.stepDist += hs * h;
-      const fast = hs > (this.pace ? 4.2 : 3.6), sk = this.pace ? 1 : 0.61; // (v66o SF2's pace: the stride and the sprint test scaled with it)
+      const fast = hs > 4.2, sk = 1; // (v66q the old pace)
       if (this.stepDist > (fast ? 2.2 : 1.9) * sk) { this.stepDist = 0; this._step(m.surface, fast ? 1.15 : 0.85, fast); }
     } else if (hs < 0.3) this.stepDist = 0.8; // standing still = silent; the next step comes soon after starting to move
   }
