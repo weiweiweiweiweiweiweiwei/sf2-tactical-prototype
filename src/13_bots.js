@@ -133,17 +133,18 @@ class Bot extends Combatant {
     }
     if (m.climbing) { if (m.climbDist > 0.6) { m.climbDist = 0; this._step('ladder', 0.9); } return; }
     const hs = m.horizontalSpeed();
-    if (m.grounded && hs > 2.4 && !m.crouching) {
+    if (m.grounded && hs > (this.pace ? 2.4 : 1.5) && !m.crouching) { // (v66o SF2's pace: its 2 m/s patrol walk is heard too)
       this.stepDist += hs * h;
-      if (this.stepDist > (hs > 4.2 ? 2.2 : 1.9)) { this.stepDist = 0; this._step(m.surface, hs > 4.2 ? 1.15 : 0.85); }
+      const fast = hs > (this.pace ? 4.2 : 3.6), sk = this.pace ? 1 : 0.61; // (v66o SF2's pace: the stride and the sprint test scaled with it)
+      if (this.stepDist > (fast ? 2.2 : 1.9) * sk) { this.stepDist = 0; this._step(m.surface, fast ? 1.15 : 0.85, fast); }
     } else if (hs < 0.3) this.stepDist = 0.8; // standing still = silent; the next step comes soon after starting to move
   }
   // Individual, strictly positional footsteps (HRTF left/right, inverse-distance, muffled through walls).
-  _step(surface, loud) {
+  _step(surface, loud, dash = false) {
     const g = this.game, p = TMP_V3.copy(this.motor.pos).setY(this.motor.pos.y + 0.1), d = p.distanceTo(g.camera.position);
     if (d > 34) return;
     const occluded = d > 3 && !g.collision.segmentClear(g.camera.position, TMP_V4.copy(p).setY(p.y + 0.5));
-    g.audio.footstep(p, surface, loud, { pitch: this.stepPitch, occluded });
+    g.audio.footstep(p, surface, loud, { pitch: this.stepPitch, occluded, dash });
   }
 
   // v63g the bot's brain on the match's fixed 60 Hz clock (was once per drawn frame): timers, then the AI picks the next step's

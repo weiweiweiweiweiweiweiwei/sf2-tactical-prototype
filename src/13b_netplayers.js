@@ -33,12 +33,12 @@ class NetPlayer extends Human {
   get muzzlePos() { this.model.root.updateMatrixWorld(); return this.model.muzzle.getWorldPosition(new THREE.Vector3()); }
   lookDir(out) { const cp = Math.cos(this.pitch); return out.set(-Math.sin(this.yaw) * cp, Math.sin(this.pitch), -Math.cos(this.yaw) * cp); }
   // footsteps / landings are positional and muffled through walls, like a bot's
-  _sfx(kind, surface, loud) {
+  _sfx(kind, surface, loud, dash = false) {
     const g = this.game, p = TMP_V3.copy(this.motor.pos).setY(this.motor.pos.y + 0.1), d = p.distanceTo(g.camera.position);
     if (d > 34) return;
     if (kind !== 'step') { g.audio.land(p, surface, loud); return; }
     const occluded = d > 3 && !g.collision.segmentClear(g.camera.position, TMP_V4.copy(p).setY(p.y + 0.5));
-    g.audio.footstep(p, surface, loud, { pitch: this.stepPitch, occluded });
+    g.audio.footstep(p, surface, loud, { pitch: this.stepPitch, occluded, dash });
   }
 
   // Commands arrive in packets (each carries the last few, so one lost packet costs nothing), possibly out of order:

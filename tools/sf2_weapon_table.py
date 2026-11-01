@@ -169,6 +169,8 @@ def main():
             'adsType': '3d_sight', 'vmHFov': r3(d.get('fZoomOutFOV', 60)), 'vmAdsHFov': r3(d.get('fZoomedMeshFOV', 35)),
             'sf2Rig': rig, 'sf2': snd, 'sf2ZoomIn': [r3(x) for x in d.get('vLocZoomIN', [0, 0, 0])], 'sf2ZoomOut': [r3(x) for x in d.get('vLocZoomOut', [0, 0, 0])],
             'sf2ReloadSounds': [[rs[0], 'magout'], [rs[1], 'magin'], [rs[2], 'charge']], 'sf2Recoil': rec,
+            # v66o the weapon bob (fBobSpeedMux, fBobWidth / Height cm, BobDamping, the aimed rates across / up)
+            'sf2Bob': [r3(d.get('fBobSpeedMux', 8)), r3(d.get('fBobWidth', 1)), r3(d.get('fBobHeight', 0.5)), r3(d.get('BobDamping', 0.4)), r3(d.get('fBobDecRateForZoom', 1)), r3(d.get('fBobZDecRateForZoom', 1))],
         }
         rb = next((blend[c] for c in d.get('chain', ['SFCWeapon' + cls]) if c in blend), None)  # v64m the Reload clip's own length (GetReloadBlendTime)
         if rb and rb > o['reloadTime']: o['sf2ReloadAnim'] = r3(rb)

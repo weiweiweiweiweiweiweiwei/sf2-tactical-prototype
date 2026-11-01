@@ -185,8 +185,13 @@ class AudioEngine {
       if (window.SF2_SFX_FX) { res(); return; }
       const s = document.createElement('script'); s.src = 'assets/sfx_sf2_fx.js'; s.async = true; s.onload = () => res(); s.onerror = () => res();
       document.head.appendChild(s);
+    })).then(() => new Promise((res) => { // v66o SF2's own footsteps and sprint breathing (tools/sfx_sf2_foot.mjs)
+      if (window.SF2_SFX_FOOT) { res(); return; }
+      const s = document.createElement('script'); s.src = 'assets/sfx_sf2_foot.js'; s.async = true; s.onload = () => res(); s.onerror = () => res();
+      document.head.appendChild(s);
     })).then(async () => {
       const pack = window.SF2_SFX;
+      if (pack && window.SF2_SFX_FOOT) { Object.assign(pack, window.SF2_SFX_FOOT); delete window.SF2_SFX_FOOT; }
       if (pack && window.SF2_SFX_FX) { Object.assign(pack, window.SF2_SFX_FX); delete window.SF2_SFX_FX; }
       if (pack && window.SF2_SFX_MECH) { Object.assign(pack, window.SF2_SFX_MECH); delete window.SF2_SFX_MECH; }
       if (pack && window.SF2_SFX_ORIG) { Object.assign(pack, window.SF2_SFX_ORIG); delete window.SF2_SFX_ORIG; }
@@ -623,11 +628,14 @@ class AudioEngine {
     if (!this.ctx) return;
     const t = this.ctx.currentTime, k = o.pitch || 1, out = this._bus(pos, 0.03, 3, o.occluded ? 720 : 0, 1.1, true);
     if (o.occluded) loud *= 0.6;
-    const rec = this._s('step_' + surface) || this._s('step_concrete');
+    // v66o SF2's own steps (user 11-01): per surface the walk / run step (Cue_Run_*) or, sprinting, the dash step (Cue_Dash_*) — o.dash;
+    // the cloth / gear rustle stays (SF2 plays its rustle with every step too). The ladder keeps its own.
+    const sf2 = surface !== 'ladder' && (this._s('sf2step_' + surface + (o.dash ? '_dash' : '')) || this._s('sf2step_concrete' + (o.dash ? '_dash' : '')));
+    const rec = sf2 || this._s('step_' + surface) || this._s('step_concrete');
     if (rec) { // v33: recorded step + cloth rustle on every step, the gear rattles when running (within earshot only)
       this._one(pick(rec), out, 0.85 * loud, k * (0.94 + Math.random() * 0.12));
       if (!pos || this.listener.distanceTo(pos) < 12) {
-        const c = this._s('cloth'), g = this._s('gear'), run = loud > 0.65;
+        const c = this._s('cloth'), g = this._s('gear'), run = o.dash ?? loud > 0.65;
         if (c) this._one(pick(c), out, (run ? 0.3 : 0.18) * loud, 0.9 + Math.random() * 0.25, 0.01);
         if (g && run && Math.random() < 0.45) this._one(pick(g), out, 0.16 * loud, 0.9 + Math.random() * 0.2, 0.02 + Math.random() * 0.06);
       }
@@ -646,11 +654,20 @@ class AudioEngine {
     }
   }
 
+  // v66o SF2's sprint breathing (SFPawnFX.PlayFootStepSound): the local player's own, unspatialised, at a step once sprinting > 3 s
+  breath(vol) {
+    if (!this.ctx || vol <= 0.01) return;
+    const b = this._s('sf2_breath'); if (!b) return;
+    this._one(pick(b), this._bus(null, 0, 1), 0.55 * vol, 0.97 + Math.random() * 0.06);
+  }
+
   land(pos, surface, strength) {
     if (!this.ctx) return;
     const t = this.ctx.currentTime, out = this._bus(pos, 0.15, 3), s = clamp(strength, 0.3, 1.4);
+    const sl = this._s('sf2land_' + surface) || this._s('sf2land_concrete'); // v66o SF2's own landing (Cue_Land_*)
     const rec = this._s('step_' + surface) || this._s('step_concrete'), c = this._s('cloth');
-    if (rec) { this._one(pick(rec), out, 0.9 * s, 0.8); this._one(pick(rec), out, 0.5 * s, 0.9, 0.035); if (c) this._one(pick(c), out, 0.3 * s, 0.85); }
+    if (sl) { this._one(pick(sl), out, 0.95 * s, 1); if (c) this._one(pick(c), out, 0.3 * s, 0.85); }
+    else if (rec) { this._one(pick(rec), out, 0.9 * s, 0.8); this._one(pick(rec), out, 0.5 * s, 0.9, 0.035); if (c) this._one(pick(c), out, 0.3 * s, 0.85); }
     this._nb(t, out, 'lowpass', surface === 'metal' ? 1500 : 700, 0.8, 0.5 * s, 0.003, 0.12);
     this._osc('sine', t, 110, 50, 0.12, out, 0.5 * s);
     if (surface === 'metal') this._nb(t, out, 'bandpass', 2200, 6, 0.3 * s, 0.002, 0.25);

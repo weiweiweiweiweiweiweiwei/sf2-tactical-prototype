@@ -1,4 +1,4 @@
-import { Settings, THREE, TMP_V1, TMP_V2, WEAPON_DEFS, clamp, damp, lerp, rand } from './01_core.js';
+import { CFG, Settings, THREE, TMP_V1, TMP_V2, WEAPON_DEFS, clamp, damp, lerp, rand } from './01_core.js';
 import { CollisionWorld } from './04_collision.js';
 import { THROW, makePlayerWeapon } from './10_weapons.js';
 import { BTN } from './12b_cmd.js';
@@ -352,7 +352,18 @@ class WeaponSystem extends Arsenal {
     const amp = clamp(hs / 5.6, 0, 1.3) * (m.grounded ? 1 : 0.15) * (1 - this.adsT * 0.88);
     this.bobAmt = damp(this.bobAmt, amp, 10, dt);
     this.bobPhase += dt * hs * (p.sprinting ? 2.1 * 0.6 : 1.85); // v63e sprint bob at 0.6× (user: too quick)
-    const bx = Math.sin(this.bobPhase) * 0.011 * this.bobAmt * (1 + this.sprintT), by = -Math.abs(Math.cos(this.bobPhase)) * 0.01 * this.bobAmt * (1 + this.sprintT);
+    let bx = Math.sin(this.bobPhase) * 0.011 * this.bobAmt * (1 + this.sprintT), by = -Math.abs(Math.cos(this.bobPhase)) * 0.01 * this.bobAmt * (1 + this.sprintT);
+    const B = w.def.sf2Bob;
+    if (B && !p.pace) { // v66o SF2's own weapon bob (user 11-01, docs/research/sf2/movement-feel.md): fBobSpeedMux / fBobWidth / fBobHeight (cm) /
+      // BobDamping / fBobDecRateForZoom / fBobZDecRateForZoom; the formula is in the packed sf2.exe, so UE3's own Pawn bob shape is used — the
+      // time runs at 0.3 + 0.7 × speed / ground speed, across sin(mux·t), up and down at twice that, both × speed / ground speed; aimed,
+      // the rates scale them. The sprint sway stays the dash clip's.
+      const [mux, wid, hgt, dmp, dx, dz] = B, r = clamp(hs / CFG.player.sf2Speed, 0, 1.5) * (m.grounded ? 1 : 0.15);
+      this.sf2BobT = (this.sf2BobT || 0) + dt * (0.3 + 0.7 * r);
+      this.bobAmt = damp(this.bobAmt, r, 4 / Math.max(0.1, dmp), dt);
+      const kx = lerp(1, dx, this.adsT), kz = lerp(1, dz, this.adsT);
+      bx = Math.sin(mux * this.sf2BobT) * wid / 100 * this.bobAmt * kx; by = Math.sin(2 * mux * this.sf2BobT) * hgt / 100 * this.bobAmt * kz;
+    }
     const swayK = 1 - this.adsT * 0.75;
     this.swayX = damp(this.swayX, clamp(-mouse.x * 0.00032, -0.035, 0.035) * swayK, 9, dt);
     this.swayY = damp(this.swayY, clamp(mouse.y * 0.00032, -0.035, 0.035) * swayK, 9, dt);

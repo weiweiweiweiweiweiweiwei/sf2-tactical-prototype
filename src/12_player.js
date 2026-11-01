@@ -62,7 +62,7 @@ class Human extends Combatant {
     this.stepDist = 0; this.sprinting = false; this.sprintBlock = 0;
   }
   gear() { return this.game.weapons; } // the arsenal whose current weapon sets the move speed (NetPlayer: its own)
-  _sfx(kind, surface, loud) { const a = this.game.audio; if (kind === 'step') a.footstep(null, surface, loud); else a.land(null, surface, loud); }
+  _sfx(kind, surface, loud, dash = false) { const a = this.game.audio; if (kind === 'step') a.footstep(null, surface, loud, { dash }); else a.land(null, surface, loud); }
 
   // v15 MANTLE: is there a ledge right in front whose top is `lo..hi` above the feet, with room to stand on it?
   _ledge(lo, hi) {
@@ -149,9 +149,14 @@ class Human extends Combatant {
     if (m.climbing) { if (m.climbDist > 0.45) { // (v65y SF2: two metal footsteps a climb cycle)
       m.climbDist = 0; this._sfx('step', 'ladder', 0.6); g.emitNoise(m.pos, 9, this.team); } return; }
     const hs = m.horizontalSpeed();
-    if (m.grounded && hs > 3.0 && !m.crouching) {
+    this.sprintTime = this.sprinting ? (this.sprintTime || 0) + h : 0; // (v66o SF2's SprintingTime, for the breathing)
+    if (m.grounded && hs > (this.pace ? 3.0 : 1.8) && !m.crouching) {
       this.stepDist += hs * h;
-      if (this.stepDist > (this.sprinting ? 2.5 : 2.1)) { this.stepDist = 0; this._sfx('step', m.surface, this.sprinting ? 0.7 : 0.55); g.emitNoise(m.pos, this.sprinting ? 17 : 11, this.team); }
+      // v66o SF2's slower pace (v66j): the stride shortened with it (2.1 / 2.5 m at 6.4 m/s → × 3.9 / 6.43), the cadence as before
+      const sk = this.pace ? 1 : 0.61;
+      if (this.stepDist > (this.sprinting ? 2.5 : 2.1) * sk) { this.stepDist = 0; this._sfx('step', m.surface, this.sprinting ? 0.7 : 0.55, this.sprinting);
+        // v66o SF2's breathing (SFPawnFX.PlayFootStepSound): from 3 s of sprint, volume (t − 3) / 5 × speed / 2 m/s, the local player only
+        if (this.isPlayer && this.sprinting && this.sprintTime > 3) g.audio.breath(clamp((this.sprintTime - 3) / 5, 0, 1) * clamp(hs / 2, 0, 1)); g.emitNoise(m.pos, this.sprinting ? 17 : 11, this.team); }
     } else if (!m.grounded) this.stepDist = 1.4;
     if (m.landSpeed > 3.5) { this._sfx('land', m.surface, m.landSpeed / 9); this.punchV += Math.min(m.landSpeed, 14) * -0.012; g.emitNoise(m.pos, 14, this.team); }
     // v34 fall damage (Source / UE-style, fixed HP): drop height h = v² / 2g; safe up to FALL_SAFE m, lethal at FALL_LETHAL m — none in Apex mode (v60; falling out of the map still kills)

@@ -1945,3 +1945,14 @@
   - 實測（`tools/out/_heldfire.mjs`）：AWP 開槍 → 切小槍 → 切回 → 0.03 秒開出下一槍。
 - 研究：`docs/research/sf2/movement-feel.md`（鏡頭晃動、持槍晃動參數、走路／衝刺兩組腳步聲、衝刺 3 秒後的喘氣聲）。
 - 驗證：MODULES_OK、CHECK_OK。
+
+### v66o（本機，2026-11-01）：SF2 原版腳步聲、衝刺喘氣聲、持槍晃動
+- 使用者 11-01 選 1A：腳步聲換成 SF2 原版（`tools/sfx_sf2_foot.mjs` → `assets/sfx_sf2_foot.js`，1.3 MB，另外載入後併進音效包）。
+  - 每種地面兩組：一般走跑 `footstep_<地面>_NN`（Cue_Run_*）、衝刺 `Footstep_<地面>_dash_NN`（Cue_Dash_*），落地 `Footstep_Land_<地面>_NN`。遊戲的地面對應：水泥→con、金屬、木頭、沙、雪、地毯→fabric、草（另外打包了 tile、soil、mud、water、glass、metalgrate、woodpanel 給之後用）。梯子維持原本的聲音；衣物、裝備聲照舊疊上（SF2 每步也播衣物摩擦聲）。
+  - 用哪一組改成直接傳「是否衝刺」（玩家、電腦、網路玩家都一樣），不再用音量判斷。
+  - 腳步間距跟著 v66j 的較慢速度縮短（× 0.61），每秒步數和以前差不多；電腦 2 m/s 巡邏走路也聽得到。
+  - 衝刺喘氣（`SFPawnFX.PlayFootStepSound`）：連續衝刺超過 3 秒，每步播一次喘氣聲，音量 = (衝刺秒數 − 3) ÷ 5 × 速度 ÷ 2 m/s（上限 1），只有自己聽得到。`Breath_Left`／`_Right` 指到哪幾個音檔讀不到，用男性的 `Breath_man_01～03`。
+  - 驗證（`tools/out/_footcheck.mjs`）：衝刺 9 秒播出 `sf2step_concrete_dash` 和 7 次喘氣。
+- 使用者 11-01 選 2A：持槍晃動照 SF2 每把槍的參數（`fBobSpeedMux`、`fBobWidth`、`fBobHeight`、`BobDamping`、開鏡倍率 `fBobDecRateForZoom`／`fBobZDecRateForZoom`；`tools/sf2_weapon_table.py` 產生 `sf2Bob`，M4A1 手動補）。公式在加殼的 `sf2.exe` 裡讀不到，用 UE3 原生的晃動形狀：時間以 0.3 + 0.7 × 速度比 推進，左右 sin(倍率·t)、上下 sin(2·倍率·t)，幅度 × 速度比。衝刺時的擺動維持衝刺動畫；沒有 SF2 參數的槍和 Apex 跑酷地圖維持舊的晃動。
+  - 實測（`tools/out/_bobcheck.mjs`，走 3.3 m/s）：M4A1 腰射左右 1.17 cm、上下 0.29 cm、上下每秒 2.5 次，開鏡 0.39／0.14 cm；AWP 開鏡 0.08／0.03 cm。
+- 驗證：MODULES_OK、CHECK_OK。
