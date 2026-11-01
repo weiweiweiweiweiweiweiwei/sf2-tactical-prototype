@@ -59,8 +59,11 @@ function sf2Ladder(b, box, nav = true) {
   // the triangle collision has no inside, so a 'blocked' test says nothing)
   const top = (nx, nz) => { const g = col.groundBelow(_lc.x - nx * 0.8, _lb.max.y + 1.5, _lc.z - nz * 0.8, 0.15, _lb.max.y - y0 + 2, 0); return g ? g.y : -Infinity; };
   const cand = sx < sz ? [[1, 0], [-1, 0]] : [[0, 1], [0, -1]], [nx, nz] = top(...cand[0]) >= top(...cand[1]) ? cand[0] : cand[1];
-  const g = col.groundBelow(_lc.x - nx * 0.8, _lb.max.y + 1.5, _lc.z - nz * 0.8, 0.15, _lb.max.y - y0 + 2, 0);
-  const y1 = g && g.y > y0 + 1 ? g.y : _lb.max.y - 0.2, x = _lc.x - nx * 0.15, z = _lc.z - nz * 0.15, tx = -nz, tz = nx;
+  // v66g …but the floor it lets off on is no higher than its own head + 0.6 m (Cannon's watchtowers: 6.0 m ladders up through the
+  // hatch of a 5.28 m cabin floor, the cabin's 7.15 m roof behind them taken for the platform — climbers pressed their heads to it);
+  // (a floor in front counts too: a climber come up through a hatch stands on it — CharacterMotor._climb)
+  const lim = _lb.max.y + 0.6, at = (s) => { const q = col.groundBelow(_lc.x - nx * 0.8 * s, lim, _lc.z - nz * 0.8 * s, 0.15, lim - y0, 0); return q && q.y > y0 + 1 ? q.y : null; };
+  const y1 = at(1) ?? at(-1) ?? _lb.max.y - 0.2, x = _lc.x - nx * 0.15, z = _lc.z - nz * 0.15, tx = -nz, tz = nx;
   const P = (a, y, d) => new THREE.Vector3(x + tx * a + nx * d, y, z + tz * a + nz * d);
   const chain = [P(0, y0, 0.95), P(0, y1, -0.95)]; chain.ladder = true; chain.cost = 1.8; if (nav !== false) b.navChains.push(chain); // (v65z def.ladderNav false: players climb, bots take the stairs)
   b.ladders.push({ x, z, y0, y1, nx, nz });
@@ -187,7 +190,7 @@ function sf2TerrainGeo(T) {
   for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) { const k = i + j * nx, u = i * T.dx, w = j * T.dz; P[k * 3] = T.x0 + u * c - w * sn; P[k * 3 + 1] = H[k]; P[k * 3 + 2] = T.z0 + u * sn + w * c; G[k * 2] = i; G[k * 2 + 1] = j; }
   for (let j = 0; j + 1 < ny; j++) for (let i = 0; i + 1 < nx; i++) {
     const a = i + j * nx, b = a + nx, c = a + 1, d = b + 1;
-    if (hole.has(a) || hole.has(b) || hole.has(c) || hole.has(d)) continue;
+    if (hole.has(a)) continue; // (v66g UE3 hides the quad whose first corner is marked: any marked corner widened every hole by a quad — user 10-31, Cannon's 0.64 m crack at a bunker's foot, fallen through)
     I.push(a, b, c, c, b, d); // (normals up: x east, z south)
   }
   const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(P, 3)); geo.setAttribute('tgrid', new THREE.BufferAttribute(G, 2));
@@ -406,6 +409,6 @@ MAPS.push(sf2TriMap({
   objectives: { cap: [-3.2, 6.3, 7.68], capRadius: 2.4, dom: [[-3, 0, -20], [-3.2, 6.3, 7.68], [-6, 0, 36]], relic: [-3.2, 6.3, 7.68], domRadius: 4 },
   background: 0xc9c2b4, envIntensity: 0, exposure: 0.95, hemi: [0xe6dcc8, 0x6a5a48, 0.35], lmFallback: [0.5, 0.48, 0.45], // (v65z brighter: its terrain has no bake, the mean light carries it)
   sun: { pos: [-40, 43, -38], color: 0xfff0d8, intensity: 1.75, auto: false }, fog: { color: 0xc9c2b4, near: 90, far: 420 },
-  lmEnv: 0, lmK: 3.14, rampStairs: /^ms_stair/i, lmCap: 5, // (v66e user 10-31: the capture room's bake, scale 7–10 against 3.4 below, burnt white through the map's steep LUT — rolled off)
+  lmEnv: 0, lmK: 3.14, rampStairs: /^ms_stair/i, lmCap: 4, // (v66e user 10-31: the capture room's bake, scale 7–10 against 3.4 below, burnt white through the map's steep LUT — rolled off)
   ladderNav: false, // (its tower ladders: bots stuck at their heads)
 }));

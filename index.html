@@ -9305,6 +9305,20 @@ var CharacterMotor = class {
     this.vel.z = tz * strafe * 1.6 - l.nz * (ci > 0 ? 1.4 : 0.35);
     this.vel.y = ci * P.climbSpeed;
     if (top && ci > 0) {
+      const w = this.world, p = this.pos;
+      for (const d of [-0.6, -0.4, -0.2, 0, 0.2, 0.4, 0.6]) {
+        const x = p.x + l.nx * d, z = p.z + l.nz * d, g2 = w.groundBelow(x, l.top + 0.3, z, this.radius, 0.5);
+        if (g2 && Math.abs(g2.y - l.top) < 0.3 && w.fits(x, g2.y + 1e-3, z, this.radius, this.height)) {
+          p.set(x, g2.y, z);
+          this.vel.set(0, 0, 0);
+          this.grounded = true;
+          this.climbing = false;
+          this.ladderCd = 0.5;
+          return;
+        }
+      }
+    }
+    if (top && ci > 0) {
       this.vel.y = 0.6;
       this.vel.x -= l.nx * 2.4;
       this.vel.z -= l.nz * 2.4;
@@ -9458,7 +9472,16 @@ var CharacterMotor = class {
   // Out first, to the nearest free spot (sideways before up, so a face is never climbed): the walk then stops or rises cleanly
   _unwedgeTris() {
     const w = this.world, p = this.pos, r = this.radius, h = this.height;
-    if (!w.tris || !this.grounded || !w.tris.blocks(p.x, p.y, p.z, r, h)) return;
+    if (!w.tris) return;
+    if (this.vel.y <= 0) {
+      const g = w.tris.groundAt(p.x, p.y + FLOOR_SKIN, p.z, 0.01, FLOOR_SKIN - 0.03, 0);
+      if (g !== null && w.fits(p.x, g + 1e-3, p.z, r, h)) {
+        p.y = g;
+        this.grounded = true;
+        this.vel.y = 0;
+      }
+    }
+    if (!this.grounded || !w.tris.blocks(p.x, p.y, p.z, r, h)) return;
     for (const d of [0.02, 0.05, 0.1]) for (const [dx, dz] of TRI_SLIDE) {
       const k = d / 0.05;
       if (w.fits(p.x + dx * k, p.y, p.z + dz * k, r, h)) {
@@ -9556,7 +9579,7 @@ var CharacterMotor = class {
           this.vel[axis] = 0;
         }
       } else if (this.grounded) {
-        const g = w.tris.groundAt(p.x, p.y + allow, p.z, r, 0.02);
+        const g = w.tris.groundAt(p.x, p.y + allow, p.z, r, allow + 0.02);
         if (g !== null && g > p.y && w.fits(p.x, g + 1e-3, p.z, r, h)) {
           const old = p.y;
           p.y = g;
@@ -16940,12 +16963,15 @@ function sf2Ladder(b, box, nav = true) {
   const sx = _lb.max.x - _lb.min.x, sz = _lb.max.z - _lb.min.z, col = b.col;
   const y0 = _lb.min.y, hw = Math.max(sx, sz) / 2;
   const top = /* @__PURE__ */ __name((nx2, nz2) => {
-    const g2 = col.groundBelow(_lc.x - nx2 * 0.8, _lb.max.y + 1.5, _lc.z - nz2 * 0.8, 0.15, _lb.max.y - y0 + 2, 0);
-    return g2 ? g2.y : -Infinity;
+    const g = col.groundBelow(_lc.x - nx2 * 0.8, _lb.max.y + 1.5, _lc.z - nz2 * 0.8, 0.15, _lb.max.y - y0 + 2, 0);
+    return g ? g.y : -Infinity;
   }, "top");
   const cand = sx < sz ? [[1, 0], [-1, 0]] : [[0, 1], [0, -1]], [nx, nz] = top(...cand[0]) >= top(...cand[1]) ? cand[0] : cand[1];
-  const g = col.groundBelow(_lc.x - nx * 0.8, _lb.max.y + 1.5, _lc.z - nz * 0.8, 0.15, _lb.max.y - y0 + 2, 0);
-  const y1 = g && g.y > y0 + 1 ? g.y : _lb.max.y - 0.2, x = _lc.x - nx * 0.15, z = _lc.z - nz * 0.15, tx = -nz, tz = nx;
+  const lim = _lb.max.y + 0.6, at = /* @__PURE__ */ __name((s) => {
+    const q = col.groundBelow(_lc.x - nx * 0.8 * s, lim, _lc.z - nz * 0.8 * s, 0.15, lim - y0, 0);
+    return q && q.y > y0 + 1 ? q.y : null;
+  }, "at");
+  const y1 = at(1) ?? at(-1) ?? _lb.max.y - 0.2, x = _lc.x - nx * 0.15, z = _lc.z - nz * 0.15, tx = -nz, tz = nx;
   const P = /* @__PURE__ */ __name((a, y, d) => new THREE.Vector3(x + tx * a + nx * d, y, z + tz * a + nz * d), "P");
   const chain = [P(0, y0, 0.95), P(0, y1, -0.95)];
   chain.ladder = true;
@@ -17148,7 +17174,7 @@ function sf2TerrainGeo(T) {
   }
   for (let j = 0; j + 1 < ny; j++) for (let i = 0; i + 1 < nx; i++) {
     const a = i + j * nx, b = a + nx, c2 = a + 1, d = b + 1;
-    if (hole.has(a) || hole.has(b) || hole.has(c2) || hole.has(d)) continue;
+    if (hole.has(a)) continue;
     I.push(a, b, c2, c2, b, d);
   }
   const geo = new THREE.BufferGeometry();
@@ -17508,7 +17534,7 @@ MAPS.push(sf2TriMap({
   lmEnv: 0,
   lmK: 3.14,
   rampStairs: /^ms_stair/i,
-  lmCap: 5,
+  lmCap: 4,
   // (v66e user 10-31: the capture room's bake, scale 7–10 against 3.4 below, burnt white through the map's steep LUT — rolled off)
   ladderNav: false
   // (its tower ladders: bots stuck at their heads)

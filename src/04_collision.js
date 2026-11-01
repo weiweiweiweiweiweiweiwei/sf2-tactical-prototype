@@ -512,6 +512,12 @@ class CharacterMotor {
     const tx = -l.nz, tz = l.nx, strafe = (wishX * tx + wishZ * tz) * (Math.abs(ci) > 0 ? 0.6 : 1);
     this.vel.x = tx * strafe * 1.6 - l.nx * (ci > 0 ? 1.4 : 0.35); this.vel.z = tz * strafe * 1.6 - l.nz * (ci > 0 ? 1.4 : 0.35);
     this.vel.y = ci * P.climbSpeed;
+    if (top && ci > 0) { // (v66g at the top, a floor to stand on within 0.6 m — the furthest behind first, the mount's way, then where the body is, then in front:
+      // Cannon's watchtower ladders come up through a hatch into a cabin 1.87 m high, too low for the mount's lift)
+      const w = this.world, p = this.pos;
+      for (const d of [-0.6, -0.4, -0.2, 0, 0.2, 0.4, 0.6]) { const x = p.x + l.nx * d, z = p.z + l.nz * d, g = w.groundBelow(x, l.top + 0.3, z, this.radius, 0.5);
+        if (g && Math.abs(g.y - l.top) < 0.3 && w.fits(x, g.y + 1e-3, z, this.radius, this.height)) { p.set(x, g.y, z); this.vel.set(0, 0, 0); this.grounded = true; this.climbing = false; this.ladderCd = 0.5; return; } }
+    }
     if (top && ci > 0) { this.vel.y = 0.6; this.vel.x -= l.nx * 2.4; this.vel.z -= l.nz * 2.4; } // mount the platform
     this.grounded = false;
     this._moveAxis('x', this.vel.x * dt, false); this._moveAxis('z', this.vel.z * dt, false);
@@ -612,7 +618,10 @@ class CharacterMotor {
   // Out first, to the nearest free spot (sideways before up, so a face is never climbed): the walk then stops or rises cleanly
   _unwedgeTris() {
     const w = this.world, p = this.pos, r = this.radius, h = this.height;
-    if (!w.tris || !this.grounded || !w.tris.blocks(p.x, p.y, p.z, r, h)) return;
+    if (!w.tris) return;
+    // (v66g sunk into a floor — a floor face over the body's centre within the skin floors may be entered by: back on top of it)
+    if (this.vel.y <= 0) { const g = w.tris.groundAt(p.x, p.y + FLOOR_SKIN, p.z, 0.01, FLOOR_SKIN - 0.03, 0); if (g !== null && w.fits(p.x, g + 1e-3, p.z, r, h)) { p.y = g; this.grounded = true; this.vel.y = 0; } }
+    if (!this.grounded || !w.tris.blocks(p.x, p.y, p.z, r, h)) return;
     for (const d of [0.02, 0.05, 0.1]) for (const [dx, dz] of TRI_SLIDE) { const k = d / 0.05; if (w.fits(p.x + dx * k, p.y, p.z + dz * k, r, h)) { p.x += dx * k; p.z += dz * k; return; } }
     for (let s = 0.02; s <= this.stepHeight + 1e-6; s += 0.02) if (w.fits(p.x, p.y + s, p.z, r, h)) { p.y += s; return; }
   }
@@ -686,7 +695,7 @@ class CharacterMotor {
         if (up >= 0) { const old = p.y; p.y += up; if (this.grounded && p.y - old > 0.08) this.stepOffset -= p.y - old; }
         else { p[axis] = before; p.y = beforeY; this.vel[axis] = 0; }
       } else if (this.grounded) { // walking up a slope: stay on it
-        const g = w.tris.groundAt(p.x, p.y + allow, p.z, r, 0.02);
+        const g = w.tris.groundAt(p.x, p.y + allow, p.z, r, allow + 0.02); // (v66g it looked only at the step height ± 2 cm: walking up Cannon's terrain the body stayed level and sank into the slope — floors only block past FLOOR_SKIN — to 0.5 m deep, then hung there in the air: quicksand)
         if (g !== null && g > p.y && w.fits(p.x, g + 1e-3, p.z, r, h)) { const old = p.y; p.y = g; if (p.y - old > 0.08) this.stepOffset -= p.y - old; }
       }
     }
