@@ -1931,3 +1931,11 @@
   - 還沒好：TAR21（開鏡準星仍偏低）、FN F2000（原版裝自己的瞄準鏡 `scope_fnf2000`，模型還沒找到，開鏡看不到槍）。
 - 台階高度照使用者 2A 維持 0.45 m。
 - 驗證：12 把的腰射／開鏡截圖、MODULES_OK、CHECK_OK。
+
+### v66m（本機，2026-11-01）：拔槍途中按住開火，拔完立刻開槍；TAR21、FN F2000 的瞄具
+- 使用者 11-01 選 1A：照 SF2 的 `WeaponEquipping.BeginFire`（拔槍中按開火會記成 PendingFire，切槍後也留著）和 `Active.BeginState`（拔完時若還按著就開火）：拔槍途中按住開火鍵不放，拔完那一刻自動開槍；中途放開就取消（`src/11_weaponsystem.js` 的 `drawing`／`pendingFire`）。
+  - 實測（`tools/out/_heldfire.mjs`）：AWP 開槍 → 按住開火切兩下 → 1.058 秒開出下一槍；放開則不開。
+- 使用者 11-01 選 2A：
+  - TAR21：SF2 的準星零件從它的根骨頭讀出來是橫躺的（左右 25 cm、前後 2.5 cm，偏左 17 cm）；插到 Sight 插槽時先繞上方軸轉 90°（`sightYaw`）。開鏡時照門環在正中、前準星綠點在環心。
+  - FN F2000：SF2 的 F2000 沒有機械瞄具，預設裝自己的瞄準鏡 `rif_fnf2000_scope`（在 `rif_fnf2000` 包，EOTech 型、`fnf2000_reticleDot` 準心）。改裝這個瞄具（Scope 插槽），開鏡是放大的鏡筒視野、準心在正中。
+- 驗證：截圖、MODULES_OK、CHECK_OK。

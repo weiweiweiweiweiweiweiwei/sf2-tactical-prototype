@@ -18406,7 +18406,7 @@ var GUN_MODELS = {};
 var GUN_RIGS = {};
 var RIG_EYE = { m16a3: 0.055, qbz97: 0.06, g36c_eo: 0.15, m14ebr: 0.15, hk417_rs: 0.15, scarl_eo: 0.15, famas_acog: 0.47, p90_od: 0.15, m4a1_eo: 0.15, mg4_od: 0.15 };
 var RIG_HIP = { k14: [0.0217, -1.2026, -0.0378] };
-var RIG_RETICLE = { g36c_eo: [0.093, 82], m14ebr: [0.093, 82], hk417_rs: [0.06, 32], scarl_eo: [0.093, 82], m4a1_eo: [0.093, 82], famas_acog: [6e-3, 64], p90_od: [6e-3, 64], mg4_od: [6e-3, 64] };
+var RIG_RETICLE = { g36c_eo: [0.093, 82], m14ebr: [0.093, 82], hk417_rs: [0.06, 32], scarl_eo: [0.093, 82], m4a1_eo: [0.093, 82], fnf2000: [0.06, 71], famas_acog: [6e-3, 64], p90_od: [6e-3, 64], mg4_od: [6e-3, 64] };
 var GLB_RELOAD_POSE = { roll: -0.5, pitch: 0.32, drop: -0.09, shift: 0.08 };
 var GUN_LOAD = { parsed: /* @__PURE__ */ new Set(), pending: /* @__PURE__ */ new Map() };
 var GUN_OVL = {};
@@ -21819,7 +21819,7 @@ var Arsenal = class {
   switchTo(i) {
     if (i === this.index || !this.selectable(i) || !this.owner.alive) return;
     this.exitADS();
-    const old = this.current;
+    const held = this.trigger, old = this.current;
     old.holster();
     old.vm.group.visible = false;
     this.lastIndex = this.index;
@@ -21832,6 +21832,8 @@ var Arsenal = class {
     const put = old.def.putDownTime ?? 0.2, left = Math.max(0, this.putT || 0);
     this.putT = put;
     w.cooldown = Math.max(w.cooldown, left + put + (w.def.equipTime || 0));
+    w.drawing = true;
+    w.pendingFire = held;
     this.onSwitch();
   }
   quickSwitch() {
@@ -21953,8 +21955,12 @@ var Arsenal = class {
           if (act && pressed & BTN.ALT) w2.attack(true);
         } else if (act && pressed & BTN.FIRE) {
           if (w2.cooldown <= 0) this._fire();
-          else if (!w2.auto) w2.queued = 0.1;
+          else if (!w2.auto) {
+            w2.queued = 0.1;
+            if (w2.drawing) w2.pendingFire = true;
+          }
         }
+        if (released & BTN.FIRE) w2.pendingFire = false;
       }
     } else this.trigger = false;
     const w = this.current;
@@ -21989,10 +21995,18 @@ var Arsenal = class {
         w.queued -= h;
         if (w.cooldown <= 0) {
           w.queued = 0;
+          w.pendingFire = false;
           this._fire();
         }
       }
-    }
+      if (w.drawing && w.cooldown <= 0) {
+        w.drawing = false;
+        if (w.pendingFire && this.trigger && !w.reloading && g.canAct()) {
+          w.pendingFire = false;
+          this._fire();
+        }
+      }
+    } else w.drawing = false;
     if (this.unscopeT > 0) {
       this.unscopeT -= h;
       if (this.unscopeT <= 0) this.setAds(false, true);

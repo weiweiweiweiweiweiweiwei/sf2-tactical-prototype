@@ -59,7 +59,7 @@ const RIG_EYE = { m16a3: 0.055, qbz97: 0.06, g36c_eo: 0.15, m14ebr: 0.15, hk417_
 // v64g a scoped SF2 gun's model position at the hip (camera space, m): solved so the scope's eyepiece sits where the user's SF2 hip shot
 // has it (K14, 10-28: centre 83.5 % / 67.6 % of the screen, radius 6.25 % of its width)
 const RIG_HIP = { k14: [0.0217, -1.2026, -0.0378] }; // (projected with the game's own viewmodel camera, tools/out/_k14fit2.mjs: the EYEPIECE end — the lens facing the camera in SF2's shot)
-const RIG_RETICLE = { g36c_eo: [0.093, 82], m14ebr: [0.093, 82], hk417_rs: [0.06, 32], scarl_eo: [0.093, 82], m4a1_eo: [0.093, 82], famas_acog: [0.006, 64], p90_od: [0.006, 64], mg4_od: [0.006, 64] }; // (v66h DotDot: its dot 64 px of 256). The ACOG's ZoomCrosshair stands 32 cm ahead of its mount (the reticle plane far out): its eye 47 cm behind it, 15 behind the eyepiece
+const RIG_RETICLE = { g36c_eo: [0.093, 82], m14ebr: [0.093, 82], hk417_rs: [0.06, 32], scarl_eo: [0.093, 82], m4a1_eo: [0.093, 82], fnf2000: [0.06, 71], famas_acog: [0.006, 64], p90_od: [0.006, 64], mg4_od: [0.006, 64] }; // (v66h DotDot: its dot 64 px of 256). The ACOG's ZoomCrosshair stands 32 cm ahead of its mount (the reticle plane far out): its eye 47 cm behind it, 15 behind the eyepiece
 // v53 reload pose of the Blender guns: cant the other way (bottom toward the middle of the screen), swing in and lift, so the
 // magazine well and the left hand working it stay in view (the procedural guns keep RELOAD_POSE, which rolls them away)
 const GLB_RELOAD_POSE = { roll: -0.5, pitch: 0.32, drop: -0.09, shift: 0.08 };

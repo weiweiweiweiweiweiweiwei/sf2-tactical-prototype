@@ -77,7 +77,7 @@ const GUNS = {
   cz3a1: gun('cz3a1', { pkg: 'smg_cz_scorpion', tex: 'cz3a1_venomous', anim: '1st_anim_cz_scorpion', socketSights: sight('cz3a1/smg_cz_scorpion/SkeletalMesh3/smg_cz_scorpion_sight_up.gltf', 'cz_scorpion_body') }), // v65q tools/sf2_add_gun.py; v66j SF2's SightOnMesh (the add-gun step had skipped it: no sight sheet of its own — it wears cz_scorpion_body_d)
   csls06: gun('csls06', { pkg: 'smg_csls06' }), // v65q tools/sf2_add_gun.py
   bizon: gun('bizon', { pkg: 'smg_bizon', tex: 'bizon_6th' }), // v65q tools/sf2_add_gun.py
-  tar21: gun('tar21', { pkg: 'rif_tar21', hoodedPost: true, socketSights: sight('tar21/rif_tar21/SkeletalMesh3/rif_tar21_sight_up.gltf', 'tar21_sight') }), // v65q tools/sf2_add_gun.py
+  tar21: gun('tar21', { pkg: 'rif_tar21', hoodedPost: true, sightYaw: +(process.env.SROLL ?? 90), socketSights: sight('tar21/rif_tar21/SkeletalMesh3/rif_tar21_sight_up.gltf', 'tar21_sight') }), // v65q tools/sf2_add_gun.py; v66m read through its root bind the sight lies across the gun (25 cm wide, 2.5 long, 17 cm to the left): turned a quarter about the socket's up axis
   t91: gun('t91', { pkg: 'rif_t91', socketSights: sight('t91/rif_t91/SkeletalMesh3/rif_t91_sight_up.gltf', 't91_barrel') }), // v65q tools/sf2_add_gun.py; v66j SF2's SightOnMesh (the add-gun step had skipped it: no sight sheet of its own — it wears t91_barrel_d)
   t65k2: gun('t65k2', { pkg: 'rif_t65k2', hoodedPost: true, socketSights: sight('t65k2/rif_t65k2_sight/SkeletalMesh3/rif_t65k2_sight_up.gltf', 'rif_t65k2_sight_up') }), // v65q tools/sf2_add_gun.py
   t65k1: gun('t65k1', { pkg: 'rif_t65k1', hoodedPost: true, socketSights: sight('t65k1/rif_t65k1/SkeletalMesh3/rif_t65k1_sight_up.gltf', 't65k1_sight_up') }), // v65q tools/sf2_add_gun.py
@@ -86,7 +86,7 @@ const GUNS = {
   sar21: gun('sar21', { pkg: 'rif_sar21', hoodedPost: true, socketSights: sight('sar21/rif_sar21_sight/SkeletalMesh3/rif_sar21_sight_up.gltf', 'sar21_sight') }), // v65q tools/sf2_add_gun.py
   mrr: gun('mrr', { pkg: 'rif_mrr', tex: 'mrr_hightech', hoodedPost: true, socketSights: sight('mrr/rif_mrr/SkeletalMesh3/rif_mrr_sight_up.gltf', 'rif_mrr_sight') }), // v65q tools/sf2_add_gun.py
   k2c1: gun('k2c1', { pkg: 'rif_K2C1', stem: 'rif_k2c1', anim: '1st_anim_K2C1', socketSights: sight('k2c1/rif_K2C1/SkeletalMesh3/rif_k2c1_sight_up.gltf', 'k2c1_body') }), // v65q tools/sf2_add_gun.py; v66j SF2's SightOnMesh (the add-gun step had skipped it: no sight sheet of its own — it wears k2c1_body_d)
-  fnf2000: gun('fnf2000', { pkg: 'rif_fnf2000', hoodedPost: true, socketSights: sight('fnf2000/rif_fnf2000/SkeletalMesh3/rif_fnf2000_sight_up.gltf', 'fnf2000_sight') }), // v65q tools/sf2_add_gun.py
+  fnf2000: gun('fnf2000', { pkg: 'rif_fnf2000', hoodedPost: true, optic: { file: 'fnf2000/rif_fnf2000/SkeletalMesh3/rif_fnf2000_scope.gltf', props: 'fnf2000_anim/rif_fnf2000/SkeletalMesh3/rif_fnf2000_scope.props.txt', tex: 'fnf2000_scope', reticle: 'parts/dot_point/Texture2D/fnf2000_reticleDot.png' } }), // v65q tools/sf2_add_gun.py; v66m SF2's own optic (SFCItem_FNF2000 -> FNF2000_Scope: rif_fnf2000_scope on the Scope socket, an EOTech-type sight with fnf2000_reticleDot; no iron sight)
   cm901: gun('cm901', { pkg: 'rif_cm901', tex: 'rif_cm901', socketSights: sight('cm901/rif_cm901/SkeletalMesh3/rif_cm901_sight_up.gltf', 'rif_cm901_barrel') }), // v65q tools/sf2_add_gun.py; v66j SF2's SightOnMesh (the add-gun step had skipped it: no sight sheet of its own — it wears rif_cm901_barrel_d)
   arx160: gun('arx160', { pkg: 'rif_arx160', tex: 'rif_arx160', socketSights: sight('arx160/rif_arx160/SkeletalMesh3/rif_arx160_sight_up.gltf', 'rif_arx160_barrel') }), // v65q tools/sf2_add_gun.py; v66j SF2's SightOnMesh (the add-gun step had skipped it: no sight sheet of its own — it wears rif_arx160_barrel_d)
   an94: gun('an94', { pkg: 'rif_an94', hoodedPost: true, socketSights: sight('an94/rif_an94_sight/SkeletalMesh3/rif_an94_sight_up.gltf', 'an94_ironsight') }), // v65q tools/sf2_add_gun.py
@@ -339,7 +339,9 @@ const bore = sockAt('flame').slice(12, 15); // the muzzle
 const rot3 = (M, f) => (v) => { const w = xf(M, v, 0); return [w[0] * f, w[1], w[2] * f]; };
 const marks = { MUZZLE: bore };
 for (const [name, file, stem, socket] of G.socketSights) { // the part's own root bone onto the socket
-  const pd = await io.read(SRC + file), sk = pd.getRoot().listSkins()[0], ibm = Array.from(sk.getInverseBindMatrices().getArray()).slice(0, 16), M = mul(sockAt(socket), ibm);
+  const pd = await io.read(SRC + file), sk = pd.getRoot().listSkins()[0], ibm = Array.from(sk.getInverseBindMatrices().getArray()).slice(0, 16);
+  const ra = (G.sightYaw || 0) * Math.PI / 180, RY = [Math.cos(ra), 0, -Math.sin(ra), 0, 0, 1, 0, 0, Math.sin(ra), 0, Math.cos(ra), 0, 0, 0, 0, 1]; // (v66m G.sightYaw: a sight modelled across the gun, turned about the socket's own y — UE's up)
+  const M = mul(mul(sockAt(socket), RY), ibm);
   V[name] = await addPart(name, file, stem, { p: (v) => xf(M, v), n: rot3(M, 1) });
 }
 // v64 attachments: the part's root bone (weapon_scope / weapon_root) onto the body's socket, as the sights above; a point on one of

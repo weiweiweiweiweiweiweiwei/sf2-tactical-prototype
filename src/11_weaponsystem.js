@@ -67,11 +67,15 @@ class Arsenal {
   switchTo(i) {
     if (i === this.index || !this.selectable(i) || !this.owner.alive) return;
     this.exitADS(); // scope bug fix: leave ADS BEFORE the index changes (wheel / number keys / Q)
-    const old = this.current; old.holster(); old.vm.group.visible = false;
+    const held = this.trigger, old = this.current; old.holster(); old.vm.group.visible = false;
     this.lastIndex = this.index; this.index = i;
     const w = this.current; w.equip(); w.vm.group.visible = true; this.drawT = 1; this.trigger = false;
     const put = old.def.putDownTime ?? 0.2, left = Math.max(0, this.putT || 0); this.putT = put;
     w.cooldown = Math.max(w.cooldown, left + put + (w.def.equipTime || 0));
+    // v66m SF2 (user 11-01 1A): a fire pressed while the gun comes up is kept (WeaponEquipping.BeginFire → the InventoryManager's
+    // PendingFire, which outlives the switch) and Active.BeginState fires it the moment the draw ends — if the button is still down;
+    // letting go clears it (StopFire). So holding fire through Q, Q fires the sniper as soon as it is up.
+    w.drawing = true; w.pendingFire = held;
     this.onSwitch();
   }
   quickSwitch() { this.switchTo(this.lastIndex); }
@@ -147,7 +151,8 @@ class Arsenal {
       } else {
         this.trigger = !!(btn & BTN.FIRE);
         if (w.kind === 'knife') { if (act && (pressed & BTN.FIRE)) w.attack(false); if (act && (pressed & BTN.ALT)) w.attack(true); }
-        else if (act && (pressed & BTN.FIRE)) { if (w.cooldown <= 0) this._fire(); else if (!w.auto) w.queued = 0.1; }
+        else if (act && (pressed & BTN.FIRE)) { if (w.cooldown <= 0) this._fire(); else if (!w.auto) { w.queued = 0.1; if (w.drawing) w.pendingFire = true; } }
+        if (released & BTN.FIRE) w.pendingFire = false;
       }
     } else this.trigger = false;
     const w = this.current;
@@ -160,8 +165,9 @@ class Arsenal {
       if (this.trigger && w.auto && !w.reloading && g.canAct()) {
         let n = 0;
         while (w.cooldown <= 0 && n < 3) { if (w.ammo <= 0) { this._fire(); this.trigger = false; break; } this._fire(); n++; }
-      } else if (w.queued > 0) { w.queued -= h; if (w.cooldown <= 0) { w.queued = 0; this._fire(); } }
-    }
+      } else if (w.queued > 0) { w.queued -= h; if (w.cooldown <= 0) { w.queued = 0; w.pendingFire = false; this._fire(); } }
+      if (w.drawing && w.cooldown <= 0) { w.drawing = false; if (w.pendingFire && this.trigger && !w.reloading && g.canAct()) { w.pendingFire = false; this._fire(); } } // (v66m the held fire at the end of the draw)
+    } else w.drawing = false;
     if (this.unscopeT > 0) { this.unscopeT -= h; if (this.unscopeT <= 0) this.setAds(false, true); }
     if (w.reloading && this.ads) this.setAds(false, true);
     if (p.sprinting && this.ads) this.setAds(false, true);
