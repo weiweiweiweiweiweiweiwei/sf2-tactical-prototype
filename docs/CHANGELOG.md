@@ -1912,3 +1912,12 @@
 - 修正：蹲走只剩 0.24 m/s——摩擦的最低停止速度 3.2 m/s 比 SF2 的蹲走速度高，加速贏不過摩擦。改成有方向輸入時摩擦照實際速度算。
 - 台階高度維持 0.45 m（SF2 是 0.26）：怕現有地圖的樓梯、斜坡卡住，沒動。
 - 驗證：`tools/out/_movemeasure.mjs`（前進 3.40、後退 2.04、側移 2.72、衝刺 4.93、蹲走 1.02 m/s，跳 1.25 m，眼高 1.23，士兵 1.59 m）、MODULES_OK、CHECK_OK（倉庫、第二張圖）。
+
+### v66k（本機，2026-11-01）：槍的腰射／開鏡位置改用 SF2 的統一規則
+- 使用者 11-01 選 2A。SF2 擺第一人稱槍模的程式（`SFHandActor.UpdateMeshPosition`）寫在 `sf2.exe` 裡，而 `sf2.exe` 有加殼保護（區段名稱亂碼、熵值 7.99），讀不到也不破解。改成從資料反推：
+  - `tools/out/_aimrule.mjs` 量每把 SF2 槍模開鏡姿勢的瞄準線：全部在槍模原點正上方，高度 = 120 cm − `vLocZoomIN.z`，誤差約 0.1 cm（M4A1 120.89 − 0.87、G36C EOTech 121.86 − 1.8、FAMAS ACOG 123.03 − 3.015）。頭部骨頭固定在 (0, 123.93, 1.61)，所有姿勢都不動。
+  - 結論：SF2 的鏡頭固定在槍模空間 (0, 1.20 m, 0)，開鏡時槍模位移 `vLocZoomIN`、腰射時位移 `vLocZoomOut`，槍模視角分別是 `fZoomedMeshFOV`、`fZoomOutFOV`；裝瞄具時用瞄具道具裡對這把槍的 `AlignmentInfo`（位移和視角）取代。
+- `src/09c_sf2rig.js`：眼睛位置改成這條規則，不再用 SIGHT／DOT／POST 標記和手調的眼距推算。
+- `tools/sf2_weapon_table.py`：配件版槍的 `align`（瞄具道具、槍類別）自動讀 `AlignmentInfo`：G36C／SCAR-L／M14EBR／雷神 M4A1 的 EOTech（視角 8.5）、HK417 Reflex（3.8）、炙炎 FAMAS ACOG 導軌（5.05，腰射位移 (0, 1.5, −2)）、鬼靈精 P90 開放式（35）、黃金 MG4 OpenDot（35）。
+- 結果：87 把 SF2 槍模裡 58 把的瞄準線和 SF2 差 1 cm 以內（包括全部裝瞄具的）。還有 18 把低 1～5 cm，都是 v65q 自動加的槍：它們在 SF2 預設裝的瞄具不是我們當初抓的零件（例如 FN F2000 裝自己的瞄準鏡、CM901 用 AUG 的瞄具、T91 是提把照門、FNAR／MSR／SVCh 原版是狙擊鏡），已記在 TODO。
+- 驗證：`_rigshot` 截圖（M4A1、G36C／雷神 EOTech、HK417 Reflex、FAMAS ACOG、MG4 OpenDot 開鏡時瞄具在畫面正中）、MODULES_OK、CHECK_OK。

@@ -62,16 +62,16 @@ GUNS = {
     # v64 the attachment builds (the base gun's rig + SF2's EOTech / Reflex and silencer, the suppressed AR shot; reload as the base gun)
     # (the aimed lenses fitted to the user's SF2 shots, 10-28, with the eye 15 cm behind the optic's DOT (src/09_models.js RIG_EYE): the HK417
     # Reflex's window 76 % of the screen's width → 15; the G36C EOTech's (a 4:3 shot stretched, heights: 52.5 %) → 20, the SCAR-L's EOTech as it)
-    'g36c_eo': ('G36C_EOTech_Silencer_ButterflyFX', 'g36c_eo', 'g36c_eo', [0.12, 0.32, 0.76], {'vmAdsHFov': 20}),
-    'hk417_rs': ('HK417_mod2A', 'hk417_rs', 'hk417_rs', [0.16, 0.37, 0.77], {'vmAdsHFov': 15}),
-    'scarl_eo': ('SCARL_MK2', 'scarl_eo', 'scarl_eo', [0.12, 0.44, 0.72], {'vmAdsHFov': 20}),
+    'g36c_eo': ('G36C_EOTech_Silencer_ButterflyFX', 'g36c_eo', 'g36c_eo', [0.12, 0.32, 0.76], {'align': ('Common_DotSight_EOTECH', 'G36C')}),
+    'hk417_rs': ('HK417_mod2A', 'hk417_rs', 'hk417_rs', [0.16, 0.37, 0.77], {'align': ('Common_DotSight_Reflex', 'HK417')}),
+    'scarl_eo': ('SCARL_MK2', 'scarl_eo', 'scarl_eo', [0.12, 0.44, 0.72], {'align': ('Common_DotSight_EOTECH', 'SCARL')}),
     # v66h the gacha guns (user 11-01): the base guns' classes on their attachment rigs. Aimed lenses: SF2's AlignmentInfo fZoomedMeshFOV
     # where it lists the gun (FAMAS on the ACOG rail 5.05 — a magnified scope: 20 here, with the world at adsFov 40; MG4 / P90 on the open
     # dot 35), the M4A1 EOTech as the G36C's (20). Reload marks as the base guns'; the P90's the SMGs' usual (not measured)
-    'famas_blaze': ('FAMAS', 'famas_acog', 'famas_blaze', [0.2, 0.4, 0.73], {'vmAdsHFov': 20, 'adsFov': 40}),
-    'p90_grinch': ('P90', 'p90_od', 'p90_grinch', [0.15, 0.45, 0.75], {'vmAdsHFov': 35}),
-    'm4a1_thor': ('M4A1', 'm4a1_eo', 'm4a1', [0.07, 0.36, 0.73], {'vmAdsHFov': 20}),
-    'mg4_gold': ('MG4', 'mg4_od', 'mg4', [0.15, 0.45, 0.8], {'vmAdsHFov': 35}),
+    'famas_blaze': ('FAMAS', 'famas_acog', 'famas_blaze', [0.2, 0.4, 0.73], {'adsFov': 40, 'align': ('Common_DotSight_ACOG_Rail', 'FAMAS')}),
+    'p90_grinch': ('P90', 'p90_od', 'p90_grinch', [0.15, 0.45, 0.75], {'align': ('P90_DotSight_Open', 'P90')}),
+    'm4a1_thor': ('M4A1', 'm4a1_eo', 'm4a1', [0.07, 0.36, 0.73], {'align': ('Common_DotSight_EOTECH', 'M4A1')}),
+    'mg4_gold': ('MG4', 'mg4_od', 'mg4', [0.15, 0.45, 0.8], {'align': ('Common_DotSight_Open', 'MG4')}),
     # v64 the K14 bolt action: its Reload clip (91 frames) opens the bolt at 13, the mag out at 28 / in at 44, the bolt shut at 68;
     # the 2D scope stays the game's (zoom levels like the M40A1), and SF2's 20° kick block is left out (the bolt drops the scope anyway)
     'k14': ('K14', 'k14', 'k14', [0.31, 0.48, 0.75], {'adsType': '2d_scope_overlay', 'adsFov': 20, 'adsSpeed': 17, 'vmAdsHFov': None, 'sf2Recoil': None,
@@ -94,7 +94,7 @@ GUNS = {
     'psg1': ('PSG1', 'psg1', 'psg1', [0.2, 0.45, 0.75], {'adsType': '2d_scope_overlay', 'adsFov': 20, 'adsSpeed': 16, 'vmAdsHFov': None, 'sf2Recoil': None, 'sf2Reticle': 'mil', 'zoomHFovs': [20, 12]}),
     'frf2': ('FRF2', 'frf2', 'frf2', [0.31, 0.48, 0.75], {'adsType': '2d_scope_overlay', 'adsFov': 20, 'adsSpeed': 17, 'vmAdsHFov': None, 'sf2Recoil': None, 'sf2Reticle': 'mil1', 'zoomHFovs': [55, 20],
                                                        'sf2ReloadSounds': [[0.14, 'boltback'], [0.31, 'magout'], [0.48, 'magin'], [0.75, 'charge']]}),
-    'm14ebr': ('M14EBR', 'm14ebr', 'm14ebr', [0.2, 0.45, 0.75], {'adsType': '3d_sight', 'vmAdsHFov': 20, 'zoomHFovs': None}), # (SF2: an EOTech rifle — the 2D scope goes)
+    'm14ebr': ('M14EBR', 'm14ebr', 'm14ebr', [0.2, 0.45, 0.75], {'adsType': '3d_sight', 'zoomHFovs': None, 'align': ('Common_DotSight_EOTECH', 'M14EBR')}), # (SF2: an EOTech rifle — the 2D scope goes)
     # v65e docs/loop/GUNS.md D: rifles (reload marks the SF2 rifles' usual: out, in, charge)
     'aug': ('AUGA3', 'aug', 'aug', [0.15, 0.4, 0.75]),
     'sg551': ('SIG551', 'sg551', 'sg551', [0.15, 0.4, 0.75]),
@@ -143,9 +143,24 @@ def reload_blend():
     return out
 
 
+def alignment():
+    """v66j an optic's own placement for each gun (user 11-01, 2A): Default__SFCItem_<sight>'s AlignmentInfo — per weapon class the
+    mesh's aimed shift vLocZoomIN, its hip shift vLocZoomOut (zero: the gun's own) and the aimed lens fZoomedMeshFOV (src/09c_sf2rig.js:
+    SF2's camera is a fixed point of the mesh's space, the shifts move the mesh)."""
+    import sf2_props as S
+    pk = S.Pkg(S.PKG_DIR + 'SFGameContent.upk'); out = {}
+    for e in pk.exports:
+        if e['name'].startswith('Default__SFCItem_'):
+            for n, i, t, v in pk.props(e):
+                if n == 'AlignmentInfo' and isinstance(v, list):
+                    for a in v:
+                        if isinstance(a, dict) and 'WeaponClassName' in a: out[(e['name'][len('Default__SFCItem_'):], a['WeaponClassName'][len('SFCWeapon'):])] = a
+    return out
+
+
 def main():
     w = json.load(open('docs/research/sf2/client-data/weapons.json', encoding='utf-8'))
-    rows = []; blend = reload_blend()
+    rows = []; blend = reload_blend(); AL = alignment()
     for gid, (cls, rig, snd, rs, *extra) in GUNS.items():
         d = w['SFCWeapon' + cls]; rc = d['RecoilDefault']
         rec = {k: r3(rc.get(k, 0)) for k in REC}; rec['zoomMod'] = r3(d.get('RecoilZoomModifier', 1)); rec['crouchMod'] = r3(d.get('RecoilCrouchModifier', 1))
@@ -158,7 +173,10 @@ def main():
         rb = next((blend[c] for c in d.get('chain', ['SFCWeapon' + cls]) if c in blend), None)  # v64m the Reload clip's own length (GetReloadBlendTime)
         if rb and rb > o['reloadTime']: o['sf2ReloadAnim'] = r3(rb)
         for k, v in (extra[0] if extra else {}).items():  # (v64 per-gun overrides; None drops the key)
-            if v is None: o.pop(k, None)
+            if k == 'align':  # (v66j the optic's own shifts and lens for this gun)
+                a = AL[v]; o['sf2ZoomIn'] = [r3(x) for x in a['vLocZoomIN']]; o['vmAdsHFov'] = r3(a['fZoomedMeshFOV'])
+                if any(abs(x) > 1e-6 for x in a['vLocZoomOut']): o['sf2ZoomOut'] = [r3(x) for x in a['vLocZoomOut']]
+            elif v is None: o.pop(k, None)
             else: o[k] = v
         rows.append(f"  {gid}: {json.dumps(o, separators=(', ', ': '))}, // SFCWeapon{cls}")
     js = ("/* v62i SF2's own timing, lenses, zoom offsets and recoil for the guns with an SF2 rig — generated by tools/sf2_weapon_table.py from\n"

@@ -17,27 +17,21 @@ class SF2Rig {
     });
     this.mixer = new THREE.AnimationMixer(m); this.a = {};
     for (const c of gltf.animations) { const a = this.mixer.clipAction(c); a.play(); a.paused = true; a.setEffectiveWeight(0); this.a[c.name] = a; }
-    // the camera: on the aimed sight line (Zoom's last frame, the peep → post line runs along +Z), as deep as the head bone
-    // (6.4 cm behind the peep), with SF2's own viewmodel lenses (def.vmHFov / vmAdsHFov, horizontal). v62f: checked on the
-    // user's SF2 ADS screenshot (10-27) — the peep ring 267 px at 1080p there and here. (v62 had the eye 3 cm back with a
-    // 48° vertical lens: the right ring from the wrong pair, the gun 1.8× too small.) One camera for every pose, as in SF2.
-    // v62h guns without a fitted peep (no SIGHT mark: AK-103, G36C): the eye level with the front sight's tip (POST), as deep as
-    // SF2 puts it through the weapon's own vLocZoomIN (the mesh's aimed offset, UE cm, x forward): head z − 3 cm − x / 100 —
-    // the M4A1's −3 gives the head depth the screenshot fit found.
-    // Rig space is +Z forward, −X right, +Y up: turned half a turn about Y it is camera space.
+    // v66j SF2's own rule (user 11-01, 2A; tools/out/_aimrule.mjs): its first-person camera stands at a fixed point of the mesh's
+    // space — 1.20 m over the Bip01 origin, on its centre line (the Head bone, 123.93 / 1.61 cm, never moves) — and the mesh is
+    // shifted by the weapon's vLocZoomIN when aimed, vLocZoomOut at the hip (UE cm: x forward, y right, z up), drawn at its own
+    // lens (fZoomedMeshFOV / fZoomOutFOV). An optic brings its own shift and lens for each gun (the sight item's AlignmentInfo,
+    // tools/sf2_weapon_table.py). Checked on the Zoom pose of every SF2 rig: the sight line (peep, post tip, optic dot) is 120.0 cm
+    // up, less vLocZoomIN.z, to 0.1 cm (M4A1 120.89 − 0.87, G36C EOTech 121.86 − 1.8, FAMAS ACOG 123.03 − 3.015). Before, the eye
+    // was found from the sight marks — on the v65q guns the post search had stopped on the wrong points (115–118 cm: the gun rode high).
+    // Rig space is +Z forward, −X right, +Y up: turned half a turn about Y it is camera space; the eye is the camera less the shift.
     this.pose({ Zoom: [this.dur('Zoom'), 1] });
-    // v64 an optic (EOTech / Reflex): its ZoomCrosshair socket (the DOT mark) is the aim point, the eye o.eyeRelief behind it
-    // (the user's SF2 G36C EOTech ADS shot, 10-28: the window half the screen wide → 6 cm), else at the vLocZoomIN depth
-    const sm = m.getObjectByName('SIGHT'), dm = m.getObjectByName('DOT'), head = m.getObjectByName('Bip01-Head').getWorldPosition(new THREE.Vector3());
-    const s = (sm || dm || m.getObjectByName('POST')).getWorldPosition(new THREE.Vector3());
-    const eye = new THREE.Vector3(s.x, s.y, (sm || dm) && o.eyeRelief != null ? s.z - o.eyeRelief : sm ? head.z : head.z - 0.03 - (o.zoomIn ? o.zoomIn[0] : -3) / 100);
+    const zi = o.zoomIn || [0, 0, 0], zo = o.zoomOut || [0, 0, 0];
+    const eye = new THREE.Vector3(zi[1] / 100, 1.2 - zi[2] / 100, -zi[0] / 100);
     m.rotation.y = Math.PI; m.position.set(eye.x, -eye.y, eye.z);
-    // v62i at the hip SF2 holds the mesh at vLocZoomOut, aimed at vLocZoomIN (UE cm: x forward, y right, z up), blended by the aim:
-    // the hip eye = the aimed eye + (in − out) in rig space (−y, z, x) / 100 (M4A1: 2 cm further back and 0.87 cm lower)
-    const zi = o.zoomIn || [-3, 0, 0], zo = o.zoomOut || [0, 0, 0];
+    // at the hip the mesh sits at vLocZoomOut instead: the hip eye = the aimed eye + (in − out) in rig space (−y, z, x) / 100
     this.eyeAim = eye.clone(); this.hipShift = new THREE.Vector3(-(zi[1] - zo[1]), zi[2] - zo[2], zi[0] - zo[0]).multiplyScalar(0.01);
-    // v64g o.hipPos: the model's position at the hip given outright (camera space) — a scoped gun has no sight line to derive it from
-    // (the K14: fitted to the user's SF2 hip shot, tools/out/_k14fit.mjs); the aim end stays the eye rule's
+    // v64g o.hipPos: the model's position at the hip given outright (camera space) — the K14, fitted to the user's SF2 hip shot
     if (o.hipPos) this.hipShift.set(o.hipPos[0] - eye.x, -o.hipPos[1] - eye.y, o.hipPos[2] - eye.z);
     this.place(0);
     this.reloadSounds = o.reloadSounds || null;
