@@ -18,9 +18,9 @@ GUNS = {
     'ultimax': ('Ultimax', 'ultimax', 'ultimax', [0.12, 0.4, 0.73]),  # v65q sf2_add_gun
     'minimispw': ('MinimiSPW', 'minimispw', 'minimispw', [0.12, 0.4, 0.73]),  # v65q sf2_add_gun
     'fnmag': ('FNMAG', 'fnmag', 'fnmag', [0.12, 0.4, 0.73]),  # v65q sf2_add_gun
-    'svch': ('SVCh', 'svch', 'svch', [0.12, 0.4, 0.73]),  # v65q sf2_add_gun
-    'msr': ('MSR', 'msr', 'msr', [0.12, 0.4, 0.73]),  # v65q sf2_add_gun
-    'fnar': ('FNAR', 'fnar', 'fnar', [0.12, 0.4, 0.73]),  # v65q sf2_add_gun
+    'svch': ('SVCh', 'svch', 'svch', [0.12, 0.4, 0.73], {'adsType': '2d_scope_overlay', 'adsFov': 20, 'adsSpeed': 16, 'vmAdsHFov': None, 'sf2Recoil': None, 'sf2Reticle': 'mil', 'zoomHFovs': [20, 12]}),  # v65q sf2_add_gun; v66j SF2 scopes it (2D scope as the SR-25 / CheyTac)
+    'msr': ('MSR', 'msr', 'msr', [0.12, 0.4, 0.73], {'adsType': '2d_scope_overlay', 'adsFov': 20, 'adsSpeed': 16, 'vmAdsHFov': None, 'sf2Recoil': None, 'sf2Reticle': 'mil', 'zoomHFovs': [55, 20]}),  # v65q sf2_add_gun; v66j SF2 scopes it (2D scope as the SR-25 / CheyTac)
+    'fnar': ('FNAR', 'fnar', 'fnar', [0.12, 0.4, 0.73], {'adsType': '2d_scope_overlay', 'adsFov': 20, 'adsSpeed': 16, 'vmAdsHFov': None, 'sf2Recoil': None, 'sf2Reticle': 'mil', 'zoomHFovs': [20, 12]}),  # v65q sf2_add_gun; v66j SF2 scopes it (2D scope as the SR-25 / CheyTac)
     'uzipro': ('UziPro', 'uzipro', 'uzipro', [0.12, 0.4, 0.73]),  # v65q sf2_add_gun
     'sigmpx': ('SIGMPX', 'sigmpx', 'sigmpx', [0.12, 0.4, 0.73]),  # v65q sf2_add_gun
     'mx4': ('Mx4Storm', 'mx4', 'mx4', [0.12, 0.4, 0.73]),  # v65q sf2_add_gun

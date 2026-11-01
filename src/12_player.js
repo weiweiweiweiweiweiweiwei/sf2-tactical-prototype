@@ -143,7 +143,7 @@ class Human extends Combatant {
     let speed = (load != null ? sf2Speed(load) : w.moveSpeed) * (this.carrying ? 0.88 : 1) * (Q ? Q.speedK : 1);
     if (m.crouching) speed *= Q ? Q.crouchMult : P.crouchMult; else if (this.sprinting || (canSprint && this.sprintAir)) speed *= Q ? Q.sprintMult : P.sprintMult;
     if (!Q && (f || r)) speed *= f > 0 ? 1 : f < 0 ? (r ? P.dirPct[3] : P.dirPct[1]) : P.dirPct[2]; // v66j SF2's SpeedDirPct: back 0.6, sideways 0.8, back-diagonal 0.7
-    if (ws.ads) speed *= w.adsMove ?? 1;
+    if (ws.ads) speed *= w.adsMove ?? (this.pace ? 1 : 0.5); // v66j SF2 (user 11-01 3A): aimed is walking — SFPlayerController.HandleWalking sets it while bZoomWalking, at Pawn.WalkingPct 0.5 (the knife's adsMove 1 keeps its stab pace)
     if (w.reloading) speed *= RELOAD_MOVE; // v34: reloading = slower walk, no sprint
     m.step(h, wx, wz, len > 0 ? speed : 0);
     if (m.climbing) { if (m.climbDist > 0.45) { // (v65y SF2: two metal footsteps a climb cycle)

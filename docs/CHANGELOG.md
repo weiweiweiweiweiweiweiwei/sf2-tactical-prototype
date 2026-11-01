@@ -1921,3 +1921,13 @@
 - `tools/sf2_weapon_table.py`：配件版槍的 `align`（瞄具道具、槍類別）自動讀 `AlignmentInfo`：G36C／SCAR-L／M14EBR／雷神 M4A1 的 EOTech（視角 8.5）、HK417 Reflex（3.8）、炙炎 FAMAS ACOG 導軌（5.05，腰射位移 (0, 1.5, −2)）、鬼靈精 P90 開放式（35）、黃金 MG4 OpenDot（35）。
 - 結果：87 把 SF2 槍模裡 58 把的瞄準線和 SF2 差 1 cm 以內（包括全部裝瞄具的）。還有 18 把低 1～5 cm，都是 v65q 自動加的槍：它們在 SF2 預設裝的瞄具不是我們當初抓的零件（例如 FN F2000 裝自己的瞄準鏡、CM901 用 AUG 的瞄具、T91 是提把照門、FNAR／MSR／SVCh 原版是狙擊鏡），已記在 TODO。
 - 驗證：`_rigshot` 截圖（M4A1、G36C／雷神 EOTech、HK417 Reflex、FAMAS ACOG、MG4 OpenDot 開鏡時瞄具在畫面正中）、MODULES_OK、CHECK_OK。
+
+### v66l（本機，2026-11-01）：開鏡強制慢走；v65q 槍補上 SF2 預設瞄具
+- 使用者 11-01 選 3A：開鏡時移動速度 ×0.5（SF2 `SFPlayerController.HandleWalking`：`bZoomWalking` 時強制靜步，`WalkingPct` 0.5）。刀不受影響；Apex 跑酷地圖維持舊的。
+- 使用者 11-01 選 1A：v66k 列出的 18 把裡修好 16 把：
+  - 補上 SF2 類別的 `SightOnMesh`（當初自動加槍時，準星沒有自己的貼圖就被跳過）：ARX160、CM901、K2C1、T91、CZ3A1、SIG MPX、Uzi Pro、FN MAG、Minimi SPW；貼圖照準星材質（多半借槍管貼圖）。
+  - 原版是狙擊鏡：FNAR（SR25 鏡）、MSR（CheyTac 鏡）、SVCh（Bender 鏡），改成 2D 狙擊鏡畫面。
+  - SAR21、Kriss V、Maxim9、SAIGA-12：準星實際高度本來就在 SF2 的瞄準線上，之前是瞄準點搜尋找錯；v66k 的規則已經對了。
+  - 還沒好：TAR21（開鏡準星仍偏低）、FN F2000（原版裝自己的瞄準鏡 `scope_fnf2000`，模型還沒找到，開鏡看不到槍）。
+- 台階高度照使用者 2A 維持 0.45 m。
+- 驗證：12 把的腰射／開鏡截圖、MODULES_OK、CHECK_OK。

@@ -63,32 +63,32 @@ const GUNS = {
   luger: gun('luger', { pkg: 'pis_luger', partNames: ['body', 'magazine'] }), // v65q tools/sf2_add_gun.py
   k5: gun('k5', { pkg: 'pis_k5', partNames: ['body', 'magazine'] }), // v65q tools/sf2_add_gun.py
   ultimax: gun('ultimax', { pkg: 'mg_ultimax' }), // v65q tools/sf2_add_gun.py
-  minimispw: gun('minimispw', { pkg: 'mg_spw', tex: 'spw', anim: '1st_anim_spw' }), // v65q tools/sf2_add_gun.py
-  fnmag: gun('fnmag', { pkg: 'mg_fn_mag', tex: 'fn_mag', anim: '1st_anim_fn_mag' }), // v65q tools/sf2_add_gun.py
-  svch: gun('svch', { pkg: 'sni_svch' }), // v65q tools/sf2_add_gun.py
-  msr: gun('msr', { pkg: 'sni_msr' }), // v65q tools/sf2_add_gun.py
-  fnar: gun('fnar', { pkg: 'sni_fnar', tex: 'sni_fnar' }), // v65q tools/sf2_add_gun.py
-  uzipro: gun('uzipro', { pkg: 'smg_uzi_pro', tex: 'smg_uzipro', anim: '1st_anim_uzi_pro' }), // v65q tools/sf2_add_gun.py
-  sigmpx: gun('sigmpx', { pkg: 'smg_sigmpx', tex: 'sigmpx_gear' }), // v65q tools/sf2_add_gun.py
+  minimispw: gun('minimispw', { pkg: 'mg_spw', tex: 'spw', anim: '1st_anim_spw', socketSights: sight('minimispw/mg_spw/SkeletalMesh3/mg_spw_sight_up.gltf', 'spw_barrel') }), // v65q tools/sf2_add_gun.py; v66j SF2's SightOnMesh (the add-gun step had skipped it: no sight sheet of its own — it wears spw_barrel_d)
+  fnmag: gun('fnmag', { pkg: 'mg_fn_mag', tex: 'fn_mag', anim: '1st_anim_fn_mag', socketSights: sight('fnmag/mg_fn_mag/SkeletalMesh3/mg_fn_mag_sight_up.gltf', 'fn_mag_barrel') }), // v65q tools/sf2_add_gun.py; v66j SF2's SightOnMesh (the add-gun step had skipped it: no sight sheet of its own — it wears fn_mag_barrel_d)
+  svch: gun('svch', { pkg: 'sni_svch', optic: { ...K14_SCOPE } }), // v65q tools/sf2_add_gun.py; v66j SF2's own scope (SFCItem_SVCH -> SR25_Def_Scope / Common_CheyTac_Original / SVCh_Scope_Bender)
+  msr: gun('msr', { pkg: 'sni_msr', optic: SCOPE('scope_cheytac', 'cheytac_scope_a') }), // v65q tools/sf2_add_gun.py; v66j SF2's own scope (SFCItem_MSR -> SR25_Def_Scope / Common_CheyTac_Original / SVCh_Scope_Bender)
+  fnar: gun('fnar', { pkg: 'sni_fnar', tex: 'sni_fnar', optic: SCOPE('scope_sr25', 'scope_sr25') }), // v65q tools/sf2_add_gun.py; v66j SF2's own scope (SFCItem_FNAR -> SR25_Def_Scope / Common_CheyTac_Original / SVCh_Scope_Bender)
+  uzipro: gun('uzipro', { pkg: 'smg_uzi_pro', tex: 'smg_uzipro', anim: '1st_anim_uzi_pro', socketSights: sight('uzipro/smg_uzi_pro/SkeletalMesh3/smg_uzi_pro_sight_up.gltf', 'smg_uzipro_barrel') }), // v65q tools/sf2_add_gun.py; v66j SF2's SightOnMesh (the add-gun step had skipped it: no sight sheet of its own — it wears smg_uzipro_barrel_d)
+  sigmpx: gun('sigmpx', { pkg: 'smg_sigmpx', tex: 'sigmpx_gear', socketSights: sight('sigmpx/smg_sigmpx/SkeletalMesh3/smg_sigmpx_sight_up.gltf', 'smg_sigmpx_barrel') }), // v65q tools/sf2_add_gun.py; v66j SF2's SightOnMesh (the add-gun step had skipped it: no sight sheet of its own — it wears smg_sigmpx_barrel_d)
   mx4: gun('mx4', { pkg: 'smg_mx4_storm', tex: 'mx4storm', anim: '1st_anim_mx4_storm' }), // v65q tools/sf2_add_gun.py
   mp40: gun('mp40', { pkg: 'rif_mp40' }), // v65q tools/sf2_add_gun.py
   krissv: gun('krissv', { pkg: 'smg_ksv', tex: 'ksv', anim: '1st_anim_ksv', hoodedPost: true, socketSights: sight('krissv/smg_ksv_sight/SkeletalMesh3/smg_ksv_sight_up.gltf', 'ksv_sight') }), // v65q tools/sf2_add_gun.py
   k1: gun('k1', { pkg: 'smg_k1', tex: 'k1_8th' }), // v65q tools/sf2_add_gun.py
-  cz3a1: gun('cz3a1', { pkg: 'smg_cz_scorpion', tex: 'cz3a1_venomous', anim: '1st_anim_cz_scorpion' }), // v65q tools/sf2_add_gun.py
+  cz3a1: gun('cz3a1', { pkg: 'smg_cz_scorpion', tex: 'cz3a1_venomous', anim: '1st_anim_cz_scorpion', socketSights: sight('cz3a1/smg_cz_scorpion/SkeletalMesh3/smg_cz_scorpion_sight_up.gltf', 'cz_scorpion_body') }), // v65q tools/sf2_add_gun.py; v66j SF2's SightOnMesh (the add-gun step had skipped it: no sight sheet of its own — it wears cz_scorpion_body_d)
   csls06: gun('csls06', { pkg: 'smg_csls06' }), // v65q tools/sf2_add_gun.py
   bizon: gun('bizon', { pkg: 'smg_bizon', tex: 'bizon_6th' }), // v65q tools/sf2_add_gun.py
   tar21: gun('tar21', { pkg: 'rif_tar21', hoodedPost: true, socketSights: sight('tar21/rif_tar21/SkeletalMesh3/rif_tar21_sight_up.gltf', 'tar21_sight') }), // v65q tools/sf2_add_gun.py
-  t91: gun('t91', { pkg: 'rif_t91' }), // v65q tools/sf2_add_gun.py
+  t91: gun('t91', { pkg: 'rif_t91', socketSights: sight('t91/rif_t91/SkeletalMesh3/rif_t91_sight_up.gltf', 't91_barrel') }), // v65q tools/sf2_add_gun.py; v66j SF2's SightOnMesh (the add-gun step had skipped it: no sight sheet of its own — it wears t91_barrel_d)
   t65k2: gun('t65k2', { pkg: 'rif_t65k2', hoodedPost: true, socketSights: sight('t65k2/rif_t65k2_sight/SkeletalMesh3/rif_t65k2_sight_up.gltf', 'rif_t65k2_sight_up') }), // v65q tools/sf2_add_gun.py
   t65k1: gun('t65k1', { pkg: 'rif_t65k1', hoodedPost: true, socketSights: sight('t65k1/rif_t65k1/SkeletalMesh3/rif_t65k1_sight_up.gltf', 't65k1_sight_up') }), // v65q tools/sf2_add_gun.py
   stg44: gun('stg44', { pkg: 'rif_stg44' }), // v65q tools/sf2_add_gun.py
   madsenlar: gun('madsenlar', { pkg: 'rif_madsen_lar', tex: 'rif_madsen_lar', anim: '1st_anim_madsen_lar' }), // v65q tools/sf2_add_gun.py
   sar21: gun('sar21', { pkg: 'rif_sar21', hoodedPost: true, socketSights: sight('sar21/rif_sar21_sight/SkeletalMesh3/rif_sar21_sight_up.gltf', 'sar21_sight') }), // v65q tools/sf2_add_gun.py
   mrr: gun('mrr', { pkg: 'rif_mrr', tex: 'mrr_hightech', hoodedPost: true, socketSights: sight('mrr/rif_mrr/SkeletalMesh3/rif_mrr_sight_up.gltf', 'rif_mrr_sight') }), // v65q tools/sf2_add_gun.py
-  k2c1: gun('k2c1', { pkg: 'rif_K2C1', stem: 'rif_k2c1', anim: '1st_anim_K2C1' }), // v65q tools/sf2_add_gun.py
+  k2c1: gun('k2c1', { pkg: 'rif_K2C1', stem: 'rif_k2c1', anim: '1st_anim_K2C1', socketSights: sight('k2c1/rif_K2C1/SkeletalMesh3/rif_k2c1_sight_up.gltf', 'k2c1_body') }), // v65q tools/sf2_add_gun.py; v66j SF2's SightOnMesh (the add-gun step had skipped it: no sight sheet of its own — it wears k2c1_body_d)
   fnf2000: gun('fnf2000', { pkg: 'rif_fnf2000', hoodedPost: true, socketSights: sight('fnf2000/rif_fnf2000/SkeletalMesh3/rif_fnf2000_sight_up.gltf', 'fnf2000_sight') }), // v65q tools/sf2_add_gun.py
-  cm901: gun('cm901', { pkg: 'rif_cm901', tex: 'rif_cm901' }), // v65q tools/sf2_add_gun.py
-  arx160: gun('arx160', { pkg: 'rif_arx160', tex: 'rif_arx160' }), // v65q tools/sf2_add_gun.py
+  cm901: gun('cm901', { pkg: 'rif_cm901', tex: 'rif_cm901', socketSights: sight('cm901/rif_cm901/SkeletalMesh3/rif_cm901_sight_up.gltf', 'rif_cm901_barrel') }), // v65q tools/sf2_add_gun.py; v66j SF2's SightOnMesh (the add-gun step had skipped it: no sight sheet of its own — it wears rif_cm901_barrel_d)
+  arx160: gun('arx160', { pkg: 'rif_arx160', tex: 'rif_arx160', socketSights: sight('arx160/rif_arx160/SkeletalMesh3/rif_arx160_sight_up.gltf', 'rif_arx160_barrel') }), // v65q tools/sf2_add_gun.py; v66j SF2's SightOnMesh (the add-gun step had skipped it: no sight sheet of its own — it wears rif_arx160_barrel_d)
   an94: gun('an94', { pkg: 'rif_an94', hoodedPost: true, socketSights: sight('an94/rif_an94_sight/SkeletalMesh3/rif_an94_sight_up.gltf', 'an94_ironsight') }), // v65q tools/sf2_add_gun.py
   // v62o the rear sight is the A2 carry handle (rif_m4a1_handle_a, its own sheet handle_d / _n in weapon_common_part): SF2's ADS picture (user 10-27) has the aperture ring standing above the handle's ears; the detachable
   // rif_m4a1_rearsight (weapon_common_part01) used since v61b is an attachment, its ring sat level with its guards

@@ -21,7 +21,8 @@
 - ✅ SF2 原版移動、重力、跳躍、身高（v66j，使用者 1A／3A）
   - ⬜ 等使用者實際玩過的意見：整體變慢約四成；台階還是 0.45 m（SF2 0.26）；開鏡時 SF2 會強制靜步（bZoomWalking），目前沒做
 - ✅ 槍的腰射／開鏡位置照 SF2 的統一規則（v66k，使用者 2A）：鏡頭固定在槍模空間 1.20 m，槍模照 `vLocZoomIN`／`vLocZoomOut` 位移，瞄具用 `AlignmentInfo`
-  - ⬜ 18 把的瞄具零件要換成 SF2 預設的（`SFCItem_<槍>` 的 DefaultItemClassNames 裡的 Def_Sight／Scope，解析 `wp_*` 包的 SFItemMesh）：ARX160（AR_Def_Sight）、CM901（AUG_Def_Sight）、FN F2000（FNF2000_Scope）、K2C1（K2_Def_Sight）、SAR21、T91（Def_Handle）、TAR21、CZ3A1、Kriss V、SIG MPX、Uzi Pro（WeaponCommon_Def_Sight）、FNAR（SR25_Def_Scope）、MSR（CheyTac 鏡）、SVCh（Bender 鏡）、FN MAG、Minimi SPW、Maxim9（Pistol_Def_Sight）、SAIGA-12；`tools/out/_aimrule.mjs` 會列出差多少
+  - ✅ 16 把補上 SF2 預設瞄具（v66l）
+  - ⬜ TAR21 開鏡準星仍偏低；FN F2000 的專屬瞄準鏡 `scope_fnf2000`（`wp_ar_fnf2000` 的 SFItemMesh 指到的模型還沒找到所在的包）
 ## 1. SF2 原版槍枝素材（UModel，`D:\SpecialForce2`）
 - ✅ 扭蛋槍（使用者 11-01，v66h）：炙炎 FAMAS、鬼靈精 P90、雷神 M4A1（動態電光烤漆）、黃金 MG4
   - ⬜ 等使用者實際玩過的意見：雷神電光的亮度與流動速度（SF2 的平移速度被烘掉，照眼睛調）、ACOG 開鏡放大倍率（世界視角 40）、P90 開放式瞄具的紅點位置
