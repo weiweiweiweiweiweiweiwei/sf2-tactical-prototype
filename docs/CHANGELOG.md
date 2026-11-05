@@ -2041,3 +2041,8 @@
   - 三重式開鏡被後方的大塊機匣擋住、Volt 開鏡被槍管擋住準星 → 眼睛再抬高（`tools/blender/apex_gun_build.py` 的 `EYE_UP`：三重式 4 cm、Volt 3 cm，其他維持 1.2 cm）。
   - 波塞克（1.3 m 的弓）腰射佔掉右半個畫面、Kraber 的槍托升進畫面、L-STAR 太大 → 各自的腰射位置（`apexHip`，`tools/apex_gun_defs.mjs`）往右下、往前移。
 - 其他 24 把的腰射和機械瞄具看起來正常（準星都在前後瞄具連線上）；四把狙擊槍用狙擊鏡。MODULES_OK、CHECK_OK。
+
+### v67a（本機，2026-11-05）：Apex 機械瞄具拿掉紅圈、R-301 前準星立起來；推 master
+- 使用者 11-05 選 B：Apex 槍的機械瞄具不再加遊戲的紅色圓圈準心（`src/09_models.js` apexGun `reticle: false`），照 Apex 只看前後瞄具。
+- R-301 的前準星有兩個零件：`sight_front_0` 是折下來的（裝鏡時用）、`_1` 是立起來的機械瞄具；之前留成 `_0`，開鏡看不到前準星。`tools/blender/apex_gun_build.py` 改成瞄具零件有 `_1` 就用 `_1`。
+- 5 把借 SF2 槍聲的照舊（使用者選 A）。使用者選 B：推 master。

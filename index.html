@@ -19066,7 +19066,7 @@ var WeaponModels = class {
   // is parsed, a stand-in of its class
   apexGun(def) {
     const stand = { assault: "m4", smg: "mp5", lmg: "m249", sniper: "m200", shotgun: "m870", pistol: "p226" }[def.type] || "m4";
-    return this.fromGLB(def.model, { eye: 0, flash: 0.2, hip: def.apexHip || (def.type === "pistol" ? [0.12, -0.15, -0.3] : [0.14, -0.175, -0.36]), reticle: def.adsType !== "2d_scope_overlay" }) || this[stand](def);
+    return this.fromGLB(def.model, { eye: 0, flash: 0.2, hip: def.apexHip || (def.type === "pistol" ? [0.12, -0.15, -0.3] : [0.14, -0.175, -0.36]), reticle: false });
   }
   // v62 SF2's own first-person rig (SF2Rig): arms and gun animated by the original clips. The group sits at the eye like any
   // viewmodel but never moves to an ADS pose — Zoom does that — and has no mag / charge / left-hand nodes for Weapon.animate.

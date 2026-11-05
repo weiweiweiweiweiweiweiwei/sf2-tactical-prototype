@@ -74,7 +74,10 @@ for gid in IDS:
   for o in meshes:
     p = part(o); base = re.sub(r'_\d+$', '', p)
     if DROP.match(p): continue
-    if p.endswith('_0') or (base.startswith(('sight', 'mastiff_sight')) and base not in has0 and p.endswith('_1')): keep.append(o)
+    is_sight = base.startswith(('sight', 'mastiff_sight'))
+    has1 = any(part(x) == base + '_1' for x in meshes)
+    # (v67a an iron sight's `_1` is it raised — the R-301's `_0` is the front post folded down for an optic: keep the raised one)
+    if (is_sight and p.endswith('_1')) or (p.endswith('_0') and not (is_sight and has1)): keep.append(o)
   M = {'MUZZLE': bone('muzzle_flash'), 'SIGHT': bone('ja_ads_attachment') + Vector((0, 0, EYE_UP.get(gid, 0.012))), 'GRIP': bone('ja_c_propGun'),
        'MAGPIV': next((bone(b) for b in MAGB if b in arm.data.bones), None)}
   vs = [A2G @ o.matrix_world @ v.co for o in keep for v in o.data.vertices if not re.search(r'magazine|clip|at_rifle_mag', part(o), re.I)]
