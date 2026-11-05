@@ -25,6 +25,7 @@
 1. `python tools/compress-apex-textures.py <名稱>`：貼圖轉 WebP、光照貼圖轉 JPEG。
 2. `node tools/pack-apex-js.mjs <名稱>`：Draco 幾何、碰撞量化＋gzip、切成 `assets/maps/apex-*/pack/*.js`（雙擊 index.html 也能載入）。
 3. `node tools/bake-apex-nav.mjs <地圖 id>`（`apex_skulltown` / `apex_full`），再跑一次第 2 步把導航包進去。
+4. `node tools/apex-zfix.mjs <名稱> <地圖 id> <packDir> [半徑]`：找出貼在一起會閃爍的物件，寫 `zfix.js`（v66s）。
 
 ## 5. 檢查
 - `node tools/check-apex-full.mjs <地圖 id>`：門、落地、不卡死、出界。

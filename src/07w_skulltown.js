@@ -39,11 +39,22 @@ async function skullTexture(buf) {
 }
 // The world's own look comes from the bake: lightmap only (the live sun and sky would light it twice). A live shadow (a soldier,
 // a door) still darkens the part of the bake that the sun lit.
+// v66s overlay layers that lie flat on a wall or floor (seams, decals, logos, stencils, tyre tracks, glass in its frame): drawn a hair
+// in front, or they flicker against the surface under them (user 11-05, Thunderdome). Props sitting flush on another are listed by
+// tools/apex-zfix.mjs (<packDir>/zfix.js) and get the same.
+const APEX_FRONT = /decal|stain|drip|_trans|erosion|seam|blend|stencil|font_|logo|sign_|stripes|scratch|runoff|tracks|_extra|glass/i;
+const apexFront = (m, units = -2) => { m.polygonOffset = true; m.polygonOffsetFactor = -1; m.polygonOffsetUnits = units; return m; };
+function apexZfixLoad(id, dir) {
+  const get = () => (window.APEX_ZFIX || {})[id] || null;
+  if (get()) return Promise.resolve(get());
+  return new Promise((res) => { const s = document.createElement('script'); s.src = dir + 'zfix.js'; s.onload = () => res(get()); s.onerror = () => res(null); document.head.appendChild(s); });
+}
+
 function skullWorldMaterial(src, lm, scale) {
   const m = new THREE.MeshLambertMaterial({ map: src.map, color: src.color, lightMap: lm, lightMapIntensity: scale, side: THREE.DoubleSide,
     alphaTest: src.alphaTest || (src.transparent ? 0.35 : 0), transparent: false, name: src.name });
   if (/thunderdome_fence|arena_start_barrier/i.test(src.name)) m.visible = false; // the Arenas hex fence and start barriers (the sky shows instead)
-  if (/decal|stain|drip|_transparent|erosion/i.test(src.name)) { m.polygonOffset = true; m.polygonOffsetFactor = -1; m.polygonOffsetUnits = -1; }
+  if (APEX_FRONT.test(src.name)) apexFront(m);
   m.onBeforeCompile = (sh) => {
     sh.fragmentShader = sh.fragmentShader.replace('#include <lights_fragment_maps>', `
       float sunVis = 1.0;
@@ -134,7 +145,8 @@ function apexTriMap(def) {
       const [lmInner, lmOuter, gltf, door] = await Promise.all([skullTexture(p.lm_inner), skullTexture(p.lm_outer), apexGLTF(p.glb), apexGLTF(p.door)]); lap('glb (Draco, WebP) + lightmaps');
       const nav = p.nav ? apexNav(p.nav) : null; lap('nav'); const tris = apexColPatch(this.id, skullTris(await apexGunzip(p.collision)), await apexColPatchLoad(this.id, this.packDir)); lap('collision gunzip');
       const soup = new TriSoup(tris.pos, tris.idx, 'concrete', tris.mats); lap('collision grid'); // (v62t here, not in build: the room's preload pays for it)
-      this._tri = { manifest, navMeta, nav, tris, soup, gltf, door: door.scene, lm: { inner: lmInner, outer: lmOuter } };
+      const zfix = new Set(await apexZfixLoad(this.id, this.packDir) || []); // (v66s)
+      this._tri = { manifest, navMeta, nav, tris, soup, gltf, zfix, door: door.scene, lm: { inner: lmInner, outer: lmOuter } };
       const B = manifest.playBounds; this.bounds = { minX: Math.floor(B.minX), maxX: Math.ceil(B.maxX), minZ: Math.floor(B.minZ), maxZ: Math.ceil(B.maxZ) };
       this.killY = manifest.killY;
       if (navMeta) {
@@ -149,7 +161,7 @@ function apexTriMap(def) {
       if (b.dry) return;
       const { manifest, tris, gltf, lm, nav } = this._tri;
       if (nav) b.navBaked = nav;
-      b.game.camera.far = 1600; b.game.camera.updateProjectionMatrix();
+      b.game.camera.far = 1600; b.game.camera.near = 0.1; b.game.camera.updateProjectionMatrix(); // (v66s near 0.05 → 0.1: twice the depth precision against flicker)
       const LT = window.__loadT || {}, t1 = performance.now();
       const soup = b.col.useTris(this._tri.soup);
       b.phys.triGround = new TriGround(soup);
@@ -162,7 +174,8 @@ function apexTriMap(def) {
       // visuals: the two world halves with their lightmaps; props instanced per geometry / material / 64 m cell
       gltf.scene.updateMatrixWorld(true);
       const batches = new Map(), worldMats = new Map(), scale = Math.PI * 1.0, sunLm = manifest.lightmaps.inner.max * 0.8; // sunlit ground ≈ 80 % of the bake's top
-      const meshes = []; let objects = 0;
+      const meshes = []; let objects = 0; const front = new Map(), zfix = this._tri.zfix || new Set(); // (v66s)
+      const fronted = (m) => { if (!front.has(m.uuid)) front.set(m.uuid, apexFront(m.clone(), -4)); return front.get(m.uuid); };
       gltf.scene.traverse((o) => {
         if (!o.isMesh) return; objects++;
       if (APEX_ARENA_SHELL.test(o.name) || APEX_ARENA_SHELL.test(o.parent?.name || '') || /cubemap|ascent_test_colors/i.test((Array.isArray(o.material) ? o.material[0] : o.material).name)) return; // the Arenas shell (its hex dome wears a dev test material) hides the sky; reflection-probe boxes
@@ -179,7 +192,9 @@ function apexTriMap(def) {
         for (const m of Array.isArray(o.material) ? o.material : [o.material]) {
           if (m.transparent && !/glass/i.test(m.name)) { m.alphaTest = 0.35; m.transparent = false; m.depthWrite = true; }
           if (m.alphaTest > 0 || /grass|plant|bush|foliage|leaf|fence|chain|wire/i.test(m.name)) m.side = THREE.DoubleSide;
+          if (APEX_FRONT.test(m.name) && !m.polygonOffset) apexFront(m); // (v66s)
         }
+        if (zfix.size && (zfix.has(o.name) || zfix.has(o.parent?.name))) o.material = Array.isArray(o.material) ? o.material.map(fronted) : fronted(o.material); // (v66s flush on a neighbour)
         const p = new THREE.Vector3().setFromMatrixPosition(o.matrixWorld);
         const key = o.geometry.uuid + ':' + (Array.isArray(o.material) ? o.material.map((m) => m.uuid).join(',') : o.material.uuid) + ':' + Math.floor(p.x / 64) + ',' + Math.floor(p.z / 64);
         if (!batches.has(key)) batches.set(key, { geo: o.geometry, mat: o.material, matrices: [], light: [] });

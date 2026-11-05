@@ -1974,3 +1974,13 @@
 - 地圖設定：`tools/blender/apex_maps.py` 的 `thunderdome`（中心 (−2, −2)、可玩半徑 170 m）；`src/07w_skulltown.js` 新增 `apex_thunderdome`「Apex 雷霆圓頂」，範圍 X −180–181、Z −117–116，天空、霧、陽光同 Skull Town，環境音「風」。
 - 工具修正：`pack-apex-js.mjs`、`compress-apex-textures.py` 的工作資料夾改成 `maps/apex-<名稱>/work/export`（v66b 搬家後的路徑），所有 Apex 地圖都受影響；`bake-apex-nav.mjs` 加上雷霆圓頂。
 - 包大小：貼圖 79.5 → 7.2 MB（WebP）、碰撞補丁 2.5 MB（`colpatch.js`）、縮圖 `assets/maps/thumbs/apex_thunderdome.jpg`。
+
+### v66s（本機，2026-11-05）：Apex 地圖跑速恢復、雷霆圓頂的閃爍、SF2 跌落傷害調查
+- 使用者 11-05：「不管拿狙擊槍、小手槍、手榴彈，奔跑速度都一模一樣，而且跑得比以前更快」。原因：Apex 地圖用舊步調（`CFG.player.legacy`），裡面的 `speedK` 是 6.43 / 3.9——v66j 把 SF2 地圖改慢到 3.9 時，Apex 地圖要乘回來；v66q 把 SF2 地圖改回 6.43 後，這個倍數沒拿掉，所以 Apex 地圖快了 1.65 倍（MP5K 衝刺 13.9 m/s）。改成 1，玩家和電腦都恢復。
+  - 實測（`tools/out/_movemeasure.mjs`）：SF2 地圖和雷霆圓頂一樣——AWP 走 4.86／衝刺 6.32、MP5K 走 6.47／衝刺 8.41 m/s；跟著重量變。
+- 雷霆圓頂交界處閃爍（z-fighting）：
+  - 新工具 `tools/apex-zfix.mjs`：找出兩個物件（或物件和地形）在同一平面（3 cm 內，正反面都算——材質是雙面）又互相重疊的三角形，寫 `<packDir>/zfix.js`。雷霆圓頂 1097 個物件。
+  - 載入時（`src/07w_skulltown.js`）：清單裡的物件、還有貼在表面上的覆蓋材質（`APEX_FRONT`：接縫、貼花、標誌、模板字、輪胎痕、玻璃……）往前畫一點（polygonOffset）。以前只有地形上的貼花有，物件身上的沒有。最大的一塊是牆上的接縫貼片 `td2_metal_sheet_seam_01`（1560 m²）。
+  - Apex 地圖的鏡頭近平面 0.05 → 0.1 m，深度精度加倍。
+  - 剩下的：地形自己內部重疊的面（約 320 m²）沒處理，要在 Blender 組場景時刪重複面再重烘。
+- SF2 跌落傷害（只調查，沒改遊戲）：`docs/research/sf2/fall-damage.md`。SF2 照落地速度算：超過 12.5 m/s（約 8 m）開始扣，傷害 = 100 ×（速度 − 12.5）/ 12.5，約 32 m 必死；踩到別人頭上給對方 5 倍。我們現在是 3.5 m 開始、11 m 必死。

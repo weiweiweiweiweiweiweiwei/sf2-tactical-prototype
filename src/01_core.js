@@ -34,7 +34,7 @@ const CFG = {
     groundAccel: 14, airAccel: 10, airCap: 0.85,
     friction: 8, brakeFriction: 18, stopSpeed: 3.2,
     sprintMult: 1.3, crouchMult: 0.36, hp: 100, climbSpeed: 2.0, baseSpeed: 5.9, sf2Speed: 6.43,
-    legacy: { gravity: -20, jumpVel: 7.0, speedK: 6.43 / 3.9, sprintMult: 1.3, crouchMult: 0.36, climbSpeed: 3.4, height: 1.8, crouchHeight: 1.2, eye: 1.64, crouchEye: 1.06 }, // (v66j the Apex traversal maps) // v64r sf2Speed: SF2's MaxSpeed 390 UU/s in m/s — the M4A1 alone (load 4.1 → 340.1) walks the old 5.9 × 0.95
+    legacy: { gravity: -20, jumpVel: 7.0, speedK: 1, /* v66s: 6.43 / 3.9 only while SF2 maps ran 3.9; since v66q they run 6.43 again, so the Apex maps ran 1.65× too fast */ sprintMult: 1.3, crouchMult: 0.36, climbSpeed: 3.4, height: 1.8, crouchHeight: 1.2, eye: 1.64, crouchEye: 1.06 }, // (v66j the Apex traversal maps) // v64r sf2Speed: SF2's MaxSpeed 390 UU/s in m/s — the M4A1 alone (load 4.1 → 340.1) walks the old 5.9 × 0.95
   },
   bot: { eye: 1.23, runSpeed: 4.9, patrolSpeed: 3.3 }, // (v66q the pace before v66j)
   spawnProtect: 3.5,

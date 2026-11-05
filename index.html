@@ -1044,7 +1044,19 @@ var CFG = {
     climbSpeed: 2,
     baseSpeed: 5.9,
     sf2Speed: 6.43,
-    legacy: { gravity: -20, jumpVel: 7, speedK: 6.43 / 3.9, sprintMult: 1.3, crouchMult: 0.36, climbSpeed: 3.4, height: 1.8, crouchHeight: 1.2, eye: 1.64, crouchEye: 1.06 }
+    legacy: {
+      gravity: -20,
+      jumpVel: 7,
+      speedK: 1,
+      /* v66s: 6.43 / 3.9 only while SF2 maps ran 3.9; since v66q they run 6.43 again, so the Apex maps ran 1.65× too fast */
+      sprintMult: 1.3,
+      crouchMult: 0.36,
+      climbSpeed: 3.4,
+      height: 1.8,
+      crouchHeight: 1.2,
+      eye: 1.64,
+      crouchEye: 1.06
+    }
     // (v66j the Apex traversal maps) // v64r sf2Speed: SF2's MaxSpeed 390 UU/s in m/s — the M4A1 alone (load 4.1 → 340.1) walks the old 5.9 × 0.95
   },
   bot: { eye: 1.23, runSpeed: 4.9, patrolSpeed: 3.3 },
@@ -16653,6 +16665,25 @@ async function skullTexture(buf) {
   return t;
 }
 __name(skullTexture, "skullTexture");
+var APEX_FRONT = /decal|stain|drip|_trans|erosion|seam|blend|stencil|font_|logo|sign_|stripes|scratch|runoff|tracks|_extra|glass/i;
+var apexFront = /* @__PURE__ */ __name((m, units = -2) => {
+  m.polygonOffset = true;
+  m.polygonOffsetFactor = -1;
+  m.polygonOffsetUnits = units;
+  return m;
+}, "apexFront");
+function apexZfixLoad(id, dir) {
+  const get = /* @__PURE__ */ __name(() => (window.APEX_ZFIX || {})[id] || null, "get");
+  if (get()) return Promise.resolve(get());
+  return new Promise((res) => {
+    const s = document.createElement("script");
+    s.src = dir + "zfix.js";
+    s.onload = () => res(get());
+    s.onerror = () => res(null);
+    document.head.appendChild(s);
+  });
+}
+__name(apexZfixLoad, "apexZfixLoad");
 function skullWorldMaterial(src, lm, scale) {
   const m = new THREE.MeshLambertMaterial({
     map: src.map,
@@ -16665,11 +16696,7 @@ function skullWorldMaterial(src, lm, scale) {
     name: src.name
   });
   if (/thunderdome_fence|arena_start_barrier/i.test(src.name)) m.visible = false;
-  if (/decal|stain|drip|_transparent|erosion/i.test(src.name)) {
-    m.polygonOffset = true;
-    m.polygonOffsetFactor = -1;
-    m.polygonOffsetUnits = -1;
-  }
+  if (APEX_FRONT.test(src.name)) apexFront(m);
   m.onBeforeCompile = (sh) => {
     sh.fragmentShader = sh.fragmentShader.replace("#include <lights_fragment_maps>", `
       float sunVis = 1.0;
@@ -16796,7 +16823,8 @@ function apexTriMap(def) {
       lap("collision gunzip");
       const soup = new TriSoup(tris.pos, tris.idx, "concrete", tris.mats);
       lap("collision grid");
-      this._tri = { manifest, navMeta, nav, tris, soup, gltf, door: door.scene, lm: { inner: lmInner, outer: lmOuter } };
+      const zfix = new Set(await apexZfixLoad(this.id, this.packDir) || []);
+      this._tri = { manifest, navMeta, nav, tris, soup, gltf, zfix, door: door.scene, lm: { inner: lmInner, outer: lmOuter } };
       const B = manifest.playBounds;
       this.bounds = { minX: Math.floor(B.minX), maxX: Math.ceil(B.maxX), minZ: Math.floor(B.minZ), maxZ: Math.ceil(B.maxZ) };
       this.killY = manifest.killY;
@@ -16823,6 +16851,7 @@ function apexTriMap(def) {
       const { manifest, tris, gltf, lm, nav } = this._tri;
       if (nav) b.navBaked = nav;
       b.game.camera.far = 1600;
+      b.game.camera.near = 0.1;
       b.game.camera.updateProjectionMatrix();
       const LT = window.__loadT || {}, t1 = performance.now();
       const soup = b.col.useTris(this._tri.soup);
@@ -16837,6 +16866,11 @@ function apexTriMap(def) {
       const batches = /* @__PURE__ */ new Map(), worldMats = /* @__PURE__ */ new Map(), scale = Math.PI * 1, sunLm = manifest.lightmaps.inner.max * 0.8;
       const meshes = [];
       let objects = 0;
+      const front = /* @__PURE__ */ new Map(), zfix = this._tri.zfix || /* @__PURE__ */ new Set();
+      const fronted = /* @__PURE__ */ __name((m) => {
+        if (!front.has(m.uuid)) front.set(m.uuid, apexFront(m.clone(), -4));
+        return front.get(m.uuid);
+      }, "fronted");
       gltf.scene.traverse((o) => {
         if (!o.isMesh) return;
         objects++;
@@ -16865,7 +16899,9 @@ function apexTriMap(def) {
             m.depthWrite = true;
           }
           if (m.alphaTest > 0 || /grass|plant|bush|foliage|leaf|fence|chain|wire/i.test(m.name)) m.side = THREE.DoubleSide;
+          if (APEX_FRONT.test(m.name) && !m.polygonOffset) apexFront(m);
         }
+        if (zfix.size && (zfix.has(o.name) || zfix.has(o.parent?.name))) o.material = Array.isArray(o.material) ? o.material.map(fronted) : fronted(o.material);
         const p = new THREE.Vector3().setFromMatrixPosition(o.matrixWorld);
         const key = o.geometry.uuid + ":" + (Array.isArray(o.material) ? o.material.map((m) => m.uuid).join(",") : o.material.uuid) + ":" + Math.floor(p.x / 64) + "," + Math.floor(p.z / 64);
         if (!batches.has(key)) batches.set(key, { geo: o.geometry, mat: o.material, matrices: [], light: [] });
