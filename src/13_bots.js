@@ -132,6 +132,7 @@ class Bot extends Combatant {
       ai.wantAirJump = false;
     }
     if (m.climbing) { if (m.climbDist > 0.6) { m.climbDist = 0; this._step('ladder', 0.9); } return; }
+    if (m.landSpeed > 0) this.landDamage(); // v66v SF2 fall damage and the head stomp for bots too (user 11-05 B)
     const hs = m.horizontalSpeed();
     if (m.grounded && hs > 2.4 && !m.crouching) {
       this.stepDist += hs * h;

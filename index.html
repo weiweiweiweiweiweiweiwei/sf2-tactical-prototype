@@ -22514,6 +22514,27 @@ var Combatant = class {
   static {
     __name(this, "Combatant");
   }
+  // v66u SF2 fall damage (FALL_* above), on landing; v66v also the bots (user 11-05 B)
+  landDamage() {
+    const g = this.game, m = this.motor;
+    if (m.landSpeed > Math.sqrt(-2 * m.gravity * FALL_SAFE) && this.alive && !g.apex) {
+      const hgt = m.landSpeed * m.landSpeed / (-2 * m.gravity), dmg = Math.floor(100 * (Math.sqrt(2 * SF2_G * hgt) - FALL_V0) / FALL_V0);
+      if (dmg > 0) {
+        let under = null;
+        for (const c of g.combatants) {
+          if (c === this || !c.alive) continue;
+          const o = c.motor, dx = o.pos.x - m.pos.x, dz = o.pos.z - m.pos.z, rr = o.radius + m.radius;
+          if (dx * dx + dz * dz < rr * rr && m.pos.y >= o.pos.y - 0.2 && m.pos.y <= o.pos.y + o.height + 0.3) {
+            under = c;
+            break;
+          }
+        }
+        if (under) g.applyDamage(under, dmg * STOMP_PCT, "chest", this, WEAPON_DEFS.fall, null, null, { fall: true });
+        else g.applyDamage(this, dmg, "legs", this, WEAPON_DEFS.fall, null, null, { fall: true });
+        if (this.isPlayer) g.audio.land(null, m.surface, 1.4);
+      }
+    }
+  }
   constructor(game, team, name, isPlayer) {
     this.game = game;
     this.team = team;
@@ -22779,23 +22800,7 @@ var Human = class extends Combatant {
       this.punchV += Math.min(m.landSpeed, 14) * -0.012;
       g.emitNoise(m.pos, 14, this.team);
     }
-    if (m.landSpeed > Math.sqrt(-2 * m.gravity * FALL_SAFE) && this.alive && !g.apex) {
-      const hgt = m.landSpeed * m.landSpeed / (-2 * m.gravity), dmg = Math.floor(100 * (Math.sqrt(2 * SF2_G * hgt) - FALL_V0) / FALL_V0);
-      if (dmg > 0) {
-        let under = null;
-        for (const c2 of g.combatants) {
-          if (c2 === this || !c2.alive) continue;
-          const o = c2.motor, dx = o.pos.x - m.pos.x, dz = o.pos.z - m.pos.z, rr = o.radius + m.radius;
-          if (dx * dx + dz * dz < rr * rr && m.pos.y >= o.pos.y - 0.2 && m.pos.y <= o.pos.y + o.height + 0.3) {
-            under = c2;
-            break;
-          }
-        }
-        if (under) g.applyDamage(under, dmg * STOMP_PCT, "chest", this, WEAPON_DEFS.fall, null, null, { fall: true });
-        else g.applyDamage(this, dmg, "legs", this, WEAPON_DEFS.fall, null, null, { fall: true });
-        if (this.isPlayer) g.audio.land(null, m.surface, 1.4);
-      }
-    }
+    this.landDamage();
   }
 };
 var Player = class extends Human {
@@ -23218,6 +23223,7 @@ var Bot = class extends Combatant {
       }
       return;
     }
+    if (m.landSpeed > 0) this.landDamage();
     const hs = m.horizontalSpeed();
     if (m.grounded && hs > 2.4 && !m.crouching) {
       this.stepDist += hs * h;

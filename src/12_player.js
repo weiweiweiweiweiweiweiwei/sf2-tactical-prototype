@@ -12,6 +12,20 @@ const RELOAD_MOVE = 0.8, FALL_V0 = 12.5, SF2_G = 9.7, FALL_SAFE = FALL_V0 * FALL
    damage log for assists, spawn protection.
    ===================================================================== */
 class Combatant {
+  // v66u SF2 fall damage (FALL_* above), on landing; v66v also the bots (user 11-05 B)
+  landDamage() {
+    const g = this.game, m = this.motor;
+    if (m.landSpeed > Math.sqrt(-2 * m.gravity * FALL_SAFE) && this.alive && !g.apex) { const hgt = m.landSpeed * m.landSpeed / (-2 * m.gravity), dmg = Math.floor(100 * (Math.sqrt(2 * SF2_G * hgt) - FALL_V0) / FALL_V0); // (v66u SF2's, FloatToInt)
+      if (dmg > 0) {
+        // v66u landed on someone (bodies only push apart sideways here, so: a living soldier the feet came down onto, within the two radii)
+        let under = null; for (const c of g.combatants) { if (c === this || !c.alive) continue; const o = c.motor, dx = o.pos.x - m.pos.x, dz = o.pos.z - m.pos.z, rr = o.radius + m.radius;
+          if (dx * dx + dz * dz < rr * rr && m.pos.y >= o.pos.y - 0.2 && m.pos.y <= o.pos.y + o.height + 0.3) { under = c; break; } }
+        if (under) g.applyDamage(under, dmg * STOMP_PCT, 'chest', this, WEAPON_DEFS.fall, null, null, { fall: true }); // (SFDmgType_CrashStep; friendly only with friendly fire — applyDamage)
+        else g.applyDamage(this, dmg, 'legs', this, WEAPON_DEFS.fall, null, null, { fall: true });
+        if (this.isPlayer) g.audio.land(null, m.surface, 1.4);
+      } }
+  }
+
   constructor(game, team, name, isPlayer) {
     this.game = game; this.team = team; this.name = name; this.isPlayer = isPlayer;
     // v24: bots accelerate / brake at ~60 % of the player's rate — with the player's instant stops their A-D strafes and dodges looked like teleports
@@ -163,15 +177,7 @@ class Human extends Combatant {
     } else if (!m.grounded) this.stepDist = 1.4;
     if (m.landSpeed > 3.5) { this._sfx('land', m.surface, m.landSpeed / 9); this.punchV += Math.min(m.landSpeed, 14) * -0.012; g.emitNoise(m.pos, 14, this.team); }
     // v34 fall damage (Source / UE-style, fixed HP): drop height h = v² / 2g; safe up to FALL_SAFE m, lethal at FALL_LETHAL m — none in Apex mode (v60; falling out of the map still kills)
-    if (m.landSpeed > Math.sqrt(-2 * m.gravity * FALL_SAFE) && this.alive && !g.apex) { const hgt = m.landSpeed * m.landSpeed / (-2 * m.gravity), dmg = Math.floor(100 * (Math.sqrt(2 * SF2_G * hgt) - FALL_V0) / FALL_V0); // (v66u SF2's, FloatToInt)
-      if (dmg > 0) {
-        // v66u landed on someone (bodies only push apart sideways here, so: a living soldier the feet came down onto, within the two radii)
-        let under = null; for (const c of g.combatants) { if (c === this || !c.alive) continue; const o = c.motor, dx = o.pos.x - m.pos.x, dz = o.pos.z - m.pos.z, rr = o.radius + m.radius;
-          if (dx * dx + dz * dz < rr * rr && m.pos.y >= o.pos.y - 0.2 && m.pos.y <= o.pos.y + o.height + 0.3) { under = c; break; } }
-        if (under) g.applyDamage(under, dmg * STOMP_PCT, 'chest', this, WEAPON_DEFS.fall, null, null, { fall: true }); // (SFDmgType_CrashStep; friendly only with friendly fire — applyDamage)
-        else g.applyDamage(this, dmg, 'legs', this, WEAPON_DEFS.fall, null, null, { fall: true });
-        if (this.isPlayer) g.audio.land(null, m.surface, 1.4);
-      } }
+    this.landDamage(); // (v66u SF2 fall damage; v66v shared with the bots)
   }
 }
 
