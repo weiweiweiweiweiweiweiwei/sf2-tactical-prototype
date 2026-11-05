@@ -189,8 +189,13 @@ class AudioEngine {
       if (window.SF2_SFX_FOOT) { res(); return; }
       const s = document.createElement('script'); s.src = 'assets/sfx_sf2_foot.js'; s.async = true; s.onload = () => res(); s.onerror = () => res();
       document.head.appendChild(s);
+    })).then(() => new Promise((res) => { // v66x the Apex guns' own sounds (tools/apex_sfx.py): banks sf2_apex_<gun>_*
+      if (window.SF2_SFX_APEX) { res(); return; }
+      const s = document.createElement('script'); s.src = 'assets/sfx_apex.js'; s.async = true; s.onload = () => res(); s.onerror = () => res();
+      document.head.appendChild(s);
     })).then(async () => {
       const pack = window.SF2_SFX;
+      if (pack && window.SF2_SFX_APEX) { Object.assign(pack, window.SF2_SFX_APEX); delete window.SF2_SFX_APEX; }
       if (pack && window.SF2_SFX_FOOT) { Object.assign(pack, window.SF2_SFX_FOOT); delete window.SF2_SFX_FOOT; }
       if (pack && window.SF2_SFX_FX) { Object.assign(pack, window.SF2_SFX_FX); delete window.SF2_SFX_FX; }
       if (pack && window.SF2_SFX_MECH) { Object.assign(pack, window.SF2_SFX_MECH); delete window.SF2_SFX_MECH; }

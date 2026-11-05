@@ -2018,3 +2018,10 @@
 - 新機制（`src/10_weapons.js`、`src/11_weaponsystem.js`）：連發（Hemlok 3、Prowler 5 發，按一下打一組，放開也會打完；Nemesis 4 發，按住連續）；Devotion 越打越快（5 → 15 發/秒，1.75 秒）。
 - 倉庫：篩選多了「SF2 槍」「Apex 槍」。槍聲暫時借同類的 SF2 槍。
 - 實測（`tools/out/_apexfire.mjs`）：Hemlok 0／0.05／0.117 s 三發；Prowler 五發 0.18 s 內打完；Nemesis 四發一組、組間 0.35 s；Devotion 間隔 0.2 → 0.08 s；R-301 21 發 0.067 s 一發。開鏡截圖（`tools/out/_rigshot.mjs`）：R-301、Wingman 機械瞄具，Kraber 狙擊鏡。MODULES_OK、CHECK_OK。
+
+### v66x（本機，2026-11-05）：Apex 槍的原版槍聲
+- 使用者 11-05：依序做「原版槍聲 → 特殊機制 → 持槍／開鏡細調」，先不推 master。
+- 新工具 `tools/apex_sfx.py`：從使用者的 Apex 音效庫（`audio/ship/general.mbnk`＋`*.mstr`，清單 `tools/out/apex/r301/audio_list.csv`）用 RSX 匯出音源 → 5.1 混成立體聲、裁長度、Ogg Vorbis → `assets/sfx_apex.js`（101 組，2.2 MB）。音效引擎多載這一包（`src/02_audio.js`），槍的 `sf2` 設成 `apex_<槍>`，開火／退彈匣／插彈匣／拉栓／拔槍都用它自己的。
+- Apex 大部分槍的核心開火錄音在音效庫裡沒有名字（只有雜湊），`weapon_<槍>_…` 是「事件」不是音源、RSX 匯不出來；所以用有名字的單發／第一發錄音（例：R-301 `wpn_r101_1p_wpnfire_firstshot_core_6ch`、G7 `wpn_g2a4_1p_wpnfire_shot_6ch`、Kraber `wpn_krabersniper_1p_wpnfire_midshot_2ch`）。Volt 只有連射循環，切出第一發 0.11 秒。
+- 24 把用自己的開火聲；HAVOC、C.A.R.、Devotion、30-30、莫三比克在音效庫裡找不到有名字的開火錄音，繼續借 SF2 同類槍的（換彈、拔槍仍用自己的）。22 把有自己的換彈聲。
+- 驗證（`tools/out/_sndcheck.mjs`）：音效包解碼成功、24 把開火、22 把換彈；MODULES_OK、CHECK_OK。

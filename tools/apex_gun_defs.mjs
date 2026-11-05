@@ -27,6 +27,8 @@ const WEIGHT = { assault: [4.1, 2.05], smg: [2.2, 1.1], lmg: [7.2, 3.6], marksma
 // the sniper rifles get the game's scope (two zoom levels, like Apex's 4–8×; Kraber's own is built in) — the marksman guns keep iron sights
 const SCOPED = new Set(['kraber', 'sentinel', 'longbow', 'chargerifle']);
 const r = (v, n = 4) => +(+v).toFixed(n);
+// v66x the Apex guns' own sounds (assets/sfx_apex.js, tools/apex_sfx.py): a gun with its own fire bank plays its banks (sf2 = apex_<gun>)
+const APEXSND = fs.existsSync('assets/sfx_apex.js') ? new Set([...fs.readFileSync('assets/sfx_apex.js', 'utf8').matchAll(/"sf2_apex_([a-z0-9]+)_fire"/g)].map((m) => m[1])) : new Set();
 const out = [], weights = [];
 for (const [pre, id, key, zh, donor, fire] of G) {
   const w = D.find((x) => x.name.startsWith(pre)); if (!w) throw new Error('no data ' + pre);
@@ -44,7 +46,7 @@ for (const [pre, id, key, zh, donor, fire] of G) {
     adsFov: SCOPED.has(id) ? 20 : c.zoom_fov || 55, adsType: SCOPED.has(id) ? '2d_scope_overlay' : '3d_sight', mobility: 0.95, maxAmmo: mag,
     reloadTime: id === 'bocek' ? 0.55 : c.reload_tactical_s, equipTime: c.deploy_s, adsSpeed: r(1 / Math.max(0.12, c.ads_s || 0.27) * 3.3, 1),
     reserveMult: id === 'bocek' ? 24 : undefined,
-    model: 'apex_' + id, apexKey: key, apexDonor: donor, tracerEvery: 2, penetration: 1,
+    model: 'apex_' + id, apexKey: key, apexDonor: donor, apexSnd: APEXSND.has(id) ? 'apex_' + id : undefined, tracerEvery: 2, penetration: 1,
     desc: `Apex Legends 原版 ${w.name}：傷害、射速、彈匣、換彈、拔槍照 Apex（S30.1）${pat ? '，後座照它的彈道表' : ''}。`,
   };
   if (fire.startsWith('burst')) Object.assign(e, { burst: f.burst_count || { nemesis: 4 }[id], burstDelay: f.burst_delay_s || 0.3 });
@@ -57,11 +59,11 @@ for (const [pre, id, key, zh, donor, fire] of G) {
 }
 const block = `// <apex-guns> v66w the Apex guns (tools/apex_gun_defs.mjs from docs/research/apex/weapons-full.json; models tools/blender/apex_gun_build.py).
 // Damage per hit as Apex (no falloff; head = head / body), rate with the rechamber, mag, tactical reload, deploy, iron-sight FOV, recoil
-// from each gun's own pattern (apexPattern: per shot [yaw, pitch] degrees, then looping from loop). Sounds borrowed (apexDonor) for now.
+// from each gun's own pattern (apexPattern: per shot [yaw, pitch] degrees, then looping from loop). Sounds: its own (apexSnd, assets/sfx_apex.js) or, with none named in Apex's banks, borrowed from apexDonor.
 Object.assign(WEAPON_DATABASE, {
 ${out.join('\n')}
 });
-for (const s of Object.values(WEAPON_DATABASE)) if (s.apexDonor) { const d = WEAPON_DATABASE[s.apexDonor]; if (d) { s.sound = d.sound || s.apexDonor; s.sf2 = d.sf2 || null; } }
+for (const s of Object.values(WEAPON_DATABASE)) if (s.apexDonor) { const d = WEAPON_DATABASE[s.apexDonor]; if (d) { s.sound = d.sound || s.apexDonor; s.sf2 = s.apexSnd || d.sf2 || null; } }
 Object.assign(SF2_WEIGHT, { ${weights.join(', ')} });
 // </apex-guns>`;
 const P = 'src/01_core.js'; let src = fs.readFileSync(P, 'utf8');

@@ -109,11 +109,8 @@
 ## 3. Apex 槍枝（資料：`docs/research/apex/weapons-full.json`，說明 `docs/research/apex/README.md`）
 - 🔄 Apex 原版槍全部做成獨立武器（使用者 11-05 全 A）：約 30 把，進 git 和網頁版、任何模式都能選、用 Apex 自己的傷害／射速／後座
   - ✅ 29 把模型、武器資料、彈道表後座、連發、Devotion 加速、倉庫「Apex 槍」篩選（v66w）
-  - 🔄 槍聲（使用者 11-05：依序做 槍聲 → 特殊機制 → 持槍／開鏡細調；先不推 master）
-    - 已查：音源清單 `tools/out/apex/r301/audio_list.csv`（45 萬筆，general.mbnk＋*.mstr）；候選整理 `node tools/out/_apexsnd.mjs` → `tools/out/apex/guns/snd_candidates.json`
-    - 每把的內部名：R-301 r101、R-99 r97、Flatline vinson、Spitfire lmg、Longbow dmr、Triple Take doubletake、G7 g2a4、Kraber krabersniper、Mozambique pistolshotgun／shotgunpistol、P2020 p2011、RE-45 re45fusion／re45auto、HAVOC havocar、Bocek bow、EVA-8 shotgun／eva8
-    - C.A.R.、Devotion、30-30、Nemesis、Rampage、HAVOC 的開火聲用 `weapon_<名>_…` 開頭（不是 `wpn_`），下一步從這些挑
-    - ⬜ 匯出（RSX `--exporttypes asrc`）→ 轉 OGG → `assets/sfx_apex.js`，`def.sf2 = apex_<槍>` 讓 `src/02_audio.js` 用 sf2_apex_<槍>_fire／magout／magin／draw
+  - ✅ 原版槍聲（v66x，`tools/apex_sfx.py` → `assets/sfx_apex.js`）：24 把自己的開火聲，22 把自己的換彈聲
+    - ⬜ HAVOC、C.A.R.、Devotion、30-30、莫三比克的開火錄音在 Apex 音效庫沒有名字，暫借 SF2；遠距離（_far）聲音也還沒有
   - ⬜ 其餘特殊機制：蓄力（Charge Rifle 光束、Bocek 拉弓、Havoc 0.42 s 起轉、Sentinel 充能）、L-STAR 過熱、Rampage 加速、Triple Take 三發水平散開、霰彈槍的固定彈著形狀
   - ⬜ 第一人稱細調：每把的腰射位置、開鏡眼睛高度（目前全部 +1.2 cm）、換彈時彈匣的移動；第三人稱（目前拿同類的程序槍）
   - ⬜ 已知舊問題：倉庫的線條圖示在 SF2 槍模還沒載入時會失敗（`makeIcons` 在第一把失敗時整個中斷）
