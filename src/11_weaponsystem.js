@@ -151,6 +151,7 @@ class Arsenal {
       } else {
         this.trigger = !!(btn & BTN.FIRE);
         if (w.kind === 'knife') { if (act && (pressed & BTN.FIRE)) w.attack(false); if (act && (pressed & BTN.ALT)) w.attack(true); }
+        else if (act && (pressed & BTN.FIRE) && (w.def.windup || w.def.bowDraw)) { w.windT = 0; w.windFired = false; } // v66y spin-up / charge / bow draw starts
         else if (act && (pressed & BTN.FIRE)) { if (w.cooldown <= 0) this._fire(); else if (!w.auto) { w.queued = 0.1; if (w.drawing) w.pendingFire = true; } }
         if (released & BTN.FIRE) w.pendingFire = false;
       }
@@ -162,8 +163,13 @@ class Arsenal {
     if (this.grabCd > 0) this.grabCd -= h;
     if (this.grabT > 0) { this.grabT += h; if (!this.grabHit && this.grabT >= 0.12) { this.grabHit = true; this._grabHit(); } if (this.grabT >= 0.45) this.grabT = 0; }
     if (w.kind !== 'knife' && w.kind !== 'grenade' && this.grabT <= 0) {
+      const wu = w.def.windup, bd = w.def.bowDraw;
+      if ((wu || bd) && w.windT != null) { // v66y HAVOC / Charge Rifle: hold through the windup; Bocek: draw, fire on release (damage × the draw)
+        if (this.trigger && !w.reloading && g.canAct()) { w.windT += h; if (wu && !w.auto && !w.windFired && w.windT >= wu && w.cooldown <= 0) { w.windFired = true; this._fire(); } }
+        else { if (bd && w.windT > 0.12 && !w.reloading && w.cooldown <= 0 && g.canAct()) { w.dmgK = clamp(w.windT / bd, 0.4, 1); this._fire(); w.dmgK = 0; } w.windT = null; }
+      }
       if (w.burstIdx > 0 && w.cooldown <= 0 && !w.reloading && g.canAct()) this._fire(); // v66w a burst runs its course whether the trigger is held or not
-      if (this.trigger && w.auto && !w.reloading && g.canAct()) {
+      if (this.trigger && w.auto && !w.reloading && g.canAct() && (!wu || (w.windT ?? 0) >= wu)) {
         let n = 0;
         while (w.cooldown <= 0 && n < 3) { if (w.ammo <= 0) { this._fire(); this.trigger = false; break; } this._fire(); n++; }
       } else if (w.queued > 0) { w.queued -= h; if (w.cooldown <= 0) { w.queued = 0; w.pendingFire = false; this._fire(); } }

@@ -2025,3 +2025,12 @@
 - Apex 大部分槍的核心開火錄音在音效庫裡沒有名字（只有雜湊），`weapon_<槍>_…` 是「事件」不是音源、RSX 匯不出來；所以用有名字的單發／第一發錄音（例：R-301 `wpn_r101_1p_wpnfire_firstshot_core_6ch`、G7 `wpn_g2a4_1p_wpnfire_shot_6ch`、Kraber `wpn_krabersniper_1p_wpnfire_midshot_2ch`）。Volt 只有連射循環，切出第一發 0.11 秒。
 - 24 把用自己的開火聲；HAVOC、C.A.R.、Devotion、30-30、莫三比克在音效庫裡找不到有名字的開火錄音，繼續借 SF2 同類槍的（換彈、拔槍仍用自己的）。22 把有自己的換彈聲。
 - 驗證（`tools/out/_sndcheck.mjs`）：音效包解碼成功、24 把開火、22 把換彈；MODULES_OK、CHECK_OK。
+
+### v66y（本機，2026-11-05）：Apex 槍的特殊機制——起轉、蓄力、拉弓、過熱、三發並排
+- 使用者 11-05 的第二項。資料在 `tools/apex_gun_defs.mjs`（→ `src/01_core.js`），扳機邏輯在 `src/11_weaponsystem.js`，射擊在 `src/10_weapons.js`：
+  - **起轉／蓄力**（`windup`）：按住扳機一段時間才開第一槍，中途放開就取消。HAVOC 0.42 s（Apex 的 charge_s），之後全自動；充能步槍 0.5 s，一次一發。
+  - **拉弓**（`bowDraw`，波塞克）：按住拉弓、放開才射，傷害 × 拉弓時間 ÷ 0.54 s（最少 40 %；`fireBullet` 多了 `opts.dmgK`，`src/16_match.js`）。
+  - **過熱**（`heatCool`，L-STAR）：彈匣當熱量用——停火 0.4 s 後 2.4 s 冷回滿；打到空就過熱，等 3.26 s（原本的換彈時間）。
+  - **三發並排**（`hLine`，三重式）：一次三發水平排開，間隔 0.012 rad。
+- 實測（`tools/out/_apexmech.mjs`）：HAVOC 第一發 0.417 s、之後 0.1 s 一發；充能步槍點一下不發、按住 0.5 s 發射；波塞克拉 0.3 s 傷害 ×0.67、拉滿 ×1；L-STAR 連打 24 發過熱，冷卻 1.5 s 回到 20 發；三重式一次 3 發。MODULES_OK、CHECK_OK。
+- 沒做：哨兵充能（要消耗護盾電池，遊戲沒有這個道具）、暴走輕機槍的鋁熱彈加速（要鋁熱手榴彈）、起轉／拉弓的音效。

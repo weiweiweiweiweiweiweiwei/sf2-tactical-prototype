@@ -51,6 +51,12 @@ for (const [pre, id, key, zh, donor, fire] of G) {
   };
   if (fire.startsWith('burst')) Object.assign(e, { burst: f.burst_count || { nemesis: 4 }[id], burstDelay: f.burst_delay_s || 0.3 });
   if (f.rate_max_hz) Object.assign(e, { rampHz: f.rate_max_hz, rampTime: f.rate_speedup_s });
+  // v66y the rest of Apex's firing mechanics: windup = hold this long before the first round (HAVOC's barrel spin-up 0.42 s, the Charge
+  // Rifle's charge); bowDraw = Bocek: fires on release, damage × draw / full draw (≥ 40 %); heatCool = L-STAR: no reload, the "mag"
+  // is heat — it cools back to full in this many seconds 0.4 s after the last shot, an empty one overheats (the reload time, 3.26 s);
+  // hLine = Triple Take's three rounds side by side, this far apart (rad)
+  const MECH = { havoc: { windup: 0.42 }, chargerifle: { windup: 0.5 }, bocek: { bowDraw: c.charge_s || 0.54 }, lstar: { heatCool: 2.4, reserveMult: 60 }, tripletake: { hLine: 0.012 } }[id];
+  if (MECH) Object.assign(e, MECH);
   if (pat) e.apexPattern = { loop: pat.loop_offset || 0, b: pat.bullets.map((b) => [r(b[0], 3), r(b[1], 3)]) };
   if (SCOPED.has(id)) e.zoomFovs = [20, 10];
   for (const k of Object.keys(e)) if (e[k] === undefined) delete e[k];

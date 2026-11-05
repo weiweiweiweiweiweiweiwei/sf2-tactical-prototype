@@ -323,7 +323,7 @@ class Match {
     if (rew) this.net.restore(rew);
     hits.sort((a, b) => a.t - b.t);
     if (shooter.isPlayer && (!pellet || opts.pellet === 0)) this.stats.shots++;
-    let power = Math.max(1, def.penetration || 0), bodies = def.kind === 'sniper' ? 2 : def.kind === 'lmg' ? 1 : 0, mult = 1, endT = range, hitPlayer = false, kills = 0; let walls = 0, passed = 0;
+    let power = Math.max(1, def.penetration || 0), bodies = def.kind === 'sniper' ? 2 : def.kind === 'lmg' ? 1 : 0, mult = opts.dmgK || 1, endT = range, hitPlayer = false, kills = 0; let walls = 0, passed = 0;
     const cam = this.camera.position, loudShooter = shooter.isPlayer || origin.distanceTo(cam) < 45, fx = !pellet || opts.pellet < 3;
     for (const h of hits) {
       if (h.type === 'world') {

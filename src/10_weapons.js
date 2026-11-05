@@ -144,7 +144,11 @@ class Weapon {
     if (s > 0) { const rr = s * Math.sqrt(R()), a = R() * Math.PI * 2; out.addScaledVector(ray.r, Math.cos(a) * rr).addScaledVector(ray.u, Math.sin(a) * rr).normalize(); }
     return out;
   }
-  _shoot(ray, ws, R) { const s = this.spread(ws); return this.game.fireBullet(this.owner, ray.o.clone(), this._cone(ray, s, new THREE.Vector3(), R), this.def); }
+  _shoot(ray, ws, R) {
+    const s = this.spread(ws), d = this._cone(ray, s, new THREE.Vector3(), R), o = this.dmgK ? { dmgK: this.dmgK } : {};
+    if (this.def.hLine) { let res = null; for (const k of [-1, 0, 1]) { const r = this.game.fireBullet(this.owner, ray.o.clone(), d.clone().addScaledVector(ray.r, k * this.def.hLine).normalize(), this.def, { ...o, pellet: k + 1 }); res = res || r; } return res; } // v66y Triple Take
+    return this.game.fireBullet(this.owner, ray.o.clone(), d, this.def, o);
+  }
 
   fire(ws) {
     const g = this.game, p = this.owner;
@@ -201,6 +205,10 @@ class Weapon {
     this.cooldown -= h;
     if (!ws.trigger && this.cooldown < 0) this.cooldown = 0;
     this.recover(h, ws);
+    const hc = this.def.heatCool; // v66y L-STAR: heat cools back 0.4 s after the last shot (no reload — an empty "mag" is the overheat)
+    if (hc && !this.reloading && this.ammo > 0 && this.ammo < this.def.mag && ws.clock - this.lastShot > 0.4) {
+      this.heatAcc = (this.heatAcc || 0) + h * this.def.mag / hc; while (this.heatAcc >= 1 && this.ammo < this.def.mag) { this.ammo++; this.heatAcc--; }
+    }
     if (this.autoReloadT > 0) { this.autoReloadT -= h; if (this.autoReloadT <= 0 && this.tryReload()) ws.setAds(false, true); }
     this._reload(h);
   }
