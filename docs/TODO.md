@@ -107,6 +107,13 @@
 - 🔄 掉到地板下：v63h 先加保護（拉回安全位置）；⬜ 根本修正：找出碰撞網格的缺口（`tools/out/_underfloor.mjs` 找得到位置）補上碰撞面
 
 ## 3. Apex 槍枝（資料：`docs/research/apex/weapons-full.json`，說明 `docs/research/apex/README.md`）
+- 🔄 Apex 原版槍全部做成獨立武器（使用者 11-05 全 A）：約 30 把，進 git 和網頁版、任何模式都能選、用 Apex 自己的傷害／射速／後座
+  - ✅ 29 把模型、武器資料、彈道表後座、連發、Devotion 加速、倉庫「Apex 槍」篩選（v66w）
+  - ⬜ 槍聲：現在借 SF2 槍的；改用 Apex 原版（`tools/apex-sfx.mjs`）
+  - ⬜ 其餘特殊機制：蓄力（Charge Rifle 光束、Bocek 拉弓、Havoc 0.42 s 起轉、Sentinel 充能）、L-STAR 過熱、Rampage 加速、Triple Take 三發水平散開、霰彈槍的固定彈著形狀
+  - ⬜ 第一人稱細調：每把的腰射位置、開鏡眼睛高度（目前全部 +1.2 cm）、換彈時彈匣的移動；第三人稱（目前拿同類的程序槍）
+  - ⬜ 已知舊問題：倉庫的線條圖示在 SF2 槍模還沒載入時會失敗（`makeIcons` 在第一把失敗時整個中斷）
+  - ⏸ 傳說造型（約 700 個，純外觀）：使用者 11-05 說先擱置
 - 🔄 29 把槍的數值接進 Apex 扣血模式
   - ✅ 完整數值（v62t）：S30.1＋官方 patch notes＋S14 原始武器腳本（散布、後座表、彈道、拔槍、配件效果），逐欄標來源；TTK 表（`tools/apex_weapon_data.py`）
   - ✅ 扣血接線（v62u）：每把槍對應一把同類、射速最接近的 Apex 槍，用它的傷害、頭／腿倍率、爆頭生效距離（自選，見 DECISIONS D6）

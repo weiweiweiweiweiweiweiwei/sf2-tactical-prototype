@@ -2009,3 +2009,12 @@
 - 使用者 11-05 選 B：跌落傷害移到 `Combatant.landDamage()`（`src/12_player.js`），玩家和電腦共用；電腦落地時也呼叫（`src/13_bots.js`）。
 - 實測（`tools/out/_falltest.mjs`）：電腦從 12 m 掉下扣 22；電腦從 10 m 踩到玩家：電腦 0、玩家 55。CHECK_OK；雷霆圓頂 90 秒對戰沒有卡住、10 次擊殺、59 fps。
 - 使用者 11-05：下一張 Apex 地圖先不做（D）。
+
+### v66w（本機，2026-11-05）：Apex 原版槍 29 把變成獨立武器（第一批）
+- 使用者 11-05 全 A：Apex 槍進 git 和網頁版（取消 10-28 的「只放本機」）、先做原版槍、任何模式都能選、用 Apex 自己的數值。傳說造型先擱置（純外觀，不影響數值）。
+- 匯出（RSX）：`common.rpak` 的 29 把 `*_base_v` 第一人稱模型和 `*_base_main_sknp` 貼圖 → `tools/out/apex/guns/`（不進 git）。
+- 模型（`tools/blender/apex_gun_build.py`，全部改寫）：留預設零件（`_0_`）和機械瞄具，丟掉瞄準鏡、消音器、雷射、擴充彈匣。標記用模型自己的骨頭：槍口 `muzzle_flash`、眼睛 `ja_ads_attachment`（再高 1.2 cm，R-301 的後方螢幕才不會擋住）、握把 `ja_c_propGun`（每把 Apex 槍右手都握在這裡）、彈匣骨頭；左手照外形放在彈匣到槍口 45 % 處。貼圖：顏色 = col + 0.4×spc（整個 spc 加上去會變成白色鍍鉻）、粗糙度 = 1 − gls、金屬度看 spc；1024 px WebP、Draco。每把約 0.5 MB。
+- 武器資料（`tools/apex_gun_defs.mjs` → `src/01_core.js` 的 `<apex-guns>` 區塊，資料 `docs/research/apex/weapons-full.json`）：每發傷害（不衰減）、爆頭倍率、射速（含拉栓）、彈匣、戰術換彈、拔槍、開鏡速度、機械瞄具視角；後座力照每把槍自己的彈道表（`apexPattern`，沒有表的用同類的固定後座）。四把狙擊槍（Kraber、Sentinel、Longbow、Charge Rifle）用遊戲的狙擊鏡（兩段），射手步槍用機械瞄具。手槍和莫三比克是副武器。重量（決定走路速度）照同類 SF2 槍。
+- 新機制（`src/10_weapons.js`、`src/11_weaponsystem.js`）：連發（Hemlok 3、Prowler 5 發，按一下打一組，放開也會打完；Nemesis 4 發，按住連續）；Devotion 越打越快（5 → 15 發/秒，1.75 秒）。
+- 倉庫：篩選多了「SF2 槍」「Apex 槍」。槍聲暫時借同類的 SF2 槍。
+- 實測（`tools/out/_apexfire.mjs`）：Hemlok 0／0.05／0.117 s 三發；Prowler 五發 0.18 s 內打完；Nemesis 四發一組、組間 0.35 s；Devotion 間隔 0.2 → 0.08 s；R-301 21 發 0.067 s 一發。開鏡截圖（`tools/out/_rigshot.mjs`）：R-301、Wingman 機械瞄具，Kraber 狙擊鏡。MODULES_OK、CHECK_OK。

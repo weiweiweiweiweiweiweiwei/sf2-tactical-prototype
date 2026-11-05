@@ -2,9 +2,9 @@
 // node tools/guns/pack.mjs
 import fs from 'node:fs'; import path from 'node:path';
 // v62h m4a1_sf2.glb (the static v61 M4A1) stays out: the animated m4a1_sf2_rig.glb replaced it and both need the same loader
-const SKIP = new Set(['m4a1_sf2.glb']); // (v62z (loop) the M16A3 / QBZ-97 rigs are in: their sight lines are set)
+const SKIP = new Set(['m4a1_sf2.glb']); // (v66w apex_* in again: the user ships the Apex guns, 11-05) // (v62z (loop) the M16A3 / QBZ-97 rigs are in: their sight lines are set)
 // v63e apex_* (EA's models, local only) stay out; v64d *_3rd.glb out again (soldiers hold the merged procedural gun: cheaper)
-const dir = 'tools/guns', out = 'assets/guns/guns.js' /* (v65j removed: per-gun files) */, files = fs.readdirSync(dir).filter((f) => f.endsWith('.glb') && !SKIP.has(f) && !f.startsWith('apex_') && !f.endsWith('_3rd.glb'));
+const dir = 'tools/guns', out = 'assets/guns/guns.js' /* (v65j removed: per-gun files) */, files = fs.readdirSync(dir).filter((f) => f.endsWith('.glb') && !SKIP.has(f) && !f.endsWith('_3rd.glb'));
 // v65j one file per gun (assets/guns/g/<id>.js) + assets/guns/index.js (window.GUN_INDEX): the game loads only the guns it shows
 // (src/09_models.js ensureGunModels) instead of one 60 MB guns.js parsed at start
 const gdir = 'assets/guns/g'; fs.mkdirSync(gdir, { recursive: true });
@@ -16,7 +16,7 @@ for (const f of files) {
   fs.writeFileSync(path.join(gdir, id + '.js'), js); total += js.length;
 }
 const ids = files.map((f) => path.basename(f, '.glb'));
-fs.writeFileSync('assets/guns/index.js', `/* gun models, one file each in assets/guns/g/ — tools/guns/pack.mjs. <id>.glb: original work, CC0; <id>_sf2*.glb: Special Force 2 originals from the user install */
+fs.writeFileSync('assets/guns/index.js', `/* gun models, one file each in assets/guns/g/ — tools/guns/pack.mjs. <id>.glb: original work, CC0; <id>_sf2*.glb: Special Force 2 originals, apex_*.glb: Apex Legends originals, both from the user's installs */
 window.GUN_INDEX = ${JSON.stringify(ids)};
 `);
 if (fs.existsSync(out)) fs.unlinkSync(out); // (the old all-in-one file)

@@ -162,6 +162,7 @@ class Arsenal {
     if (this.grabCd > 0) this.grabCd -= h;
     if (this.grabT > 0) { this.grabT += h; if (!this.grabHit && this.grabT >= 0.12) { this.grabHit = true; this._grabHit(); } if (this.grabT >= 0.45) this.grabT = 0; }
     if (w.kind !== 'knife' && w.kind !== 'grenade' && this.grabT <= 0) {
+      if (w.burstIdx > 0 && w.cooldown <= 0 && !w.reloading && g.canAct()) this._fire(); // v66w a burst runs its course whether the trigger is held or not
       if (this.trigger && w.auto && !w.reloading && g.canAct()) {
         let n = 0;
         while (w.cooldown <= 0 && n < 3) { if (w.ammo <= 0) { this._fire(); this.trigger = false; break; } this._fire(); n++; }

@@ -38,7 +38,7 @@ class Weapon {
   }
   // v66c SF2 (SFWeapon.WeaponFiring.TryPutDown clears RefireCheckTimer, then puts the gun down at once): holstering drops what is left
   // of the fire interval — a sniper's bolt included; the draw time is charged by WeaponSystem.switchTo
-  holster() { this.cooldown = 0; this.reloading = false; this.queued = 0; this.autoReloadT = 0; if (this.vm.flash) this.vm.flash.visible = false; if (this.vm.sf2flash) this.vm.sf2flash.hide(); }
+  holster() { this.burstIdx = 0; this.cooldown = 0; this.reloading = false; this.queued = 0; this.autoReloadT = 0; if (this.vm.flash) this.vm.flash.visible = false; if (this.vm.sf2flash) this.vm.sf2flash.hide(); }
   get reloadPhase() { return this.reloading ? clamp(this.reloadT / this.reloadTime, 0, 1) : 0; }
   // mechanical sounds: in your head for your own gun, positional for anyone else's
   _mech(name) { this.game.audio.mech(name, this.local ? null : this.owner.motor.pos, this.sf2); }
@@ -116,6 +116,9 @@ class Weapon {
   // (named recoilKick: `recoil` is also a def field copied onto the instance by Object.assign)
   recoilKick() {
     const r = this.def.recoil, n = this.shots;
+    const A = this.def.apexPattern; // v66w an Apex gun's own pattern: per shot [yaw, pitch] degrees (Source: pitch < 0 is up, yaw > 0 left), looping from A.loop
+    if (A && A.b.length) { const L = A.b.length, i = n - 1 < L ? Math.max(0, n - 1) : A.loop + ((n - 1 - L) % Math.max(1, L - A.loop)), b = A.b[i];
+      return [-b[1] * THREE.MathUtils.DEG2RAD, -b[0] * THREE.MathUtils.DEG2RAD]; }
     if (!r) return [0.012, rand(-0.003, 0.003)];
     const pitch = n <= 1 ? r.first : n <= r.climbShots ? r.climb : r.late;
     const yaw = n < r.hStart ? rand(-r.jitter, r.jitter) : r.h * Math.sin((n - r.hStart) * 0.5 + this.sprayPhase) + rand(-r.jitter, r.jitter);
@@ -146,9 +149,14 @@ class Weapon {
   fire(ws) {
     const g = this.game, p = this.owner;
     if (this.reloading) return false;
-    if (this.ammo <= 0) { this._mech('dry'); this.cooldown = 0.22; if (this.tryReload()) ws.setAds(false, true); return false; }
+    if (this.ammo <= 0) { this.burstIdx = 0; this._mech('dry'); this.cooldown = 0.22; if (this.tryReload()) ws.setAds(false, true); return false; }
     this.ammo--;
+    if (this.def.rampHz) { // v66w Devotion: the rate climbs to rampHz over rampTime of continuous fire
+      if (ws.clock - this.lastShot > Math.max(0.3, this.def.interval * 1.5)) this.spinT = ws.clock;
+      this.interval = lerp(this.def.interval, 1 / this.def.rampHz, clamp((ws.clock - (this.spinT ?? ws.clock)) / this.def.rampTime, 0, 1));
+    }
     this.cooldown = Math.max(Math.min(this.cooldown, 0), -this.interval) + this.interval;
+    if (this.def.burst) { this.burstIdx = (this.burstIdx || 0) + 1; if (this.burstIdx >= this.def.burst) { this.burstIdx = 0; this.cooldown += this.def.burstDelay; } } // v66w Hemlok / Nemesis / Prowler
     const now = ws.clock; // the arsenal's fixed-step clock (identical on host and client)
     if (now - this.lastShot > this.interval * 2.2) this.sprayPhase = rand(0, Math.PI * 2);
     const ray = this.aimRay();

@@ -1060,8 +1060,8 @@ class App {
     $('whSlots').querySelectorAll('.pick').forEach((b) => { b.onclick = () => { if (W.cat === b.dataset.cat) return; W.cat = b.dataset.cat; W.sel = LO[W.slot][W.cat]; W.filter = 'all'; W.page = -1; this.audio.uiClick(); this.renderWarehouse(); }; });
     // filter + search
     const types = [...new Set((W.cat === 'primary' ? PRIMARY_IDS : SECONDARY_IDS).map((id) => WEAPON_DATABASE[id].type))];
-    if (W.filter !== 'all' && !types.includes(W.filter)) W.filter = 'all';
-    const f = $('whFilter'); f.innerHTML = '<option value="all">全部</option>' + types.map((t) => `<option value="${t}">${TYPE_LABEL[t]}</option>`).join(''); f.value = W.filter;
+    if (W.filter !== 'all' && W.filter !== 'apex' && W.filter !== 'sf2' && !types.includes(W.filter)) W.filter = 'all';
+    const f = $('whFilter'); f.innerHTML = '<option value="all">全部</option><option value="sf2">SF2 槍</option><option value="apex">Apex 槍</option>' + types.map((t) => `<option value="${t}">${TYPE_LABEL[t]}</option>`).join(''); f.value = W.filter; // (v66w the Apex guns' own filter)
     f.onchange = () => { W.filter = f.value; W.page = 0; this.audio.uiClick(); this._whList(); };
     const q = $('whSearch'); q.value = W.q; q.oninput = () => { W.q = q.value.trim().toLowerCase(); W.page = 0; this._whList(); };
     this._whList(); this._whInfo(); this._whStage();
@@ -1069,7 +1069,7 @@ class App {
   // Paged 3×3 grid like SF2 (wheel or the pager turns pages); hovering a card previews it, clicking equips it.
   _whList() {
     const $ = this.$, W = this.wh, LO = Settings.data.loadouts, PER = 9;
-    const ids = (W.cat === 'primary' ? PRIMARY_IDS : SECONDARY_IDS).filter((id) => (W.filter === 'all' || WEAPON_DATABASE[id].type === W.filter) && (!W.q || `${WEAPON_DEFS[id].name} ${id}`.toLowerCase().includes(W.q)));
+    const ids = (W.cat === 'primary' ? PRIMARY_IDS : SECONDARY_IDS).filter((id) => (W.filter === 'all' || (W.filter === 'apex' ? !!WEAPON_DATABASE[id].apexKey : W.filter === 'sf2' ? !WEAPON_DATABASE[id].apexKey : WEAPON_DATABASE[id].type === W.filter)) && (!W.q || `${WEAPON_DEFS[id].name} ${id}`.toLowerCase().includes(W.q)));
     const pages = Math.max(1, Math.ceil(ids.length / PER));
     if (W.page < 0) W.page = Math.max(0, Math.floor(ids.indexOf(LO[W.slot][W.cat]) / PER));
     W.page = clamp(W.page, 0, pages - 1);

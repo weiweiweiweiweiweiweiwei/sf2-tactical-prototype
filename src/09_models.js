@@ -218,7 +218,7 @@ class WeaponModels {
   // Build the first-person model for a weapon definition: procedural first, then (optionally) an external GLTF/GLB swapped in.
   build(def) {
     const key = def.model || def.id;
-    const vm = (key === 'he' || key === 'flash' || key === 'smoke') ? this.grenade(key) : (def.sf2Rig && this.fromRig(def.sf2Rig + '_sf2_rig', this._rigOpts(def))) || this[key](def); // v62i def.sf2Rig: SF2's own rig, the old model until it is parsed
+    const vm = (key === 'he' || key === 'flash' || key === 'smoke') ? this.grenade(key) : (def.sf2Rig && this.fromRig(def.sf2Rig + '_sf2_rig', this._rigOpts(def))) || (key.startsWith('apex_') ? this.apexGun(def) : this[key](def)); // v62i def.sf2Rig: SF2's own rig, the old model until it is parsed
     if (def.kind !== 'grenade' && def.kind !== 'knife' && !vm.rig) this._fitAds(vm, def); // (a rig's camera is SF2's own)
     if (def.modelUrl) this.attachGLTF(vm, def.modelUrl);
     return vm;
@@ -374,6 +374,13 @@ class WeaponModels {
     vm.lhandMag = new V(magPiv.x + mg[0], magPiv.y + mg[1], magPiv.z + mg[2]);
     vm.lhandCharge = b.nodes.charge && b.nodes.charge.children.length ? new V(chPiv.x + cg[0], chPiv.y + cg[1], chPiv.z + cg[2]) : null; // no handle: the hand goes straight back
     return vm;
+  }
+
+  // v66w an Apex gun (tools/blender/apex_gun_build.py): marks from its own bones — the eye on ja_ads_attachment (eye 0); until the GLB
+  // is parsed, a stand-in of its class
+  apexGun(def) {
+    const stand = { assault: 'm4', smg: 'mp5', lmg: 'm249', sniper: 'm200', shotgun: 'm870', pistol: 'p226' }[def.type] || 'm4';
+    return this.fromGLB(def.model, { eye: 0, flash: 0.2, hip: def.type === 'pistol' ? [0.12, -0.15, -0.3] : [0.14, -0.175, -0.36], reticle: def.adsType !== '2d_scope_overlay' }) || this[stand](def);
   }
 
   // v62 SF2's own first-person rig (SF2Rig): arms and gun animated by the original clips. The group sits at the eye like any

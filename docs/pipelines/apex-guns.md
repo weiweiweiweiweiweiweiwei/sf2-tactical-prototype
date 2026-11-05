@@ -26,3 +26,9 @@ rsx_nogui.exe -nogui -export --exportdir "../r301/audio" --exporttypes asrc --ex
 - 槍座標：轉成 gunlib（X 右、Y 槍口、Z 上）、加 MUZZLE／SIGHT 等標記、接進 `src/09_models.js`。
 - 槍聲：接進音效包（WAV 可以轉 OGG 再打包，像 `tools/sfx_sf2.mjs`）。
 - 其他 28 把：同一套流程，`GUNS`／`ROLES` 各加一筆。
+
+## v66w 全部 29 把（使用者 11-05）
+1. 列清單：`rsx_nogui.exe -nogui --list ../common_list.csv --listformat csv <common.rpak>`；第一人稱模型是 `mdl	echart\mshop\weapons\class\<類別>\<槍>\<槍>_base_v.rmdl`。
+2. 匯出：模型 `--exporttypes mdl_ --exportfilter "<29 個 _base_v>" --exportdir ../guns`；貼圖 `--exporttypes matl --exportfilter "<*_base_main_sknp>"`（common.rpak＋common_mp.rpak）。
+3. `python tools/blender/apex_gun_build.py`（貼圖）→ `blender -b -P tools/blender/apex_gun_build.py`（模型，可加 `-- <槍…>`）→ `node tools/guns/pack.mjs`。
+4. `node tools/apex_gun_defs.mjs`：重寫 `src/01_core.js` 的 `<apex-guns>` 區塊；`sh src/build.sh`。
