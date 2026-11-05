@@ -4864,6 +4864,7 @@ var sf2Speed = /* @__PURE__ */ __name((load) => CFG.player.sf2Speed * Math.min(7
 var sf2Load = /* @__PURE__ */ __name((w, weapons) => {
   const d = w.def || w;
   if (!d.weight) return null;
+  if (d.slot !== "primary") return d.weight[0];
   const o = weapons.find((x) => x !== w && x.def && x.def.slot === (d.slot === "primary" ? "secondary" : "primary"));
   return d.weight[0] + (o && o.def.weight ? o.def.weight[1] : 0);
 }, "sf2Load");
@@ -4871,7 +4872,7 @@ for (const [id, d] of Object.entries(WEAPON_DEFS)) {
   const w = SF2_WEIGHT[id];
   if (!w) continue;
   d.weight = w;
-  d.moveSpeed = sf2Speed(w[0] + (d.slot === "primary" ? 0 : SF2_WEIGHT.m4a1[1]));
+  d.moveSpeed = sf2Speed(w[0]);
 }
 var PRIMARY_IDS = Object.keys(WEAPON_DATABASE).filter((k) => WEAPON_DATABASE[k].slot === "primary");
 var SECONDARY_IDS = Object.keys(WEAPON_DATABASE).filter((k) => WEAPON_DATABASE[k].slot === "secondary");
@@ -22505,8 +22506,10 @@ var WeaponSystem = class extends Arsenal {
 
 // src/12_player.js
 var RELOAD_MOVE = 0.8;
-var FALL_SAFE = 3.5;
-var FALL_LETHAL = 11;
+var FALL_V0 = 12.5;
+var SF2_G = 9.7;
+var FALL_SAFE = FALL_V0 * FALL_V0 / (2 * SF2_G);
+var STOMP_PCT = 5;
 var Combatant = class {
   static {
     __name(this, "Combatant");
@@ -22777,9 +22780,19 @@ var Human = class extends Combatant {
       g.emitNoise(m.pos, 14, this.team);
     }
     if (m.landSpeed > Math.sqrt(-2 * m.gravity * FALL_SAFE) && this.alive && !g.apex) {
-      const hgt = m.landSpeed * m.landSpeed / (-2 * m.gravity), dmg = Math.round((hgt - FALL_SAFE) / (FALL_LETHAL - FALL_SAFE) * 100);
+      const hgt = m.landSpeed * m.landSpeed / (-2 * m.gravity), dmg = Math.floor(100 * (Math.sqrt(2 * SF2_G * hgt) - FALL_V0) / FALL_V0);
       if (dmg > 0) {
-        g.applyDamage(this, dmg, "legs", this, WEAPON_DEFS.fall, null, null, { fall: true });
+        let under = null;
+        for (const c2 of g.combatants) {
+          if (c2 === this || !c2.alive) continue;
+          const o = c2.motor, dx = o.pos.x - m.pos.x, dz = o.pos.z - m.pos.z, rr = o.radius + m.radius;
+          if (dx * dx + dz * dz < rr * rr && m.pos.y >= o.pos.y - 0.2 && m.pos.y <= o.pos.y + o.height + 0.3) {
+            under = c2;
+            break;
+          }
+        }
+        if (under) g.applyDamage(under, dmg * STOMP_PCT, "chest", this, WEAPON_DEFS.fall, null, null, { fall: true });
+        else g.applyDamage(this, dmg, "legs", this, WEAPON_DEFS.fall, null, null, { fall: true });
         if (this.isPlayer) g.audio.land(null, m.surface, 1.4);
       }
     }

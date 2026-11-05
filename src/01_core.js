@@ -993,8 +993,10 @@ Object.assign(WEAPON_DEFS, {
 // a pistol, knife or grenade: + the primary's). docs/research/sf2/weight-speed.md. def.moveSpeed (bots, the move spread) takes
 // the usual pairing (a primary alone, the rest with an M4A1 put away); the player's own speed is worked out live (src/12_player.js).
 const sf2Speed = (load) => CFG.player.sf2Speed * Math.min(780, Math.max(295, 390 - (load - 2) * 95 / 4)) / 390;
-const sf2Load = (w, weapons) => { const d = w.def || w; if (!d.weight) return null; const o = weapons.find((x) => x !== w && x.def && x.def.slot === (d.slot === 'primary' ? 'secondary' : 'primary')); return d.weight[0] + (o && o.def.weight ? o.def.weight[1] : 0); };
-for (const [id, d] of Object.entries(WEAPON_DEFS)) { const w = SF2_WEIGHT[id]; if (!w) continue; d.weight = w; d.moveSpeed = sf2Speed(w[0] + (d.slot === 'primary' ? 0 : SF2_WEIGHT.m4a1[1])); }
+// v66u (user 11-05 B): a pistol, knife or grenade in hand runs at its own weight only (the CS way, as before v64r) — SF2 adds the
+// primary's unequip weight, so behind an AWP a grenade ran just 8 % faster. A primary in hand still carries the secondary's.
+const sf2Load = (w, weapons) => { const d = w.def || w; if (!d.weight) return null; if (d.slot !== 'primary') return d.weight[0]; const o = weapons.find((x) => x !== w && x.def && x.def.slot === (d.slot === 'primary' ? 'secondary' : 'primary')); return d.weight[0] + (o && o.def.weight ? o.def.weight[1] : 0); };
+for (const [id, d] of Object.entries(WEAPON_DEFS)) { const w = SF2_WEIGHT[id]; if (!w) continue; d.weight = w; d.moveSpeed = sf2Speed(w[0]); } // (v66u a secondary: its own weight only)
 const PRIMARY_IDS = Object.keys(WEAPON_DATABASE).filter((k) => WEAPON_DATABASE[k].slot === 'primary');
 const SECONDARY_IDS = Object.keys(WEAPON_DATABASE).filter((k) => WEAPON_DATABASE[k].slot === 'secondary');
 const WEAPON_ICONS = {}; // id → line-art dataURL (generated at boot)
