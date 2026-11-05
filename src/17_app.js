@@ -1,4 +1,4 @@
-import { AUTO_Q, CFG, DIFFICULTY, GpuPacer, LOADOUT_KEYS, MODES, PRIMARY_IDS, QUALITY, Q_LABEL, Q_ORDER, RGBELoader, RULES, RoomEnvironment, SECONDARY_IDS, STAR_BADGE, Settings, THREE, TIPS, TYPE_LABEL, WEAPON_BLURBS, WEAPON_DATABASE, WEAPON_DEFS, WEAPON_ICONS, activeQuality, calcDamage, clamp, damp, lerp, loadoutDefs, mapThumb, nextFrame, pick, setAutoQ, sleep, weaponStats } from './01_core.js';
+import { activeQuality, APEX_OPTICS, apexOptic, AUTO_Q, calcDamage, CFG, clamp, damp, DIFFICULTY, GpuPacer, lerp, LOADOUT_KEYS, loadoutDefs, mapThumb, MODES, nextFrame, pick, PRIMARY_IDS, Q_LABEL, Q_ORDER, QUALITY, RGBELoader, RoomEnvironment, RULES, SECONDARY_IDS, setAutoQ, Settings, sleep, STAR_BADGE, THREE, TIPS, TYPE_LABEL, WEAPON_BLURBS, WEAPON_DATABASE, WEAPON_DEFS, WEAPON_ICONS, weaponStats } from './01_core.js';
 import { ACOUSTICS, AudioEngine, GUN_PROFILES, HIT_SOUNDS } from './02_audio.js';
 import { CAO, MaterialLib, TextureFactory } from './03_textures.js';
 import { triBox, triHeight } from './04_collision.js';
@@ -1102,6 +1102,15 @@ class App {
     $('whName').textContent = d.name;
     $('whType').textContent = `${TYPE_LABEL[s.type]} · ${s.slot === 'primary' ? '主武器' : '副武器'} · ${st.rpm} RPM · ${d.fireMode}`;
     $('whBlurb').textContent = WEAPON_BLURBS[id] || d.desc || '';
+    { // v67b an Apex gun's optic (Settings.data.apexOptic[id]; '' = iron sights)
+      const row = $('whOptRow'), sel = $('whOptic'), opts = d.apexOptics || [];
+      row.hidden = !opts.length;
+      if (opts.length) {
+        const cur = (Settings.data.apexOptic || {})[id], val = cur === '' ? '' : cur || d.defaultOptic || '';
+        sel.innerHTML = '<option value="">機械瞄具</option>' + opts.map((k) => `<option value="${k}">${APEX_OPTICS[k].name}</option>`).join(''); sel.value = val;
+        sel.onchange = () => { (Settings.data.apexOptic || (Settings.data.apexOptic = {}))[id] = sel.value; Settings.save(); this.audio.uiClick(); };
+      }
+    }
     const bars = [['傷害', st.damage], ['後座力', 100 - st.control], ['射速', st.fireRate], ['精準度', st.accuracy]];
     $('whBars').innerHTML = bars.map(([k, v]) => `<div class="bar"><span>${k}</span><div><i style="width:${v}%"></i></div><b>${v}</b></div>`).join('')
       + `<div class="bar"><span>彈容量</span><div class="txt"></div><b>${d.mag}/${d.reserve}</b></div>`;
@@ -1187,7 +1196,7 @@ class App {
 try {
   const app = new App();
   window.app = app;
-  window.SF2 = { ensureGunModels, THREE, Settings, MAPS, WEAPON_DEFS, WEAPON_DATABASE, CFG, MODES, RULES, calcDamage, loadoutDefs, LOOK_DEFAULT, resolveLook, CAO, AudioEngine, GUN_PROFILES, triHeight, triBox }; // debug handle for the console
+  window.SF2 = { apexOptic, ensureGunModels, THREE, Settings, MAPS, WEAPON_DEFS, WEAPON_DATABASE, CFG, MODES, RULES, calcDamage, loadoutDefs, LOOK_DEFAULT, resolveLook, CAO, AudioEngine, GUN_PROFILES, triHeight, triBox }; // debug handle for the console
   window.SF2net = { Friends, NetHost, NetClient, LoopbackTransport, NetCodec, RoomDirectory, RtcHostTransport, RtcClientTransport, BackgroundTicker, RoomHost, RoomGuest, RoomLink, inviteLink, parseCode, fmtCode, roomCode, roomCfgSafe, ONLINE, host: (room, o = {}) => new NetHost(app, app.match, new LoopbackTransport(room, o)), join: (room, o = {}) => app.netJoin(room, o) }; // v25 tests
   window.__gameReady = true;
   document.getElementById('boot').classList.add('done');

@@ -217,8 +217,9 @@ class WeaponSystem extends Arsenal {
   }
 
   _vm(d) {
-    let vm = this.vmPool.get(d.id);
-    if (!vm) { vm = this.game.app.models.build(d); this.vmPool.set(d.id, vm); this.root.add(vm.group); }
+    const k = d.id + (d.optic ? '@' + d.optic : ''); // (v67b an Apex gun under each optic is its own model)
+    let vm = this.vmPool.get(k);
+    if (!vm) { vm = this.game.app.models.build(d); this.vmPool.set(k, vm); this.root.add(vm.group); }
     return vm;
   }
   onInventory() { if (this.scene.environment && this.game.applyEnvIntensity) this.game.applyEnvIntensity(); this.game.app.hud.setWeapon(this); }

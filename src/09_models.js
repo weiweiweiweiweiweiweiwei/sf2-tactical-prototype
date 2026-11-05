@@ -5,7 +5,7 @@
    Gun space: forward = -Z, up = +Y, bore axis on y = 0.
    Profile coordinates (u, v): u = distance forward, v = up.
    ===================================================================== */
-import { DRACOLoader, GLTFLoader, RoundedBoxGeometry, SkeletonUtils, THREE, WEAPON_DATABASE, mergeGeometries } from './01_core.js';
+import { APEX_OPTICS, DRACOLoader, GLTFLoader, mergeGeometries, RoundedBoxGeometry, SkeletonUtils, THREE, WEAPON_DATABASE } from './01_core.js';
 import { SF2Camo, SF2Flash, SF2Rig } from './09c_sf2rig.js';
 class GunMats {
   constructor(tf) {
@@ -72,7 +72,7 @@ function loadGunModels() {
   if (loadGunModels.p) return loadGunModels.p;
   return (loadGunModels.p = Promise.all([window.GUN_INDEX ? null : gunScript('assets/guns/index.js'), window.SF2_FX ? null : gunScript('assets/fx_sf2.js'), window.SF2_CAMO ? null : gunScript('assets/camo_sf2.js')]).then(() => {})); // (v64o SF2's weapon camos, v62m its muzzle-flash textures)
 }
-const gunGlbIds = (def) => { const I = window.GUN_INDEX || []; return [def.sf2Rig && def.sf2Rig + '_sf2_rig', def.sf2Rig && def.sf2Rig + '_sf2_ovl', def.model, def.id, def.id + '_sf2_rig', def.model + '_sf2_rig'].filter((k, i, a) => k && a.indexOf(k) === i && I.includes(k)); };
+const gunGlbIds = (def) => { const I = window.GUN_INDEX || []; return [def.sf2Rig && def.sf2Rig + '_sf2_rig', def.sf2Rig && def.sf2Rig + '_sf2_ovl', def.model, def.id, def.id + '_sf2_rig', def.model + '_sf2_rig', def.optic && 'apexopt_' + def.optic].filter((k, i, a) => k && a.indexOf(k) === i && I.includes(k)); };
 function gunModelReady(def) { return !!def && gunGlbIds(def).every((k) => GUN_LOAD.parsed.has(k)); }
 async function parseGunGlb(id) {
   const L = parseGunGlb.L || (parseGunGlb.L = (() => { const L = new GLTFLoader(), D = new DRACOLoader(); D.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/libs/draco/gltf/'); L.setDRACOLoader(D); return L; })()); // (v49 gunlib GLBs are Draco)
@@ -84,7 +84,7 @@ async function parseGunGlb(id) {
   gltf.scene.updateMatrixWorld(true);
   gltf.scene.traverse((o) => {
     if (o.isMesh) { const g = o.geometry.clone(); g.applyMatrix4(o.matrixWorld); const nm = o.name.split('__'); parts.push({ node: nm[0], mat: ((o.material && o.material.name) || '').replace('gun:', '') || (nm[1] || '').replace(/_\d+$/, ''), geo: g, material: o.material }); }
-    else if (/^(SIGHT|HOOD|MUZZLE|MUZZLE_S|SUPPORT|GRIP|MAGPIV|CHARGEPIV|BOLTPIV)$/.test(o.name)) marks[o.name] = o.getWorldPosition(new THREE.Vector3());
+    else if (/^(SIGHT|HOOD|MUZZLE|MUZZLE_S|SUPPORT|GRIP|MAGPIV|CHARGEPIV|BOLTPIV|EYE|OPT_[a-z_]+)$/.test(o.name)) marks[o.name] = o.getWorldPosition(new THREE.Vector3());
   });
   GUN_MODELS[id] = { parts, marks };
 }
@@ -253,7 +253,8 @@ class WeaponModels {
   // the slide sits a few cm from the eye and fills the screen as a black block. The sight line stays on the axis.
   _fitAds(vm, def) {
     if (!this.adsFit) this.adsFit = new Map();
-    if (this.adsFit.has(def.id)) { vm.adsPos.z += this.adsFit.get(def.id); return; }
+    const fk = def.id + (def.optic ? '@' + def.optic : ''); // (v67b an optic aims elsewhere: its own fit)
+    if (this.adsFit.has(fk)) { vm.adsPos.z += this.adsFit.get(fk); return; }
     const minD = vm.eyeRelief || (def.kind === 'pistol' ? 0.3 : vm.reticle ? 0.09 : def.adsType === '2d_scope_overlay' ? 0.07 : 0.13);
     const cam = this._adsCam || (this._adsCam = new THREE.PerspectiveCamera(48, 1.6, 0.01, 10)); cam.updateMatrixWorld();
     const g = vm.group, v = new THREE.Vector3(), p = new THREE.Vector3(), z0 = vm.adsPos.z;
@@ -269,7 +270,7 @@ class WeaponModels {
       vm.adsPos.z -= minD - near;
     }
     g.position.copy(vm.hipPos); g.rotation.copy(vm.hipRot); g.updateMatrixWorld(true);
-    this.adsFit.set(def.id, vm.adsPos.z - z0);
+    this.adsFit.set(fk, vm.adsPos.z - z0);
   }
   isArm(o) { return o.material === this.M.glove || o.material === this.M.sleeve || !!o.userData.arm; }
   // GLTF support: the loaded mesh is fitted to the procedural gun's bounds; hands/arms stay procedural. Any failure keeps the fallback mesh.
@@ -348,13 +349,13 @@ class WeaponModels {
   // chargeGrip (where the left hand takes hold, relative to those pivots). Returns null until the GLB has loaded.
   fromGLB(id, o = {}) {
     const G = GUN_MODELS[id]; if (!G || !G.marks.SIGHT) return null;
-    const M = this.M, gb = new GunBuilder(M), K = G.marks;
+    const M = this.M, gb = new GunBuilder(M), K = o.marks ? Object.assign({}, G.marks, o.marks) : G.marks; // (v67b o.marks: an optic's sight line)
     const V = THREE.Vector3, magPiv = K.MAGPIV || new V(0, -0.035, -0.03), chPiv = o.chargePiv ? new V(...o.chargePiv) : K.CHARGEPIV || new V(0, 0.024, 0.13);
     gb.node('mag', magPiv).node('charge', chPiv);
     if (K.BOLTPIV) gb.node('bolt', K.BOLTPIV); // v50 bolt action: rolls up around the bore and slides back (SniperRifle.animate)
     const MOVING = new Set(['mag', 'charge', ...(K.BOLTPIV ? ['bolt'] : [])]);
     const MAT = { tan: M.tan, magClear: M.magClear, gold: M.goldSatin, goldDark: M.goldDark, polymer: M.polymer, rubber: M.rubber, steel: M.steel, black: M.black, bright: M.bright, magBlack: M.magBlack, brass: M.brass, suppressor: M.suppressor, dotW: M.dotW, dotR: M.dotR };
-    for (const p of G.parts) {
+    for (const p of o.extra ? [...G.parts, ...o.extra] : G.parts) { // (v67b o.extra: an optic's parts)
       if (p.mat === 'lens' || (o.skip && o.skip(p.node))) continue;
       if (p.mat.startsWith('tex_') && p.material) p.material.side = THREE.DoubleSide; // (SF2 parts: some come out inside-out)
       gb.add(p.geo.clone(), (p.mat.startsWith('tex_') && p.material) || MAT[p.mat] || M.black, MOVING.has(p.node) ? p.node : 'body'); // v61 'tex_*': the GLB's own textured material (SF2 originals)
@@ -380,6 +381,16 @@ class WeaponModels {
   // is parsed, a stand-in of its class
   apexGun(def) {
     const stand = { assault: 'm4', smg: 'mp5', lmg: 'm249', sniper: 'm200', shotgun: 'm870', pistol: 'p226' }[def.type] || 'm4';
+    // v67b an Apex optic (def.optic, src/01_core.js apexOptic): its model on the gun's OPT_<key> mark, the eye on its sight line (EYE)
+    // 6 cm behind its rear, its reticle; the iron sights fold away. A scope (2D overlay) still shows on the gun when not aimed.
+    const O = def.optic && GUN_MODELS['apexopt_' + def.optic], G = GUN_MODELS[def.model], at = O && G && G.marks['OPT_' + def.optic];
+    if (at && O.marks.EYE) {
+      const OD = APEX_OPTICS[def.optic], extra = O.parts.filter((p) => p.mat !== 'lens').map((p) => Object.assign({}, p, { node: 'body', geo: p.geo.clone().translate(at.x, at.y, at.z) }));
+      let rear = -Infinity; for (const p of extra) { p.geo.computeBoundingBox(); rear = Math.max(rear, p.geo.boundingBox.max.z); }
+      const eye = at.clone().add(O.marks.EYE), V = THREE.Vector3;
+      return this.fromGLB(def.model, { extra, marks: { SIGHT: eye, HOOD: new V(0, eye.y, rear) }, skip: (n) => n === 'irons', eye: OD.scope ? 0.04 : 0.06, flash: 0.2,
+        hip: def.apexHip || (def.type === 'pistol' ? [0.12, -0.15, -0.3] : [0.14, -0.175, -0.36]), reticle: OD.scope ? false : OD.reticle === 'dot' ? 'dot' : true, reticleScale: OD.reticle === 'dot' ? 1 : 0.6 }) || this[stand](def);
+    }
     return this.fromGLB(def.model, { eye: 0, flash: 0.2, hip: def.apexHip || (def.type === 'pistol' ? [0.12, -0.15, -0.3] : [0.14, -0.175, -0.36]), reticle: false }) // (v67a user 11-05 B: Apex iron sights only — no ring of ours on them) || this[stand](def);
   }
 

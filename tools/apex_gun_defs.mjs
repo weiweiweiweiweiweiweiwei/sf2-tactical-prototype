@@ -25,7 +25,9 @@ const CAT = { '突击步枪': 'assault', '冲锋枪': 'smg', '轻机枪': 'lmg',
 // SF2's load by class (the walking pace, src/12_player.js sf2Speed): Apex has no weights — a class's typical SF2 gun
 const WEIGHT = { assault: [4.1, 2.05], smg: [2.2, 1.1], lmg: [7.2, 3.6], marksman: [4.5, 2.25], sniper: [7.6, 3.8], shotgun: [3.0, 1.5], pistol: [1.0, 0] };
 // the sniper rifles get the game's scope (two zoom levels, like Apex's 4–8×; Kraber's own is built in) — the marksman guns keep iron sights
-const SCOPED = new Set(['kraber', 'sentinel', 'longbow', 'chargerifle']);
+const SCOPED = new Set(); // (v67b the scopes are optics now — tools/out/apex/guns/build.json lists what each gun takes; the sniper rifles start on the 4–8×)
+const BUILD = JSON.parse(fs.readFileSync('tools/out/apex/guns/build.json', 'utf8'));
+const DEFOPT = { kraber: 'talon', sentinel: 'talon', longbow: 'talon', chargerifle: 'talon' };
 const r = (v, n = 4) => +(+v).toFixed(n);
 // v66x the Apex guns' own sounds (assets/sfx_apex.js, tools/apex_sfx.py): a gun with its own fire bank plays its banks (sf2 = apex_<gun>)
 const APEXSND = fs.existsSync('assets/sfx_apex.js') ? new Set([...fs.readFileSync('assets/sfx_apex.js', 'utf8').matchAll(/"sf2_apex_([a-z0-9]+)_fire"/g)].map((m) => m[1])) : new Set();
@@ -61,7 +63,9 @@ for (const [pre, id, key, zh, donor, fire] of G) {
   const HIP = { bocek: [0.24, -0.21, -0.6], kraber: [0.15, -0.19, -0.52], lstar: [0.15, -0.18, -0.42] }[id];
   if (HIP) e.apexHip = HIP;
   if (pat) e.apexPattern = { loop: pat.loop_offset || 0, b: pat.bullets.map((b) => [r(b[0], 3), r(b[1], 3)]) };
-  if (SCOPED.has(id)) e.zoomFovs = [20, 10];
+  const OPT_ORDER = ['hcog_og', 'holo', 'cro', 'holo_mag', 'hcog', 'acgs', 'aog', 'dcom', 'talon'];
+  const opts = Object.keys((BUILD[id] || {}).optics || {}).sort((a, b) => OPT_ORDER.indexOf(a) - OPT_ORDER.indexOf(b));
+  if (opts.length) { e.apexOptics = opts; if (DEFOPT[id]) e.defaultOptic = DEFOPT[id]; }
   for (const k of Object.keys(e)) if (e[k] === undefined) delete e[k];
   out.push(`  apex_${id}: ${JSON.stringify(e)},`);
   weights.push(`apex_${id}: ${JSON.stringify(WEIGHT[marks ? 'marksman' : type === 'sniper' && id !== 'kraber' && id !== 'sentinel' ? 'marksman' : type])}`);
