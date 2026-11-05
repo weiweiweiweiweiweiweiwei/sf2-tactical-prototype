@@ -46,7 +46,7 @@ class GunMats {
     this.magBlack = P({ color: 0x1b1b1d, metalness: 0.15, roughness: 0.55, roughnessMap: wear.roughnessMap, normalMap: wear.normalMap, normalScale: new THREE.Vector2(0.45, 0.45) });
     this.brass = metal(0xc8963e, 0.3, 1, 0.1);
     this.dotR = new THREE.MeshBasicMaterial({ color: new THREE.Color(1, 0.2, 0.15).multiplyScalar(1.4) }); this.dotR.userData.keep = true;
-    this.reticle = tf.reticle();
+    this.reticle = tf.reticle(); this.tf = tf; this.apexRet = {}; // (v67c apexRet: the Apex optics' reticles, made on first use)
     this.flashTex = tf.flash();
   }
 }
@@ -309,6 +309,14 @@ class WeaponModels {
     s.position.set(x, y, -u); s.scale.set(size, size, 1); s.visible = false; s.renderOrder = 10; s.userData.baseScale = size; parent.add(s);
     return s;
   }
+  // v67c an Apex optic's reticle: its own drawing (TextureFactory.apexReticle), size = its share of the screen's height when aimed (the
+  // viewmodel camera's 48° aimed lens), Apex's default red
+  _apexReticle(parent, y, key, size) {
+    const tex = this.M.apexRet[key] || (this.M.apexRet[key] = this.M.tf.apexReticle(key));
+    const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, blending: THREE.NormalBlending, depthWrite: false, depthTest: true, transparent: true, toneMapped: false, color: new THREE.Color(1, 0.07, 0.04).multiplyScalar(1.25), opacity: 0 }));
+    const k = size * 6 * Math.tan((24 * Math.PI) / 180); s.position.set(0, y, -3); s.scale.set(k, k, 1); s.renderOrder = 4; parent.add(s);
+    return s;
+  }
   _reticle(parent, y, dot = false, scale = 1, rgb = [1, 0.22, 0.16]) { // (v61 rgb: the green tritium dot of an iron front post)
     const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: dot ? this.M.dotTex : this.M.reticle, blending: THREE.AdditiveBlending, depthWrite: false, depthTest: true, transparent: true, color: new THREE.Color(...rgb).multiplyScalar(dot ? 3.2 : 2.2), opacity: 0 }));
     s.position.set(0, y, -3); const k = (dot ? 0.075 : 0.32) * scale; s.scale.set(k, k, 1); s.renderOrder = 4; parent.add(s);
@@ -366,7 +374,7 @@ class WeaponModels {
     if (o.supportGrip) { this.arm(gb, [-0.036, sv - 0.035, -su + 0.03], [-0.3, -0.32, -su + 0.3], 0.033, 'lhand'); this.gripHand(gb, -0.004, sv, su, -0.08, false, 'lhand'); }
     else { this.arm(gb, [-0.038, sv - 0.032, -su], [-0.3, -0.3, -su + 0.3], 0.033, 'lhand'); this.supportHand(gb, 0, sv + 0.028, su, o.supportW || 0.046, 'lhand'); }
     const b = gb.build(), hoodU = K.HOOD ? -K.HOOD.z : -K.SIGHT.z - 0.025;
-    const vm = this._finish(b, { muzzleU: -mz.z, sightY, hipPos: o.hip || [0.14, -0.175, -0.36], adsPos: [0, -sightY, hoodU - (o.eye ?? 0.08)], flash: o.flash ?? 0.2, reticle: o.reticle ?? true, reticleScale: o.reticleScale ?? 0.75, magMove: o.magMove, magRot: o.magRot });
+    const vm = this._finish(b, { muzzleU: -mz.z, sightY, hipPos: o.hip || [0.14, -0.175, -0.36], adsPos: [0, -sightY, hoodU - (o.eye ?? 0.08)], flash: o.flash ?? 0.2, reticle: o.reticle ?? true, reticleScale: o.reticleScale ?? 0.75, reticleTex: o.reticleTex, reticleSize: o.reticleSize, magMove: o.magMove, magRot: o.magRot });
     if (o.eyeRelief) vm.eyeRelief = o.eyeRelief;
     vm.reloadPose = o.reloadPose || GLB_RELOAD_POSE;
     if (o.boltPose) vm.boltPose = o.boltPose;
@@ -389,7 +397,7 @@ class WeaponModels {
       let rear = -Infinity; for (const p of extra) { p.geo.computeBoundingBox(); rear = Math.max(rear, p.geo.boundingBox.max.z); }
       const eye = at.clone().add(O.marks.EYE), V = THREE.Vector3;
       return this.fromGLB(def.model, { extra, marks: { SIGHT: eye, HOOD: new V(0, eye.y, rear) }, skip: (n) => n === 'irons', eye: OD.scope ? 0.04 : 0.06, flash: 0.2,
-        hip: def.apexHip || (def.type === 'pistol' ? [0.12, -0.15, -0.3] : [0.14, -0.175, -0.36]), reticle: OD.scope ? false : OD.reticle === 'dot' ? 'dot' : true, reticleScale: OD.reticle === 'dot' ? 1 : 0.6 }) || this[stand](def);
+        hip: def.apexHip || (def.type === 'pistol' ? [0.12, -0.15, -0.3] : [0.14, -0.175, -0.36]), reticle: false, reticleTex: OD.scope ? null : def.optic, reticleSize: OD.size }) || this[stand](def);
     }
     return this.fromGLB(def.model, { eye: 0, flash: 0.2, hip: def.apexHip || (def.type === 'pistol' ? [0.12, -0.15, -0.3] : [0.14, -0.175, -0.36]), reticle: false }) // (v67a user 11-05 B: Apex iron sights only — no ring of ours on them) || this[stand](def);
   }
@@ -772,7 +780,8 @@ class WeaponModels {
     out.hipPos = new THREE.Vector3(...o.hipPos); out.hipRot = new THREE.Euler(...(o.hipRot || [0, 0.035, 0]));
     out.adsPos = o.adsPos ? new THREE.Vector3(...o.adsPos) : out.hipPos.clone(); out.adsRot = o.adsPos ? new THREE.Euler(0, 0, 0) : out.hipRot.clone();
     if (o.muzzleU) { out.muzzle = new THREE.Object3D(); out.muzzle.position.set(0, 0, -o.muzzleU); g.add(out.muzzle); out.flash = this._flash(g, 0, 0, o.muzzleU + 0.03, o.flash); }
-    if (o.reticle) out.reticle = this._reticle(g, o.sightY, o.reticle === 'dot' || o.reticle === 'tritium', o.reticleScale || 1, o.reticle === 'tritium' ? [0.25, 1, 0.3] : undefined);
+    if (o.reticleTex) out.reticle = this._apexReticle(g, o.sightY, o.reticleTex, o.reticleSize || 0.1);
+    else if (o.reticle) out.reticle = this._reticle(g, o.sightY, o.reticle === 'dot' || o.reticle === 'tritium', o.reticleScale || 1, o.reticle === 'tritium' ? [0.25, 1, 0.3] : undefined);
     return out;
   }
 

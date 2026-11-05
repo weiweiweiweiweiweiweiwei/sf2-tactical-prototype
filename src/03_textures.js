@@ -593,6 +593,30 @@ class TextureFactory {
       ctx.beginPath(); ctx.arc(128, 128, 7, 0, 7); ctx.fill();
     });
   }
+  // v67c the Apex optics' reticles (white on clear, 256 px, the sight line at the centre; the sprite tints them Apex's default red).
+  // Drawn after Apex's designs — its own reticle art is drawn by each sight's RUI (ui\<optic>_sights.rpak) from images it names
+  // only by hash, so it could not be lifted from the install.
+  apexReticle(key) {
+    return this.simple('apexret:' + key, 256, (ctx) => {
+      ctx.clearRect(0, 0, 256, 256); ctx.translate(128, 128); ctx.strokeStyle = ctx.fillStyle = '#fff'; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      ctx.shadowColor = '#fff'; ctx.shadowBlur = 3;
+      const ring = (r, w) => { ctx.lineWidth = w; ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.stroke(); };
+      const dot = (r, x = 0, y = 0) => { ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill(); };
+      const line = (w, ...p) => { ctx.lineWidth = w; ctx.beginPath(); ctx.moveTo(p[0], p[1]); for (let i = 2; i < p.length; i += 2) ctx.lineTo(p[i], p[i + 1]); ctx.stroke(); };
+      const chevron = (s, w) => line(w, -s, s * 0.85, 0, 0, s, s * 0.85); // the tip on the sight line
+      const ticks = (r0, r1, w) => { for (const a of [0, 1, 2, 3]) { const c = Math.cos(a * Math.PI / 2), s = Math.sin(a * Math.PI / 2); line(w, c * r0, s * r0, c * r1, s * r1); } };
+      switch (key) {
+        case 'hcog_og': ring(84, 9); dot(9); break; // 1× HCOG 'Classic': a ring and a dot
+        case 'holo': ring(108, 6); chevron(20, 7); break; // 1× Holo: the wide ring, a chevron at its centre
+        case 'holo_mag': ring(108, 6); ticks(108, 88, 6); dot(7); break; // 1–2× Variable Holo: ring, four inward ticks, dot
+        case 'cro': ring(110, 4); ticks(26, 12, 5); dot(4); break; // 1× Digital Threat: thin ring, a gapped cross
+        case 'hcog': chevron(26, 7); line(6, -104, 0, -52, 0); line(6, 52, 0, 104, 0); line(6, 0, 40, 0, 74); break; // 2× Bruiser: chevron + stadia
+        case 'acgs': chevron(22, 6); line(5, 0, 30, 0, 118); for (const [y, h] of [[48, 30], [70, 24], [92, 18], [114, 12]]) line(5, -h, y, h, y); line(5, -110, 0, -60, 0); line(5, 60, 0, 110, 0); break; // 3× Ranger: chevron + drop ladder
+        case 'aog': chevron(24, 7); line(6, -96, 0, -46, 0); line(6, 46, 0, 96, 0); for (const y of [44, 72, 100]) dot(6, 0, y); break; // 2–4× AOG: chevron, stadia, drop dots
+        default: ring(84, 8); dot(8);
+      }
+    });
+  }
   letter(ch, color) {
     return this.simple('letter:' + ch, 256, (ctx, S) => {
       ctx.strokeStyle = color; ctx.lineWidth = 10; ctx.strokeRect(14, 14, S - 28, S - 28);

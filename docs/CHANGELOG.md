@@ -2054,3 +2054,12 @@
 - 遊戲（`src/01_core.js` `APEX_OPTICS`、`apexOptic()`）：配裝取槍時套上選的瞄準鏡（開鏡視角、縮放段數、狙擊鏡），預設機械瞄具，四把狙擊槍預設 4–8 倍。軍械庫選了 Apex 槍會多一個「瞄準鏡」選單（`Settings.data.apexOptic`）。第一人稱模型池改成以「槍＋鏡」為單位（`src/11_weaponsystem.js`）。
 - 修掉的問題：以 `Object.create` 做的鏡版武器資料，武器用 `Object.assign` 複製時拿不到繼承的欄位（名稱空白、HUD 出錯）→ 改成完整複製。
 - 實測（`tools/out/_apexvm.mjs` 加 `OPTS=`）：R-301 七種裝法、Longbow 6 倍／4–8 倍、R-99／Wingman 數位威脅的腰射和開鏡截圖。MODULES_OK、CHECK_OK。
+
+### v67c（本機，2026-11-05）：Apex 瞄準鏡細節——準心、數位威脅、真實倍率
+- 使用者 11-05 選 D（先補瞄準鏡細節），master 先不推（A）。
+- **真實倍率**：從 Apex 的武器設定（`weapon\mp_weapon_rspn101 / dmr / r97.rpak`，RSX `--exporttypes wepn`）讀出每種鏡的 `zoom_fov`（第二段是 `zoom_toggle_fov`）。它是 Apex FOV 70 下的水平角，倍率 = tan 35° ÷ tan(zoom/2)：60 → 1.2 倍、38.59 → 2 倍、26.28 → 3 倍、19.86 → 4 倍、13.31 → 6 倍、10.00 → 8 倍。`src/11_weaponsystem.js` 照 Apex 的做法按玩家自己的 FOV 換算（`def.apexZooms`）；機械瞄具也用各槍自己的 `zoom_fov`（R-301 55 → 1.35 倍）。之前 1 倍鏡用 50° 是放大過頭了。
+- **可變倍率第二段**：之前只有狙擊鏡能按右鍵切段，可變全息（1→2 倍）、AOG（2→4 倍）的第二段從來用不到；現在 Apex 槍按右鍵依序切換。實測可變全息 64.6° → 42.0° → 收鏡（FOV 75）。
+- **準心圖案**：每種鏡一張自己的準心（`src/03_textures.js` `apexReticle`，Apex 預設紅色、不受色調映射影響）：HCOG 經典圓圈加點、全息大圈加箭頭、可變全息圓圈加四刻度、數位威脅細圈加十字、打手箭頭加橫線、遊騎兵箭頭加彈道梯、AOG 箭頭加落點。Apex 的準心由各鏡的 RUI（`ui\hcog_classic_sights.rpak` 等）畫，引用的圖只有雜湊名，從 1 萬多張介面圖裡找不出來，所以照設計重畫。
+- **狙擊鏡**（6 倍、4–8 倍）：Apex 原版的彈道刻度梯（`ui.rpak` 的介面圖 0xE9CB274AB36B33EC，染紅成 `assets/apex/scope_ladder.png`）加細十字線；倍率標示改成 ×6、×4／×8。
+- **數位威脅**：用 1 倍數位威脅開鏡時，55 m 內（Apex `threat_scope_fadedist_end` 2165 英吋）的敵人整個畫成紅色剪影；只亮看得到的部分，牆後不亮（`src/15_postfx.js` `drawThreat`：世界畫完後、槍模型之前，用同一份深度再畫一次敵人）。
+- 實測：`tools/out/_apexvm.mjs`（R-301 六種鏡、長弓兩種狙擊鏡、R-99 數位威脅）、新探針 `tools/out/_apexthreat.mjs`（敵人放在 10 m 外沒有遮擋的方向，開鏡後 `threatOn` 為真、敵人變紅；可變全息三段 FOV）。MODULES_OK、CHECK_OK。

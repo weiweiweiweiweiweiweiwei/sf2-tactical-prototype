@@ -1,4 +1,4 @@
-import { CFG, Settings, THREE, TMP_V1, TMP_V2, WEAPON_DEFS, clamp, damp, lerp, rand } from './01_core.js';
+import { APEX_OPTICS, CFG, clamp, damp, lerp, rand, Settings, THREE, TMP_V1, TMP_V2, WEAPON_DEFS } from './01_core.js';
 import { CollisionWorld } from './04_collision.js';
 import { THROW, makePlayerWeapon } from './10_weapons.js';
 import { BTN } from './12b_cmd.js';
@@ -276,7 +276,8 @@ class WeaponSystem extends Arsenal {
     if (btn !== 2 || w.kind === 'knife' || w.kind === 'grenade') return;
     if (Settings.data.adsMode === 'hold') this.setAds(down);
     else if (down) {
-      if (w.scoped && w.def.zoomFovs.length > 1) this.setAds(this.zoomLevel < w.def.zoomFovs.length, false, this.zoomLevel + 1);
+      const nz = w.def.apexZooms ? w.def.apexZooms.length : w.scoped ? w.def.zoomFovs.length : 1; // (v67c Apex's variable optics step too: 1–2×, 2–4×, 4–8×)
+      if (nz > 1) this.setAds(this.zoomLevel < nz, false, this.zoomLevel + 1);
       else this.setAds(!this.ads);
     }
   }
@@ -287,12 +288,16 @@ class WeaponSystem extends Arsenal {
     w.animate(dt, this);
     // the 2D scope overlay follows the gameplay state (tick): one place for every way into or out of the scope
     const sc = w.scoped && this.scopedIn;
-    if (sc !== this._scopeShown || (sc && this.scopeLevel !== this._scopeLvl)) { this._scopeShown = sc; this._scopeLvl = this.scopeLevel; g.app.hud.setScope(sc, this.scopeLevel, w.def.sf2Rig ? w.def.sf2Reticle || 'bender' : false); }
+    if (sc !== this._scopeShown || (sc && this.scopeLevel !== this._scopeLvl)) { this._scopeShown = sc; this._scopeLvl = this.scopeLevel; g.app.hud.setScope(sc, this.scopeLevel, w.def.sf2Rig ? w.def.sf2Reticle || 'bender' : false, w.def.optic ? APEX_OPTICS[w.def.optic] : null); }
     w.vm.group.visible = !sc;
+    // v67c the digital threat (Apex's 1× CRO): aimed through it, enemies within its range draw red (src/15_postfx.js drawThreat)
+    const OT = w.def.optic && APEX_OPTICS[w.def.optic]; this.threatOn = !!(OT && OT.threat && this.ads && this.adsT > 0.5 && p.alive); this.threatRange = (OT && OT.threat) || 0;
 
     // v62f / v62w SF2 lenses (the guns with vmAdsHFov: adsFov = SF2 fZoomedFOV) are horizontal like UE3: turned into three.js's vertical FOV for this screen (16:9: 55° → 32.6°)
     const vert = (h) => 2 * Math.atan(Math.tan(h * Math.PI / 360) / this.camera.aspect) * 180 / Math.PI;
-    const target = this.ads ? (w.scoped ? (this.scopedIn ? (w.def.zoomHFovs ? vert(w.def.zoomHFovs[this.zoomLevel - 1]) : w.def.zoomFovs[this.zoomLevel - 1]) : this.baseFov * 0.82) : w.def.vmAdsHFov ? vert(w.def.adsFov) : w.def.adsFov) : this.baseFov;
+    // v67c an Apex gun's zoom (def.apexZooms, Apex's zoom_fov at its FOV 70): the same magnification at the player's FOV, as Apex scales it
+    const Z = w.def.apexZooms, az = (z) => (2 * Math.atan((Math.tan((this.baseFov * Math.PI) / 360) * Math.tan((z * Math.PI) / 360)) / Math.tan((35 * Math.PI) / 180)) * 180) / Math.PI;
+    const target = this.ads && Z ? az(Z[clamp(this.zoomLevel, 1, Z.length) - 1]) : this.ads ? (w.scoped ? (this.scopedIn ? (w.def.zoomHFovs ? vert(w.def.zoomHFovs[this.zoomLevel - 1]) : w.def.zoomFovs[this.zoomLevel - 1]) : this.baseFov * 0.82) : w.def.vmAdsHFov ? vert(w.def.adsFov) : w.def.adsFov) : this.baseFov;
     this.fov = THREE.MathUtils.lerp(this.fov, target, 1 - Math.exp(-(w.scoped ? 32 : w.def.adsSpeed * 1.4 || 28) * dt));
     if (Math.abs(this.fov - target) < 0.01 || (w.scoped && this.scopedIn)) this.fov = target; // scope zoom is instant
     const fovNow = this.fov + p.fovPunch;

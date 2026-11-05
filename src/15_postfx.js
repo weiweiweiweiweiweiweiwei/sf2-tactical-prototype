@@ -19,6 +19,29 @@ class GTAOPassX extends GTAOPass {
   render(renderer, writeBuffer, readBuffer, dt, mask) { hideForDepth(this.scene, () => super.render(renderer, writeBuffer, readBuffer, dt, mask)); }
 }
 
+// v67c Apex's digital threat: aimed through the 1× CRO, the enemies within its range are drawn again in flat bright red over the world
+// image, on its own depth (only what is in sight glows; walls hide them). Their meshes join THREAT_LAYER for that one draw; the scene's
+// background and the shadow maps are left alone.
+const THREAT_LAYER = 7;
+const threatMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(0.95, 0.0, 0.0), fog: false, depthFunc: THREE.LessEqualDepth });
+function drawThreat(r, m) {
+  const ws = m.weapons; if (!ws || !ws.threatOn) return;
+  const cam = m.camera, sc = m.scene, cp = cam.position, mine = m.player.team;
+  for (const b of m.combatants) {
+    const root = b.model && b.model.root; if (!root || b === m.player) continue;
+    const on = b.alive && b.team !== mine && root.position.distanceTo(cp) <= ws.threatRange;
+    root.traverse((o) => { if (o.isMesh) { if (on) o.layers.enable(THREAT_LAYER); else o.layers.disable(THREAT_LAYER); } });
+  }
+  const ac = r.autoClear, om = sc.overrideMaterial, bg = sc.background, mask = cam.layers.mask, sau = r.shadowMap.autoUpdate, snu = r.shadowMap.needsUpdate;
+  r.autoClear = false; sc.overrideMaterial = threatMat; sc.background = null; cam.layers.set(THREAT_LAYER); r.shadowMap.autoUpdate = false; r.shadowMap.needsUpdate = false;
+  r.render(sc, cam);
+  r.autoClear = ac; sc.overrideMaterial = om; sc.background = bg; cam.layers.mask = mask; r.shadowMap.autoUpdate = sau; r.shadowMap.needsUpdate = snu;
+}
+class ThreatPass extends Pass {
+  constructor(match) { super(); this.match = match; this.needsSwap = false; }
+  render(renderer, writeBuffer, readBuffer) { renderer.setRenderTarget(this.renderToScreen ? null : readBuffer); drawThreat(renderer, this.match); } // (right after the world: its depth is still there)
+}
+
 // Renders the first-person viewmodel on top of the current image with a cleared depth buffer (RenderPass clears the wrong target in r160).
 class ViewModelPass extends Pass {
   constructor(scene, camera) { super(); this.scene = scene; this.camera = camera; this.needsSwap = false; }
@@ -186,6 +209,7 @@ class PostFX {
     const rt = new THREE.WebGLRenderTarget(size.x, size.y, { type: THREE.HalfFloatType });
     const c = this.composer = new EffectComposer(r, rt);
     c.addPass(new RenderPass(match.scene, match.camera));
+    c.addPass(new ThreatPass(match));
     c.addPass(new SanitizePass());
     if (q.ao) {
       this.ao = new GTAOPassX(match.scene, match.camera, size.x, size.y, q.ao === 1);
@@ -235,7 +259,7 @@ class PostFX {
     this.hurt = damp(this.hurt, m.player.alive ? clamp((45 - m.player.hp) / 45, 0, 1) : 0.6, 4, dt);
     m.weapons.syncLighting(m.sun, m.hemi);
     if (!this.composer) {
-      r.setRenderTarget(null); r.autoClear = false; r.clear(); r.render(m.scene, m.camera);
+      r.setRenderTarget(null); r.autoClear = false; r.clear(); r.render(m.scene, m.camera); drawThreat(r, m);
       if (showVM) { r.clearDepth(); r.render(m.weapons.scene, m.weapons.camera); }
       m.app.hud.flashWhite(this.flashAmt);
       if (this.onFrame) this.onFrame();

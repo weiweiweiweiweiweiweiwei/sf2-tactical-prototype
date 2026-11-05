@@ -47,7 +47,7 @@ for (const [pre, id, key, zh, donor, fire] of G) {
     hipSpread: type === 'shotgun' ? 0.06 : r((c.spread_stand_hip || 3) * Math.PI / 180 * 0.5), adsSpread: 0.0015,
     adsFov: SCOPED.has(id) ? 20 : c.zoom_fov || 55, adsType: SCOPED.has(id) ? '2d_scope_overlay' : '3d_sight', mobility: 0.95, maxAmmo: mag,
     reloadTime: id === 'bocek' ? 0.55 : c.reload_tactical_s, equipTime: c.deploy_s, adsSpeed: r(1 / Math.max(0.12, c.ads_s || 0.27) * 3.3, 1),
-    reserveMult: id === 'bocek' ? 24 : undefined,
+    reserveMult: id === 'bocek' ? 24 : undefined, apexZooms: [c.zoom_fov || 55], // (v67c Apex's zoom_fov: horizontal ° at Apex's FOV 70 — src/11_weaponsystem.js scales it to the player's FOV)
     model: 'apex_' + id, apexKey: key, apexDonor: donor, apexSnd: APEXSND.has(id) ? 'apex_' + id : undefined, tracerEvery: 2, penetration: 1,
     desc: `Apex Legends 原版 ${w.name}：傷害、射速、彈匣、換彈、拔槍照 Apex（S30.1）${pat ? '，後座照它的彈道表' : ''}。`,
   };

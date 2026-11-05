@@ -57,10 +57,11 @@ class HUD {
     this._set('chv', this.el.ch, 'display', visible ? 'block' : 'none');
     if (visible && this.cache.chg !== g) { this.el.ch.style.setProperty('--gap', g + 'px'); this.cache.chg = g; }
   }
-  setScope(on, level, sf2 = false) {
+  setScope(on, level, sf2 = false, apex = null) {
     this._cls('scope', this.el.scope, 'on', on); this._cls('scopeSf2', this.el.scope, 'sf2', on && !!sf2); // v64f SF2's own tube + reticle
+    this._cls('scopeApex', this.el.scope, 'apex', on && !!apex); // v67c an Apex scope: its range ladder
     if (sf2 && this.el.scope.dataset.ret !== sf2) this.el.scope.dataset.ret = sf2; // v64s which reticle (a scope's own: 'bender', 'zeiss')
-    this._set('zl', this.el.zoomLbl, 'text', on ? (level === 2 ? '×10' : '×4') : '');
+    this._set('zl', this.el.zoomLbl, 'text', on ? (apex && apex.labels ? apex.labels[level - 1] || '' : level === 2 ? '×10' : '×4') : '');
   }
   // The scope overlay stays perfectly crisp (no blur / line thickening); moving-scope inaccuracy is still simulated in the ballistics.
   setScopeSpread() {}
