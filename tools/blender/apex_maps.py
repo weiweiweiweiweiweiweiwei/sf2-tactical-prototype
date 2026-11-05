@@ -9,6 +9,10 @@ M = ROOT / 'maps'  # (v66b each map's work folder — its .blend files — lives
 MAPS = {
     'skulltown': dict(stem='mp_rr_freedm_skulltown', maps=M / 'apex-skulltown/work/wrap/maps', models=M / 'apex-skulltown/work/full/mdl', work=M / 'apex-skulltown/work',
                       center=(-41.0, -10.0, 0.0), crop=(-330.0, 250.0, -300.0, 280.0), inner=150.0, play=None),
+    # v66r Thunderdome (mp_rr_thunderdome, user 11-05: more Apex maps) — a Mixtape map like Skull Town; its BSP is in the _client_perm /
+    # _client_temp paks (RSX wrap export -> work/wrap/wrap/maps). The 626 spawns span x −157…153, y −93…90 m: centred on them, 100 m of scenery round
+    'thunderdome': dict(stem='mp_rr_thunderdome', maps=M / 'apex-thunderdome/work/wrap/wrap/maps', models=M / 'apex-thunderdome/work/full/mdl', work=M / 'apex-thunderdome/work',
+                        center=(-2.0, -2.0, 0.0), crop=(-260.0, 260.0, -200.0, 200.0), inner=170.0, play=None),
     # the firing range (mp_rr_canyonlands_staging_mu1): the canyon the old box-collision map covered, centred on its reachable area
     'range': dict(stem='mp_rr_canyonlands_staging_mu1', maps=A / 'map-data/wrap/maps', models=A / 'full-models/mdl', work=M / 'apex-range/work',
                   center=(-145.0, 51.0, 0.0), crop=(-545.0, 255.0, -455.0, 345.0), inner=175.0, play=dict(minX=-165, maxX=165, minZ=-140, maxZ=140)),

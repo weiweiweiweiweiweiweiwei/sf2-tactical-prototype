@@ -233,5 +233,18 @@ MAPS.push(apexTriMap({
   thumb: { pos: [72.0, 15.9, 97.9], target: [-6.6, 35.9, 39.4], fov: 43.8 },
   objectives: { dom: [[-30, 0, 0], [0, 0, 0], [30, 0, 0]], relic: [0, 0, 0], domRadius: 5 }, // replaced by the baked ones on load
 }));
+// v66r Thunderdome (user 11-05: more Apex maps) — the Mixtape arena mp_rr_thunderdome, built like Skull Town (tools/blender/apex_maps.py
+// 'thunderdome'); bounds from the export's playBounds (the official spawns ± 25 m)
+MAPS.push(apexTriMap({
+  id: 'apex_thunderdome', packDir: 'assets/maps/apex-thunderdome/', name: 'Apex 雷霆圓頂', en: 'THUNDERDOME',
+  desc: '原版場景與擺設 · 烘焙光照 · 真實三角形碰撞 · E 開門', slogan: '圓頂競技場與周邊廠房 · 中央擂台、看台、貨櫃區',
+  bounds: { minX: -180, maxX: 181, minZ: -117, maxZ: 116 }, indoor: false, navLevels: [], killY: -60, killOutside: true, traversal: true,
+  hdri: 'kloofendal_48d_partly_cloudy_puresky', hdriBackground: true, background: 0xb8c8d8, envIntensity: 0.7, exposure: 1.0,
+  sun: { pos: [1.5, 68, -73], color: 0xfff1de, intensity: 2.6, auto: true }, hemi: [0xbcd6ee, 0x7a6e5c, 0.8],
+  fog: { color: 0xc4ced8, near: 180, far: 1100 }, acoustics: 'outdoor', ambience: 'wind', shadowFollow: 60,
+  shot: { pos: [0, 260, 120], target: [0, 0, 0] },
+  thumb: { pos: [170, 90, 0], target: [0, 5, 0], fov: 60 },
+  objectives: { dom: [[-30, 0, 0], [0, 0, 0], [30, 0, 0]], relic: [0, 0, 0], domRadius: 5 }, // replaced by the baked ones on load
+}));
 
 export { TriGround };

@@ -1,6 +1,6 @@
 // Ship the Apex maps as script chunks so a double-clicked index.html (file://, where fetch is blocked) loads them,
 // like the other Blender maps (assets/maps/*.js). Read by apexPack() in src/07u_apex.js.
-//   node tools/pack-apex-js.mjs skulltown|range  # v60 triangle maps from tools/out/apex/<map>/export (compress-apex-textures.py <map> first)
+//   node tools/pack-apex-js.mjs skulltown|range  # v60 triangle maps from maps/apex-<map>/work/export (compress-apex-textures.py <map> first)
 // Per map: assets/maps/<dir>/pack/index.js registers the bundle layout (byte ranges of its parts), then 0.js, 1.js, …
 // each hand one base64 piece of the bundle to APEX_PACK.chunk(id, i, b64). The full range's scene.gltf + scene.bin +
 // textures become one GLB with the images embedded. Both GLBs get Draco geometry (glTF-Transform: names, materials, images
@@ -106,9 +106,9 @@ const strz = (buf) => {
   return Buffer.concat([head, pos, Buffer.from(code), Buffer.from(mats)]);
 };
 const DOOR = 'tools/out/apex/door/door.glb'; // Apex's door leaf (tools/blender/apex_door.py), both full maps
-const TRI = { skulltown: ['apex_skulltown', 'assets/maps/apex-skulltown'], range: ['apex_full', 'assets/maps/apex-range'] }; // tools/blender/apex_maps.py names
+const TRI = { skulltown: ['apex_skulltown', 'assets/maps/apex-skulltown'], range: ['apex_full', 'assets/maps/apex-range'], thunderdome: ['apex_thunderdome', 'assets/maps/apex-thunderdome'] }; // tools/blender/apex_maps.py names
 if (TRI[process.argv[2]]) {
-  const [ID, D] = TRI[process.argv[2]], X = `tools/out/apex/${process.argv[2]}/export`;
+  const [ID, D] = TRI[process.argv[2]], X = `maps/apex-${process.argv[2]}/work/export`; // (v66r the work folders moved to maps/ in v66b: tools/blender/apex_maps.py)
   fs.mkdirSync(D, { recursive: true });
   pack(ID, D, {
     glb: await compress(glbFromGltf(X, 'scene.gltf'), true),
@@ -119,4 +119,4 @@ if (TRI[process.argv[2]]) {
     door: fs.readFileSync(DOOR),
     ...(fs.existsSync(D + '/nav.bin') ? { nav: fs.readFileSync(D + '/nav.bin'), navMeta: fs.readFileSync(D + '/nav.json') } : {}), // tools/bake-apex-nav.mjs <map id>
   });
-} else console.log('usage: node tools/pack-apex-js.mjs skulltown|range')
+} else console.log('usage: node tools/pack-apex-js.mjs skulltown|range|thunderdome')

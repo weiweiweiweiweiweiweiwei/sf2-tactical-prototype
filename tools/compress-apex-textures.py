@@ -2,7 +2,7 @@
 
 Run after the Blender exports:
     python tools/compress-apex-textures.py skulltown|range
-- skulltown | range: tools/out/apex/<map>/export (tools/blender/skulltown_export.py) textures -> WebP and both lightmaps
+- skulltown | range | thunderdome: maps/apex-<map>/work/export (tools/blender/skulltown_export.py) textures -> WebP and both lightmaps
   -> JPEG, in place (the export is rebuilt from the .blend; lightmaps at quality 92, 4:2:0 is fine for smooth light).
 Idempotent: already-converted textures are skipped.
 """
@@ -27,7 +27,7 @@ def to_webp(data):
 
 def tri_map(name):
     """v60e: every texture -> WebP (JPEG ones too: about a third smaller at the same look; the browser decodes it natively)."""
-    root = os.path.join(OUT, name, 'export') + '/'
+    root = os.path.join('maps', 'apex-' + name, 'work', 'export') + '/'  # (v66r the work folders moved to maps/ in v66b)
     gltf = json.load(open(root + 'scene.gltf', encoding='utf-8'))
     before = after = changed = 0
     for img in gltf.get('images', []):
@@ -56,7 +56,7 @@ def tri_map(name):
 
 if __name__ == '__main__':
     import sys
-    if sys.argv[1:2] in (['skulltown'], ['range']):
+    if sys.argv[1:2] in (['skulltown'], ['range'], ['thunderdome']):
         tri_map(sys.argv[1])
     else:
         print('usage: python tools/compress-apex-textures.py skulltown|range')

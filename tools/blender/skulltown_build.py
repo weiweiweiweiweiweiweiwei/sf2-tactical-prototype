@@ -7,7 +7,7 @@ Output: maps/apex-skulltown/work/skulltown.blend (+ skulltown_build.json report,
 World: model 0 meshes with UV0, original vertex normals and the vertex colour (blend weights) as attribute 'blend'; TOOLS
 surfaces dropped. Everything is cropped to a box around the play area and moved so its centre is the origin.
 """
-import bpy, json, math, re, struct, sys
+import bpy, bmesh, json, math, re, struct, sys
 from collections import Counter, defaultdict
 from pathlib import Path
 from mathutils import Matrix, Vector
@@ -21,6 +21,7 @@ MATDIR = ROOT / 'tools/out/apex/rsx-2.4.0/exported_files/material'
 S = 0.0254
 CENTER = Vector(CFG['center'])  # (m, source axes)
 CROP = tuple(c + CENTER[i // 2] for i, c in enumerate(CFG['crop']))  # x0 x1 y0 y1 (m, source axes): play area + scenery
+FX_MAT = re.compile(r'^(atmosphere_|0x[0-9a-f]+$)|exhaust_glow|_holo_', re.I)  # (v66r see-through effect materials, see import_cast)
 SKIP_MODEL = re.compile(r'godray|podium|lightshaft|_fx_|spotlight|thunderdome|fake_sky|live_fire_frame|fs_girder_beam|fs_modular_\w*floorconnector|grave_wall_gasket', re.I)  # the Arenas hex cage / dome and its girders: they hide the sky
 report = {'missing_textures': [], 'missing_models': [], 'skipped_models': []}
 
@@ -205,6 +206,15 @@ def import_cast(path, name):
     for o in added:
         if o.type != 'MESH':
             bpy.data.objects.remove(o)
+    # v66r effect cards drawn see-through in the game (Thunderdome: big white sheets across the arena): the atmosphere fade cards, engine
+    # glows, holograms and the materials that have only a hash for a name (no texture: decals, blends) — their faces go
+    for o in [o for o in geo if o.type == 'MESH']:
+        bad = [i for i, sl in enumerate(o.material_slots) if sl.material and FX_MAT.search(sl.material.name)]
+        if not bad:
+            continue
+        me = o.data; bm = bmesh.new(); bm.from_mesh(me)
+        bmesh.ops.delete(bm, geom=[f for f in bm.faces if f.material_index in bad], context='FACES'); bm.to_mesh(me); bm.free()
+        report.setdefault('fx_faces_dropped', []).append(o.name)
     if any(re.search('cubemap|ascent_test_colors', m.name if m else '') for o in geo for m in o.data.materials):  # reflection-probe boxes; the Arenas hex dome (a dev test material)
         return None
     return col if geo else None

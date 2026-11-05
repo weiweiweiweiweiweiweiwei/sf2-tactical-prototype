@@ -5,11 +5,14 @@
 
 ## 1. 從遊戲檔匯出（RSX，`tools/out/apex/rsx-2.4.0/rsx_nogui.exe`）
 - 地圖 BSP：`--exporttypes wrap`（得到各 lump 和 `*.ent`）。
+  - 有些地圖（例如雷霆圓頂）的 BSP 不在基本 rpak，而在 `<地圖>_client_perm.rpak` / `_client_temp.rpak`。
+  - 工作檔放 `maps/apex-<名稱>/work/`（wrap、mdl、matl、export），v66b 起不再放 `tools/out/apex/`。
 - 模型：`-exportdependencies -matltextures --exporttypes mdl_`（CAST 檔）。
 - 材質貼圖：很多在 `common.rpak`，要和地圖包一起載入：`--exporttypes matl --exportfilter "名稱1,名稱2,…" 地圖.rpak common_mp.rpak common.rpak`。貼圖寫到 `rsx-2.4.0/exported_files/material/`。
 
 ## 2. 組場景：`blender -b -P tools/blender/skulltown_build.py -- --map <名稱>`
 - 世界網格（Source 是順時針繞序，要反過來）、原始法線、物件依「三角形 × 擺放數」挑 LOD，另匯最粗 LOD 給碰撞。
+- 半透明特效片（`FX_MAT`：`atmosphere_*`、雜湊名材質、`exhaust_glow`、`_holo_`）整面刪掉，否則烘焙後變成白牆（v66r）。
 - 排除 Arenas 外殼（穹頂 `live_fire_frame`、環、鋼樑、圍牆、圍網、反射探針盒）。
 - 輸出 `tools/out/apex/<名稱>/<名稱>.blend`。
 

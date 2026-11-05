@@ -1966,3 +1966,11 @@
 - 使用者 11-01：走路、奔跑、跳躍滯空的時間回到上一版。重力 20、起跳 7 m/s、跑速基準 6.43 m/s（照負重）、衝刺 ×1.3、蹲走 ×0.36、後退／側移不再減速、電腦 4.9／3.3 m/s，腳步間距也回到原本的。
 - 沒動的：身高、眼高、碰撞圓柱（v66j 的 SF2 數值）、開鏡慢走（v66l）、梯子 2.0 m/s、SF2 腳步聲與持槍晃動（v66o）。
 - 實測（`tools/out/_movemeasure.mjs`）：前進 5.61、後退 5.61、側移 5.61、衝刺 7.29、蹲走 2.02 m/s，跳 1.17 m；MODULES_OK、CHECK_OK。
+
+### v66r（本機，2026-11-05）：新地圖「Apex 雷霆圓頂」（Thunderdome）
+- 使用者 11-01：「可以幫我製作更多 Apex 的地圖嗎？」先做 Arenas 的雷霆圓頂（`mp_rr_thunderdome`，整張競技場都能玩，不用裁切）。
+- 匯出（RSX 2.4.0）：地圖 BSP 不在基本 rpak，而在 `mp_rr_thunderdome_client_perm` / `_client_temp`；模型 500 種、擺放 11123 個；9 個模型所有 pak 都找不到（例如 `sewer_staircase_quad`），32 個材質沒有貼圖（19 個是雜湊名）。
+- 組場景（`tools/blender/skulltown_build.py`）：新增 `FX_MAT`，把 Apex 的半透明特效片（`atmosphere_*` 霧片、雜湊名的無貼圖材質、`exhaust_glow`、`_holo_`）的面刪掉——第一版這些烘成了一大片一大片的白牆。這次刪了 164 個材質的面。外圍的看台、環、鋼架保留當背景；籠子、螢幕塔、光束照舊不放。
+- 地圖設定：`tools/blender/apex_maps.py` 的 `thunderdome`（中心 (−2, −2)、可玩半徑 170 m）；`src/07w_skulltown.js` 新增 `apex_thunderdome`「Apex 雷霆圓頂」，範圍 X −180–181、Z −117–116，天空、霧、陽光同 Skull Town，環境音「風」。
+- 工具修正：`pack-apex-js.mjs`、`compress-apex-textures.py` 的工作資料夾改成 `maps/apex-<名稱>/work/export`（v66b 搬家後的路徑），所有 Apex 地圖都受影響；`bake-apex-nav.mjs` 加上雷霆圓頂。
+- 包大小：貼圖 79.5 → 7.2 MB（WebP）、碰撞補丁 2.5 MB（`colpatch.js`）、縮圖 `assets/maps/thumbs/apex_thunderdome.jpg`。
