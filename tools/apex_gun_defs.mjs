@@ -57,6 +57,9 @@ for (const [pre, id, key, zh, donor, fire] of G) {
   // hLine = Triple Take's three rounds side by side, this far apart (rad)
   const MECH = { havoc: { windup: 0.42 }, chargerifle: { windup: 0.5 }, bocek: { bowDraw: c.charge_s || 0.54 }, lstar: { heatCool: 2.4, reserveMult: 60 }, tripletake: { hLine: 0.012 } }[id];
   if (MECH) Object.assign(e, MECH);
+  // v66z the hip pose where the default one misfits (tools/out/_apexvm.mjs sheets): Bocek's 1.3 m bow filled the right half, Kraber's stock rose into view
+  const HIP = { bocek: [0.24, -0.21, -0.6], kraber: [0.15, -0.19, -0.52], lstar: [0.15, -0.18, -0.42] }[id];
+  if (HIP) e.apexHip = HIP;
   if (pat) e.apexPattern = { loop: pat.loop_offset || 0, b: pat.bullets.map((b) => [r(b[0], 3), r(b[1], 3)]) };
   if (SCOPED.has(id)) e.zoomFovs = [20, 10];
   for (const k of Object.keys(e)) if (e[k] === undefined) delete e[k];
