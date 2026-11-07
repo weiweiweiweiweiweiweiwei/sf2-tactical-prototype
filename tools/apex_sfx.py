@@ -48,6 +48,9 @@ G = {
   're45': (['wpn_re45fusion_wpnfire_firstshot_1p_2ch'], 'wpn_re45_reload', None, 0.5),
   'wingman': (['wpn_wingman_1p_wpnfire_shot_6ch'], 'wpn_wingman_reload', None, 0.9),
 }
+# v67i the attachment workshop's sounds (user 11-07: Apex's own pick-up / attach / select sounds): bank sf2_apex_ui_<k> <- named sources
+UI = {'attach': ['player_pickup_loot_attachment_2ch_v1_0%d' % i for i in range(1, 8)], 'select': ['UI_Menu_LoadOut_Attachment_Select_2ch_v1_01'],
+      'optic': ['Arenas_UI_Store_Optic_Select_v1_2ch_01'], 'opticopen': ['Arenas_UI_Store_Optic_Select_Open_v1_2ch_01']}
 ROLE = {  # reload takes by what they are (the first match in the gun's list wins)
   'magout': r'magpull|magout|removemag|pullmag|clipout|mageject|ejectmag|pulldrum|drumremove|canistereject|eject|pt1|start|lever_out|batteryeject|magout',
   'magin': r'maginsert|magin|insertmag|clipin|insertdrum|druminsert|canisterinsert|loadshell|insert|pt3|magslot|lever_in|batteryplace',
@@ -72,6 +75,9 @@ for g, (fires, rel, draw, _) in G.items():
   if d: P['draw'] = d
   pick[g] = P; filt += [n for v in P.values() for n in v]
   print(g.ljust(12), {k: v[0] + (f' +{len(v) - 1}' if len(v) > 1 else '') for k, v in P.items()})
+for k, ns in UI.items():
+  hit = [low[n.lower()] for n in ns if n.lower() in low]; pick['ui_' + k] = {'ui': hit}; filt += hit
+  print(('ui_' + k).ljust(12), hit[:2], len(hit))
 json.dump(pick, open(ROOT / 'tools/out/apex/guns/sfx_pick.json', 'w'), indent=1)
 if '--list' in sys.argv: sys.exit(0)
 
@@ -95,8 +101,8 @@ def enc(name, maxs):
 pack, miss = {}, []
 for g, P in pick.items():
   for role, ns in P.items():
-    out = [x for x in (enc(n, G[g][3] if role == 'fire' else 1.0) for n in ns) if x]
-    if out: pack[f'sf2_apex_{g}_{role}'] = out
+    out = [x for x in (enc(n, 1.6 if role == 'ui' else G[g][3] if role == 'fire' else 1.0) for n in ns) if x]
+    if out: pack[f'sf2_apex_{g}' if role == 'ui' else f'sf2_apex_{g}_{role}'] = out
     else: miss.append(f'{g}:{role}')
 js = '/* Apex Legends original gun sounds from the user\'s own install — tools/apex_sfx.py */\nwindow.SF2_SFX_APEX = ' + json.dumps(pack) + ';\n'
 (ROOT / 'assets/sfx_apex.js').write_text(js, encoding='utf-8')

@@ -2091,3 +2091,13 @@
 - 兩套配裝：`Settings.data.loadouts`（SF2）和新的 `loadoutsApex`（預設 A：R-301＋P2020、B：長弓＋小幫手、C：R-99＋RE-45）；`activeLoadouts()` 依這場的槍枝回傳對應那一套（對戰、F1–F3、連線、房間的配裝按鈕）。舊存檔裡混在 SF2 配裝裡的 Apex 槍改回預設。
 - 倉庫：上方「SF2 槍枝／Apex 槍枝」兩頁，各自的 A／B／C 和槍單；進倉庫先顯示房間目前的那一套。原本篩選裡的「SF2 槍／Apex 槍」拿掉。
 - 實測（新探針 `tools/out/_gunset.mjs`）：Apex 槍枝一場：我 R-301、Bot G7／充能步槍／30-30／EVA-8／L-STAR；再開 SF2 槍枝一場：我 M4A1、Bot 全是 SF2 槍；倉庫 Apex 頁只列 Apex 槍。MODULES_OK、CHECK_OK。
+
+### v67i（本機，2026-11-07）：Apex 改裝頁——3D 槍、配件卡片、裝上的動畫和 Apex 原版音效
+- 使用者 11-07：Apex 配件的下拉選單不直覺；要一個獨立頁面，實際看到每個配件（例如 3 倍鏡、8 倍鏡）長什麼樣子、裝上去之後整把槍長什麼樣子，有動畫；音效參考 Apex 撿起和裝上配件的聲音。
+- 倉庫 Apex 頁的三個下拉選單換成「改裝」按鈕＋目前配件摘要（顏色＝Apex 的稀有度）。改裝頁（`src/17_app.js` `openApexWs`）：
+  - 中間：這把槍的 3D 模型（和手上同一個模型、藏起手臂），慢慢轉；可拖曳旋轉、滾輪縮放。
+  - 右邊：瞄準鏡／彈匣／槍管分頁。瞄準鏡和穩定器的每張卡片是那個配件本身的 3D 渲染（槍裝上它、只顯示它、對準它拍一張）；邊框照 Apex 稀有度（普通白、稀有藍、史詩紫、傳說金）；附倍率、發數或後座 %。
+  - 點一張：舊配件往上（瞄準鏡）或往前（穩定器）飛走並縮小，新配件從同方向飛進來、稍微壓過頭再卡回安裝位置；彈匣（Apex 沒有加長彈匣模型）是退出再裝回去。
+  - 音效（Apex 原版，`tools/apex_sfx.py` 加的介面音效）：進頁面 `Arenas_UI_Store_Optic_Select_Open`、選瞄準鏡 `Arenas_UI_Store_Optic_Select`、選其他配件 `UI_Menu_LoadOut_Attachment_Select`、配件卡上的那一刻 `player_pickup_loot_attachment`（7 種隨機）→ `sf2_apex_ui_*`。
+- `src/01_core.js` 新增 `apexKit(def, {optic, mag, barrel})`（指定配件的槍；`apexOptic` 改成用存檔的選擇呼叫它）、`APEX_RARITY`、`apexMagnif`；`src/09_models.js` 穩定器零件改用自己的材質（`apexbarrel`），才分得出來做動畫。
+- 實測（新探針 `tools/out/_aws.mjs`，截圖 `tools/out/apex/ws/`）：R-301 從機械瞄具裝上 3 倍鏡（鏡子從 +16 cm、0.6 倍大小飛下，壓過 1.4 cm 後歸位）、3 級穩定器、2 級彈匣；音效依序 opticopen → optic → attach → select → attach → select → attach；設定存進去、回倉庫摘要和彈容量 28/84 跟著變。MODULES_OK、CHECK_OK。

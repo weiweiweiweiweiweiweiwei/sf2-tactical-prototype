@@ -1,4 +1,4 @@
-import { activeLoadouts, activeQuality, APEX_BARREL_LV, APEX_MAG_KIND, APEX_MAG_LV, APEX_OPTICS, apexOptic, AUTO_Q, calcDamage, CFG, clamp, damp, DIFFICULTY, GpuPacer, gunSetOf, isApexGun, lerp, LOADOUT_KEYS, loadoutDefs, mapThumb, MODES, nextFrame, pick, PRIMARY_IDS, Q_LABEL, Q_ORDER, QUALITY, RGBELoader, RoomEnvironment, RULES, SECONDARY_IDS, setAutoQ, Settings, sleep, STAR_BADGE, THREE, TIPS, TYPE_LABEL, WEAPON_BLURBS, WEAPON_DATABASE, WEAPON_DEFS, WEAPON_ICONS, weaponStats } from './01_core.js';
+import { activeLoadouts, activeQuality, APEX_BARREL_LV, APEX_MAG_KIND, APEX_MAG_LV, APEX_OPTICS, APEX_RARITY, apexKit, apexMagnif, apexOptic, AUTO_Q, calcDamage, CFG, clamp, damp, DIFFICULTY, GpuPacer, gunSetOf, isApexGun, lerp, LOADOUT_KEYS, loadoutDefs, mapThumb, MODES, nextFrame, pick, PRIMARY_IDS, Q_LABEL, Q_ORDER, QUALITY, RGBELoader, RoomEnvironment, RULES, SECONDARY_IDS, setAutoQ, Settings, sleep, STAR_BADGE, THREE, TIPS, TYPE_LABEL, WEAPON_BLURBS, WEAPON_DATABASE, WEAPON_DEFS, WEAPON_ICONS, weaponStats } from './01_core.js';
 import { ACOUSTICS, AudioEngine, GUN_PROFILES, HIT_SOUNDS } from './02_audio.js';
 import { CAO, MaterialLib, TextureFactory } from './03_textures.js';
 import { triBox, triHeight } from './04_collision.js';
@@ -476,6 +476,7 @@ class App {
     pills('lbLoadout', activeLoadouts(this._gs()).map((l, i) => [i, LOADOUT_KEYS[i]]), 'loadout');
     $('lbWarehouse').onclick = () => this.openWarehouse(); $('lbWh').onclick = () => this.openWarehouse();
     $('whClose').onclick = () => this.closeWarehouse();
+    $('awBack').onclick = () => this.closeApexWs();
     // v27 room bar: ＋ 邀請朋友 opens the invite pop-up (link / code / public), 離開房間 goes back to the hub
     $('lbInvite').onclick = (e) => { e.stopPropagation(); this.audio.init(); this.audio.uiClick(); this.invite(); };
     $('lbInvPop').onclick = (e) => e.stopPropagation();
@@ -815,6 +816,7 @@ class App {
       const m = this.match;
       if (this.state === 'countdown' && code === 'Escape') { this.cancelCountdown(); return; }
       if ((this.state === 'lobby' || this.state === 'hub') && code === 'Escape') {
+        if (this.$('apexWs').classList.contains('on')) { this.closeApexWs(); return; } // (v67i)
         if (this.$('warehouse').classList.contains('on')) { this.closeWarehouse(); return; }
         if (this.$('lbInvPop').classList.contains('on')) { this.invite(false); return; }
         if (this.$('friends').classList.contains('on')) { this.friendsPanel(false); return; }
@@ -1108,7 +1110,15 @@ class App {
     $('whName').textContent = d.name;
     $('whType').textContent = `${TYPE_LABEL[s.type]} · ${s.slot === 'primary' ? '主武器' : '副武器'} · ${st.rpm} RPM · ${d.fireMode}`;
     $('whBlurb').textContent = WEAPON_BLURBS[id] || d.desc || '';
-    { // v67b an Apex gun's optic (Settings.data.apexOptic[id]; '' = iron sights)
+    { // v67i an Apex gun's attachments: the workshop (改裝) and a summary; the old drop-downs stay hidden
+      const kr = $('whKitRow'), has = !!(d.apexOptics || d.apexMags || d.apexBarrel); kr.hidden = !has;
+      if (has) {
+        const D = Settings.data, o = (D.apexOptic || {})[id], op = o === '' ? '' : o || d.defaultOptic || '', ml = (D.apexMag || {})[id] | 0, bl = (D.apexBarrel || {})[id] | 0, RC = ['#c9ced3', '#3fa6ff', '#b06cff', '#ffc53d'];
+        $('whKitSum').innerHTML = [d.apexOptics && `<i style="--rc:${op ? RC[APEX_RARITY[op] || 0] : '#777'}">${op ? APEX_OPTICS[op].name : '機械瞄具'}</i>`, d.apexMags && `<i style="--rc:${ml ? RC[ml - 1] : '#777'}">${ml ? `彈匣 ${ml} 級` : '標準彈匣'}</i>`, d.apexBarrel && `<i style="--rc:${bl ? RC[bl - 1] : '#777'}">${bl ? `穩定器 ${bl} 級` : '無穩定器'}</i>`].filter(Boolean).join('');
+        $('whKitBtn').onclick = () => this.openApexWs(id);
+      }
+    }
+    if (false) { // (v67b–e drop-downs, replaced by the workshop)
       const row = $('whOptRow'), sel = $('whOptic'), opts = d.apexOptics || [];
       row.hidden = !opts.length;
       if (opts.length) {
@@ -1141,6 +1151,149 @@ class App {
     $('whPic').src = (this.thumbs && this.thumbs[id]) || WEAPON_ICONS[id] || '';
   }
 
+
+  /* ------------------------------ v67i Apex attachment workshop ------------------------------ */
+  // The gun (the same model as in your hands, arms hidden) on a turntable; each attachment a card with its own 3D render (the gun built
+  // with it, everything else hidden). Picking one: the old part flies off, the new one flies in and seats (Apex's own sounds: the
+  // Arenas optic-store select, the loadout attachment select, the loot pick-up of an attachment as it seats). Mags have no longer
+  // model in Apex's install: the mag drops out and back in.
+  openApexWs(id) {
+    const $ = this.$, d = WEAPON_DEFS[id]; if (!d || !(d.apexOptics || d.apexMags || d.apexBarrel)) return;
+    this.audio.init(); this.playUi('opticopen');
+    this.aw = Object.assign(this.aw || {}, { id, cat: d.apexOptics ? 'optic' : d.apexMags ? 'mag' : 'barrel', anim: null, thumbs: (this.aw && this.aw.id === id && this.aw.thumbs) || {} });
+    $('warehouse').classList.remove('on'); $('apexWs').classList.add('on'); $('awName').textContent = d.name;
+    if (!this.awR) this._awInit();
+    this._awBuild(); this._awRender();
+  }
+  closeApexWs() { this.$('apexWs').classList.remove('on'); this.$('warehouse').classList.add('on'); Settings.save(); this.audio.uiClick(); if (this.wh) this._whInfo(); }
+  playUi(k) { try { this.audio.playBank('sf2_apex_ui_' + k); } catch (e) { /* no pack */ } }
+  _awKit() { const D = Settings.data, id = this.aw.id; return { optic: (D.apexOptic || {})[id], mag: (D.apexMag || {})[id] | 0, barrel: (D.apexBarrel || {})[id] | 0 }; }
+  _awInit() {
+    const cv = this.$('awCv');
+    try {
+      const r = this.awR = new THREE.WebGLRenderer({ canvas: cv, antialias: true, alpha: true, preserveDrawingBuffer: true });
+      r.setPixelRatio(Math.min(devicePixelRatio, 1.5)); r.toneMapping = THREE.ACESFilmicToneMapping; r.toneMappingExposure = 1.6; r.outputColorSpace = THREE.SRGBColorSpace;
+      const sc = this.awScene = new THREE.Scene(), pm = new THREE.PMREMGenerator(r);
+      sc.environment = pm.fromScene(new RoomEnvironment(), 0.04).texture; pm.dispose();
+      const key = new THREE.DirectionalLight(0xfff2e0, 2.4); key.position.set(2, 3, 4); sc.add(key);
+      const rim = new THREE.DirectionalLight(0x9fc4ff, 1.8); rim.position.set(-3, 1.5, -2); sc.add(rim); sc.add(new THREE.HemisphereLight(0xe8eef5, 0x3a3630, 1));
+      this.awCam = new THREE.PerspectiveCamera(28, 1, 0.02, 30); this.awPivot = new THREE.Group(); sc.add(this.awPivot);
+      this.awView = { yaw: -0.5, pitch: 0.12, dist: 3.4, auto: true, t: 0 };
+      let drag = null;
+      cv.onpointerdown = (e) => { drag = { x: e.clientX, y: e.clientY }; cv.setPointerCapture(e.pointerId); this.awView.auto = false; };
+      cv.onpointermove = (e) => { if (!drag) return; const V = this.awView; V.yaw += (e.clientX - drag.x) * 0.008; V.pitch = clamp(V.pitch + (e.clientY - drag.y) * 0.006, -0.7, 0.9); drag = { x: e.clientX, y: e.clientY }; };
+      cv.onpointerup = () => { drag = null; };
+      cv.onwheel = (e) => { e.preventDefault(); this.awView.dist = clamp(this.awView.dist * (e.deltaY > 0 ? 1.1 : 0.9), 0.9, 5); };
+    } catch (e) { console.warn('workshop unavailable', e); this.awR = null; }
+  }
+  // the gun-only model of a kit: arms / reticle sprites hidden, turned side-on, centred on the bare gun (attachments don't shift it)
+  _awModel(kit) {
+    const def = apexKit(WEAPON_DEFS[this.aw.id], kit), vm = this.models.build(def), g = vm.group, parts = { optic: [], barrel: [], mag: vm.mag || null };
+    g.traverse((o) => {
+      if (o.isSprite) o.visible = false;
+      if (!o.isMesh) return;
+      if (this.models.isArm(o)) { o.visible = false; return; }
+      const n = (o.material && o.material.name) || '';
+      if (n.startsWith('gun:tex_apexopt_')) parts.optic.push(o); else if (n === 'apexbarrel') parts.barrel.push(o);
+    });
+    const inner = new THREE.Group(), holder = new THREE.Group(); inner.add(g); holder.add(inner); inner.rotation.set(0, -Math.PI / 2, 0); holder.updateMatrixWorld(true);
+    const box = new THREE.Box3(); g.traverse((o) => { if (o.isMesh && o.visible && !parts.optic.includes(o) && !parts.barrel.includes(o)) box.expandByObject(o); });
+    const c = box.getCenter(new THREE.Vector3()), size = box.getSize(new THREE.Vector3()), k = 2.0 / Math.max(size.x, size.z, size.y * 2.4, 0.2);
+    inner.position.copy(c).multiplyScalar(-1); holder.scale.setScalar(k);
+    for (const o of [...parts.optic, ...parts.barrel]) o.userData.home = o.position.clone();
+    return { root: holder, parts, def };
+  }
+  async _awBuild() {
+    const kit = this._awKit(), def = apexKit(WEAPON_DEFS[this.aw.id], kit);
+    await ensureGunModels([def]);
+    if (this.awModel) this.awPivot.remove(this.awModel.root);
+    this.awModel = this._awModel(kit); this.awPivot.add(this.awModel.root);
+  }
+  // a card's picture: the gun built with that attachment, only the attachment shown, framed on it
+  async _awThumb(cat, v) {
+    const key = cat + ':' + v; if (this.aw.thumbs[key] !== undefined) return this.aw.thumbs[key];
+    const kit = Object.assign(this._awKit(), cat === 'optic' ? { optic: v } : { barrel: v });
+    await ensureGunModels([apexKit(WEAPON_DEFS[this.aw.id], kit)]);
+    const m = this._awModel(kit), show = m.parts[cat]; if (!show || !show.length || !this.awR) return (this.aw.thumbs[key] = null);
+    const r = this.awR, cam = this.awCam, cv = r.domElement, pr = r.getPixelRatio(), sc = this.awScene, keep = this.awModel && this.awModel.root;
+    if (keep) keep.visible = false;
+    m.root.traverse((o) => { if (o.isMesh && !show.includes(o)) o.visible = false; }); sc.add(m.root); m.root.updateMatrixWorld(true);
+    const box = new THREE.Box3(); for (const o of show) box.expandByObject(o);
+    const c = box.getCenter(new THREE.Vector3()), s = box.getSize(new THREE.Vector3()).length() || 0.1;
+    const TW = 240, TH = 160; r.setPixelRatio(1); r.setSize(TW, TH, false); cam.aspect = TW / TH;
+    cam.position.copy(c).add(new THREE.Vector3(0.55, 0.32, 1).normalize().multiplyScalar(s * 1.9)); cam.lookAt(c); cam.updateProjectionMatrix();
+    r.setClearColor(0, 0); r.clear(); r.render(sc, cam); const url = cv.toDataURL('image/png');
+    sc.remove(m.root); if (keep) keep.visible = true; r.setPixelRatio(pr); const w = cv.clientWidth, h = cv.clientHeight; if (w && h) r.setSize(w, h, false);
+    return (this.aw.thumbs[key] = url);
+  }
+  _awRender() {
+    const $ = this.$, A = this.aw, d = WEAPON_DEFS[A.id], kit = this._awKit(), RC = ['#c9ced3', '#3fa6ff', '#b06cff', '#ffc53d'];
+    const cats = [d.apexOptics && ['optic', '瞄準鏡'], d.apexMags && ['mag', '彈匣'], d.apexBarrel && ['barrel', '槍管']].filter(Boolean);
+    $('awTabs').innerHTML = cats.map(([k, n]) => `<button data-k="${k}" class="${k === A.cat ? 'on' : ''}">${n}</button>`).join('');
+    [...$('awTabs').children].forEach((b) => { b.onclick = () => { if (A.cat === b.dataset.k) return; A.cat = b.dataset.k; this.audio.uiClick(); this._awRender(); }; });
+    const curOpt = kit.optic === '' ? '' : kit.optic || d.defaultOptic || '';
+    const sum = [];
+    if (d.apexOptics) sum.push(`<i style="--rc:${curOpt ? RC[APEX_RARITY[curOpt] || 0] : '#777'}">${curOpt ? APEX_OPTICS[curOpt].name : '機械瞄具'}</i>`);
+    if (d.apexMags) sum.push(`<i style="--rc:${kit.mag ? RC[kit.mag - 1] : '#777'}">${kit.mag ? `彈匣 ${kit.mag} 級` : '標準彈匣'}</i>`);
+    if (d.apexBarrel) sum.push(`<i style="--rc:${kit.barrel ? RC[kit.barrel - 1] : '#777'}">${kit.barrel ? `穩定器 ${kit.barrel} 級` : '無穩定器'}</i>`);
+    $('awSum').innerHTML = sum.join('');
+    let items = [];
+    if (A.cat === 'optic') items = [['', '機械瞄具', '槍本身的準星', '#777', null], ...d.apexOptics.map((k) => { const O = APEX_OPTICS[k]; return [k, O.name, O.zooms.map((z) => apexMagnif(z).toFixed(1).replace('.0', '') + '×').join(' / ') + (O.scope ? ' · 狙擊鏡' : '') + (O.threat ? ' · 標示敵人' : ''), RC[APEX_RARITY[k] || 0], ['普通', '稀有', '史詩', '傳說'][APEX_RARITY[k] || 0]]; })];
+    if (A.cat === 'mag') { const M = d.apexMags, kind = APEX_MAG_KIND[M.kind] || ''; items = [[0, '標準彈匣', `${d.mag} 發`, '#777', null], ...M.l.map((n, i) => [i + 1, `${kind}擴充彈匣`, `${n} 發（+${n - d.mag}）`, RC[i], `${i + 1} 級`])]; }
+    if (A.cat === 'barrel') items = [[0, '無', '後座 100%', '#777', null], ...d.apexBarrel.k.map((k, i) => [i + 1, '槍管穩定器', `後座 ${Math.round(k[0] * 100)}% · 水平 ${Math.round(k[2] * 100)}%`, RC[i], `${i + 1} 級`])];
+    const cur = A.cat === 'optic' ? curOpt : A.cat === 'mag' ? kit.mag : kit.barrel;
+    $('awCards').innerHTML = items.map(([v, n, sub, rc, lv]) => `<button class="awc${String(v) === String(cur) ? ' on' : ''}" data-v="${v}" style="--rc:${rc}">${lv ? `<span class="lv">${lv}</span>` : ''}<div class="pic"><span class="none">${A.cat === 'mag' ? '▮'.repeat(Math.max(1, +v + 1)) : v === '' || v === 0 ? '—' : '…'}</span></div><b>${n}</b><small>${sub}</small></button>`).join('');
+    [...$('awCards').children].forEach((b) => {
+      const v = A.cat === 'optic' ? b.dataset.v : +b.dataset.v;
+      b.onclick = () => this._awPick(A.cat, v);
+      b.onmouseenter = () => { $('awInfo').textContent = this._awInfoText(A.cat, v); };
+      if (A.cat !== 'mag' && v !== '' && v !== 0) this._awThumb(A.cat, A.cat === 'barrel' ? 1 : v).then((url) => { if (url && b.isConnected) b.querySelector('.pic').innerHTML = `<img src="${url}" alt="">`; });
+    });
+    $('awInfo').textContent = this._awInfoText(A.cat, cur);
+  }
+  _awInfoText(cat, v) {
+    const d = WEAPON_DEFS[this.aw.id];
+    if (cat === 'optic') { if (!v) return '機械瞄具：用槍本身的前後準星，開鏡最快。'; const O = APEX_OPTICS[v]; return `${O.name}：開鏡放大 ${O.zooms.map((z) => apexMagnif(z).toFixed(1) + ' 倍').join('，切換到 ')}。${O.scope ? '開鏡時是全畫面狙擊鏡。' : '從鏡片裡看出去。'}${O.threat ? '開鏡時 55 m 內的敵人會被標成紅色。' : ''}`; }
+    if (cat === 'mag') return v ? `擴充彈匣 ${v} 級：彈匣 ${d.apexMags.l[v - 1]} 發（標準 ${d.mag} 發），備彈總量不變。Apex 沒有加長彈匣的模型，外觀不變。` : `標準彈匣：${d.mag} 發。`;
+    return v ? `槍管穩定器 ${v} 級：垂直後座剩 ${Math.round(d.apexBarrel.k[v - 1][0] * 100)}%、水平剩 ${Math.round(d.apexBarrel.k[v - 1][2] * 100)}%。` : '不裝槍管穩定器：原本的後座。';
+  }
+  async _awPick(cat, v) {
+    const A = this.aw, D = Settings.data, id = A.id, kit = this._awKit();
+    const cur = cat === 'optic' ? (kit.optic === '' ? '' : kit.optic || WEAPON_DEFS[id].defaultOptic || '') : cat === 'mag' ? kit.mag : kit.barrel;
+    if (String(cur) === String(v) || A.busy) return;
+    A.busy = true; this.playUi(cat === 'optic' ? 'optic' : 'select');
+    const old = this.awModel, off = (o) => (cat === 'optic' ? new THREE.Vector3(0, 0.16, 0) : new THREE.Vector3(0, 0, -0.22)); // (gun space: up / out of the muzzle)
+    // the old part leaves (or the mag drops)
+    if (old) await this._awTween(0.18, (t) => {
+      if (cat === 'mag') { if (old.parts.mag) old.parts.mag.position.y = (old.parts.mag.userData.y0 ??= old.parts.mag.position.y) - 0.12 * t; return; }
+      for (const o of old.parts[cat]) { o.position.copy(o.userData.home).addScaledVector(off(o), t); o.scale.setScalar(1 - 0.85 * t); }
+    });
+    const k = cat === 'optic' ? 'apexOptic' : cat === 'mag' ? 'apexMag' : 'apexBarrel';
+    (D[k] || (D[k] = {}))[id] = v; Settings.save();
+    await this._awBuild(); const nw = this.awModel;
+    if (cat === 'mag' && nw.parts.mag) { const m = nw.parts.mag, y0 = m.position.y; m.position.y = y0 - 0.12;
+      await this._awTween(0.3, (t) => { m.position.y = y0 - 0.12 * (1 - this._ease(t)); }); this.playUi('attach'); }
+    else if (nw.parts[cat].length) {
+      for (const o of nw.parts[cat]) { o.position.copy(o.userData.home).addScaledVector(off(o), 1); o.scale.setScalar(0.6); }
+      let snd = false;
+      await this._awTween(0.34, (t) => { const e = this._ease(t); if (!snd && t > 0.72) { snd = true; this.playUi('attach'); }
+        for (const o of nw.parts[cat]) { o.position.copy(o.userData.home).addScaledVector(off(o), 1 - e); o.scale.setScalar(0.6 + 0.4 * e); } });
+    } else this.playUi('attach');
+    A.busy = false; this._awRender();
+  }
+  _ease(t) { const c = 1.6; return 1 + (c + 1) * Math.pow(t - 1, 3) + c * Math.pow(t - 1, 2); } // ease-out-back: overshoots a hair, then seats
+  _awTween(dur, f) { return new Promise((res) => { this.awTw = { t: 0, dur, f, res }; }); }
+  _renderAw(dt) {
+    if (!this.awR || !this.$('apexWs').classList.contains('on')) return;
+    const r = this.awR, cam = this.awCam, cv = this.$('awCv'), w = cv.clientWidth, h = cv.clientHeight, V = this.awView;
+    if (this.awTw) { const T = this.awTw; T.t = Math.min(1, T.t + dt / T.dur); T.f(T.t); if (T.t >= 1) { this.awTw = null; T.res(); } }
+    if (w && h && (cv.width !== Math.round(w * r.getPixelRatio()) || cv.height !== Math.round(h * r.getPixelRatio()))) r.setSize(w, h, false);
+    if (w && h) cam.aspect = w / h;
+    V.t += dt; if (V.auto) V.yaw += dt * 0.18;
+    cam.position.set(Math.sin(V.yaw) * Math.cos(V.pitch) * V.dist, Math.sin(V.pitch) * V.dist, Math.cos(V.yaw) * Math.cos(V.pitch) * V.dist); cam.lookAt(0, 0, 0); cam.updateProjectionMatrix();
+    r.setClearColor(0, 0); r.render(this.awScene, cam);
+  }
+
   /* ------------------------------ loop ------------------------------ */
   loop(now) {
     requestAnimationFrame((t) => this.loop(t));
@@ -1152,7 +1305,7 @@ class App {
     this.pacer.skips = 0;
     let dt = clamp((now - this.last) / 1000, 0, 0.1); this.last = now;
     this.input.gameActive = this.state === 'playing' || this.state === 'paused';
-    if (this.state === 'lobby' || this.state === 'hub') { this._renderPreview(dt); if (this.state === "lobby") this._renderLobbyStage(dt); if (this.thumbQ && this.thumbQ.length && performance.now() > this.thumbStart) this._pumpThumb(); }
+    if (this.state === 'lobby' || this.state === 'hub') { this._renderPreview(dt); this._renderAw(dt); if (this.state === "lobby") this._renderLobbyStage(dt); if (this.thumbQ && this.thumbQ.length && performance.now() > this.thumbStart) this._pumpThumb(); }
     this.fpsAcc += dt; this.fpsFrames++;
     if (this.fpsAcc >= 0.5) { this.fpsText = `${Math.round(this.fpsFrames / this.fpsAcc)} FPS`; this.fpsAcc = 0; this.fpsFrames = 0; }
     const mouse = this.input.consumeMouse(this._mouse);

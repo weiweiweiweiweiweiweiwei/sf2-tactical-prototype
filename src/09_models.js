@@ -366,7 +366,8 @@ class WeaponModels {
     for (const p of o.extra ? [...G.parts, ...o.extra] : G.parts) { // (v67b o.extra: an optic's parts)
       if (p.mat === 'lens' || (o.skip && o.skip(p.node))) continue;
       if (p.mat.startsWith('tex_') && p.material) p.material.side = THREE.DoubleSide; // (SF2 parts: some come out inside-out)
-      gb.add(p.geo.clone(), (p.mat.startsWith('tex_') && p.material) || MAT[p.mat] || M.black, MOVING.has(p.node) ? p.node : 'body'); // v61 'tex_*': the GLB's own textured material (SF2 originals)
+      const bm = p.node === 'barrel' && (M.apexBarrel || (M.apexBarrel = Object.assign((MAT[p.mat] || M.black).clone(), { name: 'apexbarrel' }))); // (v67i the stabilizer apart: the workshop animates it)
+      gb.add(p.geo.clone(), bm || (p.mat.startsWith('tex_') && p.material) || MAT[p.mat] || M.black, MOVING.has(p.node) ? p.node : 'body'); // v61 'tex_*': the GLB's own textured material (SF2 originals)
     }
     const sightY = K.SIGHT.y, mz = K[o.muzzle || 'MUZZLE'] || K.MUZZLE, gu = K.GRIP ? -K.GRIP.z : 0.078, su = K.SUPPORT ? -K.SUPPORT.z : 0.3, sv = K.SUPPORT ? K.SUPPORT.y : -0.028;
     this.arm(gb, [0.02, -0.115, gu + 0.03], [0.19, -0.3, gu + 0.36]); this.gripHand(gb, 0.001, -0.082, -gu, -0.36);

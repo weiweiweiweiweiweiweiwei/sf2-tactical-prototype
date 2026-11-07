@@ -1332,11 +1332,18 @@ const OPTIC_DEFS = new Map();
 // (v67d also its extended mag: the whole attachment kit)
 function apexOptic(def) {
   if (!def || !(def.apexOptics || def.apexMags || def.apexBarrel)) return def;
-  const D = Settings.data, pick = (D.apexOptic || {})[def.id];
-  let key = def.apexOptics ? (pick === '' ? null : pick || def.defaultOptic) : null;
+  const D = Settings.data;
+  return apexKit(def, { optic: (D.apexOptic || {})[def.id], mag: (D.apexMag || {})[def.id], barrel: (D.apexBarrel || {})[def.id] });
+}
+// v67i the gun with these attachments: optic undefined = its default, '' = iron sights; mag / barrel 0–3
+const APEX_RARITY = { hcog_og: 0, holo: 0, holo_mag: 1, hcog: 1, dcom: 1, acgs: 2, aog: 2, talon: 2, cro: 3 }; // (Apex's loot colours: white / blue / purple / gold)
+const apexMagnif = (z) => Math.tan((35 * Math.PI) / 180) / Math.tan((z * Math.PI) / 360);
+function apexKit(def, pk = {}) {
+  if (!def || !(def.apexOptics || def.apexMags || def.apexBarrel)) return def;
+  let key = def.apexOptics ? (pk.optic === '' ? null : pk.optic || def.defaultOptic) : null;
   const O = key && def.apexOptics.includes(key) && APEX_OPTICS[key]; if (!O) key = null;
-  const ml = def.apexMags ? clamp((D.apexMag || {})[def.id] | 0, 0, 3) : 0;
-  const bl = def.apexBarrel ? clamp((D.apexBarrel || {})[def.id] | 0, 0, 3) : 0;
+  const ml = def.apexMags ? clamp(pk.mag | 0, 0, 3) : 0;
+  const bl = def.apexBarrel ? clamp(pk.barrel | 0, 0, 3) : 0;
   if (!key && !ml && !bl) return def;
   const k = def.id + '@' + (key || '') + '#' + ml + '#' + bl;
   if (!OPTIC_DEFS.has(k)) OPTIC_DEFS.set(k, Object.assign({}, def,
@@ -1359,4 +1366,4 @@ function loadoutDefs(mode, loadout) {
 }
 
 
-export { activeLoadouts, DEFAULT_LOADOUTS_APEX, gunSetOf, isApexGun, setGunSet, APEX_BARREL_LV, APEX_MAG_KIND, APEX_MAG_LV, apexOptic, APEX_OPTICS, sf2Load, sf2Speed, APEX, APEX_POOL, APEX_STEP, APEX_WEAPONS, AUTO_Q, BOT_POOLS, CANNON, CFG, DIFFICULTY, DRACOLoader, EffectComposer, FREEZE_TIME, FrameProfiler, FullScreenQuad, GLTFLoader, GTAOPass, GpuPacer, LOADOUT_KEYS, MODES, OutputPass, PART_MULT, POINTS, PRIMARY_IDS, Pass, QUALITY, Q_LABEL, Q_ORDER, RGBELoader, RULES, RenderPass, RoomEnvironment, RoundedBoxGeometry, SECONDARY_IDS, SMAAPass, STAR_BADGE, Settings, SkeletonUtils, Sky, THREE, TIPS, TMP_V1, TMP_V2, TMP_V3, TMP_V4, TYPE_LABEL, UnrealBloomPass, WEAPON_BLURBS, WEAPON_DATABASE, WEAPON_DEFS, WEAPON_ICONS, activeQuality, apexShield, calcDamage, clamp, damp, lerp, loadoutDefs, mapThumb, mergeGeometries, mulberry32, nextFrame, pick, rand, randInt, setAutoQ, shotRng, sleep, weaponStats, wrapAngle };
+export { apexKit, apexMagnif, APEX_RARITY, activeLoadouts, DEFAULT_LOADOUTS_APEX, gunSetOf, isApexGun, setGunSet, APEX_BARREL_LV, APEX_MAG_KIND, APEX_MAG_LV, apexOptic, APEX_OPTICS, sf2Load, sf2Speed, APEX, APEX_POOL, APEX_STEP, APEX_WEAPONS, AUTO_Q, BOT_POOLS, CANNON, CFG, DIFFICULTY, DRACOLoader, EffectComposer, FREEZE_TIME, FrameProfiler, FullScreenQuad, GLTFLoader, GTAOPass, GpuPacer, LOADOUT_KEYS, MODES, OutputPass, PART_MULT, POINTS, PRIMARY_IDS, Pass, QUALITY, Q_LABEL, Q_ORDER, RGBELoader, RULES, RenderPass, RoomEnvironment, RoundedBoxGeometry, SECONDARY_IDS, SMAAPass, STAR_BADGE, Settings, SkeletonUtils, Sky, THREE, TIPS, TMP_V1, TMP_V2, TMP_V3, TMP_V4, TYPE_LABEL, UnrealBloomPass, WEAPON_BLURBS, WEAPON_DATABASE, WEAPON_DEFS, WEAPON_ICONS, activeQuality, apexShield, calcDamage, clamp, damp, lerp, loadoutDefs, mapThumb, mergeGeometries, mulberry32, nextFrame, pick, rand, randInt, setAutoQ, shotRng, sleep, weaponStats, wrapAngle };
