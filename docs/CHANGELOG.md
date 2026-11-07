@@ -2063,3 +2063,12 @@
 - **狙擊鏡**（6 倍、4–8 倍）：Apex 原版的彈道刻度梯（`ui.rpak` 的介面圖 0xE9CB274AB36B33EC，染紅成 `assets/apex/scope_ladder.png`）加細十字線；倍率標示改成 ×6、×4／×8。
 - **數位威脅**：用 1 倍數位威脅開鏡時，55 m 內（Apex `threat_scope_fadedist_end` 2165 英吋）的敵人整個畫成紅色剪影；只亮看得到的部分，牆後不亮（`src/15_postfx.js` `drawThreat`：世界畫完後、槍模型之前，用同一份深度再畫一次敵人）。
 - 實測：`tools/out/_apexvm.mjs`（R-301 六種鏡、長弓兩種狙擊鏡、R-99 數位威脅）、新探針 `tools/out/_apexthreat.mjs`（敵人放在 10 m 外沒有遮擋的方向，開鏡後 `threatOn` 為真、敵人變紅；可變全息三段 FOV）。MODULES_OK、CHECK_OK。
+
+### v67d（本機，2026-11-07）：Apex 擴充彈匣
+- 使用者 11-07 回覆「CABA」：1 C（讓瀏覽器開 Apex 維基對照準心）、2 A（做擴充彈匣）、3 B（刪 `tools/out/apex/uiimg/`）、4 A（master 等玩過再推）。
+- 1 C 沒做成：App 瀏覽器仍顯示 apexlegends.wiki.gg 被網站權限擋；網頁讀取代理讀到維基有各鏡開鏡圖（`ADS-1x_HCOG.png` 等），但圖片下載被 Cloudflare 擋（403），沒有繞過。
+- 3 B：刪除 `tools/out/apex/uiimg/`（593 MB，git 忽略的匯出暫存）。
+- 擴充彈匣：`tools/apex_mags.py` 從 Apex 各槍的武器設定（29 把 `wepn` 全部匯出）讀出基本彈匣與 `<種類>_mag_l1–3` 的發數 → `tools/out/apex/guns/mags.json` → `tools/apex_gun_defs.mjs` 的 `apexMags`。22 把能裝（L-STAR、波塞克、Kraber、四把霰彈槍在 Apex 本來就不能裝）。例：R-301 21 → 23／28／31，R-99 18 → 21／24／27，長弓 6 → 8／10／12，小幫手（狙擊彈匣）5 → 6／7／8。基本彈匣和現有資料 22 把全部一致。
+- 遊戲：`apexOptic()` 改成套整組配件（瞄準鏡＋彈匣等級，`Settings.data.apexMag`），只改 `mag`，備彈總量不變（Apex 的彈匣不帶子彈）。軍械庫多一個「彈匣」選單（標準／1 級白／2 級藍／3 級紫，附發數）。
+- 外觀不變：Apex 安裝檔的槍模沒有加長彈匣；之前說 `magazine_1` 是加長彈匣是錯的，它和 `_0` 同尺寸、面數較少。
+- 實測（新探針 `tools/out/_apexmag.mjs`）：R-301／長弓／小幫手各等級的彈匣數正確，EVA-8 不變；R-301 3 級、小幫手 3 級打空換彈補回 31／8 發。軍械庫截圖 `tools/out/apex/guns/warehouse_mag.jpg`。MODULES_OK、CHECK_OK。

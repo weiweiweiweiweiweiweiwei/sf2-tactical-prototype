@@ -1,4 +1,4 @@
-import { activeQuality, APEX_OPTICS, apexOptic, AUTO_Q, calcDamage, CFG, clamp, damp, DIFFICULTY, GpuPacer, lerp, LOADOUT_KEYS, loadoutDefs, mapThumb, MODES, nextFrame, pick, PRIMARY_IDS, Q_LABEL, Q_ORDER, QUALITY, RGBELoader, RoomEnvironment, RULES, SECONDARY_IDS, setAutoQ, Settings, sleep, STAR_BADGE, THREE, TIPS, TYPE_LABEL, WEAPON_BLURBS, WEAPON_DATABASE, WEAPON_DEFS, WEAPON_ICONS, weaponStats } from './01_core.js';
+import { activeQuality, APEX_MAG_KIND, APEX_MAG_LV, APEX_OPTICS, apexOptic, AUTO_Q, calcDamage, CFG, clamp, damp, DIFFICULTY, GpuPacer, lerp, LOADOUT_KEYS, loadoutDefs, mapThumb, MODES, nextFrame, pick, PRIMARY_IDS, Q_LABEL, Q_ORDER, QUALITY, RGBELoader, RoomEnvironment, RULES, SECONDARY_IDS, setAutoQ, Settings, sleep, STAR_BADGE, THREE, TIPS, TYPE_LABEL, WEAPON_BLURBS, WEAPON_DATABASE, WEAPON_DEFS, WEAPON_ICONS, weaponStats } from './01_core.js';
 import { ACOUSTICS, AudioEngine, GUN_PROFILES, HIT_SOUNDS } from './02_audio.js';
 import { CAO, MaterialLib, TextureFactory } from './03_textures.js';
 import { triBox, triHeight } from './04_collision.js';
@@ -1109,6 +1109,15 @@ class App {
         const cur = (Settings.data.apexOptic || {})[id], val = cur === '' ? '' : cur || d.defaultOptic || '';
         sel.innerHTML = '<option value="">機械瞄具</option>' + opts.map((k) => `<option value="${k}">${APEX_OPTICS[k].name}</option>`).join(''); sel.value = val;
         sel.onchange = () => { (Settings.data.apexOptic || (Settings.data.apexOptic = {}))[id] = sel.value; Settings.save(); this.audio.uiClick(); };
+      }
+      // v67d its extended mag (Settings.data.apexMag[id]: 0 standard, 1–3)
+      const mrow = $('whMagRow'), msel = $('whMag'), M = d.apexMags;
+      mrow.hidden = !M;
+      if (M) {
+        const kind = APEX_MAG_KIND[M.kind] || '';
+        msel.innerHTML = `<option value="0">標準（${d.mag} 發）</option>` + M.l.map((n, i) => `<option value="${i + 1}">${kind}擴充彈匣 ${APEX_MAG_LV[i + 1]}（${n} 發）</option>`).join('');
+        msel.value = String((Settings.data.apexMag || {})[id] | 0);
+        msel.onchange = () => { (Settings.data.apexMag || (Settings.data.apexMag = {}))[id] = +msel.value; Settings.save(); this.audio.uiClick(); };
       }
     }
     const bars = [['傷害', st.damage], ['後座力', 100 - st.control], ['射速', st.fireRate], ['精準度', st.accuracy]];

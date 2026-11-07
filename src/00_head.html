@@ -603,7 +603,7 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
 .whSlot img{max-height:24px;max-width:86%}.whSlot em{font-style:normal;font-size:12px;white-space:nowrap}.whSlot small{font-size:10px;color:var(--dim);letter-spacing:1px}
 .wh-filter{display:flex;gap:8px;flex-shrink:0}
 #whFilter,#whSearch{height:30px;font-family:inherit;font-size:14px;color:var(--hud);background:#0c100e;border:1px solid rgba(255,255,255,.16);border-radius:3px;padding:0 8px}
-#whFilter{width:190px}.wh-opt{display:flex;align-items:center;gap:10px;margin:6px 0 2px;font-size:13px;color:var(--dim,#9aa)}.wh-opt[hidden]{display:none}#whOptic{height:28px;min-width:200px;font-family:inherit;font-size:13px;color:var(--hud);background:#0c100e;border:1px solid rgba(255,255,255,.16);border-radius:3px;padding:0 6px}#whSearch{margin-left:auto;width:230px}
+#whFilter{width:190px}.wh-opt{display:flex;align-items:center;gap:10px;margin:6px 0 2px;font-size:13px;color:var(--dim,#9aa)}.wh-opt[hidden]{display:none}#whOptic,#whMag{height:28px;min-width:200px;font-family:inherit;font-size:13px;color:var(--hud);background:#0c100e;border:1px solid rgba(255,255,255,.16);border-radius:3px;padding:0 6px}#whSearch{margin-left:auto;width:230px}
 #whList{flex:1;min-height:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:repeat(3,minmax(0,1fr));gap:8px}
 .whGun{position:relative;display:flex;flex-direction:column;min-height:0;padding:0;cursor:pointer;font-family:inherit;color:var(--hud);border:1px solid rgba(255,255,255,.1);background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(0,0,0,.45));border-radius:2px;overflow:hidden}
 .whGun .nm{flex-shrink:0;height:25px;line-height:23px;font-size:14px;font-weight:700;text-align:center;background:rgba(0,0,0,.55);border-top:2px solid transparent;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 8px}
@@ -937,6 +937,7 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
       <div class="wh-detail"><div class="wh-pic"><img id="whPic" alt=""></div><div id="whBars"></div></div>
       <div id="whBlurb"></div>
       <div id="whOptRow" class="wh-opt" hidden><span>瞄準鏡</span><select id="whOptic"></select></div>
+      <div id="whMagRow" class="wh-opt" hidden><span>彈匣</span><select id="whMag"></select></div>
       <div id="whSlots"></div>
       <div class="wh-filter"><select id="whFilter"></select><input id="whSearch" type="text" placeholder="搜尋武器名稱" maxlength="20" autocomplete="off"></div>
       <div id="whList"></div>
