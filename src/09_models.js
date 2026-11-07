@@ -396,10 +396,10 @@ class WeaponModels {
       const OD = APEX_OPTICS[def.optic], extra = O.parts.filter((p) => p.mat !== 'lens').map((p) => Object.assign({}, p, { node: 'body', geo: p.geo.clone().translate(at.x, at.y, at.z) }));
       let rear = -Infinity; for (const p of extra) { p.geo.computeBoundingBox(); rear = Math.max(rear, p.geo.boundingBox.max.z); }
       const eye = at.clone().add(O.marks.EYE), V = THREE.Vector3;
-      return this.fromGLB(def.model, { extra, marks: { SIGHT: eye, HOOD: new V(0, eye.y, rear) }, skip: (n) => n === 'irons', eye: OD.scope ? 0.04 : 0.06, flash: 0.2,
+      return this.fromGLB(def.model, { extra, marks: { SIGHT: eye, HOOD: new V(0, eye.y, rear) }, skip: (n) => n === 'irons' || (n === 'barrel' && !def.barrelLv), eye: OD.scope ? 0.04 : 0.06, flash: 0.2,
         hip: def.apexHip || (def.type === 'pistol' ? [0.12, -0.15, -0.3] : [0.14, -0.175, -0.36]), reticle: false, reticleTex: OD.scope ? null : def.optic, reticleSize: OD.size }) || this[stand](def);
     }
-    return this.fromGLB(def.model, { eye: 0, flash: 0.2, hip: def.apexHip || (def.type === 'pistol' ? [0.12, -0.15, -0.3] : [0.14, -0.175, -0.36]), reticle: false }) // (v67a user 11-05 B: Apex iron sights only — no ring of ours on them) || this[stand](def);
+    return this.fromGLB(def.model, { skip: (n) => n === 'barrel' && !def.barrelLv, eye: 0, flash: 0.2, hip: def.apexHip || (def.type === 'pistol' ? [0.12, -0.15, -0.3] : [0.14, -0.175, -0.36]), reticle: false }) // (v67a user 11-05 B: Apex iron sights only — no ring of ours on them) || this[stand](def);
   }
 
   // v62 SF2's own first-person rig (SF2Rig): arms and gun animated by the original clips. The group sits at the eye like any

@@ -2072,3 +2072,12 @@
 - 遊戲：`apexOptic()` 改成套整組配件（瞄準鏡＋彈匣等級，`Settings.data.apexMag`），只改 `mag`，備彈總量不變（Apex 的彈匣不帶子彈）。軍械庫多一個「彈匣」選單（標準／1 級白／2 級藍／3 級紫，附發數）。
 - 外觀不變：Apex 安裝檔的槍模沒有加長彈匣；之前說 `magazine_1` 是加長彈匣是錯的，它和 `_0` 同尺寸、面數較少。
 - 實測（新探針 `tools/out/_apexmag.mjs`）：R-301／長弓／小幫手各等級的彈匣數正確，EVA-8 不變；R-301 3 級、小幫手 3 級打空換彈補回 31／8 發。軍械庫截圖 `tools/out/apex/guns/warehouse_mag.jpg`。MODULES_OK、CHECK_OK。
+
+### v67e（本機，2026-11-07）：Apex 槍管穩定器；軍械庫彈容量跟著彈匣
+- 使用者 11-07 回覆「AAA」：1 A（放行維基後對照準心）、2 A（槍管穩定器）、3 A（彈容量跟著彈匣）。
+- 1 A：App 瀏覽器開 apexlegends.wiki.gg 仍顯示被網站權限擋，等使用者放行。
+- 槍管穩定器：`tools/apex_barrels.py` 從 Apex 武器設定讀出 `barrel_stabilizer_l1–3`：後座倍率（`viewkick_pitch_base`／`_random`、`viewkick_yaw_base`／`_random`）和它打開的模型零件（`bodygroupN_name`）→ `tools/out/apex/guns/barrels.json` → `apexBarrel`。10 把能裝：Hemlok、復仇女神、R-301、專注、L-STAR、噴火、暴走、G7、長弓（後座 95／90／85 %；復仇女神 90／85／80 %、L-STAR 97／94／90 %），轉換者（只降水平後座、沒有零件）。
+- 模型：`tools/blender/apex_gun_build.py` 把每把槍自己的穩定器零件（例：R-301 的 `suppressor_square_medium`，長弓的 `_large`）留在 `barrel` 節點；9 把重建、重新打包。沒裝時隱藏（`src/09_models.js` apexGun 的 `skip`），裝了的槍是另一個槍模實例（`src/11_weaponsystem.js` 的鍵加 `#b`）。
+- 後座：`src/10_weapons.js` 三個 `recoilKick` 都乘上 `def.recoilK`（垂直 × pitch_base、水平 × yaw_base）。
+- 軍械庫：多一個「槍管」選單（無／1–3 級，附後座 %，`Settings.data.apexBarrel`）；「彈容量」改讀套上配件後的資料。
+- 實測（新探針 `tools/out/_apexbarrel.mjs`）：R-301 3 級第一發後座 0.00942 → 0.00801（85 %）、長弓 0.05 → 0.0425；裝上後槍口出現穩定器（`tools/out/apex/vm/barrel_sheet.jpg`）；軍械庫 R-301 彈匣 2 級顯示 28/84、槍管 3 級（後座 85%）。MODULES_OK、CHECK_OK。

@@ -76,6 +76,10 @@ EYE_UP = {'tripletake': 0.04, 'volt': 0.03}  # (v66z from the in-game aimed view
 # (v66w the eye a little over ja_ads_attachment: on it the R-301's rear screen hid the front post; per gun if needed)
 A2G = Matrix(((-1, 0, 0, 0), (0, 0, 1, 0), (0, 1, 0, 0), (0, 0, 0, 1))) @ Matrix.Scale(0.0254, 4)
 MAGB = ('def_c_magazine', 'def_magazine', 'def_c_mag', 'def_mag', 'def_c_clip', 'def_clip')
+# v67e the barrel stabilizer's part per gun (tools/apex_barrels.py: the bodygroup barrel_stabilizer_l1 sets) — kept on its own node 'barrel',
+# shown only when one is fitted (src/09_models.js apexGun)
+_bj = ROOT / 'tools/out/apex/guns/barrels.json'
+BARREL = {g: v['part'] for g, v in (json.load(open(_bj)) if _bj.exists() else {}).items() if v.get('part')}
 report = {}
 for gid in IDS:
   folder, stem = GUNS[gid]
@@ -90,6 +94,7 @@ for gid in IDS:
   keep = []
   for o in meshes:
     p = part(o); base = re.sub(r'_\d+$', '', p)
+    if BARREL.get(gid) == base: keep.append(o); continue  # (v67e its barrel stabilizer)
     if DROP.match(p): continue
     is_sight = base.startswith(('sight', 'mastiff_sight'))
     has1 = any(part(x) == base + '_1' for x in meshes)
@@ -97,7 +102,7 @@ for gid in IDS:
     if (is_sight and p.endswith('_1')) or (p.endswith('_0') and not (is_sight and has1)): keep.append(o)
   M = {'MUZZLE': bone('muzzle_flash'), 'SIGHT': bone('ja_ads_attachment') + Vector((0, 0, EYE_UP.get(gid, 0.012))), 'GRIP': bone('ja_c_propGun'),
        'MAGPIV': next((bone(b) for b in MAGB if b in arm.data.bones), None)}
-  vs = [A2G @ o.matrix_world @ v.co for o in keep for v in o.data.vertices if not re.search(r'magazine|clip|at_rifle_mag', part(o), re.I)]
+  vs = [A2G @ o.matrix_world @ v.co for o in keep for v in o.data.vertices if not re.search(r'magazine|clip|at_rifle_mag|suppressor', part(o), re.I)]
   g, mz = M['GRIP'], M['MUZZLE']; a = M['MAGPIV'] if M['MAGPIV'] is not None and M['MAGPIV'].y > g.y + 0.05 else g
   su = a.y + 0.45 * (mz.y - a.y) if mz.y - g.y > 0.3 else g.y + 0.06
   near = [v.z for v in vs if abs(v.y - su) < 0.02]
@@ -128,7 +133,7 @@ for gid in IDS:
     o.data.transform(A2G @ mw); o.matrix_world = Matrix.Identity(4); o.data.transform(Matrix.Translation(-org))
     own = any(m and m.name.startswith(f'{stem}_base_main') for m in o.data.materials)
     o.data.materials.clear(); o.data.materials.append(mt if own else dark)
-    nd = 'mag' if re.search(r'magazine|clip|^at_rifle_mag', part(o), re.I) else 'irons' if re.sub(r'_\d+$', '', part(o)).startswith(('sight', 'mastiff_sight')) else 'body'  # (v67b irons: folded away under an optic)
+    nd = 'barrel' if BARREL.get(gid) == re.sub(r'_\d+$', '', part(o)) else 'mag' if re.search(r'magazine|clip|^at_rifle_mag', part(o), re.I) else 'irons' if re.sub(r'_\d+$', '', part(o)).startswith(('sight', 'mastiff_sight')) else 'body'  # (v67b irons: folded away under an optic)
     o.name = f'{nd}__{"tex_apex_" + gid if own else "polymer"}_{len(kept)}'; kept.append(o)
   for o in list(bpy.data.objects):
     if o not in kept: bpy.data.objects.remove(o)

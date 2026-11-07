@@ -217,7 +217,7 @@ class WeaponSystem extends Arsenal {
   }
 
   _vm(d) {
-    const k = d.id + (d.optic ? '@' + d.optic : ''); // (v67b an Apex gun under each optic is its own model)
+    const k = d.id + (d.optic ? '@' + d.optic : '') + (d.barrelLv ? '#b' : ''); // (v67e with a barrel stabilizer: its part shown) // (v67b an Apex gun under each optic is its own model)
     let vm = this.vmPool.get(k);
     if (!vm) { vm = this.game.app.models.build(d); this.vmPool.set(k, vm); this.root.add(vm.group); }
     return vm;

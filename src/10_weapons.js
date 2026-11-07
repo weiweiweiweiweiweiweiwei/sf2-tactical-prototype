@@ -116,13 +116,14 @@ class Weapon {
   // (named recoilKick: `recoil` is also a def field copied onto the instance by Object.assign)
   recoilKick() {
     const r = this.def.recoil, n = this.shots;
+    const K = this.def.recoilK; // v67e a barrel stabilizer: Apex's pitch / yaw kick scales (the pattern and the class kick alike)
     const A = this.def.apexPattern; // v66w an Apex gun's own pattern: per shot [yaw, pitch] degrees (Source: pitch < 0 is up, yaw > 0 left), looping from A.loop
     if (A && A.b.length) { const L = A.b.length, i = n - 1 < L ? Math.max(0, n - 1) : A.loop + ((n - 1 - L) % Math.max(1, L - A.loop)), b = A.b[i];
-      return [-b[1] * THREE.MathUtils.DEG2RAD, -b[0] * THREE.MathUtils.DEG2RAD]; }
-    if (!r) return [0.012, rand(-0.003, 0.003)];
+      return [-b[1] * THREE.MathUtils.DEG2RAD * (K ? K[0] : 1), -b[0] * THREE.MathUtils.DEG2RAD * (K ? K[2] : 1)]; }
+    if (!r) return [0.012 * (K ? K[0] : 1), rand(-0.003, 0.003) * (K ? K[2] : 1)];
     const pitch = n <= 1 ? r.first : n <= r.climbShots ? r.climb : r.late;
     const yaw = n < r.hStart ? rand(-r.jitter, r.jitter) : r.h * Math.sin((n - r.hStart) * 0.5 + this.sprayPhase) + rand(-r.jitter, r.jitter);
-    return [pitch * rand(0.9, 1.1), yaw];
+    return [pitch * rand(0.9, 1.1) * (K ? K[0] : 1), yaw * (K ? K[2] : 1)];
   }
 
   // v25: the aim ray comes from the owner's eye and AIM angles, not from the camera. Aim = view + recoil + punch (what the
@@ -282,7 +283,7 @@ class SniperRifle extends Weapon {
     const mv = this.moveFactor();
     return this.hipBase + this.spreadMove * mv + (p.sprinting ? this.spreadSprint : 0) + (m.grounded ? 0 : this.spreadAir);
   }
-  recoilKick() { return [this.def.recoil.climb, rand(-1, 1) * this.def.recoil.h]; }
+  recoilKick() { const K = this.def.recoilK; return [this.def.recoil.climb * (K ? K[0] : 1), rand(-1, 1) * this.def.recoil.h * (K ? K[2] : 1)]; } // (v67e K: a barrel stabilizer)
   // bolt actions cycle (and drop out of the scope) after every shot; semi-autos (Barrett / SVD) stay scoped
   fire(ws) { const ok = super.fire(ws); if (ok) { if (this.def.bolt) { this.boltT = 0; this.boltFired = { back: false, fwd: false }; ws.unscopeT = 0.06; } else this.ejectCasing(this.aimRay(), true); } return ok; }
   equip() { super.equip(); this.boltT = -1; if (this.vm.bolt) { this.vm.bolt.position.copy(this.boltBase); this.vm.bolt.rotation.set(0, 0, 0); } }
@@ -353,7 +354,7 @@ class Shotgun extends Weapon {
 }
 
 class Pistol extends Weapon {
-  recoilKick() { return [this.def.recoil.climb * rand(0.9, 1.1), rand(-1, 1) * this.def.recoil.h]; }
+  recoilKick() { const K = this.def.recoilK; return [this.def.recoil.climb * rand(0.9, 1.1) * (K ? K[0] : 1), rand(-1, 1) * this.def.recoil.h * (K ? K[2] : 1)]; } // (v67e K: a barrel stabilizer)
   fire(ws) { const ok = super.fire(ws); if (ok) this.slideKick = 1; return ok; }
   animate(dt, ws) { super.animate(dt, ws); if (this.vm.slide) this.vm.slide.position.z = this.slideKick * 0.028 + (this.ammo === 0 && !this.reloading ? 0.028 : 0); }
 }

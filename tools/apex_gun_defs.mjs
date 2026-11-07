@@ -27,6 +27,7 @@ const WEIGHT = { assault: [4.1, 2.05], smg: [2.2, 1.1], lmg: [7.2, 3.6], marksma
 // the sniper rifles get the game's scope (two zoom levels, like Apex's 4–8×; Kraber's own is built in) — the marksman guns keep iron sights
 const SCOPED = new Set(); // (v67b the scopes are optics now — tools/out/apex/guns/build.json lists what each gun takes; the sniper rifles start on the 4–8×)
 const BUILD = JSON.parse(fs.readFileSync('tools/out/apex/guns/build.json', 'utf8'));
+const BARRELS = fs.existsSync('tools/out/apex/guns/barrels.json') ? JSON.parse(fs.readFileSync('tools/out/apex/guns/barrels.json', 'utf8')) : {}; // v67e tools/apex_barrels.py
 const MAGS = fs.existsSync('tools/out/apex/guns/mags.json') ? JSON.parse(fs.readFileSync('tools/out/apex/guns/mags.json', 'utf8')) : {}; // v67d tools/apex_mags.py
 const DEFOPT = { kraber: 'talon', sentinel: 'talon', longbow: 'talon', chargerifle: 'talon' };
 const r = (v, n = 4) => +(+v).toFixed(n);
@@ -67,6 +68,7 @@ for (const [pre, id, key, zh, donor, fire] of G) {
   const OPT_ORDER = ['hcog_og', 'holo', 'cro', 'holo_mag', 'hcog', 'acgs', 'aog', 'dcom', 'talon'];
   const opts = Object.keys((BUILD[id] || {}).optics || {}).sort((a, b) => OPT_ORDER.indexOf(a) - OPT_ORDER.indexOf(b));
   if (opts.length) { e.apexOptics = opts; if (DEFOPT[id]) e.defaultOptic = DEFOPT[id]; }
+  if (BARRELS[id]) e.apexBarrel = { part: !!BARRELS[id].part, k: BARRELS[id].k }; // v67e its barrel stabilizer: per level [pitch, pitch random, yaw, yaw random] kick scales
   if (MAGS[id] && MAGS[id].base === mag) e.apexMags = { kind: MAGS[id].kind, l: MAGS[id].l }; // v67d its extended mags (Apex's bullets / highcal / energy / sniper _mag_l1–3)
   for (const k of Object.keys(e)) if (e[k] === undefined) delete e[k];
   out.push(`  apex_${id}: ${JSON.stringify(e)},`);

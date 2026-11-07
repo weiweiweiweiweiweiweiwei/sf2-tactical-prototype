@@ -14,6 +14,7 @@ def val(base, v):
   if v.startswith('*'): return base * float(v[1:])
   return float(v)
 out = {}
+if __name__ != "__main__": pass
 for g, n in INTERNAL.items():
   s = (W / f'mp_weapon_{n}.txt').read_text(errors='replace')
   b = re.search(r'^\t"ammo_clip_size" "([^"]+)"', s, re.M); base = int(float(b.group(1))) if b else 0
