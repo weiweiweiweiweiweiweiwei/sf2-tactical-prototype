@@ -2081,3 +2081,6 @@
 - 後座：`src/10_weapons.js` 三個 `recoilKick` 都乘上 `def.recoilK`（垂直 × pitch_base、水平 × yaw_base）。
 - 軍械庫：多一個「槍管」選單（無／1–3 級，附後座 %，`Settings.data.apexBarrel`）；「彈容量」改讀套上配件後的資料。
 - 實測（新探針 `tools/out/_apexbarrel.mjs`）：R-301 3 級第一發後座 0.00942 → 0.00801（85 %）、長弓 0.05 → 0.0425；裝上後槍口出現穩定器（`tools/out/apex/vm/barrel_sheet.jpg`）；軍械庫 R-301 彈匣 2 級顯示 28/84、槍管 3 級（後座 85%）。MODULES_OK、CHECK_OK。
+
+### v67g 撤回（本機，2026-11-07）
+- 使用者 11-07：「回到改變介面之前的版本，我不喜歡這次的介面改動。」→ `git revert` v67g（SF2 導覽列、營地背景、好友按鈕、橘色配色全部撤回），選單回到 v67f 的樣子。v67f 的 SF2 介面研究工具（`tools/sf2_ui_extract.py` 等、`docs/research/sf2/lobby-ui.md`）保留。
