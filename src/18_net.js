@@ -1,4 +1,4 @@
-import { APEX, CFG, RULES, Settings, THREE, WEAPON_DEFS, clamp, lerp, wrapAngle } from './01_core.js';
+import { activeLoadouts, APEX, CFG, clamp, lerp, RULES, Settings, THREE, WEAPON_DEFS, wrapAngle } from './01_core.js';
 import { UserCmd } from './12b_cmd.js';
 import { NET_WEAPONS, NET_WI, safeName, v3arr } from './12c_netutil.js';
 import { Ghost, NetPlayer } from './13b_netplayers.js';
@@ -124,7 +124,7 @@ class NetHost {
     if (d.k === 'join') this._join(from, d);
     else if (d.k === 'hello') this.t.send(from, { k: 'host', v: NET_VERSION, room: this.t.room });
     else if (d.k === 'leave') this._drop(from, '離開了房間');
-    else if (d.k === 'loadout') { const np = this.peers.get(from); if (np) np.nextLoadout = NetPlayer.validLoadout(d); }
+    else if (d.k === 'loadout') { const np = this.peers.get(from); if (np) np.nextLoadout = NetPlayer.validLoadout(d, np.game && np.game.gunSet); }
     else if (d.k === 'ping') { this.t.send(from, { k: 'pong', t: d.t }); const np = this.peers.get(from); if (np) np.heardT = this.m.time; }
   }
   get players() { return 1 + this.peers.size; }
@@ -265,7 +265,7 @@ class NetClient {
     // v27: while this side still builds its map the host already has our soldier — keep him from timing us out (10 s)
     this.keepTimer = setInterval(() => { if (this.hostId && !this.ready) this.t.send(this.hostId, { k: 'ping', t: performance.now() }); }, 2000);
   }
-  _loadout() { const l = Settings.data.loadouts[Settings.data.lobby.loadout | 0] || Settings.data.loadouts[0]; return { loadout: { primary: l.primary, secondary: l.secondary } }; }
+  _loadout() { const LO = activeLoadouts(), l = LO[Settings.data.lobby.loadout | 0] || LO[0]; /* (v67h the match's gun set) */ return { loadout: { primary: l.primary, secondary: l.secondary } }; }
   _msg(from, d) {
     if (d instanceof ArrayBuffer) { if (this.ready && from === this.hostId && new DataView(d).getUint8(0) === NetCodec.SNAP) this._snap(NetCodec.decodeSnap(d)); return; }
     if (!d || typeof d !== 'object') return;

@@ -1,4 +1,4 @@
-import { APEX, BOT_POOLS, CANNON, CFG, FREEZE_TIME, FrameProfiler, LOADOUT_KEYS, MODES, PART_MULT, POINTS, RULES, RoomEnvironment, Settings, Sky, THREE, TMP_V1, TMP_V2, TMP_V3, WEAPON_DATABASE, WEAPON_DEFS, activeQuality, apexShield, calcDamage, clamp, lerp, loadoutDefs, nextFrame, pick, rand, wrapAngle } from './01_core.js';
+import { activeLoadouts, activeQuality, APEX, apexShield, BOT_POOLS, calcDamage, CANNON, CFG, clamp, FrameProfiler, FREEZE_TIME, gunSetOf, isApexGun, lerp, LOADOUT_KEYS, loadoutDefs, MODES, nextFrame, PART_MULT, pick, POINTS, rand, RoomEnvironment, RULES, setGunSet, Settings, Sky, THREE, TMP_V1, TMP_V2, TMP_V3, WEAPON_DATABASE, WEAPON_DEFS, wrapAngle } from './01_core.js';
 import { CAO } from './03_textures.js';
 import { CharacterMotor, CollisionWorld } from './04_collision.js';
 import { Effects, PhysicsWorld } from './05_physics_fx.js';
@@ -27,6 +27,7 @@ class Match {
     this.target = rc.target; this.roundTime = RULES[config.rule].timeUnit === 'sec' ? rc.time : 0;
     this.timeLeft = RULES[config.rule].timeUnit === 'sec' ? rc.time : rc.time ? rc.time * 60 : Infinity; // v45: score modes have no time limit
     this.opts = Object.assign({ pickup: true, killcam: true, ff: false, dmg: 'sf2' }, config.opts); // room 設置: weapon pickup, killcam, friendly fire, damage model
+    this.gunSet = gunSetOf(this.opts); setGunSet(this.gunSet); // v67h 槍枝: SF2 or Apex guns this match (independent of 扣血)
     this.apex = this.opts.dmg === 'apex'; // v58 扣血機制: SF2 (helmet) or Apex (Evo shield) — APEX in 01_core.js
     this.score = { alpha: 0, bravo: 0 }; this.roundWins = { alpha: 0, bravo: 0 }; this.round = 0;
     this.stats = { shots: 0, hits: 0 }; this.firstBlood = true; this.acc = 0; this.spotT = 0; this.freezeT = 0; this.roundEndT = 0;
@@ -83,8 +84,8 @@ class Match {
     progress(0.7, '部署部隊'); await nextFrame();
     this.player = new Player(this);
     if (this.isClient) this.player.team = this.net.team === 'bravo' ? 'bravo' : 'alpha'; // a client plays on his room team, with no bots of its own
-    const tg = performance.now(); await ensureGunModels(Settings.data.loadouts.flatMap((l) => loadoutDefs(this.mode, l))); // v65j only the guns of your three loadouts (F1–F3) if (window.__loadT) window.__loadT['gun models'] = Math.round(performance.now() - tg); // v45 Blender gun models (GLB) must be parsed before the viewmodels are built
-    this.weapons = new WeaponSystem(this, loadoutDefs(this.mode, Settings.data.loadouts[this.loadoutIndex])); this.weapons.setEnvironment(this.vmEnv || this.scene.environment);
+    const tg = performance.now(); await ensureGunModels(activeLoadouts(this.gunSet).flatMap((l) => loadoutDefs(this.mode, l))); // v65j only the guns of your three loadouts (F1–F3) if (window.__loadT) window.__loadT['gun models'] = Math.round(performance.now() - tg); // v45 Blender gun models (GLB) must be parsed before the viewmodels are built
+    this.weapons = new WeaponSystem(this, loadoutDefs(this.mode, activeLoadouts(this.gunSet)[this.loadoutIndex])); this.weapons.setEnvironment(this.vmEnv || this.scene.environment);
     this.combatants.push(this.player);
     if (!this.isClient) {
       for (let i = 0; i < this.config.allies - 1; i++) this.bots.push(new Bot(this, 'alpha', i, this.botWeapon()));
@@ -110,7 +111,13 @@ class Match {
     this.running = true;
   }
 
-  botWeapon() { return pick(BOT_POOLS[this.mode] || BOT_POOLS.general); }
+  botWeapon() {
+    if (this.gunSet === 'apex') { // v67h bots carry the match's gun set too: the Apex primaries this mode allows
+      const F = MODES[this.mode] && MODES[this.mode].primaryFilter, pool = Object.keys(WEAPON_DEFS).filter((k) => isApexGun(k) && WEAPON_DEFS[k].slot === 'primary' && (!F || F.includes(WEAPON_DEFS[k].kind)));
+      if (pool.length) return pick(pool);
+    }
+    return pick(BOT_POOLS[this.mode] || BOT_POOLS.general);
+  }
 
   setupLighting() {
     const def = this.def, B = def.bounds, cx = (B.minX + B.maxX) / 2, cz = (B.minZ + B.maxZ) / 2;
@@ -647,7 +654,7 @@ class Match {
   queueLoadout(i) {
     if (i < 0 || i >= LOADOUT_KEYS.length) return;
     this.nextSpawnLoadoutIndex = i === this.loadoutIndex ? null : i;
-    const L = Settings.data.loadouts[i];
+    const L = activeLoadouts(this.gunSet)[i];
     if (this.isClient) this.net.queueLoadout(L); // the host builds the same kit for our soldier at the next respawn
     this.audio.mech('queue');
     this.app.showLoadoutPicker(i, this.loadoutIndex);

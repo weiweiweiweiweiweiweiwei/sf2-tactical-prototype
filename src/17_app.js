@@ -1,4 +1,4 @@
-import { activeQuality, APEX_BARREL_LV, APEX_MAG_KIND, APEX_MAG_LV, APEX_OPTICS, apexOptic, AUTO_Q, calcDamage, CFG, clamp, damp, DIFFICULTY, GpuPacer, lerp, LOADOUT_KEYS, loadoutDefs, mapThumb, MODES, nextFrame, pick, PRIMARY_IDS, Q_LABEL, Q_ORDER, QUALITY, RGBELoader, RoomEnvironment, RULES, SECONDARY_IDS, setAutoQ, Settings, sleep, STAR_BADGE, THREE, TIPS, TYPE_LABEL, WEAPON_BLURBS, WEAPON_DATABASE, WEAPON_DEFS, WEAPON_ICONS, weaponStats } from './01_core.js';
+import { activeLoadouts, activeQuality, APEX_BARREL_LV, APEX_MAG_KIND, APEX_MAG_LV, APEX_OPTICS, apexOptic, AUTO_Q, calcDamage, CFG, clamp, damp, DIFFICULTY, GpuPacer, gunSetOf, isApexGun, lerp, LOADOUT_KEYS, loadoutDefs, mapThumb, MODES, nextFrame, pick, PRIMARY_IDS, Q_LABEL, Q_ORDER, QUALITY, RGBELoader, RoomEnvironment, RULES, SECONDARY_IDS, setAutoQ, Settings, sleep, STAR_BADGE, THREE, TIPS, TYPE_LABEL, WEAPON_BLURBS, WEAPON_DATABASE, WEAPON_DEFS, WEAPON_ICONS, weaponStats } from './01_core.js';
 import { ACOUSTICS, AudioEngine, GUN_PROFILES, HIT_SOUNDS } from './02_audio.js';
 import { CAO, MaterialLib, TextureFactory } from './03_textures.js';
 import { triBox, triHeight } from './04_collision.js';
@@ -98,6 +98,7 @@ class App {
   }
 
   /* ------------------------------ v27 hub (大廳): create a room, or join one ------------------------------ */
+  _gs() { return gunSetOf(this.roomCfg().opts); } // v67h the room's gun set (槍枝)
   buildHub() {
     const $ = this.$, S = Settings.data;
     if (!S.nick) { S.nick = '玩家' + Math.floor(Math.random() * 900 + 100); Settings.save(); }
@@ -467,11 +468,12 @@ class App {
     for (const id of ['lbMapModal', 'lbOptModal']) $(id).onclick = (e) => { if (e.target === $(id)) modal(id, false); };
     for (const [id, k] of [['optPickup', 'pickup'], ['optKillcam', 'killcam'], ['optFF', 'ff']]) $(id).onchange = () => { if (this.isGuest()) return; L.opts[k] = $(id).checked; this.audio.uiClick(); this.refreshLobby(); };
     // v58 扣血機制 (damage model), host's choice like the other room options
+    for (const b of $('optGuns').children) b.onclick = () => { if (this.isGuest()) return; L.opts.guns = b.dataset.v; this.audio.init(); this.audio.uiClick(); this.refreshLobby(); }; // v67h 槍枝
     for (const b of $('optDmg').children) b.onclick = () => { if (this.isGuest()) return; L.opts.dmg = b.dataset.v; this.audio.init(); this.audio.uiClick(); this.refreshLobby(); };
     document.addEventListener('click', () => document.querySelectorAll('#lobby .dd.open').forEach((d) => d.classList.remove('open')));
     // F5 = 開始 (the browser refresh is swallowed while the room is open)
     addEventListener('keydown', (e) => { if (e.code === 'F5' && (this.state === 'lobby' || this.state === 'countdown')) { e.preventDefault(); if (e.repeat) return; if (this.state === 'countdown') this.cancelCountdown(); else if (!$('lbMapModal').classList.contains('on')) this.beginCountdown(); } });
-    pills('lbLoadout', Settings.data.loadouts.map((l, i) => [i, LOADOUT_KEYS[i]]), 'loadout');
+    pills('lbLoadout', activeLoadouts(this._gs()).map((l, i) => [i, LOADOUT_KEYS[i]]), 'loadout');
     $('lbWarehouse').onclick = () => this.openWarehouse(); $('lbWh').onclick = () => this.openWarehouse();
     $('whClose').onclick = () => this.closeWarehouse();
     // v27 room bar: ＋ 邀請朋友 opens the invite pop-up (link / code / public), 離開房間 goes back to the hub
@@ -524,6 +526,7 @@ class App {
     const opts = L.opts || (L.opts = { pickup: true, killcam: true, ff: false });
     $('optPickup').checked = opts.pickup !== false; $('optKillcam').checked = opts.killcam !== false; $('optFF').checked = !!opts.ff;
     const dmg = opts.dmg === 'apex' ? 'apex' : 'sf2';
+    [...$('optGuns').children].forEach((b) => b.classList.toggle('on', b.dataset.v === gunSetOf(opts)));
     [...$('optDmg').children].forEach((b) => b.classList.toggle('on', b.dataset.v === dmg));
     $('optDmgInfo').textContent = dmg === 'apex'
       ? '100 血＋護盾：先扣盾再扣血。造成傷害會升級護盾（白 50 → 藍 75 → 紫 100）。爆頭倍率依槍種（衝鋒槍 ×1.25、步槍／機槍／手槍 ×1.75、狙擊 ×2、霰彈 ×1），腿 ×0.8，沒有距離衰減（霰彈除外）。4 秒沒受傷後每秒回 5 點（先回血、再回盾）。沒有跌落傷害。'
@@ -541,7 +544,7 @@ class App {
     this._dd('ddDiff', '難易度', DIFFICULTY[L.difficulty].name, DIFFICULTY.map((d, i) => [i, d.name]), (v) => { if (host()) { L.difficulty = +v; this.refreshLobby(); } }, L.difficulty);
     $('lbAllies').textContent = L.allies; $('lbEnemies').textContent = L.enemies;
     this._dd('ddOpts', '進階', '設置', null, () => { if (host()) { $('lbOptModal').classList.add('on'); this.audio.uiClick(); } });
-    const lo = Settings.data.loadouts[L.loadout];
+    const lo = activeLoadouts(this._gs())[L.loadout];
     $('lbLoadoutInfo').textContent = `配裝 ${LOADOUT_KEYS[L.loadout]}：${WEAPON_DEFS[lo.primary].name} + ${WEAPON_DEFS[lo.secondary].name}`;
     [...$('lbLoadout').children].forEach((b, i) => { b.title = `配裝 ${LOADOUT_KEYS[i]} · 對戰中按 F${i + 1}`; });
     $('lbMeName').textContent = Settings.data.nick || 'YOU'; $('lbMeGun').textContent = `配裝 ${LOADOUT_KEYS[L.loadout]} · ${WEAPON_DEFS[lo.primary].name}`;
@@ -577,7 +580,7 @@ class App {
       } catch (e) { console.warn('room preview unavailable', e); this.lbR = false; }
     }
     if (!this.lbR) return;
-    const L = Settings.data.lobby, id = Settings.data.loadouts[L.loadout].primary, model = WEAPON_DEFS[id].model || id;
+    const L = Settings.data.lobby, id = activeLoadouts(this._gs())[L.loadout].primary, model = WEAPON_DEFS[id].model || id;
     const team = this.room && this.room.team === 'bravo' ? 'bravo' : 'alpha';
     if (!this.lbSoldier || this.lbTeam !== team) { if (this.lbSoldier) this.lbScene.remove(this.lbSoldier.root); this.lbSoldier = this.soldiers.create(team, model); this.lbScene.add(this.lbSoldier.root); this.lbTeam = team; this.lbGun = model; }
     else if (this.lbGun !== model) { this.soldiers.setWeapon(this.lbSoldier, model); this.lbGun = model; }
@@ -945,7 +948,7 @@ class App {
 
   // v45 F1–F3: the three sets as cards in the middle of the screen (SF2), the picked one lit; fades out after ~2 s
   showLoadoutPicker(pick, cur) {
-    const el = this.$('loPick'), LO = Settings.data.loadouts;
+    const el = this.$('loPick'), LO = activeLoadouts();
     if (!this.whR) this._initPreview();
     this._makeThumbs([...LO.flatMap((l) => [l.primary, l.secondary]), 'he', 'smoke', 'flash']);
     const img = (id) => { const src = (this.thumbs && this.thumbs[id]) || WEAPON_ICONS[id] || ''; return src ? `<img src="${src}" alt="">` : ''; };
@@ -964,7 +967,8 @@ class App {
     const $ = this.$, L = Settings.data.lobby;
     this.audio.init(); this.audio.uiClick();
     this.wh = this.wh || { slot: L.loadout, cat: 'primary', sel: null, filter: 'all', q: '', page: -1 };
-    this.wh.slot = L.loadout; this.wh.sel = Settings.data.loadouts[this.wh.slot][this.wh.cat]; this.wh.page = -1; // -1 = the page showing the equipped gun
+    this.wh.set = this._gs(); // v67h the page of the room's gun set first (SF2 / Apex: each its own A–C)
+    this.wh.slot = L.loadout; this.wh.sel = activeLoadouts(this.wh.set)[this.wh.slot][this.wh.cat]; this.wh.page = -1; // -1 = the page showing the equipped gun
     this.whFrom = this.state === 'hub' ? 'hub' : 'lobby'; this.invite(false);
     $('lobby').classList.remove('on'); $('hub').classList.remove('on'); $('warehouse').classList.add('on');
     if (this.whFrom === 'lobby' && this.isGuest() && this.room.entered) this.room.status('armory'); // v64c 備戰中: never ready while picking guns
@@ -1033,7 +1037,7 @@ class App {
   // Stage: the soldier (same model as in a match) holding the selected set's primary weapon, turning slowly.
   _whStage() {
     if (!this.whR) return;
-    const id = Settings.data.loadouts[this.wh.slot].primary, model = WEAPON_DEFS[id].model || id;
+    const id = activeLoadouts(this.wh.set)[this.wh.slot].primary, model = WEAPON_DEFS[id].model || id;
     if (!this.whSoldier) { this.whSoldier = this.soldiers.create('alpha', model); this.whScene.add(this.whSoldier.root); }
     else if (this.whSoldierGun !== model) this.soldiers.setWeapon(this.whSoldier, model);
     this.whSoldierGun = model;
@@ -1048,7 +1052,9 @@ class App {
     r.render(this.whScene, cam);
   }
   renderWarehouse() {
-    const $ = this.$, W = this.wh, LO = Settings.data.loadouts, L = Settings.data.lobby, lo = LO[W.slot];
+    const $ = this.$, W = this.wh, LO = activeLoadouts(W.set), L = Settings.data.lobby, lo = LO[W.slot];
+    [...$('whGunSet').children].forEach((b) => { b.classList.toggle('on', b.dataset.v === W.set); // v67h SF2 槍枝 / Apex 槍枝: two pages, two sets
+      b.onclick = () => { if (W.set === b.dataset.v) return; W.set = b.dataset.v; W.cat = 'primary'; W.sel = activeLoadouts(W.set)[W.slot].primary; W.filter = 'all'; W.page = -1; this.audio.uiClick(); this.renderWarehouse(); }; });
     // loadout sets A–C (no names)
     $('whSets').innerHTML = LO.map((_, i) => `<button data-i="${i}" class="${i === W.slot ? 'on' : ''}" title="對戰中按 F${i + 1}">${LOADOUT_KEYS[i]}</button>`).join('');
     [...$('whSets').children].forEach((b) => { b.onclick = () => { W.slot = +b.dataset.i; L.loadout = W.slot; W.sel = LO[W.slot][W.cat]; W.page = -1; Settings.save(); this.audio.uiClick(); this.renderWarehouse(); }; });
@@ -1059,17 +1065,17 @@ class App {
     $('whSlots').innerHTML = slots.map(([cat, id, lbl]) => `<button class="whSlot${cat ? ' pick' : ''}${cat === W.cat ? ' on' : ''}" ${cat ? `data-cat="${cat}"` : 'disabled'}>${pic(id) ? `<img src="${pic(id)}" alt="">` : ''}<em>${WEAPON_DEFS[id] ? WEAPON_DEFS[id].name : lbl}</em>${WEAPON_DEFS[id] && WEAPON_DEFS[id].name !== lbl ? `<small>${lbl}</small>` : ''}</button>`).join('');
     $('whSlots').querySelectorAll('.pick').forEach((b) => { b.onclick = () => { if (W.cat === b.dataset.cat) return; W.cat = b.dataset.cat; W.sel = LO[W.slot][W.cat]; W.filter = 'all'; W.page = -1; this.audio.uiClick(); this.renderWarehouse(); }; });
     // filter + search
-    const types = [...new Set((W.cat === 'primary' ? PRIMARY_IDS : SECONDARY_IDS).map((id) => WEAPON_DATABASE[id].type))];
-    if (W.filter !== 'all' && W.filter !== 'apex' && W.filter !== 'sf2' && !types.includes(W.filter)) W.filter = 'all';
-    const f = $('whFilter'); f.innerHTML = '<option value="all">全部</option><option value="sf2">SF2 槍</option><option value="apex">Apex 槍</option>' + types.map((t) => `<option value="${t}">${TYPE_LABEL[t]}</option>`).join(''); f.value = W.filter; // (v66w the Apex guns' own filter)
+    const types = [...new Set((W.cat === 'primary' ? PRIMARY_IDS : SECONDARY_IDS).filter((id) => isApexGun(id) === (W.set === 'apex')).map((id) => WEAPON_DATABASE[id].type))];
+    if (W.filter !== 'all' && !types.includes(W.filter)) W.filter = 'all';
+    const f = $('whFilter'); f.innerHTML = '<option value="all">全部</option>' + types.map((t) => `<option value="${t}">${TYPE_LABEL[t]}</option>`).join(''); f.value = W.filter; // (v66w the Apex guns' own filter)
     f.onchange = () => { W.filter = f.value; W.page = 0; this.audio.uiClick(); this._whList(); };
     const q = $('whSearch'); q.value = W.q; q.oninput = () => { W.q = q.value.trim().toLowerCase(); W.page = 0; this._whList(); };
     this._whList(); this._whInfo(); this._whStage();
   }
   // Paged 3×3 grid like SF2 (wheel or the pager turns pages); hovering a card previews it, clicking equips it.
   _whList() {
-    const $ = this.$, W = this.wh, LO = Settings.data.loadouts, PER = 9;
-    const ids = (W.cat === 'primary' ? PRIMARY_IDS : SECONDARY_IDS).filter((id) => (W.filter === 'all' || (W.filter === 'apex' ? !!WEAPON_DATABASE[id].apexKey : W.filter === 'sf2' ? !WEAPON_DATABASE[id].apexKey : WEAPON_DATABASE[id].type === W.filter)) && (!W.q || `${WEAPON_DEFS[id].name} ${id}`.toLowerCase().includes(W.q)));
+    const $ = this.$, W = this.wh, LO = activeLoadouts(W.set), PER = 9;
+    const ids = (W.cat === 'primary' ? PRIMARY_IDS : SECONDARY_IDS).filter((id) => isApexGun(id) === (W.set === 'apex') && (W.filter === 'all' || WEAPON_DATABASE[id].type === W.filter) && (!W.q || `${WEAPON_DEFS[id].name} ${id}`.toLowerCase().includes(W.q)));
     const pages = Math.max(1, Math.ceil(ids.length / PER));
     if (W.page < 0) W.page = Math.max(0, Math.floor(ids.indexOf(LO[W.slot][W.cat]) / PER));
     W.page = clamp(W.page, 0, pages - 1);

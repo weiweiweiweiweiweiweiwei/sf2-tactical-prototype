@@ -1035,6 +1035,7 @@ const sf2Speed = (load) => CFG.player.sf2Speed * Math.min(780, Math.max(295, 390
 // primary's unequip weight, so behind an AWP a grenade ran just 8 % faster. A primary in hand still carries the secondary's.
 const sf2Load = (w, weapons) => { const d = w.def || w; if (!d.weight) return null; if (d.slot !== 'primary') return d.weight[0]; const o = weapons.find((x) => x !== w && x.def && x.def.slot === (d.slot === 'primary' ? 'secondary' : 'primary')); return d.weight[0] + (o && o.def.weight ? o.def.weight[1] : 0); };
 for (const [id, d] of Object.entries(WEAPON_DEFS)) { const w = SF2_WEIGHT[id]; if (!w) continue; d.weight = w; d.moveSpeed = sf2Speed(w[0]); } // (v66u a secondary: its own weight only)
+const isApexGun = (id) => !!(WEAPON_DATABASE[id] && WEAPON_DATABASE[id].apexKey); // v67h
 const PRIMARY_IDS = Object.keys(WEAPON_DATABASE).filter((k) => WEAPON_DATABASE[k].slot === 'primary');
 const SECONDARY_IDS = Object.keys(WEAPON_DATABASE).filter((k) => WEAPON_DATABASE[k].slot === 'secondary');
 const WEAPON_ICONS = {}; // id → line-art dataURL (generated at boot)
@@ -1124,6 +1125,13 @@ function weaponStats(id) {
   };
 }
 
+// v67h the Apex guns' own three sets (user 11-07: SF2 and Apex guns never mix in one match — the room picks the gun set, each set has
+// its own A–C, F1–F3 switch within it)
+const DEFAULT_LOADOUTS_APEX = [
+  { name: '突擊兵', primary: 'apex_r301', secondary: 'apex_p2020' },
+  { name: '狙擊手', primary: 'apex_longbow', secondary: 'apex_wingman' },
+  { name: '突破手', primary: 'apex_r99', secondary: 'apex_re45' },
+];
 const DEFAULT_LOADOUTS = [
   { name: '突擊兵', primary: 'm4a1', secondary: 'p226' },
   { name: '狙擊手', primary: 'cheytac_m200', secondary: 'deagle' },
@@ -1136,8 +1144,8 @@ const LOADOUT_KEYS = 'ABC'; // v45: three loadout sets A–C (SF2 armory tabs), 
 
 const MODES = {
   general: { name: '一般模式', desc: '配裝主武器 + 副武器 + 刀 + 三種投擲物', slots: ['primary', 'secondary', 'knife', 'he', 'smoke', 'flash'] }, // v45 wheel order: gun, pistol, knife, HE ×2, smoke, flash
-  rifle: { name: '步槍戰', desc: '只能使用步槍 / 衝鋒槍 / 機槍與刀', slots: ['primary', 'knife'], primaryFilter: ['rifle', 'smg', 'lmg'], fallback: 'm4a1' },
-  sniper: { name: '狙擊戰', desc: '全員狙擊槍（配裝的主武器若不是狙擊槍則用 CheyTac）+ 刀', slots: ['primary', 'knife'], primaryFilter: ['sniper'], fallback: 'cheytac_m200' },
+  rifle: { name: '步槍戰', desc: '只能使用步槍 / 衝鋒槍 / 機槍與刀', slots: ['primary', 'knife'], primaryFilter: ['rifle', 'smg', 'lmg'], fallback: 'm4a1', apexFallback: 'apex_r301' },
+  sniper: { name: '狙擊戰', desc: '全員狙擊槍（配裝的主武器若不是狙擊槍則用 CheyTac）+ 刀', slots: ['primary', 'knife'], primaryFilter: ['sniper'], fallback: 'cheytac_m200', apexFallback: 'apex_longbow' },
   pistol: { name: '小槍戰', desc: '全員只能拿配裝的副武器（手槍）', slots: ['secondary'] },
   knife: { name: '小刀戰', desc: '全員只能拿刀，貼身肉搏', slots: ['knife'] },
 };
@@ -1246,7 +1254,7 @@ const Settings = {
     sens: 2.0, zoomSens: 1.0, volume: 0.8, fov: 75, quality: 'high', hdri: true, adsMode: 'toggle', announcer: true, showFps: true, hipMode: 'precise', killcam: true,
     hitSound: 'sf2', // v38 ESC → 命中音效 (audition list, HIT_SOUNDS); v64e SF2's own by default
     hudStyle: 'minimal', // v19: 'minimal' (SF2) | 'panel' (v5)
-    loadouts: DEFAULT_LOADOUTS.map((l) => Object.assign({}, l)),
+    loadouts: DEFAULT_LOADOUTS.map((l) => Object.assign({}, l)), loadoutsApex: DEFAULT_LOADOUTS_APEX.map((l) => Object.assign({}, l)),
     lobby: { map: 5, mode: 'general', rule: 'dom', difficulty: 1, allies: 6, enemies: 6, loadout: 0, opts: { pickup: true, killcam: true, ff: false },
       ruleCfg: Object.fromEntries(Object.entries(RULES).map(([k, r]) => [k, Object.assign({}, r.def)])) },
   },
@@ -1260,7 +1268,12 @@ const Settings = {
         if (!RULES[lobby.rule]) lobby.rule = 'tdm';
         for (const [k, r] of Object.entries(RULES)) { const c = lobby.ruleCfg[k]; if (!c || !r.targets.includes(c.target) || !r.times.includes(c.time)) lobby.ruleCfg[k] = Object.assign({}, r.def); }
         const loadouts = Array.isArray(s.loadouts) && s.loadouts.length >= 3 ? s.loadouts.slice(0, 3) : this.data.loadouts; // v45: 5 sets → 3
-        Object.assign(this.data, s); this.data.lobby = lobby; this.data.loadouts = loadouts;
+        const loadoutsApex = Array.isArray(s.loadoutsApex) && s.loadoutsApex.length >= 3 ? s.loadoutsApex.slice(0, 3) : this.data.loadoutsApex;
+        Object.assign(this.data, s); this.data.lobby = lobby; this.data.loadouts = loadouts; this.data.loadoutsApex = loadoutsApex;
+        // v67h each set holds its own guns only (an Apex gun left in an SF2 set from before goes back to the default, and the reverse)
+        this.data.loadouts.forEach((l, i) => { if (isApexGun(l.primary)) l.primary = DEFAULT_LOADOUTS[i].primary; if (isApexGun(l.secondary)) l.secondary = DEFAULT_LOADOUTS[i].secondary; });
+        this.data.loadoutsApex.forEach((l, i) => { const D = DEFAULT_LOADOUTS_APEX[i];
+          if (!isApexGun(l.primary) || WEAPON_DATABASE[l.primary].slot !== 'primary') l.primary = D.primary; if (!isApexGun(l.secondary) || WEAPON_DATABASE[l.secondary].slot !== 'secondary') l.secondary = D.secondary; });
         for (const l of this.data.loadouts) { if (!WEAPON_DATABASE[l.primary] || WEAPON_DATABASE[l.primary].slot !== 'primary') l.primary = 'm4a1'; if (!WEAPON_DATABASE[l.secondary] || WEAPON_DATABASE[l.secondary].slot !== 'secondary') l.secondary = 'p226'; }
         const used = new Set(); // v45: a primary can sit in one set only — later duplicates take the first free gun
         for (const l of this.data.loadouts) { if (used.has(l.primary)) l.primary = PRIMARY_IDS.find((k) => !used.has(k) && !this.data.loadouts.some((o) => o.primary === k)); used.add(l.primary); }
@@ -1331,14 +1344,19 @@ function apexOptic(def) {
     ml ? { mag: def.apexMags.l[ml - 1], magLevel: ml } : {}, bl ? { barrelLv: bl, recoilK: def.apexBarrel.k[bl - 1] } : {}));
   return OPTIC_DEFS.get(k);
 }
+// v67h the match's gun set (Match sets it from the room's 槍枝 option): which A–C sets F1–F3 / the kit / the net loadout use
+let GUN_SET = 'sf2';
+const setGunSet = (s) => { GUN_SET = s === 'apex' ? 'apex' : 'sf2'; };
+const gunSetOf = (opts) => (opts && opts.guns === 'apex' ? 'apex' : 'sf2');
+function activeLoadouts(set = GUN_SET) { return set === 'apex' ? Settings.data.loadoutsApex : Settings.data.loadouts; }
 function loadoutDefs(mode, loadout) {
   const M = MODES[mode];
   return M.slots.map((s) => {
-    if (s === 'primary') { let id = loadout.primary; if (M.primaryFilter && !M.primaryFilter.includes(WEAPON_DEFS[id].kind)) id = M.fallback; return apexOptic(WEAPON_DEFS[id]); }
+    if (s === 'primary') { let id = loadout.primary; if (M.primaryFilter && !M.primaryFilter.includes(WEAPON_DEFS[id].kind)) id = (isApexGun(id) && M.apexFallback) || M.fallback; return apexOptic(WEAPON_DEFS[id]); }
     if (s === 'secondary') return apexOptic(WEAPON_DEFS[loadout.secondary]);
     return WEAPON_DEFS[s];
   });
 }
 
 
-export { APEX_BARREL_LV, APEX_MAG_KIND, APEX_MAG_LV, apexOptic, APEX_OPTICS, sf2Load, sf2Speed, APEX, APEX_POOL, APEX_STEP, APEX_WEAPONS, AUTO_Q, BOT_POOLS, CANNON, CFG, DIFFICULTY, DRACOLoader, EffectComposer, FREEZE_TIME, FrameProfiler, FullScreenQuad, GLTFLoader, GTAOPass, GpuPacer, LOADOUT_KEYS, MODES, OutputPass, PART_MULT, POINTS, PRIMARY_IDS, Pass, QUALITY, Q_LABEL, Q_ORDER, RGBELoader, RULES, RenderPass, RoomEnvironment, RoundedBoxGeometry, SECONDARY_IDS, SMAAPass, STAR_BADGE, Settings, SkeletonUtils, Sky, THREE, TIPS, TMP_V1, TMP_V2, TMP_V3, TMP_V4, TYPE_LABEL, UnrealBloomPass, WEAPON_BLURBS, WEAPON_DATABASE, WEAPON_DEFS, WEAPON_ICONS, activeQuality, apexShield, calcDamage, clamp, damp, lerp, loadoutDefs, mapThumb, mergeGeometries, mulberry32, nextFrame, pick, rand, randInt, setAutoQ, shotRng, sleep, weaponStats, wrapAngle };
+export { activeLoadouts, DEFAULT_LOADOUTS_APEX, gunSetOf, isApexGun, setGunSet, APEX_BARREL_LV, APEX_MAG_KIND, APEX_MAG_LV, apexOptic, APEX_OPTICS, sf2Load, sf2Speed, APEX, APEX_POOL, APEX_STEP, APEX_WEAPONS, AUTO_Q, BOT_POOLS, CANNON, CFG, DIFFICULTY, DRACOLoader, EffectComposer, FREEZE_TIME, FrameProfiler, FullScreenQuad, GLTFLoader, GTAOPass, GpuPacer, LOADOUT_KEYS, MODES, OutputPass, PART_MULT, POINTS, PRIMARY_IDS, Pass, QUALITY, Q_LABEL, Q_ORDER, RGBELoader, RULES, RenderPass, RoomEnvironment, RoundedBoxGeometry, SECONDARY_IDS, SMAAPass, STAR_BADGE, Settings, SkeletonUtils, Sky, THREE, TIPS, TMP_V1, TMP_V2, TMP_V3, TMP_V4, TYPE_LABEL, UnrealBloomPass, WEAPON_BLURBS, WEAPON_DATABASE, WEAPON_DEFS, WEAPON_ICONS, activeQuality, apexShield, calcDamage, clamp, damp, lerp, loadoutDefs, mapThumb, mergeGeometries, mulberry32, nextFrame, pick, rand, randInt, setAutoQ, shotRng, sleep, weaponStats, wrapAngle };

@@ -603,7 +603,7 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
 .whSlot img{max-height:24px;max-width:86%}.whSlot em{font-style:normal;font-size:12px;white-space:nowrap}.whSlot small{font-size:10px;color:var(--dim);letter-spacing:1px}
 .wh-filter{display:flex;gap:8px;flex-shrink:0}
 #whFilter,#whSearch{height:30px;font-family:inherit;font-size:14px;color:var(--hud);background:#0c100e;border:1px solid rgba(255,255,255,.16);border-radius:3px;padding:0 8px}
-#whFilter{width:190px}.wh-opt{display:flex;align-items:center;gap:10px;margin:6px 0 2px;font-size:13px;color:var(--dim,#9aa)}.wh-opt[hidden]{display:none}#whOptic,#whMag,#whBarrel{height:28px;min-width:200px;font-family:inherit;font-size:13px;color:var(--hud);background:#0c100e;border:1px solid rgba(255,255,255,.16);border-radius:3px;padding:0 6px}#whSearch{margin-left:auto;width:230px}
+#whFilter{width:190px}#whGunSet{display:flex;gap:4px;margin-left:10px}#whGunSet button{padding:7px 16px;font:700 15px/1 inherit;letter-spacing:2px;color:var(--dim);background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:3px;cursor:pointer}#whGunSet button.on{color:#06140b;background:var(--accent);border-color:var(--accent)}.wh-opt{display:flex;align-items:center;gap:10px;margin:6px 0 2px;font-size:13px;color:var(--dim,#9aa)}.wh-opt[hidden]{display:none}#whOptic,#whMag,#whBarrel{height:28px;min-width:200px;font-family:inherit;font-size:13px;color:var(--hud);background:#0c100e;border:1px solid rgba(255,255,255,.16);border-radius:3px;padding:0 6px}#whSearch{margin-left:auto;width:230px}
 #whList{flex:1;min-height:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:repeat(3,minmax(0,1fr));gap:8px}
 .whGun{position:relative;display:flex;flex-direction:column;min-height:0;padding:0;cursor:pointer;font-family:inherit;color:var(--hud);border:1px solid rgba(255,255,255,.1);background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(0,0,0,.45));border-radius:2px;overflow:hidden}
 .whGun .nm{flex-shrink:0;height:25px;line-height:23px;font-size:14px;font-weight:700;text-align:center;background:rgba(0,0,0,.55);border-top:2px solid transparent;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 8px}
@@ -892,6 +892,8 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
     <label class="tg"><input type="checkbox" id="optPickup"><span>可以撿取地上的槍械</span></label>
     <label class="tg"><input type="checkbox" id="optKillcam"><span>陣亡時播放擊殺回放（Killcam）</span></label>
     <label class="tg"><input type="checkbox" id="optFF"><span>友軍傷害（打得到隊友）</span></label>
+    <h3>槍枝</h3><div class="pills" id="optGuns"><button data-v="sf2">SF2 槍枝</button><button data-v="apex">Apex 槍枝</button></div>
+    <div class="dmginfo">全場只能用這一套槍（Bot 也是）；倉庫裡兩套各有自己的 A／B／C 配裝，F1–F3 只在這一套裡切換。和扣血機制可以任意搭配。</div>
     <h3>扣血機制</h3><div class="pills" id="optDmg"><button data-v="sf2">SF2（爆頭打飛頭盔）</button><button data-v="apex">Apex（護盾＋自動回復）</button></div>
     <div id="optDmgInfo" class="dmginfo"></div>
     </div></div>
@@ -928,7 +930,7 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
 </div></div>
 
 <div id="warehouse" class="screen"><div class="whz">
-  <div class="wh-top"><button class="btn ghost" id="whClose">← 返回房間</button><div class="wh-title">倉庫<span>ARMORY</span></div><div class="wh-hint">3 組配裝 A–C · 點武器卡即裝備 · 對戰中按 F1–F3 預約配裝，下次重生時換上</div></div>
+  <div class="wh-top"><button class="btn ghost" id="whClose">← 返回房間</button><div class="wh-title">倉庫<span>ARMORY</span></div><div id="whGunSet"><button data-v="sf2">SF2 槍枝</button><button data-v="apex">Apex 槍枝</button></div><div class="wh-hint">3 組配裝 A–C · 點武器卡即裝備 · 對戰中按 F1–F3 預約配裝，下次重生時換上</div></div>
   <div class="wh-body">
     <section class="wh-stage"><canvas id="whCanvas"></canvas><div class="wh-cap"><b id="whSetBig">A</b><span id="whSetLine"></span></div></section>
     <section class="wh-panel">

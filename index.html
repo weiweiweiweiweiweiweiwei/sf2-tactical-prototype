@@ -603,7 +603,7 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
 .whSlot img{max-height:24px;max-width:86%}.whSlot em{font-style:normal;font-size:12px;white-space:nowrap}.whSlot small{font-size:10px;color:var(--dim);letter-spacing:1px}
 .wh-filter{display:flex;gap:8px;flex-shrink:0}
 #whFilter,#whSearch{height:30px;font-family:inherit;font-size:14px;color:var(--hud);background:#0c100e;border:1px solid rgba(255,255,255,.16);border-radius:3px;padding:0 8px}
-#whFilter{width:190px}.wh-opt{display:flex;align-items:center;gap:10px;margin:6px 0 2px;font-size:13px;color:var(--dim,#9aa)}.wh-opt[hidden]{display:none}#whOptic,#whMag,#whBarrel{height:28px;min-width:200px;font-family:inherit;font-size:13px;color:var(--hud);background:#0c100e;border:1px solid rgba(255,255,255,.16);border-radius:3px;padding:0 6px}#whSearch{margin-left:auto;width:230px}
+#whFilter{width:190px}#whGunSet{display:flex;gap:4px;margin-left:10px}#whGunSet button{padding:7px 16px;font:700 15px/1 inherit;letter-spacing:2px;color:var(--dim);background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:3px;cursor:pointer}#whGunSet button.on{color:#06140b;background:var(--accent);border-color:var(--accent)}.wh-opt{display:flex;align-items:center;gap:10px;margin:6px 0 2px;font-size:13px;color:var(--dim,#9aa)}.wh-opt[hidden]{display:none}#whOptic,#whMag,#whBarrel{height:28px;min-width:200px;font-family:inherit;font-size:13px;color:var(--hud);background:#0c100e;border:1px solid rgba(255,255,255,.16);border-radius:3px;padding:0 6px}#whSearch{margin-left:auto;width:230px}
 #whList{flex:1;min-height:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:repeat(3,minmax(0,1fr));gap:8px}
 .whGun{position:relative;display:flex;flex-direction:column;min-height:0;padding:0;cursor:pointer;font-family:inherit;color:var(--hud);border:1px solid rgba(255,255,255,.1);background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(0,0,0,.45));border-radius:2px;overflow:hidden}
 .whGun .nm{flex-shrink:0;height:25px;line-height:23px;font-size:14px;font-weight:700;text-align:center;background:rgba(0,0,0,.55);border-top:2px solid transparent;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 8px}
@@ -892,6 +892,8 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
     <label class="tg"><input type="checkbox" id="optPickup"><span>可以撿取地上的槍械</span></label>
     <label class="tg"><input type="checkbox" id="optKillcam"><span>陣亡時播放擊殺回放（Killcam）</span></label>
     <label class="tg"><input type="checkbox" id="optFF"><span>友軍傷害（打得到隊友）</span></label>
+    <h3>槍枝</h3><div class="pills" id="optGuns"><button data-v="sf2">SF2 槍枝</button><button data-v="apex">Apex 槍枝</button></div>
+    <div class="dmginfo">全場只能用這一套槍（Bot 也是）；倉庫裡兩套各有自己的 A／B／C 配裝，F1–F3 只在這一套裡切換。和扣血機制可以任意搭配。</div>
     <h3>扣血機制</h3><div class="pills" id="optDmg"><button data-v="sf2">SF2（爆頭打飛頭盔）</button><button data-v="apex">Apex（護盾＋自動回復）</button></div>
     <div id="optDmgInfo" class="dmginfo"></div>
     </div></div>
@@ -928,7 +930,7 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
 </div></div>
 
 <div id="warehouse" class="screen"><div class="whz">
-  <div class="wh-top"><button class="btn ghost" id="whClose">← 返回房間</button><div class="wh-title">倉庫<span>ARMORY</span></div><div class="wh-hint">3 組配裝 A–C · 點武器卡即裝備 · 對戰中按 F1–F3 預約配裝，下次重生時換上</div></div>
+  <div class="wh-top"><button class="btn ghost" id="whClose">← 返回房間</button><div class="wh-title">倉庫<span>ARMORY</span></div><div id="whGunSet"><button data-v="sf2">SF2 槍枝</button><button data-v="apex">Apex 槍枝</button></div><div class="wh-hint">3 組配裝 A–C · 點武器卡即裝備 · 對戰中按 F1–F3 預約配裝，下次重生時換上</div></div>
   <div class="wh-body">
     <section class="wh-stage"><canvas id="whCanvas"></canvas><div class="wh-cap"><b id="whSetBig">A</b><span id="whSetLine"></span></div></section>
     <section class="wh-panel">
@@ -4924,6 +4926,7 @@ for (const [id, d] of Object.entries(WEAPON_DEFS)) {
   d.weight = w;
   d.moveSpeed = sf2Speed(w[0]);
 }
+var isApexGun = /* @__PURE__ */ __name((id) => !!(WEAPON_DATABASE[id] && WEAPON_DATABASE[id].apexKey), "isApexGun");
 var PRIMARY_IDS = Object.keys(WEAPON_DATABASE).filter((k) => WEAPON_DATABASE[k].slot === "primary");
 var SECONDARY_IDS = Object.keys(WEAPON_DATABASE).filter((k) => WEAPON_DATABASE[k].slot === "secondary");
 var WEAPON_ICONS = {};
@@ -5019,6 +5022,11 @@ function weaponStats(id) {
   };
 }
 __name(weaponStats, "weaponStats");
+var DEFAULT_LOADOUTS_APEX = [
+  { name: "突擊兵", primary: "apex_r301", secondary: "apex_p2020" },
+  { name: "狙擊手", primary: "apex_longbow", secondary: "apex_wingman" },
+  { name: "突破手", primary: "apex_r99", secondary: "apex_re45" }
+];
 var DEFAULT_LOADOUTS = [
   { name: "突擊兵", primary: "m4a1", secondary: "p226" },
   { name: "狙擊手", primary: "cheytac_m200", secondary: "deagle" },
@@ -5030,8 +5038,8 @@ var LOADOUT_KEYS = "ABC";
 var MODES = {
   general: { name: "一般模式", desc: "配裝主武器 + 副武器 + 刀 + 三種投擲物", slots: ["primary", "secondary", "knife", "he", "smoke", "flash"] },
   // v45 wheel order: gun, pistol, knife, HE ×2, smoke, flash
-  rifle: { name: "步槍戰", desc: "只能使用步槍 / 衝鋒槍 / 機槍與刀", slots: ["primary", "knife"], primaryFilter: ["rifle", "smg", "lmg"], fallback: "m4a1" },
-  sniper: { name: "狙擊戰", desc: "全員狙擊槍（配裝的主武器若不是狙擊槍則用 CheyTac）+ 刀", slots: ["primary", "knife"], primaryFilter: ["sniper"], fallback: "cheytac_m200" },
+  rifle: { name: "步槍戰", desc: "只能使用步槍 / 衝鋒槍 / 機槍與刀", slots: ["primary", "knife"], primaryFilter: ["rifle", "smg", "lmg"], fallback: "m4a1", apexFallback: "apex_r301" },
+  sniper: { name: "狙擊戰", desc: "全員狙擊槍（配裝的主武器若不是狙擊槍則用 CheyTac）+ 刀", slots: ["primary", "knife"], primaryFilter: ["sniper"], fallback: "cheytac_m200", apexFallback: "apex_longbow" },
   pistol: { name: "小槍戰", desc: "全員只能拿配裝的副武器（手槍）", slots: ["secondary"] },
   knife: { name: "小刀戰", desc: "全員只能拿刀，貼身肉搏", slots: ["knife"] }
 };
@@ -5204,6 +5212,7 @@ var Settings = {
     hudStyle: "minimal",
     // v19: 'minimal' (SF2) | 'panel' (v5)
     loadouts: DEFAULT_LOADOUTS.map((l) => Object.assign({}, l)),
+    loadoutsApex: DEFAULT_LOADOUTS_APEX.map((l) => Object.assign({}, l)),
     lobby: {
       map: 5,
       mode: "general",
@@ -5231,9 +5240,20 @@ var Settings = {
           if (!c || !r.targets.includes(c.target) || !r.times.includes(c.time)) lobby.ruleCfg[k] = Object.assign({}, r.def);
         }
         const loadouts = Array.isArray(s.loadouts) && s.loadouts.length >= 3 ? s.loadouts.slice(0, 3) : this.data.loadouts;
+        const loadoutsApex = Array.isArray(s.loadoutsApex) && s.loadoutsApex.length >= 3 ? s.loadoutsApex.slice(0, 3) : this.data.loadoutsApex;
         Object.assign(this.data, s);
         this.data.lobby = lobby;
         this.data.loadouts = loadouts;
+        this.data.loadoutsApex = loadoutsApex;
+        this.data.loadouts.forEach((l, i) => {
+          if (isApexGun(l.primary)) l.primary = DEFAULT_LOADOUTS[i].primary;
+          if (isApexGun(l.secondary)) l.secondary = DEFAULT_LOADOUTS[i].secondary;
+        });
+        this.data.loadoutsApex.forEach((l, i) => {
+          const D = DEFAULT_LOADOUTS_APEX[i];
+          if (!isApexGun(l.primary) || WEAPON_DATABASE[l.primary].slot !== "primary") l.primary = D.primary;
+          if (!isApexGun(l.secondary) || WEAPON_DATABASE[l.secondary].slot !== "secondary") l.secondary = D.secondary;
+        });
         for (const l of this.data.loadouts) {
           if (!WEAPON_DATABASE[l.primary] || WEAPON_DATABASE[l.primary].slot !== "primary") l.primary = "m4a1";
           if (!WEAPON_DATABASE[l.secondary] || WEAPON_DATABASE[l.secondary].slot !== "secondary") l.secondary = "p226";
@@ -5310,12 +5330,21 @@ function apexOptic(def) {
   return OPTIC_DEFS.get(k);
 }
 __name(apexOptic, "apexOptic");
+var GUN_SET = "sf2";
+var setGunSet = /* @__PURE__ */ __name((s) => {
+  GUN_SET = s === "apex" ? "apex" : "sf2";
+}, "setGunSet");
+var gunSetOf = /* @__PURE__ */ __name((opts) => opts && opts.guns === "apex" ? "apex" : "sf2", "gunSetOf");
+function activeLoadouts(set = GUN_SET) {
+  return set === "apex" ? Settings.data.loadoutsApex : Settings.data.loadouts;
+}
+__name(activeLoadouts, "activeLoadouts");
 function loadoutDefs(mode, loadout) {
   const M = MODES[mode];
   return M.slots.map((s) => {
     if (s === "primary") {
       let id = loadout.primary;
-      if (M.primaryFilter && !M.primaryFilter.includes(WEAPON_DEFS[id].kind)) id = M.fallback;
+      if (M.primaryFilter && !M.primaryFilter.includes(WEAPON_DEFS[id].kind)) id = isApexGun(id) && M.apexFallback || M.fallback;
       return apexOptic(WEAPON_DEFS[id]);
     }
     if (s === "secondary") return apexOptic(WEAPON_DEFS[loadout.secondary]);
@@ -23274,7 +23303,7 @@ var Player = class extends Human {
     const g = this.game;
     const queued = g.nextSpawnLoadoutIndex !== null && g.nextSpawnLoadoutIndex !== g.loadoutIndex;
     if (queued) g.loadoutIndex = g.nextSpawnLoadoutIndex;
-    const kit = loadoutDefs(g.mode, Settings.data.loadouts[g.loadoutIndex]);
+    const kit = loadoutDefs(g.mode, activeLoadouts(g.gunSet)[g.loadoutIndex]);
     if (queued || kit.map((d) => d.id).join() !== g.weapons.weapons.map((w) => w.def.id).join()) g.weapons.rebuild(kit);
     if (queued) g.app.hud.toast(`已換上配裝 ${LOADOUT_KEYS[g.loadoutIndex]}`);
     g.nextSpawnLoadoutIndex = null;
@@ -24498,7 +24527,7 @@ var NetPlayer = class _NetPlayer extends Human {
     this.walkPhase = 0;
     this.stepPitch = rand(0.92, 1.08);
     this.hipMode = opts.hipMode === "shotgun" ? "shotgun" : "precise";
-    this.loadout = _NetPlayer.validLoadout(opts.loadout);
+    this.loadout = _NetPlayer.validLoadout(opts.loadout, game.gunSet);
     this.nextLoadout = null;
     this.arsenal = new Arsenal(game, this);
     this.arsenal.remote = true;
@@ -24511,9 +24540,9 @@ var NetPlayer = class _NetPlayer extends Human {
     this.holeT = 0;
     this.respawnT = 0;
   }
-  static validLoadout(l) {
-    const ok = /* @__PURE__ */ __name((id, slot) => id && WEAPON_DATABASE[id] && WEAPON_DATABASE[id].slot === slot, "ok");
-    return { primary: l && ok(l.primary, "primary") ? l.primary : "m4a1", secondary: l && ok(l.secondary, "secondary") ? l.secondary : "p226" };
+  static validLoadout(l, set = "sf2") {
+    const ap = set === "apex", ok = /* @__PURE__ */ __name((id, slot) => id && WEAPON_DATABASE[id] && WEAPON_DATABASE[id].slot === slot && !!WEAPON_DATABASE[id].apexKey === ap, "ok");
+    return { primary: l && ok(l.primary, "primary") ? l.primary : ap ? "apex_r301" : "m4a1", secondary: l && ok(l.secondary, "secondary") ? l.secondary : ap ? "apex_p2020" : "p226" };
   }
   gear() {
     return this.arsenal;
@@ -27079,6 +27108,8 @@ var Match = class _Match {
     this.roundTime = RULES[config.rule].timeUnit === "sec" ? rc.time : 0;
     this.timeLeft = RULES[config.rule].timeUnit === "sec" ? rc.time : rc.time ? rc.time * 60 : Infinity;
     this.opts = Object.assign({ pickup: true, killcam: true, ff: false, dmg: "sf2" }, config.opts);
+    this.gunSet = gunSetOf(this.opts);
+    setGunSet(this.gunSet);
     this.apex = this.opts.dmg === "apex";
     this.score = { alpha: 0, bravo: 0 };
     this.roundWins = { alpha: 0, bravo: 0 };
@@ -27187,8 +27218,8 @@ var Match = class _Match {
     this.player = new Player(this);
     if (this.isClient) this.player.team = this.net.team === "bravo" ? "bravo" : "alpha";
     const tg = performance.now();
-    await ensureGunModels(Settings.data.loadouts.flatMap((l) => loadoutDefs(this.mode, l)));
-    this.weapons = new WeaponSystem(this, loadoutDefs(this.mode, Settings.data.loadouts[this.loadoutIndex]));
+    await ensureGunModels(activeLoadouts(this.gunSet).flatMap((l) => loadoutDefs(this.mode, l)));
+    this.weapons = new WeaponSystem(this, loadoutDefs(this.mode, activeLoadouts(this.gunSet)[this.loadoutIndex]));
     this.weapons.setEnvironment(this.vmEnv || this.scene.environment);
     this.combatants.push(this.player);
     if (!this.isClient) {
@@ -27240,6 +27271,10 @@ var Match = class _Match {
     this.running = true;
   }
   botWeapon() {
+    if (this.gunSet === "apex") {
+      const F = MODES[this.mode] && MODES[this.mode].primaryFilter, pool = Object.keys(WEAPON_DEFS).filter((k) => isApexGun(k) && WEAPON_DEFS[k].slot === "primary" && (!F || F.includes(WEAPON_DEFS[k].kind)));
+      if (pool.length) return pick(pool);
+    }
     return pick(BOT_POOLS[this.mode] || BOT_POOLS.general);
   }
   setupLighting() {
@@ -28041,7 +28076,7 @@ var Match = class _Match {
   queueLoadout(i) {
     if (i < 0 || i >= LOADOUT_KEYS.length) return;
     this.nextSpawnLoadoutIndex = i === this.loadoutIndex ? null : i;
-    const L = Settings.data.loadouts[i];
+    const L = activeLoadouts(this.gunSet)[i];
     if (this.isClient) this.net.queueLoadout(L);
     this.audio.mech("queue");
     this.app.showLoadoutPicker(i, this.loadoutIndex);
@@ -28882,7 +28917,7 @@ var NetHost = class {
     else if (d.k === "leave") this._drop(from, "離開了房間");
     else if (d.k === "loadout") {
       const np = this.peers.get(from);
-      if (np) np.nextLoadout = NetPlayer.validLoadout(d);
+      if (np) np.nextLoadout = NetPlayer.validLoadout(d, np.game && np.game.gunSet);
     } else if (d.k === "ping") {
       this.t.send(from, { k: "pong", t: d.t });
       const np = this.peers.get(from);
@@ -29175,7 +29210,7 @@ var NetClient = class {
     }, 2e3);
   }
   _loadout() {
-    const l = Settings.data.loadouts[Settings.data.lobby.loadout | 0] || Settings.data.loadouts[0];
+    const LO = activeLoadouts(), l = LO[Settings.data.lobby.loadout | 0] || LO[0];
     return { loadout: { primary: l.primary, secondary: l.secondary } };
   }
   _msg(from, d) {
@@ -29875,7 +29910,7 @@ function roomCfgSafe(c) {
     difficulty: clamp(c.difficulty | 0, 0, DIFFICULTY.length - 1),
     allies: clamp(c.allies | 0, 1, 12),
     enemies: clamp(c.enemies | 0, 1, 12),
-    opts: { pickup: !(c.opts && c.opts.pickup === false), killcam: !(c.opts && c.opts.killcam === false), ff: !!(c.opts && c.opts.ff), dmg: c.opts && c.opts.dmg === "apex" ? "apex" : "sf2" },
+    opts: { pickup: !(c.opts && c.opts.pickup === false), killcam: !(c.opts && c.opts.killcam === false), ff: !!(c.opts && c.opts.ff), dmg: c.opts && c.opts.dmg === "apex" ? "apex" : "sf2", guns: c.opts && c.opts.guns === "apex" ? "apex" : "sf2" },
     ruleCfg: { [rule]: { target: R.targets.includes(rc.target) ? rc.target : R.def.target, time: R.times.includes(rc.time) ? rc.time : R.def.time } }
   };
 }
@@ -30602,6 +30637,10 @@ var App = class {
     }, 2500);
   }
   /* ------------------------------ v27 hub (大廳): create a room, or join one ------------------------------ */
+  _gs() {
+    return gunSetOf(this.roomCfg().opts);
+  }
+  // v67h the room's gun set (槍枝)
   buildHub() {
     const $ = this.$, S = Settings.data;
     if (!S.nick) {
@@ -31382,6 +31421,13 @@ var App = class {
       this.audio.uiClick();
       this.refreshLobby();
     };
+    for (const b of $("optGuns").children) b.onclick = () => {
+      if (this.isGuest()) return;
+      L.opts.guns = b.dataset.v;
+      this.audio.init();
+      this.audio.uiClick();
+      this.refreshLobby();
+    };
     for (const b of $("optDmg").children) b.onclick = () => {
       if (this.isGuest()) return;
       L.opts.dmg = b.dataset.v;
@@ -31398,7 +31444,7 @@ var App = class {
         else if (!$("lbMapModal").classList.contains("on")) this.beginCountdown();
       }
     });
-    pills("lbLoadout", Settings.data.loadouts.map((l, i) => [i, LOADOUT_KEYS[i]]), "loadout");
+    pills("lbLoadout", activeLoadouts(this._gs()).map((l, i) => [i, LOADOUT_KEYS[i]]), "loadout");
     $("lbWarehouse").onclick = () => this.openWarehouse();
     $("lbWh").onclick = () => this.openWarehouse();
     $("whClose").onclick = () => this.closeWarehouse();
@@ -31494,6 +31540,7 @@ var App = class {
     $("optKillcam").checked = opts.killcam !== false;
     $("optFF").checked = !!opts.ff;
     const dmg = opts.dmg === "apex" ? "apex" : "sf2";
+    [...$("optGuns").children].forEach((b) => b.classList.toggle("on", b.dataset.v === gunSetOf(opts)));
     [...$("optDmg").children].forEach((b) => b.classList.toggle("on", b.dataset.v === dmg));
     $("optDmgInfo").textContent = dmg === "apex" ? "100 血＋護盾：先扣盾再扣血。造成傷害會升級護盾（白 50 → 藍 75 → 紫 100）。爆頭倍率依槍種（衝鋒槍 ×1.25、步槍／機槍／手槍 ×1.75、狙擊 ×2、霰彈 ×1），腿 ×0.8，沒有距離衰減（霰彈除外）。4 秒沒受傷後每秒回 5 點（先回血、再回盾）。沒有跌落傷害。" : "100 血：頭 ×2.5、胸 ×1、腹 ×0.9、四肢 ×0.75，有距離衰減，狙擊爆頭必死。打不死的爆頭會把頭盔打飛（這一槍只算身體傷害），之後再爆頭照 ×2.5 計算。";
     const host = /* @__PURE__ */ __name(() => !this.isGuest(), "host");
@@ -31543,7 +31590,7 @@ var App = class {
         this.audio.uiClick();
       }
     });
-    const lo = Settings.data.loadouts[L.loadout];
+    const lo = activeLoadouts(this._gs())[L.loadout];
     $("lbLoadoutInfo").textContent = `配裝 ${LOADOUT_KEYS[L.loadout]}：${WEAPON_DEFS[lo.primary].name} + ${WEAPON_DEFS[lo.secondary].name}`;
     [...$("lbLoadout").children].forEach((b, i) => {
       b.title = `配裝 ${LOADOUT_KEYS[i]} · 對戰中按 F${i + 1}`;
@@ -31611,7 +31658,7 @@ var App = class {
       }
     }
     if (!this.lbR) return;
-    const L = Settings.data.lobby, id = Settings.data.loadouts[L.loadout].primary, model = WEAPON_DEFS[id].model || id;
+    const L = Settings.data.lobby, id = activeLoadouts(this._gs())[L.loadout].primary, model = WEAPON_DEFS[id].model || id;
     const team = this.room && this.room.team === "bravo" ? "bravo" : "alpha";
     if (!this.lbSoldier || this.lbTeam !== team) {
       if (this.lbSoldier) this.lbScene.remove(this.lbSoldier.root);
@@ -32273,7 +32320,7 @@ var App = class {
   }
   // v45 F1–F3: the three sets as cards in the middle of the screen (SF2), the picked one lit; fades out after ~2 s
   showLoadoutPicker(pick2, cur) {
-    const el = this.$("loPick"), LO = Settings.data.loadouts;
+    const el = this.$("loPick"), LO = activeLoadouts();
     if (!this.whR) this._initPreview();
     this._makeThumbs([...LO.flatMap((l) => [l.primary, l.secondary]), "he", "smoke", "flash"]);
     const img = /* @__PURE__ */ __name((id) => {
@@ -32298,8 +32345,9 @@ var App = class {
     this.audio.init();
     this.audio.uiClick();
     this.wh = this.wh || { slot: L.loadout, cat: "primary", sel: null, filter: "all", q: "", page: -1 };
+    this.wh.set = this._gs();
     this.wh.slot = L.loadout;
-    this.wh.sel = Settings.data.loadouts[this.wh.slot][this.wh.cat];
+    this.wh.sel = activeLoadouts(this.wh.set)[this.wh.slot][this.wh.cat];
     this.wh.page = -1;
     this.whFrom = this.state === "hub" ? "hub" : "lobby";
     this.invite(false);
@@ -32432,7 +32480,7 @@ var App = class {
   // Stage: the soldier (same model as in a match) holding the selected set's primary weapon, turning slowly.
   _whStage() {
     if (!this.whR) return;
-    const id = Settings.data.loadouts[this.wh.slot].primary, model = WEAPON_DEFS[id].model || id;
+    const id = activeLoadouts(this.wh.set)[this.wh.slot].primary, model = WEAPON_DEFS[id].model || id;
     if (!this.whSoldier) {
       this.whSoldier = this.soldiers.create("alpha", model);
       this.whScene.add(this.whSoldier.root);
@@ -32453,7 +32501,20 @@ var App = class {
     r.render(this.whScene, cam);
   }
   renderWarehouse() {
-    const $ = this.$, W = this.wh, LO = Settings.data.loadouts, L = Settings.data.lobby, lo = LO[W.slot];
+    const $ = this.$, W = this.wh, LO = activeLoadouts(W.set), L = Settings.data.lobby, lo = LO[W.slot];
+    [...$("whGunSet").children].forEach((b) => {
+      b.classList.toggle("on", b.dataset.v === W.set);
+      b.onclick = () => {
+        if (W.set === b.dataset.v) return;
+        W.set = b.dataset.v;
+        W.cat = "primary";
+        W.sel = activeLoadouts(W.set)[W.slot].primary;
+        W.filter = "all";
+        W.page = -1;
+        this.audio.uiClick();
+        this.renderWarehouse();
+      };
+    });
     $("whSets").innerHTML = LO.map((_, i) => `<button data-i="${i}" class="${i === W.slot ? "on" : ""}" title="對戰中按 F${i + 1}">${LOADOUT_KEYS[i]}</button>`).join("");
     [...$("whSets").children].forEach((b) => {
       b.onclick = () => {
@@ -32482,10 +32543,10 @@ var App = class {
         this.renderWarehouse();
       };
     });
-    const types = [...new Set((W.cat === "primary" ? PRIMARY_IDS : SECONDARY_IDS).map((id) => WEAPON_DATABASE[id].type))];
-    if (W.filter !== "all" && W.filter !== "apex" && W.filter !== "sf2" && !types.includes(W.filter)) W.filter = "all";
+    const types = [...new Set((W.cat === "primary" ? PRIMARY_IDS : SECONDARY_IDS).filter((id) => isApexGun(id) === (W.set === "apex")).map((id) => WEAPON_DATABASE[id].type))];
+    if (W.filter !== "all" && !types.includes(W.filter)) W.filter = "all";
     const f = $("whFilter");
-    f.innerHTML = '<option value="all">全部</option><option value="sf2">SF2 槍</option><option value="apex">Apex 槍</option>' + types.map((t) => `<option value="${t}">${TYPE_LABEL[t]}</option>`).join("");
+    f.innerHTML = '<option value="all">全部</option>' + types.map((t) => `<option value="${t}">${TYPE_LABEL[t]}</option>`).join("");
     f.value = W.filter;
     f.onchange = () => {
       W.filter = f.value;
@@ -32506,8 +32567,8 @@ var App = class {
   }
   // Paged 3×3 grid like SF2 (wheel or the pager turns pages); hovering a card previews it, clicking equips it.
   _whList() {
-    const $ = this.$, W = this.wh, LO = Settings.data.loadouts, PER = 9;
-    const ids = (W.cat === "primary" ? PRIMARY_IDS : SECONDARY_IDS).filter((id) => (W.filter === "all" || (W.filter === "apex" ? !!WEAPON_DATABASE[id].apexKey : W.filter === "sf2" ? !WEAPON_DATABASE[id].apexKey : WEAPON_DATABASE[id].type === W.filter)) && (!W.q || `${WEAPON_DEFS[id].name} ${id}`.toLowerCase().includes(W.q)));
+    const $ = this.$, W = this.wh, LO = activeLoadouts(W.set), PER = 9;
+    const ids = (W.cat === "primary" ? PRIMARY_IDS : SECONDARY_IDS).filter((id) => isApexGun(id) === (W.set === "apex") && (W.filter === "all" || WEAPON_DATABASE[id].type === W.filter) && (!W.q || `${WEAPON_DEFS[id].name} ${id}`.toLowerCase().includes(W.q)));
     const pages = Math.max(1, Math.ceil(ids.length / PER));
     if (W.page < 0) W.page = Math.max(0, Math.floor(ids.indexOf(LO[W.slot][W.cat]) / PER));
     W.page = clamp(W.page, 0, pages - 1);

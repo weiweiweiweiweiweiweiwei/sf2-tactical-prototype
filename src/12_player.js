@@ -1,4 +1,4 @@
-import { APEX_STEP, CFG, LOADOUT_KEYS, Settings, THREE, TMP_V1, WEAPON_DEFS, clamp, damp, lerp, loadoutDefs, rand, sf2Load, sf2Speed, wrapAngle } from './01_core.js';
+import { activeLoadouts, APEX_STEP, CFG, clamp, damp, lerp, LOADOUT_KEYS, loadoutDefs, rand, Settings, sf2Load, sf2Speed, THREE, TMP_V1, WEAPON_DEFS, wrapAngle } from './01_core.js';
 import { CharacterMotor } from './04_collision.js';
 import { BTN } from './12b_cmd.js';
 // v66u SF2's fall damage (user 11-05 A; SFPawn.TakeFallingDamage, docs/research/sf2/fall-damage.md): damage = 100 × (V − MaxFallSpeed) / MaxFallSpeed
@@ -288,7 +288,7 @@ class Player extends Human {
     const g = this.game;
     const queued = g.nextSpawnLoadoutIndex !== null && g.nextSpawnLoadoutIndex !== g.loadoutIndex; // F1–F3 queue: the new kit is issued only now
     if (queued) g.loadoutIndex = g.nextSpawnLoadoutIndex;
-    const kit = loadoutDefs(g.mode, Settings.data.loadouts[g.loadoutIndex]);
+    const kit = loadoutDefs(g.mode, activeLoadouts(g.gunSet)[g.loadoutIndex]);
     // v45: always respawn with the set's own guns — a weapon picked up from the floor does not carry over
     if (queued || kit.map((d) => d.id).join() !== g.weapons.weapons.map((w) => w.def.id).join()) g.weapons.rebuild(kit);
     if (queued) g.app.hud.toast(`已換上配裝 ${LOADOUT_KEYS[g.loadoutIndex]}`);

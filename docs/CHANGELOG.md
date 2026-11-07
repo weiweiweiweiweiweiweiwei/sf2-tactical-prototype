@@ -2084,3 +2084,10 @@
 
 ### v67g 撤回（本機，2026-11-07）
 - 使用者 11-07：「回到改變介面之前的版本，我不喜歡這次的介面改動。」→ `git revert` v67g（SF2 導覽列、營地背景、好友按鈕、橘色配色全部撤回），選單回到 v67f 的樣子。v67f 的 SF2 介面研究工具（`tools/sf2_ui_extract.py` 等、`docs/research/sf2/lobby-ui.md`）保留。
+
+### v67h（本機，2026-11-07）：SF2 槍和 Apex 槍分開——房間的「槍枝」設定、兩套獨立的 A／B／C
+- 使用者 11-07：SF2 和 Apex 的槍不能在同一場用；房間裡選這場用哪一套槍，和扣血機制（SF2／Apex）各自獨立設定；兩套各有自己的 A／B／C，F1–F3 只在這一套裡切換；倉庫要有兩個獨立頁面。
+- 房間設置多了「槍枝：SF2 槍枝／Apex 槍枝」（`opts.guns`，跟著房間同步給所有人，`src/18c_room.js`）。全場（你、朋友、Bot）只用這一套：Bot 在 Apex 槍枝時從這個模式允許的 Apex 主武器裡抽；朋友傳來的配裝由房主檢查是不是這一套的槍（`NetPlayer.validLoadout`）。步槍戰／狙擊戰在 Apex 槍枝時的替代槍是 R-301／長弓。
+- 兩套配裝：`Settings.data.loadouts`（SF2）和新的 `loadoutsApex`（預設 A：R-301＋P2020、B：長弓＋小幫手、C：R-99＋RE-45）；`activeLoadouts()` 依這場的槍枝回傳對應那一套（對戰、F1–F3、連線、房間的配裝按鈕）。舊存檔裡混在 SF2 配裝裡的 Apex 槍改回預設。
+- 倉庫：上方「SF2 槍枝／Apex 槍枝」兩頁，各自的 A／B／C 和槍單；進倉庫先顯示房間目前的那一套。原本篩選裡的「SF2 槍／Apex 槍」拿掉。
+- 實測（新探針 `tools/out/_gunset.mjs`）：Apex 槍枝一場：我 R-301、Bot G7／充能步槍／30-30／EVA-8／L-STAR；再開 SF2 槍枝一場：我 M4A1、Bot 全是 SF2 槍；倉庫 Apex 頁只列 Apex 槍。MODULES_OK、CHECK_OK。
