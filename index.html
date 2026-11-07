@@ -732,6 +732,42 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
 #hud.minimal #weaponName{font:italic 600 12px var(--font);letter-spacing:1px}
 #hud.minimal #fps{left:auto;right:10px;bottom:4px;transform:none;opacity:.55}
 
+
+/* ===== v67g SF2's own menu look (user 11-07: the lobby / room / armory as SF2 has them — the user's SF2 screenshots of the armory and
+   the waiting room). Icons: SF2's top navigation (SFUI_Lobby.upk gfx_navi main_navi: Button_0/1/3/4/5, btn_enchant, btn_gacha,
+   btn_combine, Button_back2 — tools/sf2_swf_place.py + Ruffle → assets/sf2ui/nav_*.png); background: SF2's lobby camp
+   (Background.upk BackGround_new07). The navigation bar is moved into the shown screen's top row (src/17_app.js _sf2Nav). ===== */
+#friends{--accent:#ffa21f;--accent2:#e8860a}#friends .frz{background:rgba(8,10,12,.96) !important;border-left:2px solid #2d6fb5 !important}
+#hub,#lobby,#warehouse{--accent:#ffa21f;--accent2:#e8860a;--line:rgba(255,255,255,.12);
+  background:linear-gradient(180deg,rgba(0,0,0,.55),rgba(0,0,0,.15) 18%,rgba(0,0,0,.25) 70%,rgba(0,0,0,.7)),url(assets/sf2ui/bg_lobby.jpg) center/cover no-repeat,#0b0d0e !important}
+#hub .lb-top,#lobby .lb-top,#warehouse .wh-top{position:relative;background:linear-gradient(180deg,rgba(20,24,28,.92),rgba(8,10,12,.88));border-bottom:2px solid #2d6fb5;box-shadow:0 2px 14px rgba(40,110,200,.35)}
+#hub .lb-brand,#lobby .lb-brand,#hubFriends,#hubWh,#hubSettings,#lbFriends,#lbWh,#lbSettings,#warehouse .wh-hint,#whClose{display:none !important}
+#sf2nav{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:flex;gap:12px;z-index:3}
+#sf2nav button{width:50px;height:50px;padding:0;border:0;background:none;cursor:pointer;position:relative;transition:filter .12s}
+#sf2nav button img{width:100%;height:100%;display:block;pointer-events:none}
+#sf2nav button:hover{filter:brightness(1.55)}
+#sf2nav button.on{filter:sepia(1) hue-rotate(178deg) saturate(5) brightness(1.25) drop-shadow(0 0 6px rgba(90,170,255,.9))}
+#sf2nav button.off{filter:grayscale(1) brightness(.6);cursor:default}
+#sf2nav button.gap{margin-left:34px}
+#sf2nav button::after{content:attr(data-tip);position:absolute;left:50%;top:56px;transform:translateX(-50%);white-space:nowrap;font-size:13px;letter-spacing:1px;
+  padding:3px 8px;background:rgba(0,0,0,.85);border:1px solid rgba(255,255,255,.2);color:#ddd;opacity:0;pointer-events:none;transition:opacity .12s}
+#sf2nav button:hover::after{opacity:1}
+#sf2back{position:absolute;right:14px;top:72px;width:92px;height:35px;padding:0;border:0;background:url(assets/sf2ui/nav_back.png) center/contain no-repeat;cursor:pointer;z-index:4}
+#sf2back:hover{filter:brightness(1.3)}
+#sf2help{position:absolute;left:50%;top:66px;transform:translateX(-50%);z-index:5;display:none;width:560px;padding:14px 18px;background:rgba(6,8,10,.95);border:1px solid #2d6fb5;
+  color:#cfd6dc;font-size:14px;line-height:1.75;letter-spacing:.5px}
+#sf2help.on{display:block}
+#sf2friends{position:fixed;left:50%;bottom:12px;transform:translateX(-50%);z-index:14;width:46px;height:46px;border:1px solid #6fb0ff;border-radius:3px;cursor:pointer;display:none;
+  background:linear-gradient(180deg,#3d8be6,#1b4f99);box-shadow:0 0 10px rgba(60,140,255,.6)}
+#sf2friends svg{width:28px;height:28px;fill:#fff}
+#sf2friends:hover{filter:brightness(1.25)}
+body.sf2menu #sf2friends{display:block}
+#hub .lb-foot,#lobby .lb-foot{opacity:0}
+/* panels: SF2's black glass and gray tabs */
+.hub-card,.hub-rooms,.hub-help,#lobby .lb-right,#warehouse .wh-panel{background:rgba(6,8,10,.72) !important;border-color:rgba(255,255,255,.1) !important}
+#lobby .btn.start{background:linear-gradient(180deg,#5aa6ff,#2462c9 55%,#1b4fa6) !important;color:#fff !important;border:1px solid #8cc4ff !important;text-shadow:0 1px 2px rgba(0,0,0,.6);font-size:30px !important}
+#hub .btn:not(.ghost),#lobby .btn:not(.ghost):not(.start),#warehouse .btn:not(.ghost){background:linear-gradient(180deg,#ffb54a,#e8860a);color:#1a0d00}
+#hub .btn.ghost,#lobby .btn.ghost,#warehouse .btn.ghost{background:linear-gradient(180deg,#3a3f45,#202428);color:#dfe4e8;border:1px solid rgba(255,255,255,.14)}
 </style>
 </head>
 <body>
@@ -829,6 +865,20 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
   <div class="lb-foot">WASD 移動 · SHIFT 衝刺 · CTRL/C 蹲(無腳步聲；按住時不會掉下邊緣) · SPACE 跳(對矮牆 = 攀爬翻越) · 右鍵 開鏡 · 1-6 武器 · F 擒拿 · E 互動/佔領 · F1–F3 預約配裝 · 梯子 W/S · Q 快速切換 · R 換彈 · TAB 計分板</div>
 </div></div>
 <div id="roomToast"></div>
+<!-- v67g SF2's top navigation (moved into the shown screen's top row) and its friends button -->
+<nav id="sf2nav">
+  <button data-k="help" data-tip="說明"><img src="assets/sf2ui/nav_help.png" alt=""></button>
+  <button data-k="gun" data-tip="槍戰房間"><img src="assets/sf2ui/nav_gun.png" alt=""></button>
+  <button data-k="armory" data-tip="倉庫"><img src="assets/sf2ui/nav_armory.png" alt=""></button>
+  <button data-k="wrench" data-tip="改裝（之後開放）" class="off"><img src="assets/sf2ui/nav_wrench.png" alt=""></button>
+  <button data-k="aim" data-tip="準星（之後開放）" class="off gap"><img src="assets/sf2ui/nav_aim.png" alt=""></button>
+  <button data-k="stats" data-tip="戰績（之後開放）" class="off"><img src="assets/sf2ui/nav_stats.png" alt=""></button>
+  <button data-k="trophy" data-tip="排行（之後開放）" class="off"><img src="assets/sf2ui/nav_trophy.png" alt=""></button>
+  <button data-k="gear" data-tip="設定"><img src="assets/sf2ui/nav_gear.png" alt=""></button>
+</nav>
+<button id="sf2back" title="返回" hidden></button>
+<div id="sf2help"></div>
+<button id="sf2friends" title="好友"><svg viewBox="0 0 24 24"><circle cx="12" cy="7.5" r="4.2"/><path d="M3.5 21c0-4.8 3.8-8 8.5-8s8.5 3.2 8.5 8z"/></svg></button>
 
 <!-- v28 friends panel + room invite card -->
 <aside id="friends"><div class="frz">
@@ -30558,6 +30608,7 @@ var App = class {
     this.buildHub();
     this.buildFriends();
     this.buildChat();
+    this._sf2Nav();
     addEventListener("pagehide", () => this.closeRoom());
     const code = parseCode(q.get("room"));
     if (code) {
@@ -30602,6 +30653,53 @@ var App = class {
     }, 2500);
   }
   /* ------------------------------ v27 hub (大廳): create a room, or join one ------------------------------ */
+  // v67g SF2's top navigation: one bar, moved into the shown menu screen's top row; the buttons drive the screens' own controls
+  // (槍戰房間 = the hub or the room you are in, 倉庫, 設定, 說明); 改裝 / 準星 / 戰績 / 排行 are SF2's but not built yet. The orange
+  // arrow is SF2's back (armory → where you came from; room → leave it); the blue figure at the bottom is the friends list.
+  _sf2Nav() {
+    const $ = this.$, nav = $("sf2nav"), back = $("sf2back"), help = $("sf2help");
+    help.innerHTML = ($("hub").querySelector(".lb-foot") || {}).textContent.split(" · ").map((t) => esc(t)).join("<br>");
+    nav.onclick = (e) => {
+      const b = e.target.closest("button");
+      if (!b || b.classList.contains("off")) return;
+      const k = b.dataset.k, wh = $("warehouse").classList.contains("on");
+      if (k !== "help") help.classList.remove("on");
+      if (k === "help") {
+        help.classList.toggle("on");
+        this.audio.uiClick();
+      } else if (k === "gun") {
+        if (wh) this.closeWarehouse();
+      } else if (k === "armory") {
+        if (!wh) this.openWarehouse();
+      } else if (k === "gear") this.openSettings();
+    };
+    back.onclick = () => {
+      if ($("warehouse").classList.contains("on")) this.closeWarehouse();
+      else if ($("lobby").classList.contains("on")) $("lbLeave").click();
+    };
+    $("sf2friends").onclick = (e) => {
+      e.stopPropagation();
+      this.audio.init();
+      this.audio.uiClick();
+      this.friendsPanel();
+    };
+    const sync = /* @__PURE__ */ __name(() => {
+      const scr = ["warehouse", "lobby", "hub"].find((id) => $(id).classList.contains("on"));
+      document.body.classList.toggle("sf2menu", !!scr);
+      if (!scr) {
+        help.classList.remove("on");
+        return;
+      }
+      const top = $(scr).querySelector(scr === "warehouse" ? ".wh-top" : ".lb-top");
+      for (const el of [nav, back, help]) if (el.parentNode !== top) top.appendChild(el);
+      back.style.top = top.offsetHeight + 8 + "px";
+      back.hidden = scr === "hub";
+      for (const b of nav.children) b.classList.toggle("on", b.dataset.k === "armory" && scr === "warehouse" || b.dataset.k === "gun" && scr !== "warehouse");
+    }, "sync");
+    const mo = new MutationObserver(sync);
+    for (const id of ["hub", "lobby", "warehouse"]) mo.observe($(id), { attributes: true, attributeFilter: ["class"] });
+    sync();
+  }
   buildHub() {
     const $ = this.$, S = Settings.data;
     if (!S.nick) {

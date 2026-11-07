@@ -72,7 +72,7 @@ class App {
     const q = new URLSearchParams(location.search), o = { lag: q.get('lag'), jitter: q.get('jitter'), loss: q.get('loss'), name: q.get('name') };
     this.netOpts = o;
     this.dir = new RoomDirectory(); this.bgTick = new BackgroundTicker(() => this.hiddenTick());
-    this.buildHub(); this.buildFriends(); this.buildChat();
+    this.buildHub(); this.buildFriends(); this.buildChat(); this._sf2Nav();
     addEventListener('pagehide', () => this.closeRoom()); // best effort: tell the room right away
     const code = parseCode(q.get('room'));
     if (code) {
@@ -98,6 +98,35 @@ class App {
   }
 
   /* ------------------------------ v27 hub (大廳): create a room, or join one ------------------------------ */
+  // v67g SF2's top navigation: one bar, moved into the shown menu screen's top row; the buttons drive the screens' own controls
+  // (槍戰房間 = the hub or the room you are in, 倉庫, 設定, 說明); 改裝 / 準星 / 戰績 / 排行 are SF2's but not built yet. The orange
+  // arrow is SF2's back (armory → where you came from; room → leave it); the blue figure at the bottom is the friends list.
+  _sf2Nav() {
+    const $ = this.$, nav = $('sf2nav'), back = $('sf2back'), help = $('sf2help');
+    help.innerHTML = ($('hub').querySelector('.lb-foot') || {}).textContent.split(' · ').map((t) => esc(t)).join('<br>');
+    nav.onclick = (e) => {
+      const b = e.target.closest('button'); if (!b || b.classList.contains('off')) return;
+      const k = b.dataset.k, wh = $('warehouse').classList.contains('on');
+      if (k !== 'help') help.classList.remove('on');
+      if (k === 'help') { help.classList.toggle('on'); this.audio.uiClick(); }
+      else if (k === 'gun') { if (wh) this.closeWarehouse(); }
+      else if (k === 'armory') { if (!wh) this.openWarehouse(); }
+      else if (k === 'gear') this.openSettings();
+    };
+    back.onclick = () => { if ($('warehouse').classList.contains('on')) this.closeWarehouse(); else if ($('lobby').classList.contains('on')) $('lbLeave').click(); };
+    $('sf2friends').onclick = (e) => { e.stopPropagation(); this.audio.init(); this.audio.uiClick(); this.friendsPanel(); };
+    const sync = () => {
+      const scr = ['warehouse', 'lobby', 'hub'].find((id) => $(id).classList.contains('on'));
+      document.body.classList.toggle('sf2menu', !!scr);
+      if (!scr) { help.classList.remove('on'); return; }
+      const top = $(scr).querySelector(scr === 'warehouse' ? '.wh-top' : '.lb-top');
+      for (const el of [nav, back, help]) if (el.parentNode !== top) top.appendChild(el);
+      back.style.top = (top.offsetHeight + 8) + 'px'; back.hidden = scr === 'hub';
+      for (const b of nav.children) b.classList.toggle('on', (b.dataset.k === 'armory' && scr === 'warehouse') || (b.dataset.k === 'gun' && scr !== 'warehouse'));
+    };
+    const mo = new MutationObserver(sync); for (const id of ['hub', 'lobby', 'warehouse']) mo.observe($(id), { attributes: true, attributeFilter: ['class'] });
+    sync();
+  }
   buildHub() {
     const $ = this.$, S = Settings.data;
     if (!S.nick) { S.nick = '玩家' + Math.floor(Math.random() * 900 + 100); Settings.save(); }
