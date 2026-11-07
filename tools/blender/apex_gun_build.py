@@ -75,7 +75,33 @@ DROP = re.compile(r'^(sight_(acgs|aog|cro|hcog|holo|bruiser|tri|rangefinder|dcom
 EYE_UP = {'tripletake': 0.04, 'volt': 0.03}  # (v66z from the in-game aimed views: Triple Take's rear block and Volt's barrel hid the sight line)
 # (v66w the eye a little over ja_ads_attachment: on it the R-301's rear screen hid the front post; per gun if needed)
 A2G = Matrix(((-1, 0, 0, 0), (0, 0, 1, 0), (0, 1, 0, 0), (0, 0, 0, 1))) @ Matrix.Scale(0.0254, 4)
-MAGB = ('def_c_magazine', 'def_magazine', 'def_c_mag', 'def_mag', 'def_c_clip', 'def_clip')
+MAGB = ('def_c_magazine', 'def_magazine', 'def_c_mag', 'def_mag', 'def_c_clip', 'def_clip', 'def_c_magazineA')
+# v67j the moving parts (user 11-07: some Apex guns fired with nothing on them moving): faces whose every vertex follows one of these
+# bones (the bind pose's strongest weight) go to their own node — slide (a pistol's: blows back, locks open empty), cycle (an
+# automatic's bolt / carrier: kicks back each shot), bolt (a bolt action's: BOLTPIV, lifts and draws — SniperRifle.animate),
+# lever (the 30-30's: LEVERPIV, swings down and back), pump (the Peacekeeper's), mag (magazines the part names miss)
+MOVE = {'p2020': {'slide': ['def_c_bolt']}, 're45': {'slide': ['def_c_bolt']},
+        **{g: {'cycle': ['def_c_bolt']} for g in ('r301', 'car', 'hemlok', 'r99', 'volt', 'spitfire', 'eva8', 'g7', 'longbow')},
+        'prowler': {'cycle': ['def_c_bolt', 'def_c_bolt_end']}, 'tripletake': {'cycle': ['def_charging_handle']},
+        'repeater': {'lever': ['def_c_cock'], 'cycle': ['def_c_boltCarrier', 'def_c_boltCarrier_b', 'def_c_boltCarrier_c']},
+        'kraber': {'bolt': ['def_c_bolt']}, 'sentinel': {'bolt': ['def_c_boltA', 'def_c_energyBolts'], 'mag': ['def_c_magazineA', 'def_c_magazineB', 'def_c_magazineClip']},
+        'peacekeeper': {'pump': ['def_c_pump', 'def_c_cock']},
+        'devotion': {'mag': ['def_magazine', 'def_magazine_handle']}, 'mastiff': {'mag': ['def_magazine']}, 'rampage': {'mag': ['def_magazine']}}
+PIV = {'bolt': 'BOLTPIV', 'lever': 'LEVERPIV'}
+def split(o, bones):
+  # -> None (none of its faces), o (all of them) or a new object holding those faces (cut from o)
+  import bmesh
+  gi = {g.index for g in o.vertex_groups if g.name in bones}
+  if not gi: return None
+  dom = [max(v.groups, key=lambda x: x.weight).group if v.groups else -1 for v in o.data.vertices]
+  sel = [all(dom[i] in gi for i in p.vertices) for p in o.data.polygons]
+  if not any(sel): return None
+  if all(sel): return o
+  c = o.copy(); c.data = o.data.copy(); bpy.context.scene.collection.objects.link(c)
+  for ob, keep_sel in ((o, False), (c, True)):
+    bm = bmesh.new(); bm.from_mesh(ob.data); bm.faces.ensure_lookup_table()
+    bmesh.ops.delete(bm, geom=[f for f in bm.faces if sel[f.index] != keep_sel], context='FACES'); bm.to_mesh(ob.data); bm.free()
+  return c
 # v67e the barrel stabilizer's part per gun (tools/apex_barrels.py: the bodygroup barrel_stabilizer_l1 sets) — kept on its own node 'barrel',
 # shown only when one is fitted (src/09_models.js apexGun)
 _bj = ROOT / 'tools/out/apex/guns/barrels.json'
@@ -102,6 +128,8 @@ for gid in IDS:
     if (is_sight and p.endswith('_1')) or (p.endswith('_0') and not (is_sight and has1)): keep.append(o)
   M = {'MUZZLE': bone('muzzle_flash'), 'SIGHT': bone('ja_ads_attachment') + Vector((0, 0, EYE_UP.get(gid, 0.012))), 'GRIP': bone('ja_c_propGun'),
        'MAGPIV': next((bone(b) for b in MAGB if b in arm.data.bones), None)}
+  for nd_, bs_ in MOVE.get(gid, {}).items():
+    if nd_ in PIV: M[PIV[nd_]] = bone(bs_[0])
   vs = [A2G @ o.matrix_world @ v.co for o in keep for v in o.data.vertices if not re.search(r'magazine|clip|at_rifle_mag|suppressor', part(o), re.I)]
   g, mz = M['GRIP'], M['MUZZLE']; a = M['MAGPIV'] if M['MAGPIV'] is not None and M['MAGPIV'].y > g.y + 0.05 else g
   su = a.y + 0.45 * (mz.y - a.y) if mz.y - g.y > 0.3 else g.y + 0.06
@@ -134,6 +162,11 @@ for gid in IDS:
     own = any(m and m.name.startswith(f'{stem}_base_main') for m in o.data.materials)
     o.data.materials.clear(); o.data.materials.append(mt if own else dark)
     nd = 'barrel' if BARREL.get(gid) == re.sub(r'_\d+$', '', part(o)) else 'mag' if re.search(r'magazine|clip|^at_rifle_mag', part(o), re.I) else 'irons' if re.sub(r'_\d+$', '', part(o)).startswith(('sight', 'mastiff_sight')) else 'body'  # (v67b irons: folded away under an optic)
+    if nd == 'body':
+      for mv, bs_ in MOVE.get(gid, {}).items():
+        piece = split(o, bs_)
+        if piece is o: nd = mv; break
+        if piece: piece.name = f'{mv}__{"tex_apex_" + gid if own else "polymer"}_m{len(kept)}'; kept.append(piece)
     o.name = f'{nd}__{"tex_apex_" + gid if own else "polymer"}_{len(kept)}'; kept.append(o)
   for o in list(bpy.data.objects):
     if o not in kept: bpy.data.objects.remove(o)

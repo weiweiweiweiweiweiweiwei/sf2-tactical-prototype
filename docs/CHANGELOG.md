@@ -2101,3 +2101,16 @@
   - 音效（Apex 原版，`tools/apex_sfx.py` 加的介面音效）：進頁面 `Arenas_UI_Store_Optic_Select_Open`、選瞄準鏡 `Arenas_UI_Store_Optic_Select`、選其他配件 `UI_Menu_LoadOut_Attachment_Select`、配件卡上的那一刻 `player_pickup_loot_attachment`（7 種隨機）→ `sf2_apex_ui_*`。
 - `src/01_core.js` 新增 `apexKit(def, {optic, mag, barrel})`（指定配件的槍；`apexOptic` 改成用存檔的選擇呼叫它）、`APEX_RARITY`、`apexMagnif`；`src/09_models.js` 穩定器零件改用自己的材質（`apexbarrel`），才分得出來做動畫。
 - 實測（新探針 `tools/out/_aws.mjs`，截圖 `tools/out/apex/ws/`）：R-301 從機械瞄具裝上 3 倍鏡（鏡子從 +16 cm、0.6 倍大小飛下，壓過 1.4 cm 後歸位）、3 級穩定器、2 級彈匣；音效依序 opticopen → optic → attach → select → attach → select → attach；設定存進去、回倉庫摘要和彈容量 28/84 跟著變。MODULES_OK、CHECK_OK。
+
+## v67j Apex 槍的音效與開火動畫檢查（2026-11-07）
+
+- 使用者：「apex 的有些槍枝，在射擊的時候似乎缺少部分音效和射擊動畫」。用 `tools/out/_apexaudit.mjs` 逐把開火、換彈，記錄播了哪些聲音、有哪些可動零件。
+- **音效**：HAVOC、C.A.R.、Devotion、30-30 在 Apex 音效庫只找得到換彈／拔槍錄音（開火錄音沒有名字），以前因為「沒有開火聲」整把改借別的槍，自己的換彈聲沒用到。現在 `sf2` 指向自己的錄音，開火聲另外用 `sf2Shot`（借來的）。
+- **開火動畫**：`tools/blender/apex_gun_build.py` 新增 `MOVE`，依 Apex 模型骨架（每個頂點最大權重的骨頭）把可動零件切成獨立節點：
+  - `slide`：P2020、RE-45 的滑套（後退，空倉掛機）
+  - `cycle`：R-301、C.A.R.、赫姆洛克、R-99、電能衝鋒槍、噴火、EVA-8、G7、長弓、獵兵、三重擊的槍機／拉柄（每發後退）
+  - `bolt`：Kraber、哨兵（抬起拉後，原本的狙擊槍動畫）
+  - `lever`：30-30（每發往下擺再回來，帶 Apex 自己的上膛聲）
+  - `pump`：和平捍衛者
+  - `mag`：Devotion、Mastiff、Rampage、哨兵原本沒被認出的彈匣（換彈會動）
+- 20 把重建、`pack.mjs`；CHECK_OK。

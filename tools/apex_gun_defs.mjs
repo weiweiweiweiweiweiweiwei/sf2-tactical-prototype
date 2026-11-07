@@ -32,7 +32,11 @@ const MAGS = fs.existsSync('tools/out/apex/guns/mags.json') ? JSON.parse(fs.read
 const DEFOPT = { kraber: 'talon', sentinel: 'talon', longbow: 'talon', chargerifle: 'talon' };
 const r = (v, n = 4) => +(+v).toFixed(n);
 // v66x the Apex guns' own sounds (assets/sfx_apex.js, tools/apex_sfx.py): a gun with its own fire bank plays its banks (sf2 = apex_<gun>)
-const APEXSND = fs.existsSync('assets/sfx_apex.js') ? new Set([...fs.readFileSync('assets/sfx_apex.js', 'utf8').matchAll(/"sf2_apex_([a-z0-9]+)_fire"/g)].map((m) => m[1])) : new Set();
+const SFXA = fs.existsSync('assets/sfx_apex.js') ? fs.readFileSync('assets/sfx_apex.js', 'utf8') : '';
+const APEXSND = new Set([...SFXA.matchAll(/"sf2_apex_([a-z0-9]+)_fire"/g)].map((m) => m[1]));
+// v67j a gun with only its own reload / draw takes (CAR, Devotion, HAVOC, 30-30: Apex's fire takes for them are unnamed) keeps those
+// (apexMech) — before, no fire bank meant the donor's voice for everything, its own reload sounds unused
+const APEXMECH = new Set([...SFXA.matchAll(/"sf2_apex_([a-z0-9]+)_(?:magout|magin|charge|draw)"/g)].map((m) => m[1]).filter((g) => g !== 'ui'));
 const out = [], weights = [];
 for (const [pre, id, key, zh, donor, fire] of G) {
   const w = D.find((x) => x.name.startsWith(pre)); if (!w) throw new Error('no data ' + pre);
@@ -50,7 +54,7 @@ for (const [pre, id, key, zh, donor, fire] of G) {
     adsFov: SCOPED.has(id) ? 20 : c.zoom_fov || 55, adsType: SCOPED.has(id) ? '2d_scope_overlay' : '3d_sight', mobility: 0.95, maxAmmo: mag,
     reloadTime: id === 'bocek' ? 0.55 : c.reload_tactical_s, equipTime: c.deploy_s, adsSpeed: r(1 / Math.max(0.12, c.ads_s || 0.27) * 3.3, 1),
     reserveMult: id === 'bocek' ? 24 : undefined, apexZooms: [c.zoom_fov || 55], // (v67c Apex's zoom_fov: horizontal ° at Apex's FOV 70 — src/11_weaponsystem.js scales it to the player's FOV)
-    model: 'apex_' + id, apexKey: key, apexDonor: donor, apexSnd: APEXSND.has(id) ? 'apex_' + id : undefined, tracerEvery: 2, penetration: 1,
+    model: 'apex_' + id, apexKey: key, apexDonor: donor, apexSnd: APEXSND.has(id) ? 'apex_' + id : undefined, apexMech: !APEXSND.has(id) && APEXMECH.has(id) ? 'apex_' + id : undefined, tracerEvery: 2, penetration: 1,
     desc: `Apex Legends 原版 ${w.name}：傷害、射速、彈匣、換彈、拔槍照 Apex（S30.1）${pat ? '，後座照它的彈道表' : ''}。`,
   };
   if (fire.startsWith('burst')) Object.assign(e, { burst: f.burst_count || { nemesis: 4 }[id], burstDelay: f.burst_delay_s || 0.3 });
@@ -80,7 +84,7 @@ const block = `// <apex-guns> v66w the Apex guns (tools/apex_gun_defs.mjs from d
 Object.assign(WEAPON_DATABASE, {
 ${out.join('\n')}
 });
-for (const s of Object.values(WEAPON_DATABASE)) if (s.apexDonor) { const d = WEAPON_DATABASE[s.apexDonor]; if (d) { s.sound = d.sound || s.apexDonor; s.sf2 = s.apexSnd || d.sf2 || null; } }
+for (const s of Object.values(WEAPON_DATABASE)) if (s.apexDonor) { const d = WEAPON_DATABASE[s.apexDonor]; if (d) { s.sound = d.sound || s.apexDonor; s.sf2 = s.apexSnd || s.apexMech || d.sf2 || null; if (s.apexMech) s.sf2Shot = d.sf2 || ''; } } // (v67j sf2Shot: the shot's voice when the gun's own is not the fire one)
 Object.assign(SF2_WEIGHT, { ${weights.join(', ')} });
 // </apex-guns>`;
 const P = 'src/01_core.js'; let src = fs.readFileSync(P, 'utf8');

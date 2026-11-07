@@ -84,7 +84,7 @@ async function parseGunGlb(id) {
   gltf.scene.updateMatrixWorld(true);
   gltf.scene.traverse((o) => {
     if (o.isMesh) { const g = o.geometry.clone(); g.applyMatrix4(o.matrixWorld); const nm = o.name.split('__'); parts.push({ node: nm[0], mat: ((o.material && o.material.name) || '').replace('gun:', '') || (nm[1] || '').replace(/_\d+$/, ''), geo: g, material: o.material }); }
-    else if (/^(SIGHT|HOOD|MUZZLE|MUZZLE_S|SUPPORT|GRIP|MAGPIV|CHARGEPIV|BOLTPIV|EYE|OPT_[a-z_]+)$/.test(o.name)) marks[o.name] = o.getWorldPosition(new THREE.Vector3());
+    else if (/^(SIGHT|HOOD|MUZZLE|MUZZLE_S|SUPPORT|GRIP|MAGPIV|CHARGEPIV|BOLTPIV|LEVERPIV|EYE|OPT_[a-z_]+)$/.test(o.name)) marks[o.name] = o.getWorldPosition(new THREE.Vector3());
   });
   GUN_MODELS[id] = { parts, marks };
 }
@@ -361,7 +361,10 @@ class WeaponModels {
     const V = THREE.Vector3, magPiv = K.MAGPIV || new V(0, -0.035, -0.03), chPiv = o.chargePiv ? new V(...o.chargePiv) : K.CHARGEPIV || new V(0, 0.024, 0.13);
     gb.node('mag', magPiv).node('charge', chPiv);
     if (K.BOLTPIV) gb.node('bolt', K.BOLTPIV); // v50 bolt action: rolls up around the bore and slides back (SniperRifle.animate)
-    const MOVING = new Set(['mag', 'charge', ...(K.BOLTPIV ? ['bolt'] : [])]);
+    // v67j the Apex guns' moving parts (tools/blender/apex_gun_build.py MOVE): slide / cycle / pump slide straight back, the lever swings on LEVERPIV
+    const NODES = new Set(G.parts.map((p) => p.node)), MV = ['slide', 'cycle', 'pump', 'lever'].filter((n) => NODES.has(n));
+    for (const n of MV) gb.node(n, n === 'lever' && K.LEVERPIV ? K.LEVERPIV : new V());
+    const MOVING = new Set(['mag', 'charge', ...(K.BOLTPIV ? ['bolt'] : []), ...MV]);
     const MAT = { tan: M.tan, magClear: M.magClear, gold: M.goldSatin, goldDark: M.goldDark, polymer: M.polymer, rubber: M.rubber, steel: M.steel, black: M.black, bright: M.bright, magBlack: M.magBlack, brass: M.brass, suppressor: M.suppressor, dotW: M.dotW, dotR: M.dotR };
     for (const p of o.extra ? [...G.parts, ...o.extra] : G.parts) { // (v67b o.extra: an optic's parts)
       if (p.mat === 'lens' || (o.skip && o.skip(p.node))) continue;
@@ -776,7 +779,7 @@ class WeaponModels {
 
   _finish(b, o) {
     const g = b.group, out = { group: g, nodes: b.nodes, mag: b.nodes.mag || null, bolt: b.nodes.bolt || null, slide: b.nodes.slide || null, charge: b.nodes.charge || null,
-      pin: b.nodes.pin || null, nade: b.nodes.nade || null, pump: b.nodes.pump || null, cover: b.nodes.cover || null };
+      pin: b.nodes.pin || null, nade: b.nodes.nade || null, pump: b.nodes.pump || null, cover: b.nodes.cover || null, cycle: b.nodes.cycle || null, lever: b.nodes.lever || null };
     out.magMove = new THREE.Vector3(...(o.magMove || [0, -0.3, 0.05])); out.magRot = o.magRot ?? 0.3;
     out.hipPos = new THREE.Vector3(...o.hipPos); out.hipRot = new THREE.Euler(...(o.hipRot || [0, 0.035, 0]));
     out.adsPos = o.adsPos ? new THREE.Vector3(...o.adsPos) : out.hipPos.clone(); out.adsRot = o.adsPos ? new THREE.Euler(0, 0, 0) : out.hipRot.clone();

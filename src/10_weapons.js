@@ -12,6 +12,7 @@ class Weapon {
   constructor(game, def, vm, owner) {
     this.game = game; this.def = def; this.vm = vm; this.owner = owner || game.player; Object.assign(this, def);
     if (vm.reloadSounds) this.reloadSounds = vm.reloadSounds; // v62 an SF2 rig times them to its own Reload clip
+    this.cycleBase = vm.cycle ? vm.cycle.position.clone() : null; this.leverT = -1; // v67j an Apex gun's bolt carrier / the 30-30's lever
     this.ammo = def.mag || 0; this.reserveAmmo = this.reserveMax; this.shotN = 0;
     this.cooldown = 0; this.bloom = 0; this.shots = 0; this.lastShot = -10; this.sprayPhase = 0;
     this.reloading = false; this.reloadT = 0; this.reloadFired = new Set();
@@ -184,12 +185,13 @@ class Weapon {
       ws.muzzleLight(this.suppressed ? 0.25 : 1);
       if (this.tracerEvery && this.shots % this.tracerEvery === 0 && !(ws.scopedIn && this.scoped)) g.effects.tracer(mz, res.end, this.kind === 'sniper' ? 520 : 400, this.kind === 'sniper' ? 6 : 3.5);
       if (this.kind !== 'sniper' && this.kind !== 'shotgun') this.ejectCasing(ray, false);
-      g.audio.gunshot(this.sound, null, this.soundRate, this.sf2);
+      g.audio.gunshot(this.sound, null, this.soundRate, this.sf2Shot ?? this.sf2);
     } else g.thirdPersonShot(p, this.def, mz, res.end, this.shots);
     g.recordShot(p, mz, res.end, this.def);
     g.emitNoise(p.motor.pos, this.noise, p.team);
     p.onAttack();
     if (this.ammo === 0 && this.reserveAmmo > 0) this.autoReloadT = 0.3;
+    this.slideKick = 1; if (this.vm.lever) { this.leverT = 0; this.leverSnd = false; } // v67j every gun's action cycles (was: pistols' slide only)
     return true;
   }
 
@@ -250,6 +252,16 @@ class Weapon {
       const k = p > 0.8 && p < 0.92 ? Math.sin((p - 0.8) / 0.12 * Math.PI) : 0;
       vm.charge.position.z = this.chargeBase.z + k * 0.05;
     }
+    // v67j an Apex gun's action: the bolt carrier kicks back with each shot (held open on an empty mag); the 30-30's lever swings
+    // down and back over 0.55 s after each shot, its carrier riding with it, and the lever's own click as it closes
+    let lv = 0;
+    if (this.leverT >= 0) {
+      this.leverT += dt; const t = this.leverT; lv = t < 0.12 ? 0 : t < 0.28 ? (t - 0.12) / 0.16 : t < 0.36 ? 1 : t < 0.55 ? 1 - (t - 0.36) / 0.19 : 0;
+      if (t > 0.42 && !this.leverSnd) { this.leverSnd = true; this._mech('charge'); }
+      if (t > 0.6) this.leverT = -1;
+    }
+    if (vm.lever) vm.lever.rotation.x = lv * 0.85;
+    if (vm.cycle && this.cycleBase) vm.cycle.position.z = this.cycleBase.z + (vm.lever ? lv * 0.045 : this.slideKick * 0.03 + (this.ammo === 0 && !this.reloading && this.kind !== 'shotgun' ? 0.03 : 0));
   }
   // magazine travel over the reload: out 0.15–0.35, away 0.35–0.55, back in 0.55–0.72
   magOff(p) { return p > 0.15 && p < 0.35 ? (p - 0.15) / 0.2 : p >= 0.35 && p < 0.55 ? 1 : p >= 0.55 && p < 0.72 ? 1 - (p - 0.55) / 0.17 : 0; }
