@@ -24586,6 +24586,8 @@ var NetPlayer = class _NetPlayer extends Human {
     this.peer = peer;
     this.isNet = true;
     this.aimPitch = 0;
+    this.motor.accelK = 1;
+    this.motor.frictionK = 1;
     this.walkPhase = 0;
     this.stepPitch = rand(0.92, 1.08);
     this.hipMode = opts.hipMode === "shotgun" ? "shotgun" : "precise";

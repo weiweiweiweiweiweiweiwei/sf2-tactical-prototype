@@ -15,7 +15,12 @@ import { Bot, animateSoldier } from './13_bots.js';
 class NetPlayer extends Human {
   constructor(game, team, name, peer, opts = {}) {
     super(game, team, name, false);
-    this.peer = peer; this.isNet = true; this.aimPitch = 0; this.walkPhase = 0; this.stepPitch = rand(0.92, 1.08);
+    this.peer = peer; this.isNet = true; this.aimPitch = 0;
+    // v67k a friend's soldier moves as HIS client predicts it: the player's acceleration and friction. Combatant gives every
+    // non-local soldier the bots' 60 % (v24, before there was a network) — so the host's copy started, turned and stopped
+    // slower than the friend's own screen, and every snapshot pulled him back (tools/_netsmooth.mjs: 70–88 % of snapshots
+    // corrected while strafing, up to 2 m)
+    this.motor.accelK = 1; this.motor.frictionK = 1; this.walkPhase = 0; this.stepPitch = rand(0.92, 1.08);
     this.hipMode = opts.hipMode === 'shotgun' ? 'shotgun' : 'precise';
     this.loadout = NetPlayer.validLoadout(opts.loadout, game.gunSet); this.nextLoadout = null;
     this.arsenal = new Arsenal(game, this); this.arsenal.remote = true; this.arsenal.init(loadoutDefs(game.mode, this.loadout));

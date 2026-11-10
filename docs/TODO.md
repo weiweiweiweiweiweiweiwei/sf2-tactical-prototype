@@ -174,6 +174,13 @@
 - ✅ `check.mjs --map all` 改成全部 19 張（v63g：加上天空城和兩張 Apex 地圖，全部 PASS、出生點互看 0）
 
 ## 5. 連線
+- ✅ v67k 朋友端一直被拉回：房主把朋友的角色用 Bot 的 60% 加速／煞車模擬（`src/12_player.js` 的 `accelK`），已改成和玩家一樣。`tools/_netsmooth.mjs` 實測：轉彎橫移時被修正的快照 70–88% → 0%（延遲 90 ms／抖動 40 ms／掉包 5% 也是 0%）
+- ⬜ v67k 檢查找到、還沒修（量測工具：`tools/_netsmooth.mjs`、`tools/out/_hosthitch.mjs`、`tools/out/_netdiverge.mjs`）：
+  - 對戰中途才編譯著色器，凍結 0.2–1.8 秒（每場第一次）：手榴彈丟出、頭盔被打飛、第一次擊殺的屍體（`camoMat` 複製材質）、掉落的槍、爆炸煙霧。做法：載入時把這些物件各建一個，用 `renderer.compileAsync(物件, camera, scene)` 預先編譯；用 `_hosthitch.mjs` 驗到「對戰中新增程式 = 0」
+  - 掉槍時才載入並解析那把槍的模型（`src/16_match.js` `dropWeapon` → `ensureGunModels`，`parseGunGlb` 50–100 ms＋貼圖上傳）：房主卡住時所有人一起停。做法：排隊，只在非交戰階段（倒數、回合結束、自己死亡）載入
+  - 房主端的指令緩衝常駐 3–4 筆（約 45–65 ms 額外延遲），房主卡頓後積壓 60 筆要 1 秒才消化完（`NetPlayer.step` 門檻 >4 才加速）
+  - 別人的槍聲在快照到達時一次播出，節奏被量化成 33 ms 的倍數（連發聽起來不均勻）；掉包時該發槍聲直接消失。做法：射擊帶時間戳、延後約 50 ms 依原間隔播放（要改封包格式、`NET_VERSION` +1）
+  - 其他玩家的畫面固定延後 100 ms（`NET_INTERP`），可依實際抖動調到 60–70 ms
 - ⬜ 客戶端完整回溯重播修正
 - ⬜ 房主驗證速度與射速（防作弊）
 
