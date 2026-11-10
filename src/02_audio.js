@@ -161,6 +161,8 @@ const ACOUSTICS = {
   canyon:    { reverb: 1.2, decay: 4.4, wet: 0.07, echo: 0.16, echoDelay: [0.27, 0.62] },
 };
 
+// v67m SF2's volumes on our scale: an M4's Cue_WeaponFire (0.81 × modulator 1.4 = 1.13) is our close shot (0.95)
+const SF2_FB_K = 0.95 / 1.13;
 class AudioEngine {
   static banks = {};
   static banksReady = false;
@@ -338,13 +340,21 @@ class AudioEngine {
   // watchdog rebuilds all of them (and cuts every voice still wired to the old inputs) when the output is ever non-finite.
   _buildBus() {
     const ctx = this.ctx;
-    for (const n of [this.master, this.tinn, this.dry, this.reverbIn, this.wet, this.echoIn, this.muffle, this.comp, this.tinnG, ...(this.echoTaps || []).map((e) => e.g)])
+    for (const n of [this.master, this.tinn, this.dry, this.reverbIn, this.wet, this.echoIn, this.muffle, this.comp, this.tinnG, this.fb, this.fbMuffle, this.lim, ...(this.echoTaps || []).map((e) => e.g)])
       if (n) try { n.disconnect(); } catch (e) { /* was not connected */ }
     this.muffle = ctx.createBiquadFilter(); this.muffle.type = 'lowpass'; this.muffle.frequency.value = 22000; this.muffle.Q.value = 0.5;
     this.comp = ctx.createDynamicsCompressor();
     this.comp.threshold.value = -14; this.comp.knee.value = 10; this.comp.ratio.value = 6; this.comp.attack.value = 0.002; this.comp.release.value = 0.2;
     this.probe = ctx.createAnalyser(); this.probe.fftSize = 2048; this.probeIn = ctx.createAnalyser(); this.probeIn.fftSize = 2048; this.probeBuf = new Float32Array(2048);
-    this.master.connect(this.muffle); this.muffle.connect(this.comp); this.comp.connect(ctx.destination); this.comp.connect(this.probe); this.master.connect(this.probeIn);
+    // v67m the hit / kill confirmations have their own way out, past the compressor (user 11-10: the hit sound got too quiet to
+    // hear). They land in the same instant as your own shot, the loudest thing in the mix, which pushed the compressor 10–11 dB
+    // down (tools/out/_killsnd.mjs) — a sniper's kill sound under its own crack. SF2 (UE3) has no master compressor: the hit is
+    // simply played louder than the shot (HitNormal_cue 1.5–2.0 against an M4's Cue_WeaponFire 0.81 × 1.4). A peak limiter at
+    // the very end keeps the sum from clipping (−1 dB; it only touches peaks, and both buses alike).
+    this.lim = ctx.createDynamicsCompressor(); this.lim.threshold.value = -1; this.lim.knee.value = 0; this.lim.ratio.value = 20; this.lim.attack.value = 0.001; this.lim.release.value = 0.06;
+    this.fbMuffle = ctx.createBiquadFilter(); this.fbMuffle.type = 'lowpass'; this.fbMuffle.frequency.value = 22000; this.fbMuffle.Q.value = 0.5;
+    this.fb = ctx.createGain(); this.fb.gain.value = this.volume; this.fb.connect(this.fbMuffle); this.fbMuffle.connect(this.lim);
+    this.master.connect(this.muffle); this.muffle.connect(this.comp); this.comp.connect(this.lim); this.lim.connect(ctx.destination); this.comp.connect(this.probe); this.master.connect(this.probeIn);
     this.dry = ctx.createGain(); this.dry.connect(this.master);
     this.reverbIn = ctx.createGain(); this.convolver = ctx.createConvolver(); this.wet = ctx.createGain(); this.wet.gain.value = 1;
     this.reverbIn.connect(this.convolver); this.convolver.connect(this.wet); this.wet.connect(this.master);
@@ -372,7 +382,7 @@ class AudioEngine {
     }
   }
 
-  setVolume(v) { this.volume = v; if (this.master) this.master.gain.setTargetAtTime(v, this.ctx.currentTime, 0.02); }
+  setVolume(v) { this.volume = v; if (this.master) this.master.gain.setTargetAtTime(v, this.ctx.currentTime, 0.02); if (this.fb) this.fb.gain.setTargetAtTime(v, this.ctx.currentTime, 0.02); }
 
   setAcoustics(a) {
     this.acoustics = a;
@@ -515,8 +525,8 @@ class AudioEngine {
   // Flashbang / blast deafening: tinnitus tone + master low-pass that slowly recovers.
   deafen(strength, dur) {
     if (!this.ctx || strength <= 0.02) return;
-    const t = this.ctx.currentTime, f = this.muffle.frequency, g = this.tinnG.gain;
-    f.cancelScheduledValues(t); f.setValueAtTime(Math.max(380, 3000 * (1 - strength)), t); f.setTargetAtTime(22000, t + dur * 0.5, dur * 0.35);
+    const t = this.ctx.currentTime, g = this.tinnG.gain;
+    for (const f of [this.muffle.frequency, this.fbMuffle.frequency]) { f.cancelScheduledValues(t); f.setValueAtTime(Math.max(380, 3000 * (1 - strength)), t); f.setTargetAtTime(22000, t + dur * 0.5, dur * 0.35); }
     g.cancelScheduledValues(t); g.setValueAtTime(0.0001, t); g.linearRampToValueAtTime(0.09 * strength, t + 0.05); g.setTargetAtTime(0, t + dur * 0.4, dur * 0.3);
   }
 
@@ -554,8 +564,10 @@ class AudioEngine {
     if (kind === 'helmet') { this._hit_ping(t, out, 1.1); this._osc('sine', t, 260, 120, 0.06, out, 0.25, 0.001); return; }
     const S2 = HIT_SOUNDS[Settings.data.hitSound] && HIT_SOUNDS[Settings.data.hitSound].sf2 && this._s('sf2_hit');
     if (S2) { // v64e SF2: bullet_hit_2d_03 (its cue: volume 1.5–2); the killing hit is HitDead_cue (Bullet_flesh_0x at pitch 0.8) and kill3_New
-      if (kind === 'kill') { const d = this._s('sf2_hitdead'), k = !this._s('kfb_default') && this._s('sf2_kill'); if (d) this._one(pick(d), out, 1.1, 0.8); if (k) this._one(pick(k), out, 0.9); } // (the kill's own sound: killFeedback)
-      else this._one(this._hitHead(S2[0]), out, 1.0, 0.98 + Math.random() * 0.04);
+      // v67m at SF2's own levels against the shot (SF2_FB_K: our close shot 0.95 ≙ an M4's 1.13), on the feedback bus (see _buildBus)
+      const fo = this.ctx.createGain(); fo.gain.value = SF2_FB_K; fo.connect(this.fb);
+      if (kind === 'kill') { const d = this._s('sf2_hitdead'), k = !this._s('kfb_default') && this._s('sf2_kill'); if (d) this._one(pick(d), fo, 1.0, 0.8); if (k) this._one(pick(k), fo, 1.0); } // (the kill's own sound: killFeedback)
+      else this._one(this._hitHead(S2[0]), fo, 1.5 + Math.random() * 0.5, 0.98 + Math.random() * 0.04);
       return;
     }
     const H = HIT_SOUNDS[Settings.data.hitSound] || HIT_SOUNDS.flesh, k = (kind === 'kill' ? 1.2 : kind === 'head' ? 1.1 : 1) * (H.gain || 1);
@@ -572,7 +584,7 @@ class AudioEngine {
   killFeedback(tier) {
     if (!this.ctx || !(HIT_SOUNDS[Settings.data.hitSound] && HIT_SOUNDS[Settings.data.hitSound].sf2)) return;
     const l = this._s('kfb_' + tier) || this._s('kfb_default'); if (!l) return;
-    const out = this.ctx.createGain(); out.gain.value = 0.7; out.connect(this.dry); this._one(l[0], out, 1.0);
+    const out = this.ctx.createGain(); out.gain.value = SF2_FB_K; out.connect(this.fb || this.dry); this._one(l[0], out, 1.0); // (v67m the feedback bus, SF2's level: the wave as it is)
   }
   // v64g bullet_hit_2d_03 carries a second sound after the hit (user 10-28: a man's odd laugh, from 0.40 s): only its first 0.37 s,
   // faded out over the last 25 ms (its RMS: the hit 0.04–0.36 s, down to −36 dB at 0.38, the other sound rising again at 0.40)

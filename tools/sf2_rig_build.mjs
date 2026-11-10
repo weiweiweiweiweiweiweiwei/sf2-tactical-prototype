@@ -152,7 +152,9 @@ const GUNS = {
   sg551: gun('sg551', { pkg: 'rif_sig551', tex: 'sig551', anim: '1st_anim_sig551', hoodedPost: true }), // (sights on the body)
   type89: gun('type89', { hoodedPost: true }), // (its sight package put on the Scope socket floated off the gun: the body's own sights)
   // v65f docs/loop/GUNS.md D: SMGs (the P90's ring sight is its own two parts on the body's skeleton)
-  p90: gun('p90', { pkg: 'smg_p90', extraParts: [['dot_a', 'p90/smg_p90/SkeletalMesh3/smg_p90_dot_a.gltf', 'p90_dot_a'], ['dot_b', 'p90/smg_p90/SkeletalMesh3/smg_p90_dot_b.gltf', 'p90_dot_b']] }),
+  // v67m (user 11-10: the P90's hip and aimed views were broken — the Blender stand-in, no hands in view, the sight a solid ring):
+  // the plain P90 as SF2's own rig, the open sight of the P90 OpenDot (its dot measured, see p90_od) without the silencer
+  p90: gun('p90', { pkg: 'smg_p90', extraParts: [['dot_b', 'p90/smg_p90/SkeletalMesh3/smg_p90_dot_b.gltf', 'p90_dot_b']], reticle: DOTDOT, sightMarks: { DOT: [-0.05005, 1.218, 0.295] } }),
   ump45: gun('ump45', { pkg: 'smg_ump45', hoodedPost: true, socketSights: sight('ump45/smg_ump45/SkeletalMesh3/smg_upm45_sight_up.gltf', 'ump45_sight') }),
   mp7: gun('mp7', { pkg: 'smg_mp7', texMap: { stock: 'mp7_stock_a' }, socketSights: sight('mp7/smg_mp7_sight/SkeletalMesh3/smg_mp7_sight_up.gltf', 'mp7_sight') }),
   // v65g docs/loop/GUNS.md D: machine guns (their sight parts on the Sight socket; the belt guns' ammo belts left out)

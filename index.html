@@ -4757,6 +4757,8 @@ var SF2_WEAPONS = {
   // SFCWeaponFAMAS
   p90_grinch: { "fireRate": 0.081, "reloadTime": 2.25, "equipTime": 0.821, "adsSpeed": 12, "adsFov": 55, "adsType": "3d_sight", "vmHFov": 60, "vmAdsHFov": 35, "sf2Rig": "p90_od", "sf2": "p90_grinch", "sf2ZoomIn": [13, -0, -1.57], "sf2ZoomOut": [2, 0, -1], "sf2ReloadSounds": [[0.15, "magout"], [0.45, "magin"], [0.75, "charge"]], "sf2Recoil": { "nextCrossVert": 1.15, "maxCrossVert": 12, "vertInc": 1e4, "vertDec": 10, "crossDecreasInc": 30, "incline": 0.1, "forceCorrection": 50, "domDefault": 0.9, "domZoomDefault": 0, "domInc": 0.17, "domMax": 2.3, "domMin": 0.2, "domDec": 1, "maxMovingValue": 1, "mulValueRun": 0.35, "mulValueJump": 2, "zoomMod": 0.6, "crouchMod": 0.8 }, "sf2Bob": [8.2, 0.7, 0.3, 0.4, 0.3, 0.3], "sf2ReloadAnim": 2.367 },
   // SFCWeaponP90
+  p90: { "fireRate": 0.081, "reloadTime": 2.25, "equipTime": 0.821, "adsSpeed": 12, "adsFov": 55, "adsType": "3d_sight", "vmHFov": 60, "vmAdsHFov": 35, "sf2Rig": "p90", "sf2": "p90", "sf2ZoomIn": [13, -0, -1.57], "sf2ZoomOut": [2, 0, -1], "sf2ReloadSounds": [[0.15, "magout"], [0.45, "magin"], [0.75, "charge"]], "sf2Recoil": { "nextCrossVert": 1.15, "maxCrossVert": 12, "vertInc": 1e4, "vertDec": 10, "crossDecreasInc": 30, "incline": 0.1, "forceCorrection": 50, "domDefault": 0.9, "domZoomDefault": 0, "domInc": 0.17, "domMax": 2.3, "domMin": 0.2, "domDec": 1, "maxMovingValue": 1, "mulValueRun": 0.35, "mulValueJump": 2, "zoomMod": 0.6, "crouchMod": 0.8 }, "sf2Bob": [8.2, 0.7, 0.3, 0.4, 0.3, 0.3], "sf2ReloadAnim": 2.367 },
+  // SFCWeaponP90 (v67m the plain P90 on SF2's own rig: tools/sf2_rig_build.mjs p90 — the stats as its gacha twin's, own sounds)
   m4a1_thor: { "fireRate": 0.096, "reloadTime": 2.3, "equipTime": 0.8, "adsSpeed": 12, "adsFov": 55, "adsType": "3d_sight", "vmHFov": 60, "vmAdsHFov": 8.5, "sf2Rig": "m4a1_eo", "sf2": "m4a1", "sf2ZoomIn": [15, 0, -0.75], "sf2ZoomOut": [-1, 0, 0], "sf2ReloadSounds": [[0.07, "magout"], [0.36, "magin"], [0.73, "charge"]], "sf2Recoil": { "nextCrossVert": 1.26, "maxCrossVert": 14, "vertInc": 9e3, "vertDec": 12, "crossDecreasInc": 9, "incline": 0.5, "forceCorrection": 50, "domDefault": 0.25, "domZoomDefault": 0, "domInc": 0.13, "domMax": 2, "domMin": 0.1, "domDec": 6, "maxMovingValue": 0.7, "mulValueRun": 0.8, "mulValueJump": 6, "zoomMod": 0.6, "crouchMod": 0.9 }, "sf2Bob": [8.7, 0.8, 0.2, 0.4, 0.5, 0.7], "sf2ReloadAnim": 2.533 },
   // SFCWeaponM4A1
   mg4_gold: { "fireRate": 0.1, "reloadTime": 6.15, "equipTime": 1.9, "adsSpeed": 12, "adsFov": 55, "adsType": "3d_sight", "vmHFov": 60, "vmAdsHFov": 35, "sf2Rig": "mg4_od", "sf2": "mg4", "sf2ZoomIn": [-1.8, -0.015, -0.32], "sf2ZoomOut": [1.2, 0, 0], "sf2ReloadSounds": [[0.15, "magout"], [0.45, "magin"], [0.8, "charge"]], "sf2Recoil": { "nextCrossVert": 1.1, "maxCrossVert": 7, "vertInc": 1e4, "vertDec": 10, "crossDecreasInc": 30, "incline": 0.1, "forceCorrection": 50, "domDefault": 1, "domZoomDefault": 0.1, "domInc": 0.2, "domMax": 1.9, "domMin": 0.2, "domDec": 1.5, "maxMovingValue": 1, "mulValueRun": 0.35, "mulValueJump": 2, "zoomMod": 0.7, "crouchMod": 0.8 }, "sf2Bob": [7.6, 0.7, 0.2, 0.6, 0.4, 0.7], "sf2ReloadAnim": 6.5 },
@@ -5778,6 +5780,7 @@ var ACOUSTICS = {
   outdoor: { reverb: 0.9, decay: 4.8, wet: 0.06, echo: 0.12, echoDelay: [0.19, 0.47] },
   canyon: { reverb: 1.2, decay: 4.4, wet: 0.07, echo: 0.16, echoDelay: [0.27, 0.62] }
 };
+var SF2_FB_K = 0.95 / 1.13;
 var AudioEngine = class _AudioEngine {
   static {
     __name(this, "AudioEngine");
@@ -6128,7 +6131,7 @@ var AudioEngine = class _AudioEngine {
   // watchdog rebuilds all of them (and cuts every voice still wired to the old inputs) when the output is ever non-finite.
   _buildBus() {
     const ctx = this.ctx;
-    for (const n of [this.master, this.tinn, this.dry, this.reverbIn, this.wet, this.echoIn, this.muffle, this.comp, this.tinnG, ...(this.echoTaps || []).map((e) => e.g)])
+    for (const n of [this.master, this.tinn, this.dry, this.reverbIn, this.wet, this.echoIn, this.muffle, this.comp, this.tinnG, this.fb, this.fbMuffle, this.lim, ...(this.echoTaps || []).map((e) => e.g)])
       if (n) try {
         n.disconnect();
       } catch (e) {
@@ -6148,9 +6151,24 @@ var AudioEngine = class _AudioEngine {
     this.probeIn = ctx.createAnalyser();
     this.probeIn.fftSize = 2048;
     this.probeBuf = new Float32Array(2048);
+    this.lim = ctx.createDynamicsCompressor();
+    this.lim.threshold.value = -1;
+    this.lim.knee.value = 0;
+    this.lim.ratio.value = 20;
+    this.lim.attack.value = 1e-3;
+    this.lim.release.value = 0.06;
+    this.fbMuffle = ctx.createBiquadFilter();
+    this.fbMuffle.type = "lowpass";
+    this.fbMuffle.frequency.value = 22e3;
+    this.fbMuffle.Q.value = 0.5;
+    this.fb = ctx.createGain();
+    this.fb.gain.value = this.volume;
+    this.fb.connect(this.fbMuffle);
+    this.fbMuffle.connect(this.lim);
     this.master.connect(this.muffle);
     this.muffle.connect(this.comp);
-    this.comp.connect(ctx.destination);
+    this.comp.connect(this.lim);
+    this.lim.connect(ctx.destination);
     this.comp.connect(this.probe);
     this.master.connect(this.probeIn);
     this.dry = ctx.createGain();
@@ -6210,6 +6228,7 @@ var AudioEngine = class _AudioEngine {
   setVolume(v) {
     this.volume = v;
     if (this.master) this.master.gain.setTargetAtTime(v, this.ctx.currentTime, 0.02);
+    if (this.fb) this.fb.gain.setTargetAtTime(v, this.ctx.currentTime, 0.02);
   }
   setAcoustics(a) {
     this.acoustics = a;
@@ -6420,10 +6439,12 @@ var AudioEngine = class _AudioEngine {
   // Flashbang / blast deafening: tinnitus tone + master low-pass that slowly recovers.
   deafen(strength, dur) {
     if (!this.ctx || strength <= 0.02) return;
-    const t = this.ctx.currentTime, f = this.muffle.frequency, g = this.tinnG.gain;
-    f.cancelScheduledValues(t);
-    f.setValueAtTime(Math.max(380, 3e3 * (1 - strength)), t);
-    f.setTargetAtTime(22e3, t + dur * 0.5, dur * 0.35);
+    const t = this.ctx.currentTime, g = this.tinnG.gain;
+    for (const f of [this.muffle.frequency, this.fbMuffle.frequency]) {
+      f.cancelScheduledValues(t);
+      f.setValueAtTime(Math.max(380, 3e3 * (1 - strength)), t);
+      f.setTargetAtTime(22e3, t + dur * 0.5, dur * 0.35);
+    }
     g.cancelScheduledValues(t);
     g.setValueAtTime(1e-4, t);
     g.linearRampToValueAtTime(0.09 * strength, t + 0.05);
@@ -6504,11 +6525,14 @@ var AudioEngine = class _AudioEngine {
     }
     const S2 = HIT_SOUNDS[Settings.data.hitSound] && HIT_SOUNDS[Settings.data.hitSound].sf2 && this._s("sf2_hit");
     if (S2) {
+      const fo = this.ctx.createGain();
+      fo.gain.value = SF2_FB_K;
+      fo.connect(this.fb);
       if (kind === "kill") {
         const d = this._s("sf2_hitdead"), k2 = !this._s("kfb_default") && this._s("sf2_kill");
-        if (d) this._one(pick(d), out, 1.1, 0.8);
-        if (k2) this._one(pick(k2), out, 0.9);
-      } else this._one(this._hitHead(S2[0]), out, 1, 0.98 + Math.random() * 0.04);
+        if (d) this._one(pick(d), fo, 1, 0.8);
+        if (k2) this._one(pick(k2), fo, 1);
+      } else this._one(this._hitHead(S2[0]), fo, 1.5 + Math.random() * 0.5, 0.98 + Math.random() * 0.04);
       return;
     }
     const H = HIT_SOUNDS[Settings.data.hitSound] || HIT_SOUNDS.flesh, k = (kind === "kill" ? 1.2 : kind === "head" ? 1.1 : 1) * (H.gain || 1);
@@ -6542,8 +6566,8 @@ var AudioEngine = class _AudioEngine {
     const l = this._s("kfb_" + tier) || this._s("kfb_default");
     if (!l) return;
     const out = this.ctx.createGain();
-    out.gain.value = 0.7;
-    out.connect(this.dry);
+    out.gain.value = SF2_FB_K;
+    out.connect(this.fb || this.dry);
     this._one(l[0], out, 1);
   }
   // v64g bullet_hit_2d_03 carries a second sound after the hit (user 10-28: a man's odd laugh, from 0.40 s): only its first 0.37 s,
@@ -18757,9 +18781,9 @@ var GunMats = class {
 };
 var GUN_MODELS = {};
 var GUN_RIGS = {};
-var RIG_EYE = { m16a3: 0.055, qbz97: 0.06, g36c_eo: 0.15, m14ebr: 0.15, hk417_rs: 0.15, scarl_eo: 0.15, famas_acog: 0.47, p90_od: 0.15, m4a1_eo: 0.15, mg4_od: 0.15 };
+var RIG_EYE = { m16a3: 0.055, qbz97: 0.06, g36c_eo: 0.15, m14ebr: 0.15, hk417_rs: 0.15, scarl_eo: 0.15, famas_acog: 0.47, p90_od: 0.15, p90: 0.15, m4a1_eo: 0.15, mg4_od: 0.15 };
 var RIG_HIP = { k14: [0.0217, -1.2026, -0.0378] };
-var RIG_RETICLE = { g36c_eo: [0.093, 82], m14ebr: [0.093, 82], hk417_rs: [0.06, 32], scarl_eo: [0.093, 82], m4a1_eo: [0.093, 82], fnf2000: [0.06, 71], famas_acog: [6e-3, 64], p90_od: [6e-3, 64], mg4_od: [6e-3, 64] };
+var RIG_RETICLE = { g36c_eo: [0.093, 82], m14ebr: [0.093, 82], hk417_rs: [0.06, 32], scarl_eo: [0.093, 82], m4a1_eo: [0.093, 82], fnf2000: [0.06, 71], famas_acog: [6e-3, 64], p90_od: [6e-3, 64], p90: [6e-3, 64], mg4_od: [6e-3, 64] };
 var GLB_RELOAD_POSE = { roll: -0.5, pitch: 0.32, drop: -0.09, shift: 0.08 };
 var GUN_LOAD = { parsed: /* @__PURE__ */ new Set(), pending: /* @__PURE__ */ new Map() };
 var GUN_OVL = {};
