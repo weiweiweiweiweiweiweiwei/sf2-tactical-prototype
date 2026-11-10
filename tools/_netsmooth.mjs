@@ -36,7 +36,7 @@ await C.evaluate(() => {
   const osf = N._self.bind(N); N._self = (s, e) => { const h = N.hist[s.ack & 255]; if (h && h.seq === s.ack && e.alive && m.player.alive) { const er = Math.hypot(e.x - h.x, e.y - h.y, e.z - h.z); if (er >= 0.03 && er < 5) S.errs.push(er); } osf(s, e); };
   const ots = m.thirdPersonShot.bind(m); m.thirdPersonShot = (c, def, a, b2, n) => { const t = performance.now(), G = S.shotGaps[c.netId] || (S.shotGaps[c.netId] = { last: 0, iv: def.interval * 1000, g: [] }); if (G.last && t - G.last < 400) G.g.push(t - G.last); G.last = t; G.iv = def.interval * 1000; return ots(c, def, a, b2, n); };
   const sp = new Map();
-  S.long = []; let lt = performance.now(); const tick = () => { const t = performance.now(); if (t - lt > 80) S.long.push([Math.round(t - S.t0), Math.round(t - lt)]); lt = t; S.frames++; const rt = N.hostClock - 0.1;
+  S.long = []; let lt = performance.now(); const tick = () => { const t = performance.now(); if (t - lt > 80) S.long.push([Math.round(t - S.t0), Math.round(t - lt)]); lt = t; S.frames++; const rt = N.hostClock - (N.interp || 0.1); S.interp = N.interp;
     for (const g of N.ghosts.values()) { if (!g.alive || !g.buf.length) continue; S.gframes++; if (rt > g.buf[g.buf.length - 1].t + 1e-4) S.holds++;
       const last = sp.get(g.netId), p = g.motor.pos; if (last) { const d = Math.hypot(p.x - last.x, p.z - last.z); if (last.d > 0.02 && d < last.d * 0.3 || (d > 0.02 && last.d < d * 0.3 && last.d > 0)) S.jumps++; sp.set(g.netId, { x: p.x, z: p.z, d }); } else sp.set(g.netId, { x: p.x, z: p.z, d: 0 }); }
     S.raf = requestAnimationFrame(tick); }; tick();
@@ -48,11 +48,11 @@ await sleep(12000);
 await C.evaluate(() => { clearInterval(window.__mv); app.input.keys.clear(); });
 const q = (a, p) => { if (!a.length) return 0; const s = a.slice().sort((x, y) => x - y); return +s[Math.min(s.length - 1, Math.floor(s.length * p))].toFixed(2); };
 const h = await H.evaluate(() => { const S = window.__S, np = app.match.humans[0]; return { long: S.long, deaths: np.deaths, life: np.life, ticks: S.ticks, stalls: (np.stalls || 0) - S.stalls0, pend: S.pend, fps: S.frames / ((performance.now() - S.t0) / 1000) }; });
-const c = await C.evaluate(() => { const S = window.__S, N = app.match.net; return { long: S.long, corrN: N.corr.n - S.corr0.n, snaps: N.corr.snaps - S.corr0.snaps, errs: S.errs, holds: S.holds, gframes: S.gframes, jumps: S.jumps, gaps: S.gaps, shotGaps: S.shotGaps, fps: S.frames / ((performance.now() - S.t0) / 1000), rtt: N.rtt }; });
+const c = await C.evaluate(() => { const S = window.__S, N = app.match.net; return { interp: S.interp, long: S.long, corrN: N.corr.n - S.corr0.n, snaps: N.corr.snaps - S.corr0.snaps, errs: S.errs, holds: S.holds, gframes: S.gframes, jumps: S.jumps, gaps: S.gaps, shotGaps: S.shotGaps, fps: S.frames / ((performance.now() - S.t0) / 1000), rtt: N.rtt }; });
 const pendAvg = h.pend.reduce((a, x) => a + x, 0) / Math.max(1, h.pend.length);
 const shots = Object.values(c.shotGaps).filter((G) => G.g.length >= 5).map((G) => ({ iv: +G.iv.toFixed(0), n: G.g.length, p10: q(G.g, 0.1), p50: q(G.g, 0.5), p90: q(G.g, 0.9), zero: G.g.filter((x) => x < 2).length }));
 console.log('NETSMOOTH', JSON.stringify({ lag: +lag, jitter: +jitter, loss: +loss,
   host: { long: h.long, life: h.life, fps: +h.fps.toFixed(1), ticks: h.ticks, stallPct: +(100 * h.stalls / h.ticks).toFixed(1), pendAvg: +pendAvg.toFixed(2), pendP90: q(h.pend, 0.9), pendMax: Math.max(...h.pend), bufferMs: +(pendAvg * 16.7).toFixed(0) },
-  client: { long: c.long, fps: +c.fps.toFixed(1), rtt: +(+c.rtt).toFixed(0), corrPct: +(100 * c.corrN / Math.max(1, c.snaps)).toFixed(1), errP50: q(c.errs, 0.5), errP90: q(c.errs, 0.9), errMax: q(c.errs, 1), holdPct: +(100 * c.holds / Math.max(1, c.gframes)).toFixed(2), jumps: c.jumps, snapGapP50: q(c.gaps, 0.5), snapGapP90: q(c.gaps, 0.9), snapGapMax: q(c.gaps, 1), remoteShots: shots },
+  client: { interpMs: Math.round((c.interp || 0.1) * 1000), long: c.long, fps: +c.fps.toFixed(1), rtt: +(+c.rtt).toFixed(0), corrPct: +(100 * c.corrN / Math.max(1, c.snaps)).toFixed(1), errP50: q(c.errs, 0.5), errP90: q(c.errs, 0.9), errMax: q(c.errs, 1), holdPct: +(100 * c.holds / Math.max(1, c.gframes)).toFixed(2), jumps: c.jumps, snapGapP50: q(c.gaps, 0.5), snapGapP90: q(c.gaps, 0.9), snapGapMax: q(c.gaps, 1), remoteShots: shots },
 }), errs.slice(0, 3));
 await b.close(); srv.close();

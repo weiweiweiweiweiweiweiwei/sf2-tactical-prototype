@@ -10,7 +10,7 @@ import { BTN } from './12b_cmd.js';
 import { NET_WEAPONS, netV3 } from './12c_netutil.js';
 import { WeaponSystem } from './11_weaponsystem.js';
 import { Player } from './12_player.js';
-import { Bot, TeamIntel } from './13_bots.js';
+import { Bot, TeamIntel, soldierCorpse } from './13_bots.js';
 import { AIDebug } from './14c_aidebug.js';
 import { createRule } from './15b_rules.js';
 /* =====================================================================
@@ -75,7 +75,7 @@ class Match {
     // the nav graph, soldiers and guns load; the compile stage below then waits only for what is left (soldiers, viewmodel, effects)
     this.effects = new Effects(this.scene, app.tex, this.audio); // (v62t before the compile: its muzzle / blast lights count in every lit shader)
     app.post.applyWorld(this, activeQuality());
-    const tc = performance.now(); this._precompile = app.renderer.compileAsync ? app.renderer.compileAsync(this.scene, this.camera).then(() => { if (window.__loadT) window.__loadT['world shaders (background)'] = Math.round(performance.now() - tc); }).catch(() => {}) : null;
+    const tc = performance.now(); this._precompile = app.renderer.compileAsync ? app.post.compileAsync(this.scene, this.camera, null, activeQuality()).then(() => { if (window.__loadT) window.__loadT['world shaders (background)'] = Math.round(performance.now() - tc); }).catch(() => {}) : null;
     progress(0.56, '計算 Bot 導航網格'); await nextFrame();
     this.nav = new NavGraph(this.collision, this.builder, def);
     for (const mc of this.builder.mechs) if (mc.initNav) mc.initNav(this.nav);
@@ -92,6 +92,7 @@ class Match {
       for (let i = 0; i < this.config.enemies; i++) this.bots.push(new Bot(this, 'bravo', i, this.botWeapon()));
     }
     this.combatants.push(...this.bots);
+    for (const b of this.bots) this.wantGun(b.def); // v67l the guns in play: their models load during the countdown (Match._gunQueue)
     this.combatants.forEach((c, i) => { c.netId = i + 1; this.refit(c); }); this.netSeq = this.combatants.length; // v25: stable ids (network snapshots, seeded spread)
     this.spawns = { alpha: this.makeSpawns('alpha'), bravo: this.makeSpawns('bravo') }; this.pruneSpawnLOS();
     this.spawnLOS = this.checkSpawnLOS(); window.__debug = Object.assign(window.__debug || {}, { map: def.id, spawnLOS: this.spawnLOS.visible > 0, spawnLOSPairs: this.spawnLOS });
@@ -104,9 +105,13 @@ class Match {
     app.post.configure(this, activeQuality());
     if (this.isClient) { this.round = 1; this.rules.startRound(); } else this.startRound(); // v27: a client attaches once the host's match takes him in (App.startMatch)
     this.player.updateCamera(1); this.weapons.update(0, app.input, { x: 0, y: 0 });
-    if (app.renderer.compileAsync) { const tw = performance.now(); await this._precompile; if (window.__loadT) window.__loadT['waited for world shaders'] = Math.round(performance.now() - tw); await app.renderer.compileAsync(this.scene, this.camera); await app.renderer.compileAsync(this.weapons.scene, this.weapons.camera); }
+    if (app.renderer.compileAsync) { const tw = performance.now(); await this._precompile; if (window.__loadT) window.__loadT['waited for world shaders'] = Math.round(performance.now() - tw); await app.post.compileAsync(this.scene, this.camera); await app.post.compileAsync(this.weapons.scene, this.weapons.camera); await app.post.compileAsync(this._warmGroup(), this.camera, this.scene); }
     else { app.renderer.compile(this.scene, this.camera); app.renderer.compile(this.weapons.scene, this.weapons.camera); }
+    // v67l the warm frame also draws what a fight adds later (Match._warmGroup), once, under the loading screen: their shadow-depth
+    // programs exist only after a first shadow pass (a body is the first skinned shadow caster — 150 ms at the first kill)
+    const wg = this._warm; if (wg) { wg.position.copy(this.player.motor.pos); wg.traverse((o) => { o.frustumCulled = false; }); this.scene.add(wg); app.renderer.shadowMap.needsUpdate = true; }
     app.post.render(0.016, true);
+    if (wg) this.scene.remove(wg);
     progress(1, '準備完成');
     this.running = true;
   }
@@ -452,11 +457,49 @@ class Match {
     const p = M.head.getWorldPosition(new THREE.Vector3()); p.y += 0.14;
     if (p.distanceTo(this.camera.position) > 80) return;
     const d = dir ? dir.clone().setY(0).normalize() : new THREE.Vector3(rand(-1, 1), 0, rand(-1, 1)).normalize();
-    this._helmetGeo = this._helmetGeo || new THREE.SphereGeometry(0.132, 14, 8, 0, Math.PI * 2, 0, Math.PI * 0.52);
-    const mat = (this._helmetMats = this._helmetMats || {})[c.team] || (this._helmetMats[c.team] = new THREE.MeshStandardMaterial({ color: TEAM_PALETTE[c.team].helmet, roughness: 0.75, side: THREE.DoubleSide }));
-    const mesh = new THREE.Mesh(this._helmetGeo, mat); mesh.castShadow = true;
+    const mesh = this._helmetMesh(c.team);
     this.physics.addDynamic({ mesh, mass: 1.2, shape: new CANNON.Sphere(0.12), position: p, velocity: { x: d.x * 3.2 + rand(-0.6, 0.6), y: rand(2.6, 3.6), z: d.z * 3.2 + rand(-0.6, 0.6) },
       angularVelocity: { x: rand(-12, 12), y: rand(-6, 6), z: rand(-12, 12) }, life: 8, sink: 0.6 });
+  }
+
+  _helmetMesh(team) {
+    this._helmetGeo = this._helmetGeo || new THREE.SphereGeometry(0.132, 14, 8, 0, Math.PI * 2, 0, Math.PI * 0.52);
+    const mat = (this._helmetMats = this._helmetMats || {})[team] || (this._helmetMats[team] = new THREE.MeshStandardMaterial({ color: TEAM_PALETTE[team].helmet, roughness: 0.75, side: THREE.DoubleSide }));
+    const mesh = new THREE.Mesh(this._helmetGeo, mat); mesh.castShadow = true; return mesh;
+  }
+  // v67l one of everything a fight ADDS to the scene (it is not there when the level's shaders are compiled at load): a thrown
+  // grenade, a helmet shot off, a body, a dropped gun (its real model, the low-poly stand-in, its glow), a name tag / scope glint
+  // as a friend's ghost brings them, a smoke grenade's puffs. The first of each used to compile its shader in the middle of the
+  // match — 0.2–1.8 s frozen (tools/out/_hosthitch.mjs), and a host's freeze is everyone's. Never added to the scene: it only
+  // keeps those programs alive (three drops a program with its last material).
+  _warmGroup() {
+    const app = this.app, g = this._warm = new THREE.Group(), add = (o) => { g.add(o); return o; }, tex = app.tex;
+    const tryAdd = (f) => { try { const o = f(); if (o) add(o); } catch (e) { /* a model that is not there: nothing to warm */ } };
+    for (const id of ['he', 'flash', 'smoke']) tryAdd(() => { const m = new THREE.Mesh(app.models.tp(id), app.soldiers.gunMat); m.castShadow = true; return m; });
+    for (const team of ['alpha', 'bravo']) tryAdd(() => this._helmetMesh(team));
+    tryAdd(() => { const c = soldierCorpse(this.playerModel, true); c.visible = true; return c; });
+    for (const w of this.weapons.weapons) { const def = w.def; if (!Match.isGun(def)) continue;
+      tryAdd(() => (gunModelReady(def) ? app.models.dropModel(def) : null));
+      tryAdd(() => { const m = new THREE.Mesh(app.models.tp(def.model), app.soldiers.gunMat); m.castShadow = true; return m; }); }
+    const spr = (o) => add(new THREE.Sprite(new THREE.SpriteMaterial(o)));
+    spr({ map: tex.dot(), color: new THREE.Color(0.45, 1, 0.8), transparent: true, opacity: 0.5, depthWrite: false, blending: THREE.AdditiveBlending }); // a drop's glow
+    spr({ map: tex.dot(), depthTest: false, transparent: true, sizeAttenuation: false }); // a name tag
+    spr({ map: tex.dot(), blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, sizeAttenuation: false }); // a scope glint
+    spr({ map: this.effects.tex.smoke, color: 0xbfc3c6, transparent: true, depthWrite: false, opacity: 0, rotation: 1 }); // a smoke grenade's puff
+    return g;
+  }
+  // v67l a gun whose model is not loaded yet (v65j: only your own loadouts are, at load) used to be fetched and parsed the
+  // moment the first one dropped: 50–100 ms of this thread for the GLB, then its textures' upload — a frozen frame in the
+  // middle of a fight, on the host for everyone. Now it waits for a moment a hitch costs nothing: outside the fight (the
+  // countdown, a round's end), or while you are dead — a host with friends in the match waits for the first two only. One
+  // at a time; until then that gun drops as the low-poly one (as before).
+  wantGun(def) { if (def && Match.isGun(def) && !gunModelReady(def) && !(this._gunQ || (this._gunQ = [])).some((d) => d.id === def.id)) this._gunQ.push(def); }
+  _gunQueue() {
+    const Q = this._gunQ; if (!Q || !Q.length || this._gunBusy) return;
+    const hosting = !!(this.net && this.net.role === 'host' && this.net.peers.size);
+    if (this.phase === 'live' && (hosting || this.player.alive)) return;
+    const def = Q.shift(); this._gunBusy = true;
+    ensureGunModels([def]).catch(() => {}).then(() => { this._gunBusy = false; });
   }
 
   /* ------------------------------ v13 KILLCAM ------------------------------ */
@@ -666,9 +709,12 @@ class Match {
   dropWeapon(def, ammo, reserve, pos, vel, netId = 0) {
     if (!Match.isGun(def) || !this.opts.pickup) return null; // room option: no weapon drops / pickups
     const holder = new THREE.Group(); let gun; // v64d the detailed first-person model (no arms), real size; the low-poly one if it cannot be built
-    if (!gunModelReady(def)) ensureGunModels([def]); // v65j (in the background: this drop shows the low-poly gun, the next one the real model)
+    this.wantGun(def); // v65j / v67l (later, when a hitch costs nothing: this drop shows the low-poly gun, a later one the real model)
     try { if (!gunModelReady(def)) throw 0; gun = this.app.models.dropModel(def); } catch (e) { gun = new THREE.Mesh(this.app.models.tp(def.model), this.app.soldiers.gunMat); gun.scale.setScalar(1.25); gun.castShadow = true; }
     holder.add(gun);
+    // v67l a real model's materials differ from gun to gun (which maps it has), so its shader may be new: compiled in the
+    // background first, the gun shown when it is ready (a few frames) — drawn at once, the frame waited for the compiler
+    if (gun.isGroup && this.app.renderer.compileAsync) { holder.visible = false; this.app.post.compileAsync(holder, this.camera, this.scene).then(() => { holder.visible = true; }); }
     const len = ((WEAPON_DATABASE[def.id] && WEAPON_DATABASE[def.id].tp && WEAPON_DATABASE[def.id].tp.len) || (def.kind === 'pistol' ? 0.22 : 0.9)) * 0.62;
     const dyn = this.physics.addDynamic({ mesh: holder, mass: 3, shape: new CANNON.Box(new CANNON.Vec3(0.035, 0.06, Math.max(0.08, len / 2))), position: pos, velocity: vel,
       angularVelocity: { x: rand(-2, 2), y: rand(-6, 6), z: rand(-4, 4) }, linearDamping: 0.08, angularDamping: 0.45, life: 999, manual: true });
@@ -972,6 +1018,7 @@ class Match {
     for (const np of this.humans) if (np.alive) np.update(dt, alpha); // v25 host: friends' soldiers
     if (client && this.rules.netTick) this.rules.netTick(dt); // v29: a client only animates the mode; its state comes from the host
     if (this.net) this.net.frame(dt);
+    if (this._gunQ && this._gunQ.length) this._gunQueue();
     const t2 = performance.now(), respawns = this.rules.respawns;
     if (!p.alive) {
       if (respawns) {

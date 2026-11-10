@@ -403,7 +403,7 @@ class WeaponModels {
       return this.fromGLB(def.model, { extra, marks: { SIGHT: eye, HOOD: new V(0, eye.y, rear) }, skip: (n) => n === 'irons' || (n === 'barrel' && !def.barrelLv), eye: OD.scope ? 0.04 : 0.06, flash: 0.2,
         hip: def.apexHip || (def.type === 'pistol' ? [0.12, -0.15, -0.3] : [0.14, -0.175, -0.36]), reticle: false, reticleTex: OD.scope ? null : def.optic, reticleSize: OD.size }) || this[stand](def);
     }
-    return this.fromGLB(def.model, { skip: (n) => n === 'barrel' && !def.barrelLv, eye: 0, flash: 0.2, hip: def.apexHip || (def.type === 'pistol' ? [0.12, -0.15, -0.3] : [0.14, -0.175, -0.36]), reticle: false }) // (v67a user 11-05 B: Apex iron sights only — no ring of ours on them) || this[stand](def);
+    return this.fromGLB(def.model, { skip: (n) => n === 'barrel' && !def.barrelLv, eye: 0, flash: 0.2, hip: def.apexHip || (def.type === 'pistol' ? [0.12, -0.15, -0.3] : [0.14, -0.175, -0.36]), reticle: false }) /* (v67a user 11-05 B: Apex iron sights only — no ring of ours on them) */ || this[stand](def); // (v67l the comment had swallowed the stand-in)
   }
 
   // v62 SF2's own first-person rig (SF2Rig): arms and gun animated by the original clips. The group sits at the eye like any

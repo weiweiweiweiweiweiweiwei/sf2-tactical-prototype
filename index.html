@@ -19305,7 +19305,7 @@ var WeaponModels = class {
         reticleSize: OD.size
       }) || this[stand](def);
     }
-    return this.fromGLB(def.model, { skip: /* @__PURE__ */ __name((n) => n === "barrel" && !def.barrelLv, "skip"), eye: 0, flash: 0.2, hip: def.apexHip || (def.type === "pistol" ? [0.12, -0.15, -0.3] : [0.14, -0.175, -0.36]), reticle: false });
+    return this.fromGLB(def.model, { skip: /* @__PURE__ */ __name((n) => n === "barrel" && !def.barrelLv, "skip"), eye: 0, flash: 0.2, hip: def.apexHip || (def.type === "pistol" ? [0.12, -0.15, -0.3] : [0.14, -0.175, -0.36]), reticle: false }) || this[stand](def);
   }
   // v62 SF2's own first-person rig (SF2Rig): arms and gun animated by the original clips. The group sits at the eye like any
   // viewmodel but never moves to an ADS pose — Zoom does that — and has no mag / charge / left-hand nodes for Weapon.animate.
@@ -23531,16 +23531,7 @@ var Bot = class extends Combatant {
     this.holdE = false;
     this.motor.climbInput = 0;
     this.model.head.visible = true;
-    const corpse = SkeletonUtils.clone(this.model.root);
-    corpse.position.set(0, 0, 0);
-    corpse.rotation.set(0, 0, 0);
-    corpse.traverse((o) => {
-      if (o.isMesh) {
-        o.castShadow = true;
-        if (o.material === this.model.mat) o.material = camoMat(this.model.mat.clone());
-        if (o.material.emissive) o.material.emissive.setRGB(0, 0, 0);
-      }
-    });
+    const corpse = soldierCorpse(this.model);
     const hd = dir.clone().setY(0);
     if (hd.lengthSq() < 1e-4) hd.set(Math.sin(this.yaw), 0, Math.cos(this.yaw));
     const N = /* @__PURE__ */ __name((n) => corpse.getObjectByName(n), "N"), hips = [N("hip0"), N("hip1")], torso = N("torso"), knees = [N("knee0"), N("knee1")], head = N("head"), arms = N("arms");
@@ -24575,6 +24566,20 @@ var TeamIntel = class {
     return t === void 0 ? 1 : clamp((now - t) / 60, 0, 1);
   }
 };
+function soldierCorpse(model, warm = false) {
+  const corpse = SkeletonUtils.clone(model.root);
+  corpse.position.set(0, 0, 0);
+  corpse.rotation.set(0, 0, 0);
+  corpse.traverse((o) => {
+    if (o.isMesh) {
+      o.castShadow = true;
+      if (o.material === model.mat) o.material = camoMat(model.mat.clone());
+      if (!warm && o.material.emissive) o.material.emissive.setRGB(0, 0, 0);
+    }
+  });
+  return corpse;
+}
+__name(soldierCorpse, "soldierCorpse");
 
 // src/13b_netplayers.js
 var NetPlayer = class _NetPlayer extends Human {
@@ -24598,6 +24603,8 @@ var NetPlayer = class _NetPlayer extends Human {
     this.arsenal.init(loadoutDefs(game.mode, this.loadout));
     this.model = game.app.soldiers.create(team, this.def.model || this.def.id);
     this.model.root.scale.setScalar(game.def.traversal ? 1 : CFG.player.bodyScale);
+    game.scene.add(this.model.root);
+    this.modelGun = this.def.id;
     if (team === game.player.team) this.tag = Bot.prototype._makeTag.call(this);
     this.pending = /* @__PURE__ */ new Map();
     this.ackSeq = 0;
@@ -24645,8 +24652,23 @@ var NetPlayer = class _NetPlayer extends Human {
   // arrived yet (jitter): the soldier waits this tick (his own client already predicted it). A backlog is worked off two
   // per tick. So the host replays the client's input stream exactly: same position, same shots, same spread.
   // A missing number (packet lost or still in flight) is waited for up to 4 ticks (~33 ms), then skipped.
+  // v67l the buffer is kept short. It only ever grew (a tick with no command adds one for good) and was worked off from 5 up,
+  // so 3–4 commands sat in it — 45–65 ms on top of the link, for how the others see him and for when his shots count
+  // (tools/_netsmooth.mjs). Now: every half second, what the buffer never went below is what it holds for nothing — all of
+  // that but 2 is worked off, one extra command a tick; after a hitch (more than 12 waiting) four a tick — 60 used to take a second.
   step(h) {
-    const n = this.pending.size > 4 ? 2 : 1;
+    const P = this.pending.size;
+    this.winMin = Math.min(this.winMin ?? P, P);
+    if ((this.winN = (this.winN || 0) + 1) >= 30) {
+      this.excess = Math.max(0, this.winMin - 2);
+      this.winMin = P;
+      this.winN = 0;
+    }
+    let n = P > 12 ? 4 : P > 4 ? 2 : 1;
+    if (n === 1 && this.excess > 0 && P > 2) {
+      n = 2;
+      this.excess--;
+    }
     let ran = 0;
     for (let i = 0; i < n; i++) {
       let cmd = this.pending.get(this.ackSeq + 1);
@@ -24757,6 +24779,7 @@ var Ghost = class extends Combatant {
     this.weaponId = NET_WEAPONS[info.w] || "m4a1";
     this.model = game.app.soldiers.create(info.team, WEAPON_DEFS[this.weaponId].model || this.weaponId);
     this.model.root.scale.setScalar(game.def.traversal ? 1 : CFG.player.bodyScale);
+    game.scene.add(this.model.root);
     this.alive = false;
     this.model.root.visible = false;
     this.life = -1;
@@ -24819,13 +24842,17 @@ var Ghost = class extends Combatant {
       a = b[i - 1];
       c = b[i];
       k = (renderT - a.t) / Math.max(1e-4, c.t - a.t);
+    } else if (b.length > 1 && c.t - b[b.length - 2].t < 0.1 && renderT - c.t < 0.25) {
+      a = b[b.length - 2];
+      k = 1 + Math.min(renderT - c.t, 0.06) / Math.max(1e-3, c.t - a.t);
     } else a = c;
     const m = this.motor, ox = m.pos.x, oz = m.pos.z;
     m.pos.set(lerp(a.x, c.x, k), lerp(a.y, c.y, k), lerp(a.z, c.z, k));
     m.prevPos.copy(m.pos);
     m.crouching = (k < 0.5 ? a : c).crouch;
-    this.yaw = a.yaw + wrapAngle(c.yaw - a.yaw) * k;
-    this.aimPitch = lerp(a.pitch, c.pitch, k);
+    const ka = Math.min(k, 1);
+    this.yaw = a.yaw + wrapAngle(c.yaw - a.yaw) * ka;
+    this.aimPitch = lerp(a.pitch, c.pitch, ka);
     this.speed = damp(this.speed, Math.hypot(m.pos.x - ox, m.pos.z - oz) / Math.max(1e-3, dt), 10, dt);
     const M = this.model;
     M.root.position.copy(m.pos);
@@ -26223,6 +26250,25 @@ var PostFX = class {
       this.composer.setSize(innerWidth, innerHeight);
     }
   }
+  // v67l shaders compiled ahead of time must be compiled for where their object is DRAWN. With post-processing that is the
+  // composer's render target — linear output, no tone mapping — and both are part of three's program key: compiled against
+  // the canvas (as v62t did) every program came out as a twin nobody used (tools/out/_progkeys.mjs: 50 of 93 at high), and
+  // the real one was compiled the first time its object came into view — in the middle of the match.
+  // target: the scene whose lights / fog `obj` will live under when it is not in a scene yet (WebGLRenderer.compile's targetScene)
+  compileAsync(obj, camera, target = null, qName = this.qName) {
+    const r = this.r, q = QUALITY[qName] || QUALITY.high, prev = r.getRenderTarget();
+    if (!r.compileAsync) {
+      r.compile(obj, camera, target);
+      return Promise.resolve();
+    }
+    if (q.post) r.setRenderTarget(this._warmRT || (this._warmRT = new THREE.WebGLRenderTarget(4, 4, { type: THREE.HalfFloatType })));
+    try {
+      return r.compileAsync(obj, camera, target).catch(() => {
+      });
+    } finally {
+      r.setRenderTarget(prev);
+    }
+  }
   configure(match, qName) {
     this.dispose();
     const q = QUALITY[qName] || QUALITY.high, r = this.r;
@@ -27265,7 +27311,7 @@ var Match = class _Match {
     this.effects = new Effects(this.scene, app.tex, this.audio);
     app.post.applyWorld(this, activeQuality());
     const tc = performance.now();
-    this._precompile = app.renderer.compileAsync ? app.renderer.compileAsync(this.scene, this.camera).then(() => {
+    this._precompile = app.renderer.compileAsync ? app.post.compileAsync(this.scene, this.camera, null, activeQuality()).then(() => {
       if (window.__loadT) window.__loadT["world shaders (background)"] = Math.round(performance.now() - tc);
     }).catch(() => {
     }) : null;
@@ -27291,6 +27337,7 @@ var Match = class _Match {
       for (let i = 0; i < this.config.enemies; i++) this.bots.push(new Bot(this, "bravo", i, this.botWeapon()));
     }
     this.combatants.push(...this.bots);
+    for (const b of this.bots) this.wantGun(b.def);
     this.combatants.forEach((c, i) => {
       c.netId = i + 1;
       this.refit(c);
@@ -27324,13 +27371,24 @@ var Match = class _Match {
       const tw = performance.now();
       await this._precompile;
       if (window.__loadT) window.__loadT["waited for world shaders"] = Math.round(performance.now() - tw);
-      await app.renderer.compileAsync(this.scene, this.camera);
-      await app.renderer.compileAsync(this.weapons.scene, this.weapons.camera);
+      await app.post.compileAsync(this.scene, this.camera);
+      await app.post.compileAsync(this.weapons.scene, this.weapons.camera);
+      await app.post.compileAsync(this._warmGroup(), this.camera, this.scene);
     } else {
       app.renderer.compile(this.scene, this.camera);
       app.renderer.compile(this.weapons.scene, this.weapons.camera);
     }
+    const wg = this._warm;
+    if (wg) {
+      wg.position.copy(this.player.motor.pos);
+      wg.traverse((o) => {
+        o.frustumCulled = false;
+      });
+      this.scene.add(wg);
+      app.renderer.shadowMap.needsUpdate = true;
+    }
     app.post.render(0.016, true);
+    if (wg) this.scene.remove(wg);
     progress(1, "準備完成");
     this.running = true;
   }
@@ -27816,10 +27874,7 @@ var Match = class _Match {
     p.y += 0.14;
     if (p.distanceTo(this.camera.position) > 80) return;
     const d = dir ? dir.clone().setY(0).normalize() : new THREE.Vector3(rand(-1, 1), 0, rand(-1, 1)).normalize();
-    this._helmetGeo = this._helmetGeo || new THREE.SphereGeometry(0.132, 14, 8, 0, Math.PI * 2, 0, Math.PI * 0.52);
-    const mat = (this._helmetMats = this._helmetMats || {})[c.team] || (this._helmetMats[c.team] = new THREE.MeshStandardMaterial({ color: TEAM_PALETTE[c.team].helmet, roughness: 0.75, side: THREE.DoubleSide }));
-    const mesh = new THREE.Mesh(this._helmetGeo, mat);
-    mesh.castShadow = true;
+    const mesh = this._helmetMesh(c.team);
     this.physics.addDynamic({
       mesh,
       mass: 1.2,
@@ -27829,6 +27884,78 @@ var Match = class _Match {
       angularVelocity: { x: rand(-12, 12), y: rand(-6, 6), z: rand(-12, 12) },
       life: 8,
       sink: 0.6
+    });
+  }
+  _helmetMesh(team) {
+    this._helmetGeo = this._helmetGeo || new THREE.SphereGeometry(0.132, 14, 8, 0, Math.PI * 2, 0, Math.PI * 0.52);
+    const mat = (this._helmetMats = this._helmetMats || {})[team] || (this._helmetMats[team] = new THREE.MeshStandardMaterial({ color: TEAM_PALETTE[team].helmet, roughness: 0.75, side: THREE.DoubleSide }));
+    const mesh = new THREE.Mesh(this._helmetGeo, mat);
+    mesh.castShadow = true;
+    return mesh;
+  }
+  // v67l one of everything a fight ADDS to the scene (it is not there when the level's shaders are compiled at load): a thrown
+  // grenade, a helmet shot off, a body, a dropped gun (its real model, the low-poly stand-in, its glow), a name tag / scope glint
+  // as a friend's ghost brings them, a smoke grenade's puffs. The first of each used to compile its shader in the middle of the
+  // match — 0.2–1.8 s frozen (tools/out/_hosthitch.mjs), and a host's freeze is everyone's. Never added to the scene: it only
+  // keeps those programs alive (three drops a program with its last material).
+  _warmGroup() {
+    const app = this.app, g = this._warm = new THREE.Group(), add = /* @__PURE__ */ __name((o) => {
+      g.add(o);
+      return o;
+    }, "add"), tex = app.tex;
+    const tryAdd = /* @__PURE__ */ __name((f) => {
+      try {
+        const o = f();
+        if (o) add(o);
+      } catch (e) {
+      }
+    }, "tryAdd");
+    for (const id of ["he", "flash", "smoke"]) tryAdd(() => {
+      const m = new THREE.Mesh(app.models.tp(id), app.soldiers.gunMat);
+      m.castShadow = true;
+      return m;
+    });
+    for (const team of ["alpha", "bravo"]) tryAdd(() => this._helmetMesh(team));
+    tryAdd(() => {
+      const c = soldierCorpse(this.playerModel, true);
+      c.visible = true;
+      return c;
+    });
+    for (const w of this.weapons.weapons) {
+      const def = w.def;
+      if (!_Match.isGun(def)) continue;
+      tryAdd(() => gunModelReady(def) ? app.models.dropModel(def) : null);
+      tryAdd(() => {
+        const m = new THREE.Mesh(app.models.tp(def.model), app.soldiers.gunMat);
+        m.castShadow = true;
+        return m;
+      });
+    }
+    const spr = /* @__PURE__ */ __name((o) => add(new THREE.Sprite(new THREE.SpriteMaterial(o))), "spr");
+    spr({ map: tex.dot(), color: new THREE.Color(0.45, 1, 0.8), transparent: true, opacity: 0.5, depthWrite: false, blending: THREE.AdditiveBlending });
+    spr({ map: tex.dot(), depthTest: false, transparent: true, sizeAttenuation: false });
+    spr({ map: tex.dot(), blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, sizeAttenuation: false });
+    spr({ map: this.effects.tex.smoke, color: 12567494, transparent: true, depthWrite: false, opacity: 0, rotation: 1 });
+    return g;
+  }
+  // v67l a gun whose model is not loaded yet (v65j: only your own loadouts are, at load) used to be fetched and parsed the
+  // moment the first one dropped: 50–100 ms of this thread for the GLB, then its textures' upload — a frozen frame in the
+  // middle of a fight, on the host for everyone. Now it waits for a moment a hitch costs nothing: outside the fight (the
+  // countdown, a round's end), or while you are dead — a host with friends in the match waits for the first two only. One
+  // at a time; until then that gun drops as the low-poly one (as before).
+  wantGun(def) {
+    if (def && _Match.isGun(def) && !gunModelReady(def) && !(this._gunQ || (this._gunQ = [])).some((d) => d.id === def.id)) this._gunQ.push(def);
+  }
+  _gunQueue() {
+    const Q = this._gunQ;
+    if (!Q || !Q.length || this._gunBusy) return;
+    const hosting = !!(this.net && this.net.role === "host" && this.net.peers.size);
+    if (this.phase === "live" && (hosting || this.player.alive)) return;
+    const def = Q.shift();
+    this._gunBusy = true;
+    ensureGunModels([def]).catch(() => {
+    }).then(() => {
+      this._gunBusy = false;
     });
   }
   /* ------------------------------ v13 KILLCAM ------------------------------ */
@@ -28154,7 +28281,7 @@ var Match = class _Match {
     if (!_Match.isGun(def) || !this.opts.pickup) return null;
     const holder = new THREE.Group();
     let gun;
-    if (!gunModelReady(def)) ensureGunModels([def]);
+    this.wantGun(def);
     try {
       if (!gunModelReady(def)) throw 0;
       gun = this.app.models.dropModel(def);
@@ -28164,6 +28291,12 @@ var Match = class _Match {
       gun.castShadow = true;
     }
     holder.add(gun);
+    if (gun.isGroup && this.app.renderer.compileAsync) {
+      holder.visible = false;
+      this.app.post.compileAsync(holder, this.camera, this.scene).then(() => {
+        holder.visible = true;
+      });
+    }
     const len = (WEAPON_DATABASE[def.id] && WEAPON_DATABASE[def.id].tp && WEAPON_DATABASE[def.id].tp.len || (def.kind === "pistol" ? 0.22 : 0.9)) * 0.62;
     const dyn = this.physics.addDynamic({
       mesh: holder,
@@ -28604,6 +28737,7 @@ var Match = class _Match {
     for (const np of this.humans) if (np.alive) np.update(dt, alpha);
     if (client && this.rules.netTick) this.rules.netTick(dt);
     if (this.net) this.net.frame(dt);
+    if (this._gunQ && this._gunQ.length) this._gunQueue();
     const t2 = performance.now(), respawns = this.rules.respawns;
     if (!p.alive) {
       if (respawns) {
@@ -28720,11 +28854,14 @@ var Match = class _Match {
 };
 
 // src/18_net.js
-var NET_VERSION = 31;
+var NET_VERSION = 32;
 var NET_PHASES = ["loading", "freeze", "live", "roundEnd", "over"];
 var NET_SNAP_HZ = 30;
 var NET_CMD_EVERY = 1;
 var NET_INTERP = 0.1;
+var NET_INTERP_MIN = 0.06;
+var NET_INTERP_MAX = 0.15;
+var NET_SHOT_DELAY = 0.05;
 var NET_REWIND_MAX = 0.4;
 var LoopbackTransport = class {
   static {
@@ -28778,7 +28915,7 @@ var NetCodec = {
   SNAP: 2,
   CMD_SIZE: 26,
   ENT_SIZE: 22,
-  SHOT_SIZE: 27,
+  SHOT_SIZE: 29,
   encodeCmds(list) {
     const v = new DataView(new ArrayBuffer(2 + list.length * 26));
     v.setUint8(0, 1);
@@ -28825,7 +28962,7 @@ var NetCodec = {
   },
   // per-client snapshot: shared header + this client's own authoritative extras + every soldier + recent shots
   encodeSnap(s) {
-    const v = new DataView(new ArrayBuffer(29 + 19 + 1 + s.ents.length * 22 + 1 + s.shots.length * 27));
+    const v = new DataView(new ArrayBuffer(29 + 19 + 1 + s.ents.length * 22 + 1 + s.shots.length * 29));
     let o = 0;
     v.setUint8(o, 2);
     v.setUint32(o + 1, s.tick);
@@ -28871,7 +29008,9 @@ var NetCodec = {
         v.setFloat32(o + 3 + i * 4, h.from[i]);
         v.setFloat32(o + 15 + i * 4, h.to[i]);
       }
-      o += 27;
+      v.setUint8(o + 27, clamp(Math.round((s.time - h.t) * 500), 0, 255));
+      v.setUint8(o + 28, h.n & 255);
+      o += 29;
     }
     return v.buffer;
   },
@@ -28912,13 +29051,13 @@ var NetCodec = {
     }
     const ns = v.getUint8(o++);
     s.shots = [];
-    for (let i = 0; i < ns; i++, o += 27) {
+    for (let i = 0; i < ns; i++, o += 29) {
       const f = [], t = [];
       for (let k = 0; k < 3; k++) {
         f.push(v.getFloat32(o + 3 + k * 4));
         t.push(v.getFloat32(o + 15 + k * 4));
       }
-      s.shots.push({ id: v.getUint16(o), w: v.getUint8(o + 2), from: f, to: t });
+      s.shots.push({ id: v.getUint16(o), w: v.getUint8(o + 2), from: f, to: t, age: v.getUint8(o + 27) * 2e-3, n: v.getUint8(o + 28) });
     }
     return s;
   }
@@ -29099,7 +29238,9 @@ var NetHost = class {
     if (this.snapT > 0) return;
     this.snapT = Math.max(0, this.snapT + 1 / NET_SNAP_HZ);
     this.tick++;
-    const ents = m.combatants.filter((c) => !c.removed).map((c) => netEntity(m, c)), shots = this.shots.splice(0);
+    const fresh = this.shots.splice(0), prev = this.prevShots || [], shots = prev.length + fresh.length <= 24 ? prev.concat(fresh) : fresh;
+    this.prevShots = fresh;
+    const ents = m.combatants.filter((c) => !c.removed).map((c) => netEntity(m, c));
     const base = {
       tick: this.tick,
       time: m.time,
@@ -29125,7 +29266,7 @@ var NetHost = class {
         sh: np.shield,
         shMax: np.maxShield,
         ents,
-        shots: shots.filter((h) => h.id !== np.netId).slice(-60)
+        shots: shots.filter((h) => h.id !== np.netId).slice(-40)
       });
       this.t.send(peer, NetCodec.encodeSnap(s), false);
     }
@@ -29197,7 +29338,7 @@ var NetHost = class {
     for (const [peer] of this.peers) this.t.send(peer, ev === "start" ? { k: "round", ev, n: a } : { k: "round", ev, w: a || null, why: String(b || "").slice(0, 30) });
   }
   onShot(c, from, to, def) {
-    if (this.peers.size && this.shots.length < 120) this.shots.push({ id: c.netId, w: NET_WI[def.id] ?? 0, from: [from.x, from.y, from.z], to: [to.x, to.y, to.z] });
+    if (this.peers.size && this.shots.length < 120) this.shots.push({ id: c.netId, w: NET_WI[def.id] ?? 0, from: [from.x, from.y, from.z], to: [to.x, to.y, to.z], t: this.m.time, n: this.shotN = (this.shotN || 0) + 1 & 255 });
   }
   onHit(attacker, victim, kind, point) {
     if (attacker.isNet && attacker.peer) this.t.send(attacker.peer, { k: "hit", kind, pt: point ? v3arr(point) : null });
@@ -29243,6 +29384,12 @@ var NetClient = class {
     this.corr = { n: 0, snaps: 0, max: 0 };
     this.rtt = 0;
     this.pingT = 0;
+    this.interp = NET_INTERP;
+    this.gapDev = 0;
+    this.lastSnapAt = 0;
+    this.lateAt = -10;
+    this.shotQ = [];
+    this.shotSeen = new Array(256);
     this.cfg = opts.cfg || null;
     this.team = opts.team || null;
     this.welcomed = new Promise((res) => {
@@ -29403,7 +29550,7 @@ var NetClient = class {
   }
   // after each local fixed step: remember where prediction put us for this command, send commands at 60 Hz
   afterLocalStep(cmd) {
-    cmd.vt = this.hostClock === null ? 0 : this.hostClock - NET_INTERP;
+    cmd.vt = this.hostClock === null ? 0 : this.hostClock - this.interp;
     const p = this.m.player.motor.pos;
     this.hist[cmd.seq & 255] = { seq: cmd.seq, x: p.x, y: p.y, z: p.z };
     this.sent.push(new UserCmd().copy(cmd));
@@ -29416,7 +29563,13 @@ var NetClient = class {
   _snap(s) {
     if (s.tick <= this.lastTick) return;
     this.lastTick = s.tick;
-    const m = this.m, p = m.player;
+    const m = this.m, p = m.player, now = performance.now() / 1e3;
+    if (this.lastSnapAt) {
+      const gap = now - this.lastSnapAt;
+      this.gapDev += (Math.min(Math.abs(gap - 1 / NET_SNAP_HZ), 0.1) - this.gapDev) * 0.05;
+      if (gap > 0.055) this.lateAt = now;
+    }
+    this.lastSnapAt = now;
     this.hostClock = this.hostClock === null || Math.abs(s.time - this.hostClock) > 0.3 ? s.time : this.hostClock + (s.time - this.hostClock) * 0.1;
     m.score.alpha = s.scoreA;
     m.score.bravo = s.scoreB;
@@ -29442,8 +29595,10 @@ var NetClient = class {
       if (g) g.push(s.time, e);
     }
     for (const h of s.shots) {
-      const c = this.ghosts.get(h.id), def = WEAPON_DEFS[NET_WEAPONS[h.w]];
-      if (c && def) m.thirdPersonShot(c, def, new THREE.Vector3(...h.from), new THREE.Vector3(...h.to));
+      const seen = this.shotSeen[h.n];
+      if (seen !== void 0 && s.tick >= seen && s.tick - seen <= 3) continue;
+      this.shotSeen[h.n] = s.tick;
+      if (this.shotQ.length < 240) this.shotQ.push({ t: s.time - h.age, id: h.id, w: h.w, from: h.from, to: h.to });
     }
   }
   // our own soldier: respawns and health come from the host; position is predicted here and only nudged back if it drifted
@@ -29504,7 +29659,20 @@ var NetClient = class {
     }
     if (this.hostClock === null) return;
     this.hostClock += dt;
-    const rt = this.hostClock - NET_INTERP;
+    const m = this.m, Q = this.shotQ, st = this.hostClock - NET_SHOT_DELAY;
+    let keep = 0;
+    for (const h of Q) {
+      if (h.t > st) {
+        Q[keep++] = h;
+        continue;
+      }
+      const c = this.ghosts.get(h.id), def = WEAPON_DEFS[NET_WEAPONS[h.w]];
+      if (c && def) m.thirdPersonShot(c, def, new THREE.Vector3(...h.from), new THREE.Vector3(...h.to));
+    }
+    Q.length = keep;
+    const want = clamp(0.03 + 3 * this.gapDev + (performance.now() / 1e3 - this.lateAt < 3 ? 1 / NET_SNAP_HZ : 0) + 0.017, NET_INTERP_MIN, NET_INTERP_MAX);
+    this.interp += clamp(want - this.interp, -0.01 * dt, 0.25 * dt);
+    const rt = this.hostClock - this.interp;
     for (const g of this.ghosts.values()) g.update(dt, rt);
   }
   close() {

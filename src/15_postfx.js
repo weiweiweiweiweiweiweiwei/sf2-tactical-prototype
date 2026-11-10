@@ -173,6 +173,18 @@ class PostFX {
     if (this.composer) { this.composer.setPixelRatio(this.r.getPixelRatio()); this.composer.setSize(innerWidth, innerHeight); }
   }
 
+  // v67l shaders compiled ahead of time must be compiled for where their object is DRAWN. With post-processing that is the
+  // composer's render target — linear output, no tone mapping — and both are part of three's program key: compiled against
+  // the canvas (as v62t did) every program came out as a twin nobody used (tools/out/_progkeys.mjs: 50 of 93 at high), and
+  // the real one was compiled the first time its object came into view — in the middle of the match.
+  // target: the scene whose lights / fog `obj` will live under when it is not in a scene yet (WebGLRenderer.compile's targetScene)
+  compileAsync(obj, camera, target = null, qName = this.qName) {
+    const r = this.r, q = QUALITY[qName] || QUALITY.high, prev = r.getRenderTarget();
+    if (!r.compileAsync) { r.compile(obj, camera, target); return Promise.resolve(); }
+    if (q.post) r.setRenderTarget(this._warmRT || (this._warmRT = new THREE.WebGLRenderTarget(4, 4, { type: THREE.HalfFloatType })));
+    try { return r.compileAsync(obj, camera, target).catch(() => {}); } finally { r.setRenderTarget(prev); }
+  }
+
   configure(match, qName) {
     this.dispose();
     const q = QUALITY[qName] || QUALITY.high, r = this.r;

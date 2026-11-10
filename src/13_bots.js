@@ -100,9 +100,7 @@ class Bot extends Combatant {
   die(dir, force) {
     this.alive = false; this.hp = 0; this.respawnT = CFG.respawn; this.holdE = false; this.motor.climbInput = 0;
     this.model.head.visible = true;
-    const corpse = SkeletonUtils.clone(this.model.root); // v22: skinned soldier — rebinds the clone to its own bones
-    corpse.position.set(0, 0, 0); corpse.rotation.set(0, 0, 0);
-    corpse.traverse((o) => { if (o.isMesh) { o.castShadow = true; if (o.material === this.model.mat) o.material = camoMat(this.model.mat.clone()); if (o.material.emissive) o.material.emissive.setRGB(0, 0, 0); } });
+    const corpse = soldierCorpse(this.model);
     const hd = dir.clone().setY(0); if (hd.lengthSq() < 1e-4) hd.set(Math.sin(this.yaw), 0, Math.cos(this.yaw));
     const N = (n) => corpse.getObjectByName(n), hips = [N('hip0'), N('hip1')], torso = N('torso'), knees = [N('knee0'), N('knee1')], head = N('head'), arms = N('arms');
     const limp = knees[0] && knees[1] && head && arms ? { t: 0, hips, knees, torso, head, arms, h0: hips.map((h) => h.rotation.x), k0: knees.map((n) => n.rotation.x), a0: arms.rotation.x, hd0: head.rotation.x, t0: torso.rotation.x,
@@ -705,4 +703,12 @@ class TeamIntel {
   stale(p, now) { const t = this.seen.get(this._k(p)); return t === undefined ? 1 : clamp((now - t) / 60, 0, 1); }
 }
 
-export { BOT_NAMES, Bot, TeamIntel, animateSoldier };
+// the body a soldier leaves behind: a clone of his model with its own material (v67l apart from Bot.die: Match._warmGroup builds one
+// at load so its shaders are compiled then — `warm`: the shared materials are left as they are)
+function soldierCorpse(model, warm = false) {
+  const corpse = SkeletonUtils.clone(model.root); // v22: skinned soldier — rebinds the clone to its own bones
+  corpse.position.set(0, 0, 0); corpse.rotation.set(0, 0, 0);
+  corpse.traverse((o) => { if (o.isMesh) { o.castShadow = true; if (o.material === model.mat) o.material = camoMat(model.mat.clone()); if (!warm && o.material.emissive) o.material.emissive.setRGB(0, 0, 0); } });
+  return corpse;
+}
+export { BOT_NAMES, Bot, TeamIntel, animateSoldier, soldierCorpse };

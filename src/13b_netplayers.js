@@ -24,7 +24,7 @@ class NetPlayer extends Human {
     this.hipMode = opts.hipMode === 'shotgun' ? 'shotgun' : 'precise';
     this.loadout = NetPlayer.validLoadout(opts.loadout, game.gunSet); this.nextLoadout = null;
     this.arsenal = new Arsenal(game, this); this.arsenal.remote = true; this.arsenal.init(loadoutDefs(game.mode, this.loadout));
-    this.model = game.app.soldiers.create(team, this.def.model || this.def.id); this.model.root.scale.setScalar(game.def.traversal ? 1 : CFG.player.bodyScale); // (v66j SF2's 1.56 m soldier) game.scene.add(this.model.root); this.modelGun = this.def.id;
+    this.model = game.app.soldiers.create(team, this.def.model || this.def.id); this.model.root.scale.setScalar(game.def.traversal ? 1 : CFG.player.bodyScale); /* (v66j SF2's 1.56 m soldier) */ game.scene.add(this.model.root); this.modelGun = this.def.id; // (v67l v66j's comment had swallowed these two: online, nobody else's soldier was in the scene)
     if (team === game.player.team) this.tag = Bot.prototype._makeTag.call(this);
     this.pending = new Map(); this.ackSeq = 0; this.holeT = 0; this.respawnT = 0;
   }
@@ -53,8 +53,14 @@ class NetPlayer extends Human {
   // arrived yet (jitter): the soldier waits this tick (his own client already predicted it). A backlog is worked off two
   // per tick. So the host replays the client's input stream exactly: same position, same shots, same spread.
   // A missing number (packet lost or still in flight) is waited for up to 4 ticks (~33 ms), then skipped.
+  // v67l the buffer is kept short. It only ever grew (a tick with no command adds one for good) and was worked off from 5 up,
+  // so 3–4 commands sat in it — 45–65 ms on top of the link, for how the others see him and for when his shots count
+  // (tools/_netsmooth.mjs). Now: every half second, what the buffer never went below is what it holds for nothing — all of
+  // that but 2 is worked off, one extra command a tick; after a hitch (more than 12 waiting) four a tick — 60 used to take a second.
   step(h) {
-    const n = this.pending.size > 4 ? 2 : 1;
+    const P = this.pending.size;
+    this.winMin = Math.min(this.winMin ?? P, P); if ((this.winN = (this.winN || 0) + 1) >= 30) { this.excess = Math.max(0, this.winMin - 2); this.winMin = P; this.winN = 0; }
+    let n = P > 12 ? 4 : P > 4 ? 2 : 1; if (n === 1 && this.excess > 0 && P > 2) { n = 2; this.excess--; }
     let ran = 0;
     for (let i = 0; i < n; i++) {
       let cmd = this.pending.get(this.ackSeq + 1);
@@ -109,7 +115,7 @@ class Ghost extends Combatant {
     super(game, info.team === 'bravo' ? 'bravo' : 'alpha', safeName(info.name), false);
     this.netId = info.id; this.kind = info.kind; this.isBot = info.kind === 'bot'; this.isNet = info.kind !== 'bot';
     this.aimPitch = 0; this.walkPhase = Math.random() * 6; this.buf = []; this.speed = 0; this.weaponId = NET_WEAPONS[info.w] || 'm4a1';
-    this.model = game.app.soldiers.create(info.team, WEAPON_DEFS[this.weaponId].model || this.weaponId); this.model.root.scale.setScalar(game.def.traversal ? 1 : CFG.player.bodyScale); // (v66j SF2's 1.56 m soldier) game.scene.add(this.model.root);
+    this.model = game.app.soldiers.create(info.team, WEAPON_DEFS[this.weaponId].model || this.weaponId); this.model.root.scale.setScalar(game.def.traversal ? 1 : CFG.player.bodyScale); /* (v66j SF2's 1.56 m soldier) */ game.scene.add(this.model.root); // (v67l as above: a ghost was never drawn)
     this.alive = false; this.model.root.visible = false; this.life = -1;
     if (info.team === game.player.team) this.tag = Bot.prototype._makeTag.call(this);
   }
@@ -135,10 +141,11 @@ class Ghost extends Combatant {
     let a = b[0], c = b[b.length - 1], k = 0;
     if (renderT <= a.t) c = a;
     else if (renderT < c.t) { let i = 1; while (b[i].t < renderT) i++; a = b[i - 1]; c = b[i]; k = (renderT - a.t) / Math.max(1e-4, c.t - a.t); }
+    else if (b.length > 1 && c.t - b[b.length - 2].t < 0.1 && renderT - c.t < 0.25) { a = b[b.length - 2]; k = 1 + Math.min(renderT - c.t, 0.06) / Math.max(1e-3, c.t - a.t); } // v67l the next snapshot is late: he keeps moving as he was for up to 60 ms (was: stood still, then jumped)
     else a = c;
     const m = this.motor, ox = m.pos.x, oz = m.pos.z;
     m.pos.set(lerp(a.x, c.x, k), lerp(a.y, c.y, k), lerp(a.z, c.z, k)); m.prevPos.copy(m.pos); m.crouching = (k < 0.5 ? a : c).crouch;
-    this.yaw = a.yaw + wrapAngle(c.yaw - a.yaw) * k; this.aimPitch = lerp(a.pitch, c.pitch, k);
+    const ka = Math.min(k, 1); this.yaw = a.yaw + wrapAngle(c.yaw - a.yaw) * ka; this.aimPitch = lerp(a.pitch, c.pitch, ka); // (the view is not carried on)
     this.speed = damp(this.speed, Math.hypot(m.pos.x - ox, m.pos.z - oz) / Math.max(1e-3, dt), 10, dt);
     const M = this.model; M.root.position.copy(m.pos); M.root.rotation.y = this.yaw;
     animateSoldier(this, dt, Math.min(this.speed, 9), m.crouching, this.aimPitch, (k < 0.5 ? a : c).reload);

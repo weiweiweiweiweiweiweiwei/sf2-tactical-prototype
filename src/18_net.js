@@ -11,9 +11,13 @@ import { Ghost, NetPlayer } from './13b_netplayers.js';
      testing; WebRTC + a signalling service take its place in v26 with the same send / onMessage interface; from v27 a
      match talks through its room's RoomLink (18c_room.js), so the connection outlives the match.
    ===================================================================== */
-const NET_VERSION = 31; // v64c room ready check (準備 F5): an older guest never sends ready, so it would never be taken into a match
+const NET_VERSION = 32; // v67l a snapshot's shots carry their time and a number (SHOT_SIZE 29) · (31: v64c room ready check)
 const NET_PHASES = ['loading', 'freeze', 'live', 'roundEnd', 'over'];
-const NET_SNAP_HZ = 30, NET_CMD_EVERY = 1, NET_INTERP = 0.1; // snapshots / s · send a cmd packet every tick (60 Hz, v63g) · ghosts drawn 100 ms behind
+const NET_SNAP_HZ = 30, NET_CMD_EVERY = 1, NET_INTERP = 0.1; // snapshots / s · send a cmd packet every tick (60 Hz, v63g) · ghosts drawn 100 ms behind (the start; then NetClient.interp)
+// v67l the delay follows the link: one snapshot interval + how unevenly they arrive, 60–150 ms (was 100 ms for everyone — on a
+// steady link 40 ms more of "he saw me first" than needed, on a rough one too little and the ghosts stalled)
+const NET_INTERP_MIN = 0.06, NET_INTERP_MAX = 0.15;
+const NET_SHOT_DELAY = 0.05; // v67l others' shots are played this long after their own time (see NetClient._snap)
 const NET_REWIND_MAX = 0.4; // v29 lag compensation: at most 400 ms back (≈ 150 ms ping each way + 100 ms interpolation; slower links are not trusted)
 
 class LoopbackTransport {
@@ -43,7 +47,7 @@ class LoopbackTransport {
 
 // Binary packets for the two high-rate streams. Everything else is small JSON (reliable events).
 const NetCodec = {
-  CMD: 1, SNAP: 2, CMD_SIZE: 26, ENT_SIZE: 22, SHOT_SIZE: 27,
+  CMD: 1, SNAP: 2, CMD_SIZE: 26, ENT_SIZE: 22, SHOT_SIZE: 29,
   encodeCmds(list) {
     const v = new DataView(new ArrayBuffer(2 + list.length * 26)); v.setUint8(0, 1); v.setUint8(1, list.length);
     let o = 2;
@@ -62,7 +66,7 @@ const NetCodec = {
   },
   // per-client snapshot: shared header + this client's own authoritative extras + every soldier + recent shots
   encodeSnap(s) {
-    const v = new DataView(new ArrayBuffer(29 + 19 + 1 + s.ents.length * 22 + 1 + s.shots.length * 27)); let o = 0;
+    const v = new DataView(new ArrayBuffer(29 + 19 + 1 + s.ents.length * 22 + 1 + s.shots.length * 29)); let o = 0;
     v.setUint8(o, 2); v.setUint32(o + 1, s.tick); v.setFloat32(o + 5, s.time); v.setUint32(o + 9, s.ack); v.setInt16(o + 13, s.scoreA); v.setInt16(o + 15, s.scoreB);
     v.setFloat32(o + 17, s.timeLeft); v.setUint8(o + 21, s.phase); v.setFloat32(o + 22, s.phaseT); v.setUint8(o + 26, s.winsA); v.setUint8(o + 27, s.winsB); v.setUint8(o + 28, s.round); o = 29;
     v.setFloat32(o, s.vx); v.setFloat32(o + 4, s.vy); v.setFloat32(o + 8, s.vz); v.setUint8(o + 12, s.hp); v.setUint16(o + 13, s.ammo); v.setUint16(o + 15, s.reserve);
@@ -74,7 +78,8 @@ const NetCodec = {
       v.setInt16(o + 17, Math.round(wrapAngle(e.yaw) * 10000)); v.setInt16(o + 19, Math.round(clamp(e.pitch, -1.6, 1.6) * 10000)); v.setUint8(o + 21, clamp(Math.round(e.hp), 0, 255)); o += 22;
     }
     v.setUint8(o++, s.shots.length);
-    for (const h of s.shots) { v.setUint16(o, h.id); v.setUint8(o + 2, h.w); for (let i = 0; i < 3; i++) { v.setFloat32(o + 3 + i * 4, h.from[i]); v.setFloat32(o + 15 + i * 4, h.to[i]); } o += 27; }
+    // (v67l + how long before this snapshot it was fired, 2 ms units, and its running number — a shot is sent twice)
+    for (const h of s.shots) { v.setUint16(o, h.id); v.setUint8(o + 2, h.w); for (let i = 0; i < 3; i++) { v.setFloat32(o + 3 + i * 4, h.from[i]); v.setFloat32(o + 15 + i * 4, h.to[i]); } v.setUint8(o + 27, clamp(Math.round((s.time - h.t) * 500), 0, 255)); v.setUint8(o + 28, h.n & 255); o += 29; }
     return v.buffer;
   },
   decodeSnap(buf) {
@@ -89,7 +94,7 @@ const NetCodec = {
         x: v.getFloat32(o + 5), y: v.getFloat32(o + 9), z: v.getFloat32(o + 13), yaw: v.getInt16(o + 17) / 10000, pitch: v.getInt16(o + 19) / 10000, hp: v.getUint8(o + 21) });
     }
     const ns = v.getUint8(o++); s.shots = [];
-    for (let i = 0; i < ns; i++, o += 27) { const f = [], t = []; for (let k = 0; k < 3; k++) { f.push(v.getFloat32(o + 3 + k * 4)); t.push(v.getFloat32(o + 15 + k * 4)); } s.shots.push({ id: v.getUint16(o), w: v.getUint8(o + 2), from: f, to: t }); }
+    for (let i = 0; i < ns; i++, o += 29) { const f = [], t = []; for (let k = 0; k < 3; k++) { f.push(v.getFloat32(o + 3 + k * 4)); t.push(v.getFloat32(o + 15 + k * 4)); } s.shots.push({ id: v.getUint16(o), w: v.getUint8(o + 2), from: f, to: t, age: v.getUint8(o + 27) * 0.002, n: v.getUint8(o + 28) }); }
     return s;
   },
 };
@@ -183,13 +188,16 @@ class NetHost {
     if (m.builder.mechs.length && (this.mechT = (this.mechT || 0) - dt) <= 0) { this.mechT = 0.1; const s = m.builder.mechs[0].netState(); for (const [peer] of this.peers) this.t.send(peer, { k: 'mech', s }, false); } // v46 trams / drawbridge
     this.snapT -= dt; if (this.snapT > 0) return;
     this.snapT = Math.max(0, this.snapT + 1 / NET_SNAP_HZ); this.tick++;
-    const ents = m.combatants.filter((c) => !c.removed).map((c) => netEntity(m, c)), shots = this.shots.splice(0);
+    // v67l every shot goes out in two snapshots in a row (they are unreliable: one lost used to be a shot nobody heard) —
+    // unless that makes the packet long (over ~1200 bytes it is sent in pieces, and one lost piece loses it all)
+    const fresh = this.shots.splice(0), prev = this.prevShots || [], shots = prev.length + fresh.length <= 24 ? prev.concat(fresh) : fresh; this.prevShots = fresh;
+    const ents = m.combatants.filter((c) => !c.removed).map((c) => netEntity(m, c));
     const base = { tick: this.tick, time: m.time, scoreA: m.score.alpha, scoreB: m.score.bravo, timeLeft: m.timeLeft, phase: NET_PHASES.indexOf(m.phase), phaseT: m.phase === 'freeze' ? m.freezeT : m.roundEndT || 0,
       winsA: m.roundWins.alpha, winsB: m.roundWins.bravo, round: m.round & 255 };
     for (const [peer, np] of this.peers) {
       const w = np.arsenal.current;
       const s = Object.assign({}, base, { ack: np.ackSeq, vx: np.motor.vel.x, vy: np.motor.vel.y, vz: np.motor.vel.z, hp: np.alive ? Math.max(0, Math.round(np.hp)) : 0, ammo: w.ammo || 0, reserve: w.reserveAmmo || 0, sh: np.shield, shMax: np.maxShield,
-        ents, shots: shots.filter((h) => h.id !== np.netId).slice(-60) }); // his own shots are already on his screen
+        ents, shots: shots.filter((h) => h.id !== np.netId).slice(-40) }); // his own shots are already on his screen
       this.t.send(peer, NetCodec.encodeSnap(s), false);
     }
   }
@@ -230,7 +238,7 @@ class NetHost {
   onUndrop(d) { for (const [peer] of this.peers) this.t.send(peer, { k: 'undrop', id: d.id }); }
   onPickup(np, i, def, ammo, reserve) { this.t.send(np.peer, { k: 'got', i, w: NET_WI[def.id] ?? 0, a: ammo, r: reserve }); }
   onRound(ev, a, b) { for (const [peer] of this.peers) this.t.send(peer, ev === 'start' ? { k: 'round', ev, n: a } : { k: 'round', ev, w: a || null, why: String(b || '').slice(0, 30) }); }
-  onShot(c, from, to, def) { if (this.peers.size && this.shots.length < 120) this.shots.push({ id: c.netId, w: NET_WI[def.id] ?? 0, from: [from.x, from.y, from.z], to: [to.x, to.y, to.z] }); }
+  onShot(c, from, to, def) { if (this.peers.size && this.shots.length < 120) this.shots.push({ id: c.netId, w: NET_WI[def.id] ?? 0, from: [from.x, from.y, from.z], to: [to.x, to.y, to.z], t: this.m.time, n: (this.shotN = ((this.shotN || 0) + 1) & 255) }); }
   onHit(attacker, victim, kind, point) { if (attacker.isNet && attacker.peer) this.t.send(attacker.peer, { k: 'hit', kind, pt: point ? v3arr(point) : null }); }
   onRemoteDamaged(np, amount, from) { this.t.send(np.peer, { k: 'dmg', amt: Math.round(amount), hp: Math.max(0, Math.round(np.hp)), from: v3arr(from) }); }
   onFlash(np, s) { this.t.send(np.peer, { k: 'flash', s: +s.toFixed(3) }); }
@@ -248,6 +256,7 @@ class NetClient {
     this.role = 'client'; this.app = app; this.t = transport; this.opts = opts; this.m = null; this.hostId = null; this.ready = false;
     this.ghosts = new Map(); this.hist = new Array(256); this.sent = []; this.stepN = 0; this.lastTick = 0; this.hostClock = null; this.corr = { n: 0, snaps: 0, max: 0 };
     this.rtt = 0; this.pingT = 0;
+    this.interp = NET_INTERP; this.gapDev = 0; this.lastSnapAt = 0; this.lateAt = -10; this.shotQ = []; this.shotSeen = new Array(256); // v67l
     // v27: a room member knows the match settings (cfg) and his team before the host is ready, and builds the map meanwhile;
     // `welcomed` settles when the host's match takes him in ({ reject } if it will not)
     this.cfg = opts.cfg || null; this.team = opts.team || null;
@@ -316,7 +325,7 @@ class NetClient {
 
   // after each local fixed step: remember where prediction put us for this command, send commands at 60 Hz
   afterLocalStep(cmd) {
-    cmd.vt = this.hostClock === null ? 0 : this.hostClock - NET_INTERP; // v29: what our screen shows right now, in host time
+    cmd.vt = this.hostClock === null ? 0 : this.hostClock - this.interp; // v29: what our screen shows right now, in host time
     const p = this.m.player.motor.pos; this.hist[cmd.seq & 255] = { seq: cmd.seq, x: p.x, y: p.y, z: p.z };
     this.sent.push(new UserCmd().copy(cmd)); if (this.sent.length > 4) this.sent.shift();
     if (++this.stepN % NET_CMD_EVERY === 0) this.t.send(this.hostId, NetCodec.encodeCmds(this.sent), false);
@@ -325,7 +334,11 @@ class NetClient {
 
   _snap(s) {
     if (s.tick <= this.lastTick) return; this.lastTick = s.tick;
-    const m = this.m, p = m.player;
+    const m = this.m, p = m.player, now = performance.now() / 1000;
+    // v67l how evenly the snapshots arrive (the interpolation delay follows it — frame()): the average distance of a gap from
+    // the nominal one, and when one last came a whole snapshot late (lost, or a hitch on the way)
+    if (this.lastSnapAt) { const gap = now - this.lastSnapAt; this.gapDev += (Math.min(Math.abs(gap - 1 / NET_SNAP_HZ), 0.1) - this.gapDev) * 0.05; if (gap > 0.055) this.lateAt = now; }
+    this.lastSnapAt = now;
     this.hostClock = this.hostClock === null || Math.abs(s.time - this.hostClock) > 0.3 ? s.time : this.hostClock + (s.time - this.hostClock) * 0.1;
     m.score.alpha = s.scoreA; m.score.bravo = s.scoreB; m.timeLeft = s.timeLeft; m.roundWins.alpha = s.winsA; m.roundWins.bravo = s.winsB; m.round = s.round;
     const ph = NET_PHASES[s.phase] || 'live';
@@ -338,7 +351,13 @@ class NetClient {
       if (e.id === p.netId) { this._self(s, e); continue; }
       const g = this.ghosts.get(e.id); if (g) g.push(s.time, e);
     }
-    for (const h of s.shots) { const c = this.ghosts.get(h.id), def = WEAPON_DEFS[NET_WEAPONS[h.w]]; if (c && def) m.thirdPersonShot(c, def, new THREE.Vector3(...h.from), new THREE.Vector3(...h.to)); }
+    // v67l others' shots are not played as their snapshot lands (all of a snapshot's at once, so every gun's rhythm was cut
+    // into 33 ms steps: a 100 ms gun heard at 100 / 133 / 133 …) but at their own time + NET_SHOT_DELAY, each as far from
+    // the last as it was fired. Each comes twice (see NetHost.frame): the second copy of one already heard is skipped.
+    for (const h of s.shots) {
+      const seen = this.shotSeen[h.n]; if (seen !== undefined && s.tick >= seen && s.tick - seen <= 3) continue;
+      this.shotSeen[h.n] = s.tick; if (this.shotQ.length < 240) this.shotQ.push({ t: s.time - h.age, id: h.id, w: h.w, from: h.from, to: h.to });
+    }
   }
   // our own soldier: respawns and health come from the host; position is predicted here and only nudged back if it drifted
   _self(s, e) {
@@ -370,7 +389,17 @@ class NetClient {
     this.pingT -= dt; if (this.pingT <= 0) { this.pingT = 1; this.t.send(this.hostId, { k: 'ping', t: performance.now() }); }
     if (this.hostClock === null) return;
     this.hostClock += dt;
-    const rt = this.hostClock - NET_INTERP;
+    const m = this.m, Q = this.shotQ, st = this.hostClock - NET_SHOT_DELAY; let keep = 0;
+    for (const h of Q) {
+      if (h.t > st) { Q[keep++] = h; continue; }
+      const c = this.ghosts.get(h.id), def = WEAPON_DEFS[NET_WEAPONS[h.w]]; if (c && def) m.thirdPersonShot(c, def, new THREE.Vector3(...h.from), new THREE.Vector3(...h.to));
+    }
+    Q.length = keep;
+    // v67l the delay the ghosts are drawn at: a snapshot interval + 3 × the unevenness + a frame, another interval for 3 s after
+    // a snapshot went missing. It grows at once (a stall shows), and comes back down slowly (10 ms a second: nobody sees it)
+    const want = clamp(0.03 + 3 * this.gapDev + (performance.now() / 1000 - this.lateAt < 3 ? 1 / NET_SNAP_HZ : 0) + 0.017, NET_INTERP_MIN, NET_INTERP_MAX);
+    this.interp += clamp(want - this.interp, -0.01 * dt, 0.25 * dt);
+    const rt = this.hostClock - this.interp;
     for (const g of this.ghosts.values()) g.update(dt, rt);
   }
   close() {
