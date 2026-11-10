@@ -331,7 +331,7 @@ class WeaponSystem extends Arsenal {
     hud.setCrosshair(gap, p.alive && !(this.ads && w.kind !== 'knife'));
     if (w.scoped && this.scopedIn) hud.setScopeSpread(spread);
     hud.setReload(w.reloading ? w.reloadPhase : -1);
-    hud.setCharge(w.kind === 'grenade' && w.charging ? (w.power - 1) / (THROW.maxPower - 1) : -1);
+    hud.setCharge(-1); // (v67n SF2's throw has no charge)
 
     this.focusT -= dt;
     if (this.focusT <= 0) {

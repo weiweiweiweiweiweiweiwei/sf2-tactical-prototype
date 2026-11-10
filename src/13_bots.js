@@ -631,12 +631,12 @@ class BotAI {
     const type = bot.nades.he > 0 && Math.random() < 0.65 ? 'he' : bot.nades.flash > 0 ? 'flash' : null;
     if (!type) return;
     const origin = bot.eyePos(new THREE.Vector3()), tgt = this.lastKnown.clone(), dx = tgt.x - origin.x, dz = tgt.z - origin.z, d = Math.hypot(dx, dz);
-    if (d < 7 || d > 30) return;
+    if (d < 7 || d > 45) return; // (v67n SF2's throw carries ~50 m)
     const h = tgt.y + 0.3 - origin.y;
     let th = 0.62, den = 2 * Math.cos(th) ** 2 * (d * Math.tan(th) - h);
     if (den <= 0) { th = 0.95; den = 2 * Math.cos(th) ** 2 * (d * Math.tan(th) - h); }
     if (den <= 0) return;
-    const v = Math.min(22, Math.sqrt(-CFG.physGravity * d * d / den)); // (v66j the grenades' own world)
+    const v = Math.min(CFG.nade.terminal, Math.sqrt(-CFG.nade.gravity * d * d / den)); // (v67n the grenades' own gravity, SF2's)
     const vel = new THREE.Vector3(dx / d * v * Math.cos(th), v * Math.sin(th), dz / d * v * Math.cos(th));
     bot.nades[type]--;
     g.throwGrenade(bot, WEAPON_DEFS[type], origin.addScaledVector(TMP_V1.set(dx / d, 0, dz / d), 0.4), vel);

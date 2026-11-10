@@ -1,4 +1,4 @@
-import { Settings, THREE, TMP_V1, TMP_V2, clamp, damp, lerp, rand, shotRng } from './01_core.js';
+import { CFG, Settings, THREE, TMP_V1, TMP_V2, clamp, damp, lerp, rand, shotRng } from './01_core.js';
 /* =====================================================================
    PLAYER WEAPONS — per-class behaviour, all numbers come from the
    compiled WEAPON_DATABASE entry. Spread values are cone radii in
@@ -429,11 +429,13 @@ class GrenadeWeapon extends Weapon {
   }
   release() { if (this.state === 'pulling') this.releaseQueued = true; else if (this.state === 'ready') this._throw(); }
   _throw() {
-    const g = this.game, p = this.owner, ray = this.aimRay(), power = this.power;
+    const g = this.game, p = this.owner, ray = this.aimRay(), N = CFG.nade;
     this.count--; this.state = 'throwing'; this.t = 0;
     const origin = ray.o.clone().addScaledVector(ray.r, 0.18).addScaledVector(ray.u, -0.08).addScaledVector(ray.d, 0.45);
-    const dir = ray.d.clone().addScaledVector(TMP_V1.set(0, 1, 0), THROW.loft).normalize();
-    const vel = dir.multiplyScalar((this.lob ? THROW.lobBase : THROW.base) * power).add(p.motor.vel); // momentum: player velocity + aim × power × base
+    // v67n SF2 (SFProjectile.Init): no charge, both buttons alike — the aim × 18 m/s, +2 m/s up (TossZ), plus the thrower's own
+    // velocity forward / back and up / down (OwnerInertiaApplyRatio (1, 0, 1): not sideways)
+    const vel = ray.d.clone().multiplyScalar(N.speed); vel.y += N.tossZ;
+    const mv = p.motor.vel, fx = -Math.sin(p.yaw), fz = -Math.cos(p.yaw), fwd = mv.x * fx + mv.z * fz; vel.x += fx * fwd; vel.z += fz * fwd; vel.y += mv.y;
     g.throwGrenade(p, this.def, origin, vel);
     this._mech('throw'); p.onAttack(); this.chargeT = 0;
     if (this.vm.pin) this.vm.pin.visible = false;

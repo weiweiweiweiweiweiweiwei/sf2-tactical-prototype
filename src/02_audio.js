@@ -586,6 +586,17 @@ class AudioEngine {
     const l = this._s('kfb_' + tier) || this._s('kfb_default'); if (!l) return;
     const out = this.ctx.createGain(); out.gain.value = SF2_FB_K; out.connect(this.fb || this.dry); this._one(l[0], out, 1.0); // (v67m the feedback bus, SF2's level: the wave as it is)
   }
+  // v67n SF2's kill announcer (SFKillVoice: one line per kill, the kill's strongest message — the emblems are in that order) and its
+  // UX cues: the in-game challenge pop-up (Cue_Challenge_InGamePopUp, volume 2.0) and the level-up (Cue_HUDLevelUp). On the
+  // feedback bus at SF2's levels; the announcer follows the 'SF2 原版' hit sound like the kill sound does.
+  announceKill(emblems) {
+    if (!this.ctx || Settings.data.announcer === false || !(HIT_SOUNDS[Settings.data.hitSound] && HIT_SOUNDS[Settings.data.hitSound].sf2)) return;
+    const V = { double: 'doublekill', multi: 'multikill', specialist: 'specialist', specialforce: 'specialforce', first: 'firstkill', lastshot: 'lastoneshot', welcome: 'welcomeback',
+      revenge: 'revenge', headshot: 'headshot', wall: 'wallshot', pierce: 'piercingshot', grenade: 'grenadekill', slash: 'slash', knife: 'knifekill' };
+    for (const e of emblems) { const l = V[e] && this._s('annc_' + V[e]); if (l) { this._ux(l[0], 1.0, 0.12); return; } }
+  }
+  uxCue(k) { const l = this._s(k === 'challenge' ? 'ui_challenge' : 'ui_levelup'); if (l) this._ux(l[0], k === 'challenge' ? 2.0 : 1.0); }
+  _ux(buf, vol, delay = 0) { const o = this.ctx.createGain(); o.gain.value = SF2_FB_K; o.connect(this.fb || this.dry); this._one(buf, o, vol, 1, delay); }
   // v64g bullet_hit_2d_03 carries a second sound after the hit (user 10-28: a man's odd laugh, from 0.40 s): only its first 0.37 s,
   // faded out over the last 25 ms (its RMS: the hit 0.04–0.36 s, down to −36 dB at 0.38, the other sound rising again at 0.40)
   _hitHead(buf) {

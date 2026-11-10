@@ -2143,3 +2143,15 @@
 - **P90**：原本是 Blender 做的替代模型，腰射時槍伸到右下角、看不到手，開鏡是整圈實心環。改成 SF2 自己的骨架（`tools/sf2_rig_build.mjs p90`：P90 OpenDot 的開放式內紅點，不裝消音器），數值、鏡頭、後座照 SFCWeaponP90，音效用 SF2 的 `sf2_p90_*`。
 - **調查**：`docs/research/sf2/sound-design.md`（命中／擊殺、BGM、徽章／升級、擊殺播報、無線電、情境混音、手榴彈投擲距離）。新工具 `tools/sf2_sound_dump.py`。
 - 驗證：`tools/out/_killsnd.mjs` 確認狙擊槍擊殺會播 `sf2_hitdead` 和 `kfb_*`；P90 截圖；CHECK_OK。
+
+## v67n 手榴彈照 SF2、擊殺播報與 UX 音、鏡頭眼高（2026-11-10）
+
+- 使用者 11-10：全 A。
+- **投擲**（`CFG.nade`、`GrenadeWeapon._throw`、`Match.stepGrenades`）：不蓄力，左右鍵相同；瞄準方向 × 18 m/s ＋ 往上 2 m/s ＋ 玩家前後／上下速度（不含左右）；手榴彈自己的重力 6.79 m/s²（每步補回物理世界 20 與它的差）、終端速度 19 m/s、無阻力。Bot 投擲用同一重力解彈道，距離上限 30 → 45 m。實測仰角 15° 落點 39.4 m（SF2 計算 37 m）。
+- **音效**（`tools/sfx_sf2_fx.mjs`）：
+  - SF2 擊殺播報（`KillAnnounce` 男聲 15 句）：每次擊殺播一句，取最強的擊殺訊息，跟著「SF2 原版」命中音與「播報」設定。
+  - 連殺里程碑用 `Cue_Challenge_InGamePopUp`（音量 2.0），取代語音合成。
+  - Apex 護盾升級用 `Cue_HUDLevelUp`。
+  - 三者都走回饋總線。
+- **眼高**：站 1.23 → 1.42 m、蹲 1.005 → 1.16 m，對齊 1.56 m 士兵模型的眼睛。碰撞高度不變。
+- 驗證：`tools/out/_annc.mjs`、`tools/out/_nadethrow.mjs`、CHECK_OK。

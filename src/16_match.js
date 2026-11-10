@@ -439,7 +439,7 @@ class Match {
     c.evo += amount; const max = apexShield(c.evo);
     if (max <= c.maxShield) return;
     c.maxShield = max; if (c.alive) c.shield = max;
-    if (c.isPlayer) { this.app.hud.toast(`護盾升級 LV${APEX.shields.indexOf(max) + 1}（${max}）`); this.audio.hit('evo'); }
+    if (c.isPlayer) { this.app.hud.toast(`護盾升級 LV${APEX.shields.indexOf(max) + 1}（${max}）`); this.audio.uxCue('levelup'); } // (v67n SF2's level-up)
   }
   // Apex Mixtape-style recovery: after 4 s without damage, health refills first, then the shield
   _regen(h) {
@@ -598,7 +598,8 @@ class Match {
     if (victim) hud.killNote(victim.name, E.find((x) => x === 'headshot' || x === 'grenade' || x === 'slash' || x === 'knife' || x === 'grab') || 'kill');
     p.emblems = p.emblems || {}; for (const id of E) p.emblems[id] = (p.emblems[id] || 0) + 1;
     const streaks = { 5: 'KILLING SPREE', 8: 'RAMPAGE', 12: 'UNSTOPPABLE', 16: 'GODLIKE' };
-    if (streaks[p.streak]) { hud.announce(streaks[p.streak], ''); this.app.speak(streaks[p.streak]); }
+    this.audio.announceKill(E); // v67n SF2's kill announcer (its voice instead of the speech synthesiser for these)
+    if (streaks[p.streak]) { hud.announce(streaks[p.streak], ''); this.audio.uxCue('challenge'); } // (v67n SF2's challenge pop-up sound on a streak milestone)
     else if (!opts.collateral) { const v = { double: 'DOUBLE KILL', multi: 'TRIPLE KILL', specialist: 'MULTI KILL', specialforce: 'ULTRA KILL', first: 'FIRST BLOOD', headshot: 'HEADSHOT', grenade: 'GRENADE KILL' }; const k = E.find((x) => v[x]); if (k) this.app.speak(v[k]); }
   }
   // the local player died: Revenge / Welcome Back bookkeeping + Love Shot (both died within 0.4 s)
@@ -822,7 +823,7 @@ class Match {
   throwGrenade(owner, def, pos, vel, remote = null) {
     const mesh = new THREE.Mesh(this.app.models.tp(def.id), this.app.soldiers.gunMat); mesh.castShadow = true;
     const dyn = this.physics.grenadeBody(mesh, pos, vel);
-    dyn.body.linearDamping = 0.02; // keep the throw's momentum (long charged / jump throws)
+    dyn.body.linearDamping = 0; // (v67n SF2's grenade: no drag, its own gravity and terminal speed — stepGrenades)
     const n = { def, owner, dyn, body: dyn.body, t: 0, prev: pos.clone(), id: remote ? remote.id : (this.nadeSeq = (this.nadeSeq || 0) + 1), remote: !!remote };
     this.grenades.push(n);
     if (!remote && this.net && this.net.role === 'host') this.net.onNade(n, pos, vel);
@@ -844,6 +845,7 @@ class Match {
     const o = TMP_V1, d = TMP_V2;
     for (let i = this.grenades.length - 1; i >= 0; i--) {
       const n = this.grenades[i]; n.t += h;
+      { const v = n.body.velocity, N = CFG.nade; v.y += (N.gravity - CFG.physGravity) * h; const s = Math.hypot(v.x, v.y, v.z); if (s > N.terminal) { const k = N.terminal / s; v.x *= k; v.y *= k; v.z *= k; } } // v67n SF2's 0.7 g
       // anti-tunnelling: fast grenades are swept against the level every step and bounced off whatever they would pass through
       const b = n.body, cur = TMP_V3.set(b.position.x, b.position.y, b.position.z), seg = d.subVectors(cur, n.prev), len = seg.length();
       const tri = this.collision.tris; // v63m triangle maps: no cannon trimesh tiles (3 grenades = ~200k triangles, 100 ms a step) — every step is swept here

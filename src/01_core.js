@@ -26,10 +26,13 @@ const CFG = {
   // SprintingPct 1.45, CrouchedPct 0.3, LadderSpeed 200 (Engine Pawn), SpeedDirPct front / back / side / diagonal 1 / 0.6 / 0.8 / 0.7.
   // The soldier's model (c_deltaforce_skelet delm_body_s01 + helmet) stands 1.56 m — the hitboxes and the third-person soldier scale to it
   // (bodyScale against the old 1.8 m). The Apex traversal maps keep the old pace (legacy: their jumps were laid out for it).
+  // v67n SF2's hand grenades (docs/research/sf2/sound-design.md §3): SFCProjectileM67 / M84 / M18 Speed 1800, TossZ 200, terminal 1900
+  // UU/s, CustomGravityScaling 0.7 of the world's 970 — 18 m/s, +2 up, 19 max, 6.79 m/s² (the debris world keeps physGravity)
+  nade: { speed: 18, tossZ: 2, terminal: 19, gravity: -6.79 },
   gravity: -20, physGravity: -20, // v66q (user 11-01) walking, running and the jump's airtime back to before v66j: gravity 20, jump 7 m/s, the old pace // (v66j physGravity: grenades and debris keep the throw arcs they were tuned on)
   fixedStep: 1 / 60, // v63g the whole simulation (Match.tick) — was 1/120 for movement, weapons and physics only
   player: {
-    radius: 0.32, height: 1.36, crouchHeight: 0.91, eye: 1.23, crouchEye: 1.005, bodyScale: 1.56 / 1.8, dirPct: [1, 1, 1, 1], // (v66q SF2's SpeedDirPct 1 / 0.6 / 0.8 / 0.7 withdrawn with the pace)
+    radius: 0.32, height: 1.36, crouchHeight: 0.91, eye: 1.42, crouchEye: 1.16, /* v67n (user 11-10 A: you looked up at everyone — the 1.56 m soldier's eyes are at 1.42 m; SF2's BaseEyeHeight gave 1.23 / 1.005) */ bodyScale: 1.56 / 1.8, dirPct: [1, 1, 1, 1], // (v66q SF2's SpeedDirPct 1 / 0.6 / 0.8 / 0.7 withdrawn with the pace)
     stepHeight: 0.45, airStep: 0.36, jumpVel: 7.0, jumpBuffer: 0.12,
     groundAccel: 14, airAccel: 10, airCap: 0.85,
     friction: 8, brakeFriction: 18, stopSpeed: 3.2,

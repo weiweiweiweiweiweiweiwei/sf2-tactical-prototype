@@ -21,6 +21,11 @@ const MAP = {
   kfb_default: ['SoundUX', 'hud_kill_default'], kfb_normal: ['SoundUX', 'hud_kill_normal'], kfb_special: ['SoundUX', 'hud_kill_special'],
   step_ladder: ['Sound_FootSteps', 'footstep_metal_01', 'footstep_metal_02', 'footstep_metal_03', 'footstep_metal_04'],
   kfb_rare: ['SoundUX', 'hud_kill_rare'], kfb_continuous: ['SoundUX', 'hud_kill_continuous'],
+  // v67n (user 11-10 A) the kill announcer (SoundGroupAnnounce KillAnnounce: its EventName → wave, the male voice) and SoundUX's
+  // in-game challenge pop-up (Cue_Challenge_InGamePopUp: Lobby_GachaBest06 at 2.0) and level-up (Cue_HUDLevelUp: hud_levelup02)
+  ...Object.fromEntries(['HeadShot', 'WallShot', 'BackAttack', 'Revenge', 'LastOneShot', 'FirstKill', 'PiercingShot', 'WelcomeBack', 'DoubleKill', 'MultiKill',
+    'Specialist', 'Specialforce', 'GrenadeKill', 'Slash', 'KnifeKill'].map((n) => ['annc_' + n.toLowerCase(), ['KillAnnounce', n]])),
+  ui_challenge: ['SoundUX', 'Lobby_GachaBest06'], ui_levelup: ['SoundUX', 'hud_levelup02'],
 };
 const out = Object.fromEntries(Object.entries(MAP).map(([k, [pkg, ...ns]]) => [k, ns.map((n) => W(pkg, n))]));
 const js = `/* Special Force 2 original effect sounds from the user's own install — tools/sfx_sf2_fx.mjs */\nwindow.SF2_SFX_FX = ${JSON.stringify(out)};\n`;

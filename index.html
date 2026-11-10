@@ -1056,6 +1056,9 @@ var CFG = {
   // SprintingPct 1.45, CrouchedPct 0.3, LadderSpeed 200 (Engine Pawn), SpeedDirPct front / back / side / diagonal 1 / 0.6 / 0.8 / 0.7.
   // The soldier's model (c_deltaforce_skelet delm_body_s01 + helmet) stands 1.56 m — the hitboxes and the third-person soldier scale to it
   // (bodyScale against the old 1.8 m). The Apex traversal maps keep the old pace (legacy: their jumps were laid out for it).
+  // v67n SF2's hand grenades (docs/research/sf2/sound-design.md §3): SFCProjectileM67 / M84 / M18 Speed 1800, TossZ 200, terminal 1900
+  // UU/s, CustomGravityScaling 0.7 of the world's 970 — 18 m/s, +2 up, 19 max, 6.79 m/s² (the debris world keeps physGravity)
+  nade: { speed: 18, tossZ: 2, terminal: 19, gravity: -6.79 },
   gravity: -20,
   physGravity: -20,
   // v66q (user 11-01) walking, running and the jump's airtime back to before v66j: gravity 20, jump 7 m/s, the old pace // (v66j physGravity: grenades and debris keep the throw arcs they were tuned on)
@@ -1065,8 +1068,9 @@ var CFG = {
     radius: 0.32,
     height: 1.36,
     crouchHeight: 0.91,
-    eye: 1.23,
-    crouchEye: 1.005,
+    eye: 1.42,
+    crouchEye: 1.16,
+    /* v67n (user 11-10 A: you looked up at everyone — the 1.56 m soldier's eyes are at 1.42 m; SF2's BaseEyeHeight gave 1.23 / 1.005) */
     bodyScale: 1.56 / 1.8,
     dirPct: [1, 1, 1, 1],
     // (v66q SF2's SpeedDirPct 1 / 0.6 / 0.8 / 0.7 withdrawn with the pace)
@@ -6569,6 +6573,45 @@ var AudioEngine = class _AudioEngine {
     out.gain.value = SF2_FB_K;
     out.connect(this.fb || this.dry);
     this._one(l[0], out, 1);
+  }
+  // v67n SF2's kill announcer (SFKillVoice: one line per kill, the kill's strongest message — the emblems are in that order) and its
+  // UX cues: the in-game challenge pop-up (Cue_Challenge_InGamePopUp, volume 2.0) and the level-up (Cue_HUDLevelUp). On the
+  // feedback bus at SF2's levels; the announcer follows the 'SF2 原版' hit sound like the kill sound does.
+  announceKill(emblems) {
+    if (!this.ctx || Settings.data.announcer === false || !(HIT_SOUNDS[Settings.data.hitSound] && HIT_SOUNDS[Settings.data.hitSound].sf2)) return;
+    const V = {
+      double: "doublekill",
+      multi: "multikill",
+      specialist: "specialist",
+      specialforce: "specialforce",
+      first: "firstkill",
+      lastshot: "lastoneshot",
+      welcome: "welcomeback",
+      revenge: "revenge",
+      headshot: "headshot",
+      wall: "wallshot",
+      pierce: "piercingshot",
+      grenade: "grenadekill",
+      slash: "slash",
+      knife: "knifekill"
+    };
+    for (const e of emblems) {
+      const l = V[e] && this._s("annc_" + V[e]);
+      if (l) {
+        this._ux(l[0], 1, 0.12);
+        return;
+      }
+    }
+  }
+  uxCue(k) {
+    const l = this._s(k === "challenge" ? "ui_challenge" : "ui_levelup");
+    if (l) this._ux(l[0], k === "challenge" ? 2 : 1);
+  }
+  _ux(buf, vol, delay = 0) {
+    const o = this.ctx.createGain();
+    o.gain.value = SF2_FB_K;
+    o.connect(this.fb || this.dry);
+    this._one(buf, o, vol, 1, delay);
   }
   // v64g bullet_hit_2d_03 carries a second sound after the hit (user 10-28: a man's odd laugh, from 0.40 s): only its first 0.37 s,
   // faded out over the last 25 ms (its RMS: the hit 0.04–0.36 s, down to −36 dB at 0.38, the other sound rising again at 0.40)
@@ -22025,13 +22068,17 @@ var GrenadeWeapon = class extends Weapon {
     else if (this.state === "ready") this._throw();
   }
   _throw() {
-    const g = this.game, p = this.owner, ray = this.aimRay(), power = this.power;
+    const g = this.game, p = this.owner, ray = this.aimRay(), N = CFG.nade;
     this.count--;
     this.state = "throwing";
     this.t = 0;
     const origin = ray.o.clone().addScaledVector(ray.r, 0.18).addScaledVector(ray.u, -0.08).addScaledVector(ray.d, 0.45);
-    const dir = ray.d.clone().addScaledVector(TMP_V1.set(0, 1, 0), THROW.loft).normalize();
-    const vel = dir.multiplyScalar((this.lob ? THROW.lobBase : THROW.base) * power).add(p.motor.vel);
+    const vel = ray.d.clone().multiplyScalar(N.speed);
+    vel.y += N.tossZ;
+    const mv = p.motor.vel, fx = -Math.sin(p.yaw), fz = -Math.cos(p.yaw), fwd = mv.x * fx + mv.z * fz;
+    vel.x += fx * fwd;
+    vel.z += fz * fwd;
+    vel.y += mv.y;
     g.throwGrenade(p, this.def, origin, vel);
     this._mech("throw");
     p.onAttack();
@@ -22744,7 +22791,7 @@ var WeaponSystem = class extends Arsenal {
     hud.setCrosshair(gap, p.alive && !(this.ads && w.kind !== "knife"));
     if (w.scoped && this.scopedIn) hud.setScopeSpread(spread);
     hud.setReload(w.reloading ? w.reloadPhase : -1);
-    hud.setCharge(w.kind === "grenade" && w.charging ? (w.power - 1) / (THROW.maxPower - 1) : -1);
+    hud.setCharge(-1);
     this.focusT -= dt;
     if (this.focusT <= 0) {
       this.focusT = 0.08;
@@ -24461,7 +24508,7 @@ var BotAI = class {
     const type = bot.nades.he > 0 && Math.random() < 0.65 ? "he" : bot.nades.flash > 0 ? "flash" : null;
     if (!type) return;
     const origin = bot.eyePos(new THREE.Vector3()), tgt = this.lastKnown.clone(), dx = tgt.x - origin.x, dz = tgt.z - origin.z, d = Math.hypot(dx, dz);
-    if (d < 7 || d > 30) return;
+    if (d < 7 || d > 45) return;
     const h = tgt.y + 0.3 - origin.y;
     let th = 0.62, den = 2 * Math.cos(th) ** 2 * (d * Math.tan(th) - h);
     if (den <= 0) {
@@ -24469,7 +24516,7 @@ var BotAI = class {
       den = 2 * Math.cos(th) ** 2 * (d * Math.tan(th) - h);
     }
     if (den <= 0) return;
-    const v = Math.min(22, Math.sqrt(-CFG.physGravity * d * d / den));
+    const v = Math.min(CFG.nade.terminal, Math.sqrt(-CFG.nade.gravity * d * d / den));
     const vel = new THREE.Vector3(dx / d * v * Math.cos(th), v * Math.sin(th), dz / d * v * Math.cos(th));
     bot.nades[type]--;
     g.throwGrenade(bot, WEAPON_DEFS[type], origin.addScaledVector(TMP_V1.set(dx / d, 0, dz / d), 0.4), vel);
@@ -27877,7 +27924,7 @@ var Match = class _Match {
     if (c.alive) c.shield = max;
     if (c.isPlayer) {
       this.app.hud.toast(`護盾升級 LV${APEX.shields.indexOf(max) + 1}（${max}）`);
-      this.audio.hit("evo");
+      this.audio.uxCue("levelup");
     }
   }
   // Apex Mixtape-style recovery: after 4 s without damage, health refills first, then the shield
@@ -28156,9 +28203,10 @@ var Match = class _Match {
     p.emblems = p.emblems || {};
     for (const id of E) p.emblems[id] = (p.emblems[id] || 0) + 1;
     const streaks = { 5: "KILLING SPREE", 8: "RAMPAGE", 12: "UNSTOPPABLE", 16: "GODLIKE" };
+    this.audio.announceKill(E);
     if (streaks[p.streak]) {
       hud.announce(streaks[p.streak], "");
-      this.app.speak(streaks[p.streak]);
+      this.audio.uxCue("challenge");
     } else if (!opts.collateral) {
       const v = { double: "DOUBLE KILL", multi: "TRIPLE KILL", specialist: "MULTI KILL", specialforce: "ULTRA KILL", first: "FIRST BLOOD", headshot: "HEADSHOT", grenade: "GRENADE KILL" };
       const k = E.find((x) => v[x]);
@@ -28478,7 +28526,7 @@ var Match = class _Match {
     const mesh = new THREE.Mesh(this.app.models.tp(def.id), this.app.soldiers.gunMat);
     mesh.castShadow = true;
     const dyn = this.physics.grenadeBody(mesh, pos, vel);
-    dyn.body.linearDamping = 0.02;
+    dyn.body.linearDamping = 0;
     const n = { def, owner, dyn, body: dyn.body, t: 0, prev: pos.clone(), id: remote ? remote.id : this.nadeSeq = (this.nadeSeq || 0) + 1, remote: !!remote };
     this.grenades.push(n);
     if (!remote && this.net && this.net.role === "host") this.net.onNade(n, pos, vel);
@@ -28503,6 +28551,17 @@ var Match = class _Match {
     for (let i = this.grenades.length - 1; i >= 0; i--) {
       const n = this.grenades[i];
       n.t += h;
+      {
+        const v = n.body.velocity, N = CFG.nade;
+        v.y += (N.gravity - CFG.physGravity) * h;
+        const s = Math.hypot(v.x, v.y, v.z);
+        if (s > N.terminal) {
+          const k = N.terminal / s;
+          v.x *= k;
+          v.y *= k;
+          v.z *= k;
+        }
+      }
       const b = n.body, cur = TMP_V3.set(b.position.x, b.position.y, b.position.z), seg = d.subVectors(cur, n.prev), len = seg.length();
       const tri = this.collision.tris;
       if (len > (tri ? 4e-3 : 0.08)) {
@@ -29639,7 +29698,7 @@ var NetClient = class {
     if (m.apex) {
       if (s.shMax > (p.maxShield || 0) && p.maxShield) {
         m.app.hud.toast(`護盾升級 LV${APEX.shields.indexOf(s.shMax) + 1}（${s.shMax}）`);
-        m.audio.hit("evo");
+        m.audio.uxCue("levelup");
       }
       p.hp = e.hp;
       p.shield = s.sh;

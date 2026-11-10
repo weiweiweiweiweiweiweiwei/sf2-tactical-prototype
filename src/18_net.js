@@ -365,7 +365,7 @@ class NetClient {
     if (e.alive && e.life !== ((p.life || 0) & 255)) { p.respawn(new THREE.Vector3(e.x, e.y, e.z), e.yaw); p.life = e.life; m.app.hud.showDeath(false); this.hist.fill(undefined); return; }
     if (!p.alive || !e.alive) return;
     if (m.apex) { // v58 Apex: health and shield also come back (regen), so take the host's values as they are
-      if (s.shMax > (p.maxShield || 0) && p.maxShield) { m.app.hud.toast(`護盾升級 LV${APEX.shields.indexOf(s.shMax) + 1}（${s.shMax}）`); m.audio.hit('evo'); }
+      if (s.shMax > (p.maxShield || 0) && p.maxShield) { m.app.hud.toast(`護盾升級 LV${APEX.shields.indexOf(s.shMax) + 1}（${s.shMax}）`); m.audio.uxCue('levelup'); }
       p.hp = e.hp; p.shield = s.sh; p.maxShield = s.shMax;
     } else p.hp = Math.min(p.hp, e.hp) || e.hp;
     const h = this.hist[s.ack & 255]; if (!h || h.seq !== s.ack) return;
