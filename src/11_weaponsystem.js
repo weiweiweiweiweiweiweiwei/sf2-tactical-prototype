@@ -191,6 +191,27 @@ class Arsenal {
    ===================================================================== */
 // v50/v51 default reload and bolt-cycle poses; a viewmodel may carry its own (vm.reloadPose / vm.boltPose, see ViewModels.fromGLB)
 const RELOAD_POSE = { roll: 0.55, pitch: 0.2, drop: 0.03, shift: 0.02 }, BOLT_POSE = { roll: 0.22, drop: 0.012, shift: 0 };
+/* v67r SF2's scope surround (user 11-18: "around the lens it is just black"). SF2 draws the scope part's ScopeMesh `sni_scope_zin`
+   (sni_scope_a has the same shape) in front of the eye: a short eyepiece — its lens (r 1.22 UU, 2.6–3.0 UU deep), the bore and a
+   rounded lip out to r 1.69 — black diffuse, all its look from specular and the world cubemap (sni_scope_zin_mic), so it shows brown /
+   grey sheens that change with the map's light. Here: that profile (from the .psk, docs/research/sf2/sniper-reticles.md) as a lathe,
+   dark polished metal lit by the viewmodel scene and its environment. The eye 1.32 UU behind the mesh origin puts the lens edge at
+   57.5 vh and the lip at ≈ 93 vh — as measured on the user's four SF2 shots (Barrett, M40A1, Dragunov); the corners show the world. */
+const SCOPE_LENS_VH = 57.5, SCOPE_EYE = 1.318, SCOPE_LENS_TAN = 1.22 / (2.96 + SCOPE_EYE);
+function sf2ScopeTube() {
+  const P = [[1.22, 2.96], [1.26, 2.73], [1.22, 2.34], [1.25, 2.27], [1.28, 2.22], [1.34, 2.19], [1.42, 2.16], [1.5, 2.16], [1.57, 2.19], [1.66, 2.27], [1.69, 2.34], [1.69, 3.3]]; // (the body behind the eyepiece, r 2.8 at 8.7–10 UU, left out: through the open lens it showed as a ring inside the view)
+  const geo = new THREE.LatheGeometry(P.map(([r, d]) => new THREE.Vector2(r, d + SCOPE_EYE)), 64); geo.rotateX(-Math.PI / 2); // lathe axis +y → the view's −z
+  const mat = new THREE.MeshStandardMaterial({ color: 0x3a2f27, metalness: 1, roughness: 0.4, side: THREE.DoubleSide, envMapIntensity: 1 });
+  const tube = new THREE.Mesh(geo, mat); tube.frustumCulled = false; tube.renderOrder = 10;
+  // the bore (lens to lip) in shadow, as in SF2's shots: the darkest band right round the lens
+  const bg = new THREE.LatheGeometry(P.slice(0, 4).map(([r, d]) => new THREE.Vector2(r * 0.996, d + SCOPE_EYE)), 64); bg.rotateX(-Math.PI / 2);
+  const bore = new THREE.Mesh(bg, new THREE.MeshStandardMaterial({ color: 0x120e0b, metalness: 1, roughness: 0.6, side: THREE.DoubleSide, envMapIntensity: 0.5 })); bore.frustumCulled = false; bore.renderOrder = 11;
+  // the lens: SF2's lens_base at 2 % opacity with a strong cubemap — a faint reflection over the view
+  const lens = new THREE.Mesh(new THREE.CircleGeometry(1.22, 48), new THREE.MeshStandardMaterial({ color: 0x000000, metalness: 1, roughness: 0.08, transparent: true, opacity: 0.07, depthWrite: false }));
+  lens.position.z = -(2.85 + SCOPE_EYE); lens.frustumCulled = false; lens.renderOrder = 11;
+  const g = new THREE.Group(); g.add(tube, bore, lens); g.visible = false; return g;
+}
+
 class WeaponSystem extends Arsenal {
   constructor(game, defs) {
     super(game, game.player);
@@ -204,6 +225,7 @@ class WeaponSystem extends Arsenal {
     this.key = new THREE.DirectionalLight(0xfff0dc, 5); this.scene.add(this.key, this.key.target); // v16 camera-relative key light: the back of the gun catches highlights instead of reading as a black block
     this.flashLight = new THREE.PointLight(0xffaa33, 0, 8, 2); this.scene.add(this.flashLight); this.flashLightT = 0;
     this.root = new THREE.Group(); this.scene.add(this.root);
+    this.scopeTube = sf2ScopeTube(); this.root.add(this.scopeTube); // v67r the eyepiece around an SF2 scope's lens
     const models = game.app.models;
     this.vmPool = new Map(); // viewmodels are built once per weapon and reused when the loadout changes
     this.aimTarget = null; this._scopeShown = false; this._scopeLvl = 0;
@@ -290,6 +312,7 @@ class WeaponSystem extends Arsenal {
     const sc = w.scoped && this.scopedIn;
     if (sc !== this._scopeShown || (sc && this.scopeLevel !== this._scopeLvl)) { this._scopeShown = sc; this._scopeLvl = this.scopeLevel; g.app.hud.setScope(sc, this.scopeLevel, w.def.sf2Rig ? w.def.sf2Reticle || 'bender' : false, w.def.optic ? APEX_OPTICS[w.def.optic] : null); }
     w.vm.group.visible = !sc;
+    this.scopeTube.visible = !!(sc && w.def.sf2Rig && !w.def.optic);
     // v67c the digital threat (Apex's 1× CRO): aimed through it, enemies within its range draw red (src/15_postfx.js drawThreat)
     const OT = w.def.optic && APEX_OPTICS[w.def.optic]; this.threatOn = !!(OT && OT.threat && this.ads && this.adsT > 0.5 && p.alive); this.threatRange = (OT && OT.threat) || 0;
 
@@ -306,6 +329,7 @@ class WeaponSystem extends Arsenal {
     // v45 vmAdsFov: narrower viewmodel lens = bigger holo window; v62f vmHFov / vmAdsHFov: SF2's own lenses (so the gun keeps its size across screen shapes)
     const vmFov = lerp(w.def.vmHFov ? vert(w.def.vmHFov) : 58, w.def.vmAdsHFov ? vert(w.def.vmAdsHFov) : (w.def.vmAdsFov || 48), this.adsT * (w.scoped ? 0 : 1));
     if (Math.abs(this.camera.fov - vmFov) > 0.01) { this.camera.fov = vmFov; this.camera.updateProjectionMatrix(); }
+    if (this.scopeTube.visible) { const k = SCOPE_LENS_VH / 50 * Math.tan(this.camera.fov * Math.PI / 360) / SCOPE_LENS_TAN; this.scopeTube.scale.set(k * 0.01, k * 0.01, 0.01); } // (radially: its lens on the CSS lens)
 
     // viewmodel lives at the camera's world transform
     this.root.position.copy(cam.position); this.root.quaternion.copy(cam.quaternion);

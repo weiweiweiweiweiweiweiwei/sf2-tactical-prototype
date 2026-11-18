@@ -60,8 +60,8 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
    v64g (the user's SF2 shots, the clearest at 2000×1182; R = the ring's radius): the bar heavier (0.065R) out to 2.91R, a thin line across
    the ring (the dot on it), the thin vertical from 2.13R above down to a heavy post (0.087R wide) from 1.43R to 2.52R below. */
 #scope.sf2 .lh,#scope.sf2 .lv,#scope.sf2 .tk,#scope.sf2 .cd,#scope.sf2 .zl{display:none}
-#scope.sf2 .lens{width:142vh;height:142vh;box-shadow:0 0 0 200vmax #070504,inset 0 0 9vh 4vh rgba(12,7,4,.97),inset 0 0 22vh 2vh rgba(40,24,14,.55);background:none}
-#scope .ret{display:none;position:absolute;left:50%;top:50%;width:100vh;height:100vh;transform:translate(-50%,-50%);overflow:visible}
+#scope.sf2 .lens{width:115vh;height:115vh;box-shadow:inset 0 0 1.2vh .3vh rgba(6,4,3,.85);background:none} /* v67r SF2: the lens 57.5 vh, the eyepiece around it is 3D (sf2ScopeTube) */
+#scope .ret{display:none;position:absolute;left:50%;top:50%;width:81vh;height:81vh;transform:translate(-50%,-50%);overflow:visible}
 #scope.sf2[data-ret="bender"] .ret.bender,#scope.sf2[data-ret="zeiss"] .ret.zeiss,#scope.sf2[data-ret="mil"] .ret.mil,#scope.sf2[data-ret="mil3"] .ret.mil3,#scope.sf2[data-ret="mil1"] .ret.mil1{display:block} /* v64s each scope its own SF2 reticle (common_sight: the K14's Bender ScopeView_Reticle_06, the TRG-41's Zeiss _03; v64t 'mil': SF2's default mic_ScopeView — tex_scope_Crosshair_Diffuse + _dot, M40A1 / CZ700 / M200 / AWP, at the lens mask's scale: 200 texels = the tube's 71vh) */
 /* v67c an Apex scope (6×, 4–8×): a thin red cross gapped at the centre, Apex's own range ladder below it (ui.rpak's ui_image 0xE9CB274AB36B33EC,
    tinted red: its first tick, row 185 of 489, on the sight line) */

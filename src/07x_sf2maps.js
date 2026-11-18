@@ -244,6 +244,35 @@ function sf2Decals(list, dtex) {
   return out;
 }
 
+/* v67r SF2's Capture-mode console (user 11-18 A, Cannon: "after the 2 minutes the machine in the middle rises"). tower.upk's Kismet:
+   LevelLoaded → Delay 119 s → Matinee InterpData_0 moves InterpActor_3 (TW_Satellite_Trigger_001, a 1.28 m block hidden under the
+   point's floor) 100 UU up in 1.994 s — keyed from rest to an arrival tangent of 107 UU/s (it comes up with a thump, no ease-out) —
+   ending just as the point opens at 120 s. It blocks (bBlockActors): a collision box rises with it and lifts whoever stands there.
+   Counted from the start of play like CaptureRule's opening; the host's clock is sent to clients (the 'mech' message). */
+class Sf2Riser {
+  constructor(b, mesh, R) {
+    this.m = b.game; this.col = b.col; this.mesh = mesh; this.R = R; this.t = 0; this.y = 0;
+    mesh.geometry.computeBoundingBox(); const bb = mesh.geometry.boundingBox;
+    this.box = b.col.addBox(bb.min.clone(), bb.max.clone().setY(bb.max.y - 0.04), { material: 'metal', surface: 'metal' });
+  }
+  _at(t) { // Hermite: rest → dy, the end tangent the Matinee's (×dur)
+    const R = this.R, s = Math.min(1, Math.max(0, (t - R.at) / R.dur)), m1 = R.tan * R.dur;
+    return R.dy * (3 * s * s - 2 * s * s * s) + m1 * (s * s * s - s * s);
+  }
+  tick(h) {
+    const m = this.m; if (m.phase === 'live' && !m.isClient) this.t += h;
+    const y = this._at(this.t), d = y - this.y; if (Math.abs(d) < 1e-5) return;
+    this.y = y; this.mesh.position.y = y; this.col.moveBox(this.box, 0, d, 0);
+    const B = this.box; // whoever stands on its top goes up with it
+    for (const c of m.combatants || []) { const p = c.alive && c.motor && c.motor.pos; if (p && p.x > B.min.x - 0.3 && p.x < B.max.x + 0.3 && p.z > B.min.z - 0.3 && p.z < B.max.z + 0.3 && p.y < B.max.y && p.y > B.max.y - 1.3) p.y = B.max.y; }
+  }
+  render() {}
+  interact() { return false; }
+  prompt() { return null; }
+  netState() { return [+this.t.toFixed(2)]; }
+  applyNet(s) { if (s && s.length) this.t = +s[0] || 0; }
+}
+
 function sf2TriMap(def) {
   return Object.assign({
     indoor: false, killOutside: false, traversal: false, navClimb: 0.45, navGrid: 1, bodyRadius: 0.25, underFloorAirOnly: true, acoustics: 'indoor', ambience: 'warehouse',
@@ -340,7 +369,7 @@ function sf2TriMap(def) {
       // its iron rails (def.stairKeep materials) left as they are
       const stairMat = def.stairMat && meshes.map((o) => o.material).find((mt) => mt && mt.name === def.stairMat);
       const groups = new Map();
-      const ladders = [];
+      const ladders = [], riser = [];
       for (const src of meshes) {
         if (src.userData.colOnly) continue; // (a blocking volume: in the triangle soup, not drawn)
         // v65y a clone per match (geometry / materials shared): moving the loaded meshes themselves left the map's second match empty
@@ -353,6 +382,7 @@ function sf2TriMap(def) {
         if (/ladder/i.test(m.name)) ladders.push(m);
         if (Array.isArray(m.material) || m.userData.sky) { b.scene.add(m); continue; }
         const L = sf2LightOf(src), k = m.material.uuid + '|' + (L.tex || '') + '|' + (L.max || '');
+        if (def.riser && def.riser.mesh.test(m.name)) { riser.push({ m, src, L }); continue; } // (v67r drawn on its own: it moves)
         (groups.get(k) || groups.set(k, []).get(k)).push({ m, src, L });
       }
       // v65z every placement of one material on one baked-light sheet merged into one mesh carrying SF2's own light (user 10-30: Desert
@@ -360,6 +390,7 @@ function sf2TriMap(def) {
       // material and sheet (nothing raycasts the drawn map: shots and bodies use the triangle soup)
       sf2Ladders(b, ladders, def.ladderNav);
       for (const list of groups.values()) b.scene.add(sf2Merge(list, this._s2.lm, def));
+      if (riser.length) { const rm = sf2Merge(riser, this._s2.lm, def); b.scene.add(rm); b.mechs.push(new Sf2Riser(b, rm, def.riser)); }
       for (const t of this._s2.terrains || []) b.scene.add(t);
       if (this._s2.meta.decals) for (const m of sf2Decals(this._s2.meta.decals.list, this._s2.dtex)) b.scene.add(m);
     },
@@ -411,4 +442,5 @@ MAPS.push(sf2TriMap({
   sun: { pos: [-40, 43, -38], color: 0xfff0d8, intensity: 1.75, auto: false }, fog: { color: 0xc9c2b4, near: 90, far: 420 },
   lmEnv: 0, lmK: 3.14, rampStairs: /^ms_stair/i, lmCap: 4, // (v66e user 10-31: the capture room's bake, scale 7–10 against 3.4 below, burnt white through the map's steep LUT — rolled off)
   ladderNav: false, // (its tower ladders: bots stuck at their heads)
+  riser: { mesh: /^TW_Satellite_Trigger_001/, at: 119, dur: 1.994, dy: 1, tan: 1.07 }, // v67r the console under the point (SF2's InterpActor_3, docs/research/sf2/cannon-capture-rise.md)
 }));

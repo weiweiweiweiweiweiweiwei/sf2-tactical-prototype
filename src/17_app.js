@@ -1385,7 +1385,7 @@ class App {
         }
         if (!idle || now - (this.idleDrawT || 0) > 100) {
           this.idleDrawT = now;
-          const showVM = m.player.alive && m.weapons.current.vm.group.visible && this.state !== 'ended';
+          const showVM = m.player.alive && (m.weapons.current.vm.group.visible || m.weapons.scopeTube.visible) && this.state !== 'ended'; // (v67r or the scope eyepiece)
           const rt0 = performance.now(); this.post.render(this.state === 'playing' || netLive ? dt : 0, showVM); if (m.prof) m.prof.add('render', performance.now() - rt0);
           if (this.state === 'playing') this.pacer.mark();
         }

@@ -60,8 +60,8 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
    v64g (the user's SF2 shots, the clearest at 2000×1182; R = the ring's radius): the bar heavier (0.065R) out to 2.91R, a thin line across
    the ring (the dot on it), the thin vertical from 2.13R above down to a heavy post (0.087R wide) from 1.43R to 2.52R below. */
 #scope.sf2 .lh,#scope.sf2 .lv,#scope.sf2 .tk,#scope.sf2 .cd,#scope.sf2 .zl{display:none}
-#scope.sf2 .lens{width:142vh;height:142vh;box-shadow:0 0 0 200vmax #070504,inset 0 0 9vh 4vh rgba(12,7,4,.97),inset 0 0 22vh 2vh rgba(40,24,14,.55);background:none}
-#scope .ret{display:none;position:absolute;left:50%;top:50%;width:100vh;height:100vh;transform:translate(-50%,-50%);overflow:visible}
+#scope.sf2 .lens{width:115vh;height:115vh;box-shadow:inset 0 0 1.2vh .3vh rgba(6,4,3,.85);background:none} /* v67r SF2: the lens 57.5 vh, the eyepiece around it is 3D (sf2ScopeTube) */
+#scope .ret{display:none;position:absolute;left:50%;top:50%;width:81vh;height:81vh;transform:translate(-50%,-50%);overflow:visible}
 #scope.sf2[data-ret="bender"] .ret.bender,#scope.sf2[data-ret="zeiss"] .ret.zeiss,#scope.sf2[data-ret="mil"] .ret.mil,#scope.sf2[data-ret="mil3"] .ret.mil3,#scope.sf2[data-ret="mil1"] .ret.mil1{display:block} /* v64s each scope its own SF2 reticle (common_sight: the K14's Bender ScopeView_Reticle_06, the TRG-41's Zeiss _03; v64t 'mil': SF2's default mic_ScopeView — tex_scope_Crosshair_Diffuse + _dot, M40A1 / CZ700 / M200 / AWP, at the lens mask's scale: 200 texels = the tube's 71vh) */
 /* v67c an Apex scope (6×, 4–8×): a thin red cross gapped at the centre, Apex's own range ladder below it (ui.rpak's ui_image 0xE9CB274AB36B33EC,
    tinted red: its first tick, row 185 of 489, on the sight line) */
@@ -17771,6 +17771,54 @@ function sf2Decals(list, dtex) {
   return out;
 }
 __name(sf2Decals, "sf2Decals");
+var Sf2Riser = class {
+  static {
+    __name(this, "Sf2Riser");
+  }
+  constructor(b, mesh, R) {
+    this.m = b.game;
+    this.col = b.col;
+    this.mesh = mesh;
+    this.R = R;
+    this.t = 0;
+    this.y = 0;
+    mesh.geometry.computeBoundingBox();
+    const bb = mesh.geometry.boundingBox;
+    this.box = b.col.addBox(bb.min.clone(), bb.max.clone().setY(bb.max.y - 0.04), { material: "metal", surface: "metal" });
+  }
+  _at(t) {
+    const R = this.R, s = Math.min(1, Math.max(0, (t - R.at) / R.dur)), m1 = R.tan * R.dur;
+    return R.dy * (3 * s * s - 2 * s * s * s) + m1 * (s * s * s - s * s);
+  }
+  tick(h) {
+    const m = this.m;
+    if (m.phase === "live" && !m.isClient) this.t += h;
+    const y = this._at(this.t), d = y - this.y;
+    if (Math.abs(d) < 1e-5) return;
+    this.y = y;
+    this.mesh.position.y = y;
+    this.col.moveBox(this.box, 0, d, 0);
+    const B = this.box;
+    for (const c of m.combatants || []) {
+      const p = c.alive && c.motor && c.motor.pos;
+      if (p && p.x > B.min.x - 0.3 && p.x < B.max.x + 0.3 && p.z > B.min.z - 0.3 && p.z < B.max.z + 0.3 && p.y < B.max.y && p.y > B.max.y - 1.3) p.y = B.max.y;
+    }
+  }
+  render() {
+  }
+  interact() {
+    return false;
+  }
+  prompt() {
+    return null;
+  }
+  netState() {
+    return [+this.t.toFixed(2)];
+  }
+  applyNet(s) {
+    if (s && s.length) this.t = +s[0] || 0;
+  }
+};
 function sf2TriMap(def) {
   return Object.assign({
     indoor: false,
@@ -17931,7 +17979,7 @@ function sf2TriMap(def) {
       });
       const stairMat = def.stairMat && meshes.map((o) => o.material).find((mt) => mt && mt.name === def.stairMat);
       const groups = /* @__PURE__ */ new Map();
-      const ladders = [];
+      const ladders = [], riser = [];
       for (const src of meshes) {
         if (src.userData.colOnly) continue;
         const m = src.clone();
@@ -17964,10 +18012,19 @@ function sf2TriMap(def) {
           continue;
         }
         const L = sf2LightOf(src), k = m.material.uuid + "|" + (L.tex || "") + "|" + (L.max || "");
+        if (def.riser && def.riser.mesh.test(m.name)) {
+          riser.push({ m, src, L });
+          continue;
+        }
         (groups.get(k) || groups.set(k, []).get(k)).push({ m, src, L });
       }
       sf2Ladders(b, ladders, def.ladderNav);
       for (const list of groups.values()) b.scene.add(sf2Merge(list, this._s2.lm, def));
+      if (riser.length) {
+        const rm = sf2Merge(riser, this._s2.lm, def);
+        b.scene.add(rm);
+        b.mechs.push(new Sf2Riser(b, rm, def.riser));
+      }
       for (const t of this._s2.terrains || []) b.scene.add(t);
       if (this._s2.meta.decals) for (const m of sf2Decals(this._s2.meta.decals.list, this._s2.dtex)) b.scene.add(m);
     }
@@ -18052,8 +18109,10 @@ MAPS.push(sf2TriMap({
   rampStairs: /^ms_stair/i,
   lmCap: 4,
   // (v66e user 10-31: the capture room's bake, scale 7–10 against 3.4 below, burnt white through the map's steep LUT — rolled off)
-  ladderNav: false
+  ladderNav: false,
   // (its tower ladders: bots stuck at their heads)
+  riser: { mesh: /^TW_Satellite_Trigger_001/, at: 119, dur: 1.994, dy: 1, tan: 1.07 }
+  // v67r the console under the point (SF2's InterpActor_3, docs/research/sf2/cannon-capture-rise.md)
 }));
 
 // src/08_nav_input.js
@@ -22638,6 +22697,32 @@ var Arsenal = class {
 };
 var RELOAD_POSE = { roll: 0.55, pitch: 0.2, drop: 0.03, shift: 0.02 };
 var BOLT_POSE = { roll: 0.22, drop: 0.012, shift: 0 };
+var SCOPE_LENS_VH = 57.5;
+var SCOPE_EYE = 1.318;
+var SCOPE_LENS_TAN = 1.22 / (2.96 + SCOPE_EYE);
+function sf2ScopeTube() {
+  const P = [[1.22, 2.96], [1.26, 2.73], [1.22, 2.34], [1.25, 2.27], [1.28, 2.22], [1.34, 2.19], [1.42, 2.16], [1.5, 2.16], [1.57, 2.19], [1.66, 2.27], [1.69, 2.34], [1.69, 3.3]];
+  const geo = new THREE.LatheGeometry(P.map(([r, d]) => new THREE.Vector2(r, d + SCOPE_EYE)), 64);
+  geo.rotateX(-Math.PI / 2);
+  const mat = new THREE.MeshStandardMaterial({ color: 3813159, metalness: 1, roughness: 0.4, side: THREE.DoubleSide, envMapIntensity: 1 });
+  const tube = new THREE.Mesh(geo, mat);
+  tube.frustumCulled = false;
+  tube.renderOrder = 10;
+  const bg = new THREE.LatheGeometry(P.slice(0, 4).map(([r, d]) => new THREE.Vector2(r * 0.996, d + SCOPE_EYE)), 64);
+  bg.rotateX(-Math.PI / 2);
+  const bore = new THREE.Mesh(bg, new THREE.MeshStandardMaterial({ color: 1183243, metalness: 1, roughness: 0.6, side: THREE.DoubleSide, envMapIntensity: 0.5 }));
+  bore.frustumCulled = false;
+  bore.renderOrder = 11;
+  const lens = new THREE.Mesh(new THREE.CircleGeometry(1.22, 48), new THREE.MeshStandardMaterial({ color: 0, metalness: 1, roughness: 0.08, transparent: true, opacity: 0.07, depthWrite: false }));
+  lens.position.z = -(2.85 + SCOPE_EYE);
+  lens.frustumCulled = false;
+  lens.renderOrder = 11;
+  const g = new THREE.Group();
+  g.add(tube, bore, lens);
+  g.visible = false;
+  return g;
+}
+__name(sf2ScopeTube, "sf2ScopeTube");
 var WeaponSystem = class extends Arsenal {
   static {
     __name(this, "WeaponSystem");
@@ -22662,6 +22747,8 @@ var WeaponSystem = class extends Arsenal {
     this.flashLightT = 0;
     this.root = new THREE.Group();
     this.scene.add(this.root);
+    this.scopeTube = sf2ScopeTube();
+    this.root.add(this.scopeTube);
     const models = game.app.models;
     this.vmPool = /* @__PURE__ */ new Map();
     this.aimTarget = null;
@@ -22798,6 +22885,7 @@ var WeaponSystem = class extends Arsenal {
       g.app.hud.setScope(sc, this.scopeLevel, w.def.sf2Rig ? w.def.sf2Reticle || "bender" : false, w.def.optic ? APEX_OPTICS[w.def.optic] : null);
     }
     w.vm.group.visible = !sc;
+    this.scopeTube.visible = !!(sc && w.def.sf2Rig && !w.def.optic);
     const OT = w.def.optic && APEX_OPTICS[w.def.optic];
     this.threatOn = !!(OT && OT.threat && this.ads && this.adsT > 0.5 && p.alive);
     this.threatRange = OT && OT.threat || 0;
@@ -22816,6 +22904,10 @@ var WeaponSystem = class extends Arsenal {
     if (Math.abs(this.camera.fov - vmFov) > 0.01) {
       this.camera.fov = vmFov;
       this.camera.updateProjectionMatrix();
+    }
+    if (this.scopeTube.visible) {
+      const k = SCOPE_LENS_VH / 50 * Math.tan(this.camera.fov * Math.PI / 360) / SCOPE_LENS_TAN;
+      this.scopeTube.scale.set(k * 0.01, k * 0.01, 0.01);
     }
     this.root.position.copy(cam.position);
     this.root.quaternion.copy(cam.quaternion);
@@ -33537,7 +33629,7 @@ var App = class {
         }
         if (!idle || now - (this.idleDrawT || 0) > 100) {
           this.idleDrawT = now;
-          const showVM = m.player.alive && m.weapons.current.vm.group.visible && this.state !== "ended";
+          const showVM = m.player.alive && (m.weapons.current.vm.group.visible || m.weapons.scopeTube.visible) && this.state !== "ended";
           const rt0 = performance.now();
           this.post.render(this.state === "playing" || netLive ? dt : 0, showVM);
           if (m.prof) m.prof.add("render", performance.now() - rt0);
