@@ -536,6 +536,32 @@ class AudioEngine {
   }
   _noiseSrc(t, dur, rate = 1) { const s = this.ctx.createBufferSource(); s.buffer = this.noise; s.playbackRate.value = rate; s.start(t, Math.random() * 2, dur + 0.05); return s; }
   _filter(type, freq, q = 0.7) { const f = this.ctx.createBiquadFilter(); f.type = type; f.frequency.value = freq; f.Q.value = q; return f; }
+  // v67o original match music, synthesized here (user 11-18 A — not SF2's tracks): 'start' (the countdown: a pulse under a rising
+  // minor figure), 'win' (a major fanfare), 'lose' (a falling minor line). Played the way SF2 plays its match cues: the end ones
+  // fade in over 0.5 s, hold 7 s and fade out over 2 s. One piece at a time.
+  music(kind) {
+    if (!this.ctx) return;
+    if (this.musicOut) { const g = this.musicOut.gain, t0 = this.ctx.currentTime; g.cancelScheduledValues(t0); g.setTargetAtTime(0, t0, 0.15); }
+    const ctx = this.ctx, t = ctx.currentTime + 0.05, out = this.musicOut = ctx.createGain(), mf = (n) => 440 * Math.pow(2, (n - 69) / 12);
+    out.connect(this.dry); out.gain.setValueAtTime(0, t); out.gain.linearRampToValueAtTime(0.32, t + 0.5);
+    const len = kind === 'start' ? 8 : 7.5; out.gain.setValueAtTime(0.32, t + len - 2); out.gain.linearRampToValueAtTime(0, t + len);
+    const note = (n, at, dur, type = 'triangle', peak = 0.5) => { const o = ctx.createOscillator(), g = ctx.createGain(); o.type = type; o.frequency.value = mf(n);
+      g.gain.setValueAtTime(0, t + at); g.gain.linearRampToValueAtTime(peak, t + at + 0.02); g.gain.setTargetAtTime(0, t + at + dur * 0.6, dur * 0.25); o.connect(g); g.connect(out); o.start(t + at); o.stop(t + at + dur + 0.6); };
+    const drum = (at, f = 70, peak = 0.9) => this._osc('sine', t + at, f * 1.8, f, 0.18, out, peak, 0.002);
+    const pad = (ns, at, dur) => { for (const n of ns) { note(n, at, dur, 'sawtooth', 0.05); note(n + 0.08, at, dur, 'sawtooth', 0.05); } };
+    if (kind === 'start') { // D minor, 96 bpm: a steady pulse, the figure climbing, a held chord
+      const b = 60 / 96; for (let i = 0; i < 12; i++) drum(i * b, 62, i % 4 === 0 ? 1 : 0.55);
+      [[62, 0], [65, 1], [69, 2], [67, 3], [65, 4], [69, 5], [72, 6], [74, 7]].forEach(([n, k]) => note(n, k * b, b * 0.9, 'square', 0.12));
+      pad([50, 57, 62], 0, 4 * b); pad([48, 55, 60], 4 * b, 4 * b); pad([50, 57, 62, 65], 8 * b, 5 * b);
+    } else if (kind === 'win') { // C major: a rising arpeggio answered by a held tonic chord
+      const b = 60 / 120; [[60, 0], [64, 0.5], [67, 1], [72, 1.5], [67, 2.5], [72, 3], [76, 3.5]].forEach(([n, k]) => note(n, k * b, b * 0.8, 'square', 0.14));
+      note(79, 4 * b, b * 6, 'square', 0.14); pad([48, 55, 60, 64], 0, 4 * b); pad([53, 57, 60, 65], 2.5 * b, 2 * b); pad([48, 55, 60, 64, 67], 4 * b, 7 * b);
+      for (const k of [0, 1, 2, 3, 4]) drum(k * b, 80, 0.8);
+    } else { // A minor: a falling line over a slow, low chord
+      const b = 60 / 72; [[76, 0], [74, 1], [72, 2], [71, 3], [69, 4]].forEach(([n, k]) => note(n, k * b, b * 0.95, 'triangle', 0.2));
+      pad([45, 52, 57, 60], 0, 3 * b); pad([41, 48, 53, 57], 3 * b, 4 * b); drum(0, 55, 0.7); drum(3 * b, 50, 0.7);
+    }
+  }
   _osc(type, t, f0, f1, dur, out, peak, attack = 0.002) {
     const o = this.ctx.createOscillator(), g = this.ctx.createGain();
     o.type = type; o.frequency.setValueAtTime(f0, t);

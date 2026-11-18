@@ -466,6 +466,7 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
 
 /* ---- end screen ---- */
 #endscreen .card{width:min(980px,96vw);text-align:center}
+#hud.endfly>*:not(#announce){visibility:hidden} /* v67o the end flyover: only the VICTORY / DEFEAT banner */
 #endTitle{font-size:78px!important;letter-spacing:10px!important;line-height:1}
 #endSub{color:var(--dim);letter-spacing:3px;margin-top:6px}
 #endScore{font-size:40px;font-weight:700;margin:14px 0 6px}
@@ -6472,6 +6473,66 @@ var AudioEngine = class _AudioEngine {
     f.frequency.value = freq;
     f.Q.value = q;
     return f;
+  }
+  // v67o original match music, synthesized here (user 11-18 A — not SF2's tracks): 'start' (the countdown: a pulse under a rising
+  // minor figure), 'win' (a major fanfare), 'lose' (a falling minor line). Played the way SF2 plays its match cues: the end ones
+  // fade in over 0.5 s, hold 7 s and fade out over 2 s. One piece at a time.
+  music(kind) {
+    if (!this.ctx) return;
+    if (this.musicOut) {
+      const g = this.musicOut.gain, t0 = this.ctx.currentTime;
+      g.cancelScheduledValues(t0);
+      g.setTargetAtTime(0, t0, 0.15);
+    }
+    const ctx = this.ctx, t = ctx.currentTime + 0.05, out = this.musicOut = ctx.createGain(), mf = /* @__PURE__ */ __name((n) => 440 * Math.pow(2, (n - 69) / 12), "mf");
+    out.connect(this.dry);
+    out.gain.setValueAtTime(0, t);
+    out.gain.linearRampToValueAtTime(0.32, t + 0.5);
+    const len = kind === "start" ? 8 : 7.5;
+    out.gain.setValueAtTime(0.32, t + len - 2);
+    out.gain.linearRampToValueAtTime(0, t + len);
+    const note = /* @__PURE__ */ __name((n, at, dur, type = "triangle", peak = 0.5) => {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = type;
+      o.frequency.value = mf(n);
+      g.gain.setValueAtTime(0, t + at);
+      g.gain.linearRampToValueAtTime(peak, t + at + 0.02);
+      g.gain.setTargetAtTime(0, t + at + dur * 0.6, dur * 0.25);
+      o.connect(g);
+      g.connect(out);
+      o.start(t + at);
+      o.stop(t + at + dur + 0.6);
+    }, "note");
+    const drum = /* @__PURE__ */ __name((at, f = 70, peak = 0.9) => this._osc("sine", t + at, f * 1.8, f, 0.18, out, peak, 2e-3), "drum");
+    const pad = /* @__PURE__ */ __name((ns, at, dur) => {
+      for (const n of ns) {
+        note(n, at, dur, "sawtooth", 0.05);
+        note(n + 0.08, at, dur, "sawtooth", 0.05);
+      }
+    }, "pad");
+    if (kind === "start") {
+      const b = 60 / 96;
+      for (let i = 0; i < 12; i++) drum(i * b, 62, i % 4 === 0 ? 1 : 0.55);
+      [[62, 0], [65, 1], [69, 2], [67, 3], [65, 4], [69, 5], [72, 6], [74, 7]].forEach(([n, k]) => note(n, k * b, b * 0.9, "square", 0.12));
+      pad([50, 57, 62], 0, 4 * b);
+      pad([48, 55, 60], 4 * b, 4 * b);
+      pad([50, 57, 62, 65], 8 * b, 5 * b);
+    } else if (kind === "win") {
+      const b = 60 / 120;
+      [[60, 0], [64, 0.5], [67, 1], [72, 1.5], [67, 2.5], [72, 3], [76, 3.5]].forEach(([n, k]) => note(n, k * b, b * 0.8, "square", 0.14));
+      note(79, 4 * b, b * 6, "square", 0.14);
+      pad([48, 55, 60, 64], 0, 4 * b);
+      pad([53, 57, 60, 65], 2.5 * b, 2 * b);
+      pad([48, 55, 60, 64, 67], 4 * b, 7 * b);
+      for (const k of [0, 1, 2, 3, 4]) drum(k * b, 80, 0.8);
+    } else {
+      const b = 60 / 72;
+      [[76, 0], [74, 1], [72, 2], [71, 3], [69, 4]].forEach(([n, k]) => note(n, k * b, b * 0.95, "triangle", 0.2));
+      pad([45, 52, 57, 60], 0, 3 * b);
+      pad([41, 48, 53, 57], 3 * b, 4 * b);
+      drum(0, 55, 0.7);
+      drum(3 * b, 50, 0.7);
+    }
   }
   _osc(type, t, f0, f1, dur, out, peak, attack = 2e-3) {
     const o = this.ctx.createOscillator(), g = this.ctx.createGain();
@@ -27694,6 +27755,7 @@ var Match = class _Match {
   }
   startRound() {
     this.round++;
+    if (this.round === 1) this.audio.music("start");
     for (const n of this.grenades) this.physics.remove(n.dyn);
     this.grenades.length = 0;
     for (const s of this.effects.smokes) s.dispose();
@@ -32559,19 +32621,66 @@ var App = class {
     $("endStats").innerHTML = [["分數", p.score], ["擊殺", p.kills], ["助攻", p.assists], ["死亡", p.deaths], ["爆頭率 / 命中率", `${hs}% / ${acc}%`]].map(([k, v]) => `<div><b>${v}</b><span>${k}</span></div>`).join("");
     const mvp = m.combatants.slice().sort((a, b) => b.score - a.score)[0];
     $("endMvp").textContent = mvp ? `★ MVP · ${mvp.isPlayer ? "YOU" : mvp.name}（${mvp.team === "alpha" ? "藍隊" : "紅隊"}）· ${mvp.score} 分 · ${mvp.kills} 殺` : "";
-    $("endscreen").classList.add("on");
-    this.speak(draw ? "draw" : mine ? "victory" : "defeat");
-    let n = 10;
-    $("endCount").textContent = `${n} 秒後自動返回房間`;
+    this.audio.music(draw || !mine ? "lose" : "win");
     clearInterval(this.endTimer);
-    this.endTimer = setInterval(() => {
-      n--;
+    this.endCam = { t: 0, dur: 8, ...this._endOrbit(m) };
+    this.hud.announce(draw ? "DRAW" : mine ? "VICTORY" : "DEFEAT", "");
+    $("hud").classList.add("endfly");
+    const show = /* @__PURE__ */ __name(() => {
+      if (!this.endCam || this.state !== "ended") return;
+      this.endCam = null;
+      $("hud").classList.remove("endfly");
+      removeEventListener("pointerdown", show);
+      removeEventListener("keydown", show);
+      $("endscreen").classList.add("on");
+      let n = 10;
       $("endCount").textContent = `${n} 秒後自動返回房間`;
-      if (n <= 0) {
-        clearInterval(this.endTimer);
-        this.returnToLobby();
+      this.endTimer = setInterval(() => {
+        n--;
+        $("endCount").textContent = `${n} 秒後自動返回房間`;
+        if (n <= 0) {
+          clearInterval(this.endTimer);
+          this.returnToLobby();
+        }
+      }, 1e3);
+    }, "show");
+    this.endCam.done = show;
+    setTimeout(() => {
+      addEventListener("pointerdown", show);
+      addEventListener("keydown", show);
+    }, 400);
+  }
+  // the orbit: around the middle of where people play (the nav graph's ground), wide enough to frame it, from 35° above
+  _endOrbit(m) {
+    const N = m.nav && m.nav.groundNodes || [], B = m.def.bounds;
+    let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity, y = 0;
+    for (const n of N) {
+      x0 = Math.min(x0, n.p.x);
+      x1 = Math.max(x1, n.p.x);
+      z0 = Math.min(z0, n.p.z);
+      z1 = Math.max(z1, n.p.z);
+      y += n.p.y;
+    }
+    if (!N.length) {
+      if (B) {
+        x0 = B.minX;
+        x1 = B.maxX;
+        z0 = B.minZ;
+        z1 = B.maxZ;
+      } else {
+        x0 = z0 = -30;
+        x1 = z1 = 30;
       }
-    }, 1e3);
+    } else y /= N.length;
+    const cx = (x0 + x1) / 2, cz = (z0 + z1) / 2, C = m.collision, V = THREE.Vector3;
+    const up = C.raycast(new V(cx, y + 1.5, cz), new V(0, 1, 0), 200), ceil = up ? up.point.y - y - 0.8 : Infinity;
+    let r = clamp(Math.hypot(x1 - x0, z1 - z0) * (up ? 0.3 : 0.55), 10, 140), h = Math.min(Math.max(r * 0.7, 7), ceil);
+    const a0 = Math.atan2(m.camera.position.x - cx, m.camera.position.z - cz), tgt = new V(cx, y + 1, cz);
+    for (let i = 0; i < 6 && !C.segmentClear(new V(cx + Math.sin(a0) * r, y + h, cz + Math.cos(a0) * r), tgt); i++) {
+      r *= 0.75;
+      h = Math.min(Math.max(r * 0.7, 7), ceil);
+    }
+    return { cx, cy: y, cz, r, h: Math.max(2, h), a0 };
   }
   onResize() {
     document.documentElement.style.setProperty("--ui", clamp(innerHeight / 1e3, 0.55, 1.3).toFixed(3));
@@ -33411,7 +33520,18 @@ var App = class {
         for (const fn of m.builder.animated) fn(dt, this.shotT);
         this.post.render(dt, false);
       } else if (this.state === "playing" || this.state === "paused" || this.state === "ended") {
-        const idle = this.state !== "playing" && !netLive;
+        const E = this.state === "ended" && this.endCam, idle = this.state !== "playing" && !netLive && !E;
+        if (E) {
+          E.t += dt;
+          const k = Math.min(1, E.t / E.dur), a = E.a0 + k * k * (3 - 2 * k) * Math.PI * 0.5, c = m.camera;
+          c.position.set(E.cx + Math.sin(a) * E.r, E.cy + E.h, E.cz + Math.cos(a) * E.r);
+          c.lookAt(E.cx, E.cy, E.cz);
+          c.fov = 55;
+          c.updateProjectionMatrix();
+          m.effects.update(dt);
+          for (const fn of m.builder.animated) fn(dt, this.endT = (this.endT || 0) + dt);
+          if (E.t >= E.dur) E.done();
+        }
         if (!idle || now - (this.idleDrawT || 0) > 100) {
           this.idleDrawT = now;
           const showVM = m.player.alive && m.weapons.current.vm.group.visible && this.state !== "ended";

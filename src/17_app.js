@@ -896,11 +896,31 @@ class App {
     $('endStats').innerHTML = [['分數', p.score], ['擊殺', p.kills], ['助攻', p.assists], ['死亡', p.deaths], ['爆頭率 / 命中率', `${hs}% / ${acc}%`]].map(([k, v]) => `<div><b>${v}</b><span>${k}</span></div>`).join('');
     const mvp = m.combatants.slice().sort((a, b) => b.score - a.score)[0];
     $('endMvp').textContent = mvp ? `★ MVP · ${mvp.isPlayer ? 'YOU' : mvp.name}（${mvp.team === 'alpha' ? '藍隊' : '紅隊'}）· ${mvp.score} 分 · ${mvp.kills} 殺` : '';
-    $('endscreen').classList.add('on');
-    this.speak(draw ? 'draw' : mine ? 'victory' : 'defeat');
-    let n = 10; $('endCount').textContent = `${n} 秒後自動返回房間`;
+    this.audio.music(draw || !mine ? 'lose' : 'win'); // v67o (original music, SF2's timing: in 0.5 s, 7 s, out 2 s)
+    // v67o the end flyover: 8 s around the map (SF2 plays the map's own end cutscene, its Matinee, before the results); a click or Esc skips it
     clearInterval(this.endTimer);
-    this.endTimer = setInterval(() => { n--; $('endCount').textContent = `${n} 秒後自動返回房間`; if (n <= 0) { clearInterval(this.endTimer); this.returnToLobby(); } }, 1000);
+    this.endCam = { t: 0, dur: 8, ...this._endOrbit(m) }; this.hud.announce(draw ? 'DRAW' : mine ? 'VICTORY' : 'DEFEAT', ''); $('hud').classList.add('endfly');
+    const show = () => {
+      if (!this.endCam || this.state !== 'ended') return; this.endCam = null; $('hud').classList.remove('endfly'); removeEventListener('pointerdown', show); removeEventListener('keydown', show);
+      $('endscreen').classList.add('on');
+      let n = 10; $('endCount').textContent = `${n} 秒後自動返回房間`;
+      this.endTimer = setInterval(() => { n--; $('endCount').textContent = `${n} 秒後自動返回房間`; if (n <= 0) { clearInterval(this.endTimer); this.returnToLobby(); } }, 1000);
+    };
+    this.endCam.done = show; setTimeout(() => { addEventListener('pointerdown', show); addEventListener('keydown', show); }, 400);
+  }
+  // the orbit: around the middle of where people play (the nav graph's ground), wide enough to frame it, from 35° above
+  _endOrbit(m) {
+    const N = (m.nav && m.nav.groundNodes) || [], B = m.def.bounds; let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity, y = 0;
+    for (const n of N) { x0 = Math.min(x0, n.p.x); x1 = Math.max(x1, n.p.x); z0 = Math.min(z0, n.p.z); z1 = Math.max(z1, n.p.z); y += n.p.y; }
+    if (!N.length) { if (B) { x0 = B.minX; x1 = B.maxX; z0 = B.minZ; z1 = B.maxZ; } else { x0 = z0 = -30; x1 = z1 = 30; } } else y /= N.length;
+    const cx = (x0 + x1) / 2, cz = (z0 + z1) / 2, C = m.collision, V = THREE.Vector3;
+    // under a roof (indoor maps) the camera stays inside: just below the ceiling over the middle, the circle shrunk until the
+    // middle is in clear view from its start
+    const up = C.raycast(new V(cx, y + 1.5, cz), new V(0, 1, 0), 200), ceil = up ? up.point.y - y - 0.8 : Infinity;
+    let r = clamp(Math.hypot(x1 - x0, z1 - z0) * (up ? 0.3 : 0.55), 10, 140), h = Math.min(Math.max(r * 0.7, 7), ceil);
+    const a0 = Math.atan2(m.camera.position.x - cx, m.camera.position.z - cz), tgt = new V(cx, y + 1, cz);
+    for (let i = 0; i < 6 && !C.segmentClear(new V(cx + Math.sin(a0) * r, y + h, cz + Math.cos(a0) * r), tgt); i++) { r *= 0.75; h = Math.min(Math.max(r * 0.7, 7), ceil); }
+    return { cx, cy: y, cz, r, h: Math.max(2, h), a0 };
   }
 
   onResize() {
@@ -1356,7 +1376,13 @@ class App {
         this.post.render(dt, false);
       } else if (this.state === 'playing' || this.state === 'paused' || this.state === 'ended') {
         // v23: a paused / finished match only redraws ~10×/s — a forgotten paused tab no longer pins the GPU at 100 %
-        const idle = this.state !== 'playing' && !netLive;
+        const E = this.state === 'ended' && this.endCam, idle = this.state !== 'playing' && !netLive && !E;
+        if (E) { // v67o the end flyover: one slow turn (a quarter of the way round in 8 s), easing in
+          E.t += dt; const k = Math.min(1, E.t / E.dur), a = E.a0 + (k * k * (3 - 2 * k)) * Math.PI * 0.5, c = m.camera;
+          c.position.set(E.cx + Math.sin(a) * E.r, E.cy + E.h, E.cz + Math.cos(a) * E.r); c.lookAt(E.cx, E.cy, E.cz); c.fov = 55; c.updateProjectionMatrix();
+          m.effects.update(dt); for (const fn of m.builder.animated) fn(dt, (this.endT = (this.endT || 0) + dt));
+          if (E.t >= E.dur) E.done();
+        }
         if (!idle || now - (this.idleDrawT || 0) > 100) {
           this.idleDrawT = now;
           const showVM = m.player.alive && m.weapons.current.vm.group.visible && this.state !== 'ended';

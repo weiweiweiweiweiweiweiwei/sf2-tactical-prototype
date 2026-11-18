@@ -282,6 +282,7 @@ class Match {
 
   startRound() {
     this.round++;
+    if (this.round === 1) this.audio.music('start'); // v67o the countdown's music (original)
     for (const n of this.grenades) this.physics.remove(n.dyn);
     this.grenades.length = 0;
     for (const s of this.effects.smokes) s.dispose(); this.effects.smokes.length = 0;
