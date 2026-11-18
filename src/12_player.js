@@ -111,7 +111,7 @@ class Human extends Combatant {
   fixedUpdate(h, cmd) {
     const m = this.motor, P = CFG.player, g = this.game;
     if (!this.alive) { m.step(h, 0, 0, 0); this.holdE = false; return; }
-    const frozen = !g.canMove(), btn = frozen ? 0 : cmd.btn;
+    const frozen = !g.canMove() || !!this.downed, btn = frozen ? (this.downed && g.canMove() ? cmd.btn & BTN.USE : 0) : cmd.btn; // (v67p downed: still, low)
     this.holdE = g.canAct() && !!(btn & BTN.USE);
     const traversal = !!g.def.traversal;
     if (m.grounded || m.climbing) this.airJumpUsed = false;
@@ -141,7 +141,7 @@ class Human extends Combatant {
     // ladders: W/S drive the vertical axis (facing away from the ladder inverts W, so walking off the top climbs down)
     const lad = g.collision.ladders.length ? g.collision.ladderAt(m.pos.x, m.pos.y, m.pos.z, m.radius) : null;
     if (lad) { const facing = -s * -lad.nx + -c * -lad.nz; m.climbInput = f * (facing < -0.3 ? -1 : 1); } else m.climbInput = 0;
-    const crouchKey = !!(btn & BTN.CROUCH);
+    const crouchKey = !!(btn & BTN.CROUCH) || !!this.downed;
     // v59: no slide (user: SF2 has none) — crouch is crouch, also while sprinting
     m.setCrouch(crouchKey);
     const shift = !!(btn & BTN.SPRINT);

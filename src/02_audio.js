@@ -621,7 +621,17 @@ class AudioEngine {
       revenge: 'revenge', headshot: 'headshot', wall: 'wallshot', pierce: 'piercingshot', grenade: 'grenadekill', slash: 'slash', knife: 'knifekill' };
     for (const e of emblems) { const l = V[e] && this._s('annc_' + V[e]); if (l) { this._ux(l[0], 1.0, 0.12); return; } }
   }
-  uxCue(k) { const l = this._s(k === 'challenge' ? 'ui_challenge' : 'ui_levelup'); if (l) this._ux(l[0], k === 'challenge' ? 2.0 : 1.0); }
+  // v67p the infected (original, synthesized): 'idle' a low growl, 'hit' a snarl and a thud, 'wave' a far roar (no position)
+  zombie(pos, kind, brute = false) {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime + 0.01, out = pos ? this._bus(pos, 0.25, brute ? 7 : 5) : this.dry, k = brute ? 0.7 : 1;
+    if (kind === 'idle') { const f = rand(70, 110) * k; this._osc('sawtooth', t, f, f * 0.8, 0.7, out, 0.18); this._nb(t, out, 'bandpass', 380 * k, 2.5, 0.22, 0.08, 0.6); }
+    else if (kind === 'hit') { this._nb(t, out, 'bandpass', 900 * k, 1.5, 0.45, 0.01, 0.25); this._osc('sawtooth', t, 160 * k, 90 * k, 0.3, out, 0.25); this._osc('sine', t + 0.04, 120, 50, 0.12, out, 0.6); }
+    else { this._osc('sawtooth', t, 95, 55, 2.2, out, 0.12, 0.4); this._nb(t, out, 'lowpass', 500, 0.8, 0.3, 0.5, 1.8); }
+  }
+  uxCue(k) {
+    if (k === 'buy') { if (!this.ctx) return; const t = this.ctx.currentTime, o = this.fb || this.dry; this._osc('square', t, 1320, 1320, 0.06, o, 0.08); this._osc('square', t + 0.08, 1760, 1760, 0.12, o, 0.08); return; } // v67p the shop
+    const l = this._s(k === 'challenge' ? 'ui_challenge' : 'ui_levelup'); if (l) this._ux(l[0], k === 'challenge' ? 2.0 : 1.0); }
   _ux(buf, vol, delay = 0) { const o = this.ctx.createGain(); o.gain.value = SF2_FB_K; o.connect(this.fb || this.dry); this._one(buf, o, vol, 1, delay); }
   // v64g bullet_hit_2d_03 carries a second sound after the hit (user 10-28: a man's odd laugh, from 0.40 s): only its first 0.37 s,
   // faded out over the last 25 ms (its RMS: the hit 0.04–0.36 s, down to −36 dB at 0.38, the other sound rising again at 0.40)

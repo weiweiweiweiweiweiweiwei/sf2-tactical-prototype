@@ -6,7 +6,7 @@ import { MapBuilder } from './06_mapbuilder.js';
 import { MAPS } from './07_maps.js';
 import { NavGraph } from './08_nav_input.js';
 import { TEAM_PALETTE, ensureGunModels, gunModelReady } from './09_models.js';
-import { BTN } from './12b_cmd.js';
+import { BTN, UserCmd } from './12b_cmd.js';
 import { NET_WEAPONS, netV3 } from './12c_netutil.js';
 import { WeaponSystem } from './11_weaponsystem.js';
 import { Player } from './12_player.js';
@@ -18,6 +18,7 @@ import { createRule } from './15b_rules.js';
    scoring, grenades, freeze time. All mode-specific logic lives in
    the Rule state machine (TDM / Elimination / Relic / Domination).
    ===================================================================== */
+const IDLE_CMD = new UserCmd(); // v67p
 class Match {
   constructor(app, config) {
     this.app = app; this.config = config; this.def = MAPS[config.map]; this.mode = config.mode; this.rule = config.rule;
@@ -89,7 +90,8 @@ class Match {
     this.combatants.push(this.player);
     if (!this.isClient) {
       for (let i = 0; i < this.config.allies - 1; i++) this.bots.push(new Bot(this, 'alpha', i, this.botWeapon()));
-      for (let i = 0; i < this.config.enemies; i++) this.bots.push(new Bot(this, 'bravo', i, this.botWeapon()));
+      if (this.rule === 'zombie') for (let i = 0; i < 16; i++) this.bots.push(new Bot(this, 'bravo', i, 'knife')); // v67p the infected (ZombieRule.init)
+      else for (let i = 0; i < this.config.enemies; i++) this.bots.push(new Bot(this, 'bravo', i, this.botWeapon()));
     }
     this.combatants.push(...this.bots);
     for (const b of this.bots) this.wantGun(b.def); // v67l the guns in play: their models load during the countdown (Match._gunQueue)
@@ -291,6 +293,7 @@ class Match {
     this.player.setSpectate(null);
     for (const c of this.combatants) c.alive = false;
     for (const c of this.combatants) {
+      if (c.zombie) { c.model.root.visible = false; if (c.tag) c.tag.visible = false; continue; } // (v67p the infected wake with their wave)
       const p = this.pickSpawn(c.team, taken, false); taken.push(p);
       if (c.isBot && rb) c.setWeapon(this.botWeapon()); // (friends keep their own loadout)
       c.respawn(p, this.spawns[c.team].yaw);
@@ -424,6 +427,7 @@ class Match {
     }
     if (!victim.isPlayer && victim.team !== this.player.team) victim.spottedT = this.time;
     victim.onDamaged(dmg, attacker, attacker ? attacker.motor.pos : (point || victim.motor.pos));
+    if (victim.hp <= 0 && this.rules.onLethal && this.rules.onLethal(victim, opts)) return true; // v67p downed, not dead (ZombieRule)
     if (victim.hp <= 0) this.onKill(victim, attacker, def, part, dir || new THREE.Vector3(0, 0, 1), opts);
     return true;
   }
@@ -618,7 +622,7 @@ class Match {
     const head = part === 'head' && def.kind !== 'grenade', hud = this.app.hud, p = this.player;
     if (this.net && this.net.role === 'host') this.net.onKill(victim, killer, def, head, dir, opts);
     victim.deaths++;
-    this.rules.onDeath(victim);
+    this.rules.onDeath(victim, killer, head);
     this.dropOnDeath(victim, dir);
     this._die(victim, killer, def, dir);
     const valid = killer && killer !== victim && killer.team !== victim.team;
@@ -686,6 +690,13 @@ class Match {
     this.app.onMatchEnd(this);
   }
 
+  // v67p an infected's claw (ZombieAI): the host's call
+  zombieHit(z, t) {
+    if (this.isClient) return;
+    const d = new THREE.Vector3(t.motor.pos.x - z.motor.pos.x, 0, t.motor.pos.z - z.motor.pos.z).normalize();
+    this.audio.zombie(z.motor.pos, 'hit', z.brute);
+    this.applyDamage(t, z.zDmg || 15, 'chest', z, WEAPON_DEFS.knife, d, t.motor.pos.clone().setY(t.motor.pos.y + 1.1), { melee: true });
+  }
   emitNoise(pos, radius, team, kind = 'noise') { for (const b of this.bots) if (b.alive && b.team !== team) b.ai.hear(pos, radius, kind); }
 
   // v63a F4: the AI debug labels (bots run on this machine only: offline or the host)
@@ -994,7 +1005,7 @@ class Match {
       // v25: one UserCmd per fixed step drives the local player's movement AND weapons (the host steps remote humans the same way)
       const cmd = this.app.cmds.build(p, this.weapons, !this.app.chatOpen); // v31: typing a chat line → the soldier stands still
       p.fixedUpdate(h, cmd);
-      this.weapons.tick(h, cmd);
+      this.weapons.tick(h, p.downed ? IDLE_CMD : cmd); // (v67p a downed soldier cannot use his weapons)
       if ((cmd.btn & BTN.INTERACT) && p.alive && this.canMove()) this.onInteract();
       if (this.net) { if (client) this.net.afterLocalStep(cmd); else this.net.step(h); }
       for (const b of this.bots) b.fixedUpdate(h);

@@ -466,6 +466,12 @@ canvas#game{display:block;position:fixed;inset:0;width:100vw;height:100vh}
 
 /* ---- end screen ---- */
 #endscreen .card{width:min(980px,96vw);text-align:center}
+/* v67p the zombie shop */
+#zshop{position:fixed;right:24px;top:50%;transform:translateY(-50%);z-index:30;width:300px;padding:12px 14px;background:rgba(8,10,12,.88);border:1px solid rgba(255,255,255,.18);color:#e8ecef;font-size:15px;pointer-events:none}
+#zshop h3{margin:0 0 8px;font-size:17px;color:#ffd257;letter-spacing:1px}
+#zshop .zr{display:flex;gap:10px;padding:4px 2px;border-bottom:1px solid rgba(255,255,255,.07)}
+#zshop .zr b{width:18px;color:#ffd257}#zshop .zr span{flex:1}#zshop .zr i{font-style:normal;color:#9fe39a}
+#zshop .zr.no{opacity:.4}#zshop p{margin:8px 0 0;font-size:12px;color:#9aa3a8}
 #hud.endfly>*:not(#announce){visibility:hidden} /* v67o the end flyover: only the VICTORY / DEFEAT banner */
 #endTitle{font-size:78px!important;letter-spacing:10px!important;line-height:1}
 #endSub{color:var(--dim);letter-spacing:3px;margin-top:6px}
@@ -5097,6 +5103,8 @@ var RULES = {
   relic: { name: "奪取戰", desc: "藍隊進攻奪取山丘聖物並運回撤離點 · 紅隊防守 · 回合制", unit: "勝", targets: [5, 6, 7, 8, 9], times: [600], timeUnit: "sec", def: { target: 6, time: 600 } },
   tower: { name: "佔領模式", desc: "SF2 原版 · 單一據點，開局 2 分鐘後開放 · 站上據點即佔領，佔領方 60 秒倒數，易手重新計時 · 倒數結束時佔領的一方獲勝 · 10 分鐘時限到看誰佔領", unit: "分", targets: [0], targetText: "倒數結束時佔領", times: [600], timeUnit: "sec", def: { target: 0, time: 600 } },
   // v65z SFCaptureGame
+  zombie: { name: "殭屍生存", desc: "合作模式 · 全員同隊對抗一波波感染者 · 倒地 30 秒內可被隊友救起（按住 E）· 殺敵賺錢，B 開商店 · 撐過指定波數獲勝", unit: "波", targets: [5, 10, 15, 20], times: [0], timeUnit: "min", def: { target: 10, time: 0 }, coop: true },
+  // v67p
   dom: { name: "佔領戰", desc: "按住 E 6 秒佔領 A/B/C · 佔點隨時間得分 · 全佔封鎖對手得分", unit: "分", targets: [150, 250, 400], times: [0], timeUnit: "min", def: { target: 250, time: 0 } }
 };
 var FREEZE_TIME = 5;
@@ -6664,7 +6672,31 @@ var AudioEngine = class _AudioEngine {
       }
     }
   }
+  // v67p the infected (original, synthesized): 'idle' a low growl, 'hit' a snarl and a thud, 'wave' a far roar (no position)
+  zombie(pos, kind, brute = false) {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime + 0.01, out = pos ? this._bus(pos, 0.25, brute ? 7 : 5) : this.dry, k = brute ? 0.7 : 1;
+    if (kind === "idle") {
+      const f = rand(70, 110) * k;
+      this._osc("sawtooth", t, f, f * 0.8, 0.7, out, 0.18);
+      this._nb(t, out, "bandpass", 380 * k, 2.5, 0.22, 0.08, 0.6);
+    } else if (kind === "hit") {
+      this._nb(t, out, "bandpass", 900 * k, 1.5, 0.45, 0.01, 0.25);
+      this._osc("sawtooth", t, 160 * k, 90 * k, 0.3, out, 0.25);
+      this._osc("sine", t + 0.04, 120, 50, 0.12, out, 0.6);
+    } else {
+      this._osc("sawtooth", t, 95, 55, 2.2, out, 0.12, 0.4);
+      this._nb(t, out, "lowpass", 500, 0.8, 0.3, 0.5, 1.8);
+    }
+  }
   uxCue(k) {
+    if (k === "buy") {
+      if (!this.ctx) return;
+      const t = this.ctx.currentTime, o = this.fb || this.dry;
+      this._osc("square", t, 1320, 1320, 0.06, o, 0.08);
+      this._osc("square", t + 0.08, 1760, 1760, 0.12, o, 0.08);
+      return;
+    }
     const l = this._s(k === "challenge" ? "ui_challenge" : "ui_levelup");
     if (l) this._ux(l[0], k === "challenge" ? 2 : 1);
   }
@@ -12865,45 +12897,45 @@ var MAPS = [
         b._batch(wm, wg, false);
       }
       b.sym((s) => {
-        const X = /* @__PURE__ */ __name((x) => x * s, "X"), Z = /* @__PURE__ */ __name((z) => z * s, "Z");
-        b.box(X(-31), 0, Z(5), X(-21), 6.5, Z(14), "plaster", { radar: "building" });
-        b.box(X(-31), 6.5, Z(5), X(-21), 7.3, Z(5.3), "plaster", { radar: false });
-        b.room(Math.min(X(-18), X(-11)), Math.min(Z(6), Z(12)), Math.max(X(-18), X(-11)), Math.max(Z(6), Z(12)), {
+        const X = /* @__PURE__ */ __name((x) => x * s, "X"), Z2 = /* @__PURE__ */ __name((z) => z * s, "Z");
+        b.box(X(-31), 0, Z2(5), X(-21), 6.5, Z2(14), "plaster", { radar: "building" });
+        b.box(X(-31), 6.5, Z2(5), X(-21), 7.3, Z2(5.3), "plaster", { radar: false });
+        b.room(Math.min(X(-18), X(-11)), Math.min(Z2(6), Z2(12)), Math.max(X(-18), X(-11)), Math.max(Z2(6), Z2(12)), {
           h: 4,
           t: 0.3,
           mat: s > 0 ? "plasterRed" : "plaster",
           roof: "roof",
           open: s > 0 ? { s: [{ a: -15.6, b: -13.6 }], e: [{ a: 8, b: 10 }], w: [{ a: 8.4, b: 9.8, y0: 1.2, y1: 2.2 }] } : { n: [{ a: 13.6, b: 15.6 }], w: [{ a: -10, b: -8 }], e: [{ a: -9.8, b: -8.4, y0: 1.2, y1: 2.2 }] }
         });
-        b.crate(X(-16.8), Z(10.8), 1.1);
-        b.box(X(-13.8), 0, Z(10.6), X(-11.8), 1, Z(11.5), "wood", { material: "wood", radar: "crate" });
-        b.box(X(-30), 0, Z(-16), X(-20), 3.8, Z(-6), "plaster", { radar: "building" });
-        b.stairs({ axis: "z", from: Z(-6.6), dir: -s, a0: Math.min(X(-19.9), X(-18.5)), a1: Math.max(X(-19.9), X(-18.5)), steps: 13, rise: 3.8 / 13, run: 0.45, mat: "plaster", nosing: "wood" });
-        b.box(X(-20), 0, Z(-16), X(-18.5), 3.8, Z(-12.45), "plaster", { radar: "building" });
-        for (const [x0, z0, x1, z1] of [[-30, -16, -18.5, -15.75], [-30, -6.25, -20, -6], [-30, -16, -29.75, -6], [-18.75, -16, -18.5, -12.45]]) b.box(X(x0), 3.8, Z(z0), X(x1), 4.8, Z(z1), "plaster", { radar: false });
-        b.box(X(-20.25), 3.8, Z(-9.2), X(-20), 4.8, Z(-6), "plaster", { radar: false });
-        b.box(X(-31), 0, Z(18), X(-24), 7, Z(27), "plaster", { radar: "building" });
-        b.box(X(-12), 0, Z(-26), X(-5), 5, Z(-20.5), "plasterWhite", { radar: "building" });
+        b.crate(X(-16.8), Z2(10.8), 1.1);
+        b.box(X(-13.8), 0, Z2(10.6), X(-11.8), 1, Z2(11.5), "wood", { material: "wood", radar: "crate" });
+        b.box(X(-30), 0, Z2(-16), X(-20), 3.8, Z2(-6), "plaster", { radar: "building" });
+        b.stairs({ axis: "z", from: Z2(-6.6), dir: -s, a0: Math.min(X(-19.9), X(-18.5)), a1: Math.max(X(-19.9), X(-18.5)), steps: 13, rise: 3.8 / 13, run: 0.45, mat: "plaster", nosing: "wood" });
+        b.box(X(-20), 0, Z2(-16), X(-18.5), 3.8, Z2(-12.45), "plaster", { radar: "building" });
+        for (const [x0, z0, x1, z1] of [[-30, -16, -18.5, -15.75], [-30, -6.25, -20, -6], [-30, -16, -29.75, -6], [-18.75, -16, -18.5, -12.45]]) b.box(X(x0), 3.8, Z2(z0), X(x1), 4.8, Z2(z1), "plaster", { radar: false });
+        b.box(X(-20.25), 3.8, Z2(-9.2), X(-20), 4.8, Z2(-6), "plaster", { radar: false });
+        b.box(X(-31), 0, Z2(18), X(-24), 7, Z2(27), "plaster", { radar: "building" });
+        b.box(X(-12), 0, Z2(-26), X(-5), 5, Z2(-20.5), "plasterWhite", { radar: "building" });
         for (const [x, z, c] of [[-18, 21, "canvasRed"], [-11, 24, "canvasBlue"], [-6, 18.5, "canvasRed"]]) {
-          for (const [dx, dz] of [[-1.3, -0.9], [1.3, -0.9], [-1.3, 0.9], [1.3, 0.9]]) b.box(X(x + dx) - 0.05, 0, Z(z + dz) - 0.05, X(x + dx) + 0.05, 2.5, Z(z + dz) + 0.05, "wood", { radar: false });
-          b.deco(X(x - 1.5), 2.5, Z(z - 1.1), X(x + 1.5), 2.56, Z(z + 1.1), c);
-          b.box(X(x - 1.1), 0, Z(z - 0.5), X(x + 1.1), 0.95, Z(z + 0.5), "wood", { material: "wood", radar: "crate", penetrable: true });
+          for (const [dx, dz] of [[-1.3, -0.9], [1.3, -0.9], [-1.3, 0.9], [1.3, 0.9]]) b.box(X(x + dx) - 0.05, 0, Z2(z + dz) - 0.05, X(x + dx) + 0.05, 2.5, Z2(z + dz) + 0.05, "wood", { radar: false });
+          b.deco(X(x - 1.5), 2.5, Z2(z - 1.1), X(x + 1.5), 2.56, Z2(z + 1.1), c);
+          b.box(X(x - 1.1), 0, Z2(z - 0.5), X(x + 1.1), 0.95, Z2(z + 0.5), "wood", { material: "wood", radar: "crate", penetrable: true });
         }
-        b.box(X(-9), 0, Z(-8.3), X(-5), 1.2, Z(-7.7), "plaster", { radar: "sandbag" });
-        b.box(X(-8.3), 0, Z(-8), X(-7.7), 1.2, Z(-4.6), "plaster", { radar: "sandbag" });
-        b.box(X(-9), 0, Z(7.7), X(-5), 1.2, Z(8.3), "plaster", { radar: "sandbag" });
-        b.tree(X(-9.5), Z(5.2));
-        b.tree(X(-13.5), Z(-4.8));
-        b.tree(X(-35), Z(14));
-        b.tree(X(-36), Z(-20));
-        b.car(X(-23), Z(1.8), 0.2);
-        b.car(X(-3.5), Z(-14), Math.PI / 2);
-        b.box(X(-30.3), 0, Z(-6), X(-29.7), 2.6, Z(0.5), "plaster", { radar: "wall" });
-        b.deco(X(-30.4), 2.6, Z(-6), X(-29.6), 2.72, Z(0.6), "plasterWhite");
-        b.box(X(-26.3), 0, Z(-0.8), X(-25.7), 2.6, Z(5), "plaster", { radar: "wall" });
-        b.deco(X(-26.4), 2.6, Z(-0.9), X(-25.6), 2.72, Z(5), "plasterWhite");
+        b.box(X(-9), 0, Z2(-8.3), X(-5), 1.2, Z2(-7.7), "plaster", { radar: "sandbag" });
+        b.box(X(-8.3), 0, Z2(-8), X(-7.7), 1.2, Z2(-4.6), "plaster", { radar: "sandbag" });
+        b.box(X(-9), 0, Z2(7.7), X(-5), 1.2, Z2(8.3), "plaster", { radar: "sandbag" });
+        b.tree(X(-9.5), Z2(5.2));
+        b.tree(X(-13.5), Z2(-4.8));
+        b.tree(X(-35), Z2(14));
+        b.tree(X(-36), Z2(-20));
+        b.car(X(-23), Z2(1.8), 0.2);
+        b.car(X(-3.5), Z2(-14), Math.PI / 2);
+        b.box(X(-30.3), 0, Z2(-6), X(-29.7), 2.6, Z2(0.5), "plaster", { radar: "wall" });
+        b.deco(X(-30.4), 2.6, Z2(-6), X(-29.6), 2.72, Z2(0.6), "plasterWhite");
+        b.box(X(-26.3), 0, Z2(-0.8), X(-25.7), 2.6, Z2(5), "plaster", { radar: "wall" });
+        b.deco(X(-26.4), 2.6, Z2(-0.9), X(-25.6), 2.72, Z2(5), "plasterWhite");
         b.wallX(
-          Z(-17.5),
+          Z2(-17.5),
           Math.min(X(-19), X(-6)),
           Math.max(X(-19), X(-6)),
           0,
@@ -12913,8 +12945,8 @@ var MAPS = [
           (s > 0 ? [[-17, -14.8], [-12.6, -10.4], [-8.2, -6]] : [[6, 8.2], [10.4, 12.6], [14.8, 17]]).map(([a, bb]) => ({ a, b: bb, y1: 3 })),
           { radar: "wall" }
         );
-        for (const [x, z, sz] of [[-26, -3, 1.2], [-26, -1.8, 0.9], [-17, -2.6, 1.1], [-33, 9, 1.2], [-22, 23, 1.2], [-3, 23, 1.1], [-16, -23, 1.2], [-28, -24, 1.2]]) b.crate(X(x), Z(z), sz);
-        for (const [x, z, r] of [[-18.5, 15.5, 1], [-19.2, 16.1, 0], [-7, -25, 1]]) b.barrel(X(x), Z(z), r);
+        for (const [x, z, sz] of [[-26, -3, 1.2], [-26, -1.8, 0.9], [-17, -2.6, 1.1], [-33, 9, 1.2], [-22, 23, 1.2], [-3, 23, 1.1], [-16, -23, 1.2], [-28, -24, 1.2]]) b.crate(X(x), Z2(z), sz);
+        for (const [x, z, r] of [[-18.5, 15.5, 1], [-19.2, 16.1, 0], [-7, -25, 1]]) b.barrel(X(x), Z2(z), r);
       });
       b.spawnZone("alpha", -38.6, -6, -33, 6, -Math.PI / 2);
       b.spawnZone("bravo", 33, -6, 38.6, 6, Math.PI / 2);
@@ -12988,21 +13020,21 @@ var MAPS = [
       b.box(-2.2, 0, -6.2, 0.2, 1.8, -4.8, "yellowSteel", { material: "metal", radar: "crate" });
       b.box(-2.2, 1.8, -6.2, -0.6, 2.6, -4.8, "darkSteel", { material: "metal", radar: false });
       b.sym((s) => {
-        const X = /* @__PURE__ */ __name((x) => x * s, "X"), Z = /* @__PURE__ */ __name((z) => z * s, "Z");
+        const X = /* @__PURE__ */ __name((x) => x * s, "X"), Z2 = /* @__PURE__ */ __name((z) => z * s, "Z");
         const C = [[-26, 10, "x", 2, 0], [-26, -12, "x", 1, 1], [-18, 3, "z", 1, 2], [-18, 16, "z", 3, 3], [-12, -6, "x", 2, 4], [-12, 13, "x", 1, 5], [-5, -18, "x", 1, 6], [-20, -19, "x", 1, 7], [-33, 16, "z", 2, 1], [-34, -16, "z", 1, 2]];
-        for (const [x, z, a, st, c] of C) b.container(X(x), Z(z), a, st, s > 0 ? c : c + 3);
-        b.container(X(-30), Z(-4), "z", 2, s > 0 ? 5 : 1);
-        b.stairs({ axis: "x", from: X(-22.83), dir: -s, a0: Math.min(Z(-5.2), Z(-3.8)), a1: Math.max(Z(-5.2), Z(-3.8)), steps: 17, rise: 0.3, run: 0.35, mat: "plate" });
-        b.railing(Math.min(X(-31.22), X(-28.78)), Z(-7), Math.max(X(-31.22), X(-28.78)), Z(-7), 5.2, "yellowSteel");
-        b.railing(Math.min(X(-31.22), X(-28.78)), Z(-1), Math.max(X(-31.22), X(-28.78)), Z(-1), 5.2, "yellowSteel");
-        for (const [x, z, sz] of [[-22, -9, 1.2], [-22, -10.3, 0.9], [-9, 2, 1.2], [-9, 3.3, 0.9], [-29, 3, 1.1], [-15, -14, 1.2], [-3, 12, 1.1], [-37, -3, 1], [-37, 4, 1]]) b.crate(X(x), Z(z), sz);
-        for (const [x, z, r] of [[-14.5, 20, 1], [-15.2, 20.6, 0], [-24, 21, 0], [-10, -21, 1]]) b.barrel(X(x), Z(z), r);
-        for (const [x, z] of [[-21, 21], [-8, -12], [-30, -21]]) b.pallet(X(x), Z(z), 0, 1);
-        b.lamp(X(-20), Z(0.5), 7, { top: 7.6, light: true, color: 16757867, intensity: 70, distance: 26 });
-        b.box(X(-20) - 0.1, 0, Z(0.5) - 0.1, X(-20) + 0.1, 7.6, Z(0.5) + 0.1, "darkSteel", { radar: false });
-        for (let x = -36; x <= -8; x += 4) b.paint(X(x) - 1, Z(-22) - 0.07, X(x) + 1, Z(-22) + 0.07, 15263976);
-        b.floorDecal(X(-14), Z(8), 5, 3, 0.3, "puddle");
-        b.floorDecal(X(-24), Z(-2), 6, 5, 1.1, "grime");
+        for (const [x, z, a, st, c] of C) b.container(X(x), Z2(z), a, st, s > 0 ? c : c + 3);
+        b.container(X(-30), Z2(-4), "z", 2, s > 0 ? 5 : 1);
+        b.stairs({ axis: "x", from: X(-22.83), dir: -s, a0: Math.min(Z2(-5.2), Z2(-3.8)), a1: Math.max(Z2(-5.2), Z2(-3.8)), steps: 17, rise: 0.3, run: 0.35, mat: "plate" });
+        b.railing(Math.min(X(-31.22), X(-28.78)), Z2(-7), Math.max(X(-31.22), X(-28.78)), Z2(-7), 5.2, "yellowSteel");
+        b.railing(Math.min(X(-31.22), X(-28.78)), Z2(-1), Math.max(X(-31.22), X(-28.78)), Z2(-1), 5.2, "yellowSteel");
+        for (const [x, z, sz] of [[-22, -9, 1.2], [-22, -10.3, 0.9], [-9, 2, 1.2], [-9, 3.3, 0.9], [-29, 3, 1.1], [-15, -14, 1.2], [-3, 12, 1.1], [-37, -3, 1], [-37, 4, 1]]) b.crate(X(x), Z2(z), sz);
+        for (const [x, z, r] of [[-14.5, 20, 1], [-15.2, 20.6, 0], [-24, 21, 0], [-10, -21, 1]]) b.barrel(X(x), Z2(z), r);
+        for (const [x, z] of [[-21, 21], [-8, -12], [-30, -21]]) b.pallet(X(x), Z2(z), 0, 1);
+        b.lamp(X(-20), Z2(0.5), 7, { top: 7.6, light: true, color: 16757867, intensity: 70, distance: 26 });
+        b.box(X(-20) - 0.1, 0, Z2(0.5) - 0.1, X(-20) + 0.1, 7.6, Z2(0.5) + 0.1, "darkSteel", { radar: false });
+        for (let x = -36; x <= -8; x += 4) b.paint(X(x) - 1, Z2(-22) - 0.07, X(x) + 1, Z2(-22) + 0.07, 15263976);
+        b.floorDecal(X(-14), Z2(8), 5, 3, 0.3, "puddle");
+        b.floorDecal(X(-24), Z2(-2), 6, 5, 1.1, "grime");
       });
       b.lamp(0, -14, 7, { top: 7.6, light: true, color: 16757867, intensity: 70, distance: 26 });
       b.box(-0.1, 0, -14.1, 0.1, 7.6, -13.9, "darkSteel", { radar: false });
@@ -13080,7 +13112,7 @@ var MAPS = [
       const W = /* @__PURE__ */ __name((s, z, x0, x1, ops, mat = "officeWall") => b.wallX(z * s, Math.min(x0 * s, x1 * s), Math.max(x0 * s, x1 * s), 0, 3.6, 0.2, mat, ops.map((o) => Object.assign({}, o, s > 0 ? {} : { a: -o.b, b: -o.a })), { radar: "wall" }), "W");
       const Wz = /* @__PURE__ */ __name((s, x, z0, z1, ops, mat = "officeWall") => b.wallZ(x * s, Math.min(z0 * s, z1 * s), Math.max(z0 * s, z1 * s), 0, 3.6, 0.2, mat, ops.map((o) => Object.assign({}, o, s > 0 ? {} : { a: -o.b, b: -o.a })), { radar: "wall" }), "Wz");
       b.sym((s) => {
-        const X = /* @__PURE__ */ __name((x) => x * s, "X"), Z = /* @__PURE__ */ __name((z) => z * s, "Z");
+        const X = /* @__PURE__ */ __name((x) => x * s, "X"), Z2 = /* @__PURE__ */ __name((z) => z * s, "Z");
         Wz(s, -19, -8, 8, [{ a: -2.5, b: 2.5, y1: 2.8 }]);
         W(s, 8, -28, -19, [{ a: -24.6, b: -23 }, { a: -27.6, b: -24.6, y0: 0.9, y1: 3.1, glass: true }, { a: -23, b: -19.4, y0: 0.9, y1: 3.1, glass: true }]);
         W(s, 8, -19, -8, [{ a: -17.4, b: -15.8 }, { a: -11.6, b: -10 }]);
@@ -13089,36 +13121,36 @@ var MAPS = [
         W(s, 8, 19, 28, [{ a: 22.4, b: 24 }]);
         for (const x of [-19, -13.5, -8, 8, 13.5, 19]) Wz(s, x, 8.1, 19.8, []);
         Wz(s, 0, 8.1, 19.8, [{ a: 12, b: 13.6 }]);
-        b.box(X(-23), 0, Z(-3), X(-21.6), 1.1, Z(3), "desk", { radar: "crate" });
-        b.deco(X(-23.2), 1.1, Z(-3.1), X(-21.5), 1.16, Z(3.1), "whiteSteel");
-        b.box(X(-22.5), 1.16, Z(-3.1), X(-22.1), 2.4, Z(3.1), "officeWall", { radar: false });
-        for (const z of [-6, 5.5]) b.box(X(-27.2), 0, Z(z), X(-26.2), 0.8, Z(z + 2.4), "partition", { material: "carpet", radar: "crate", penetrable: true });
-        b.box(X(-26), 0, Z(12.5), X(-21), 0.76, Z(15.5), "desk", { material: "wood", radar: "crate", penetrable: true });
+        b.box(X(-23), 0, Z2(-3), X(-21.6), 1.1, Z2(3), "desk", { radar: "crate" });
+        b.deco(X(-23.2), 1.1, Z2(-3.1), X(-21.5), 1.16, Z2(3.1), "whiteSteel");
+        b.box(X(-22.5), 1.16, Z2(-3.1), X(-22.1), 2.4, Z2(3.1), "officeWall", { radar: false });
+        for (const z of [-6, 5.5]) b.box(X(-27.2), 0, Z2(z), X(-26.2), 0.8, Z2(z + 2.4), "partition", { material: "carpet", radar: "crate", penetrable: true });
+        b.box(X(-26), 0, Z2(12.5), X(-21), 0.76, Z2(15.5), "desk", { material: "wood", radar: "crate", penetrable: true });
         for (const [cx, cz] of [[-17, 3], [-17, -6], [-12.5, 3], [-12.5, -6]]) {
-          b.box(X(cx), 0, Z(cz + 1.45), X(cx + 3.6), 1.25, Z(cz + 1.55), "partition", { material: "carpet", penetrable: true, radar: "fence" });
-          b.box(X(cx), 0, Z(cz), X(cx + 0.06), 1.25, Z(cz + 3), "partition", { material: "carpet", penetrable: true, radar: "fence" });
-          b.box(X(cx), 0, Z(cz + 0.1), X(cx + 3.4), 0.74, Z(cz + 0.8), "desk", { material: "wood", penetrable: true, radar: "crate" });
-          b.box(X(cx), 0, Z(cz + 2.2), X(cx + 3.4), 0.74, Z(cz + 2.9), "desk", { material: "wood", penetrable: true, radar: "crate" });
+          b.box(X(cx), 0, Z2(cz + 1.45), X(cx + 3.6), 1.25, Z2(cz + 1.55), "partition", { material: "carpet", penetrable: true, radar: "fence" });
+          b.box(X(cx), 0, Z2(cz), X(cx + 0.06), 1.25, Z2(cz + 3), "partition", { material: "carpet", penetrable: true, radar: "fence" });
+          b.box(X(cx), 0, Z2(cz + 0.1), X(cx + 3.4), 0.74, Z2(cz + 0.8), "desk", { material: "wood", penetrable: true, radar: "crate" });
+          b.box(X(cx), 0, Z2(cz + 2.2), X(cx + 3.4), 0.74, Z2(cz + 2.9), "desk", { material: "wood", penetrable: true, radar: "crate" });
         }
-        b.box(X(-18.6), 0, Z(17.5), X(-14), 0.76, Z(19.2), "desk", { material: "wood", radar: "crate" });
-        b.box(X(-13), 0, Z(9), X(-8.6), 0.76, Z(10.5), "desk", { material: "wood", radar: "crate" });
-        b.box(X(9), 0, Z(17.5), X(13), 0.76, Z(19.2), "desk", { material: "wood", radar: "crate" });
-        b.box(X(14.2), 0, Z(9), X(18.4), 0.76, Z(10.4), "desk", { material: "wood", radar: "crate" });
-        for (const [x, z, sz] of [[21, 18, 1.2], [22.3, 18, 1], [26.5, 11, 1.2], [26.5, 12.3, 0.9], [24, 15, 1.1]]) b.crate(X(x), Z(z), sz);
-        b.box(X(-18.6), 0, Z(8.4), X(-17.8), 1.9, Z(11), "darkSteel", { material: "metal", radar: "crate" });
-        for (let x = -7.4; x <= -1.4; x += 1.5) b.box(X(x), 0, Z(15), X(x + 0.8), 2.1, Z(18.8), "darkSteel", { material: "metal", radar: "crate" });
-        b.box(X(1), 0, Z(18), X(7.6), 0.95, Z(19.6), "desk", { material: "wood", radar: "crate" });
-        b.box(X(3), 0, Z(11), X(6), 0.95, Z(13), "desk", { material: "wood", radar: "crate" });
+        b.box(X(-18.6), 0, Z2(17.5), X(-14), 0.76, Z2(19.2), "desk", { material: "wood", radar: "crate" });
+        b.box(X(-13), 0, Z2(9), X(-8.6), 0.76, Z2(10.5), "desk", { material: "wood", radar: "crate" });
+        b.box(X(9), 0, Z2(17.5), X(13), 0.76, Z2(19.2), "desk", { material: "wood", radar: "crate" });
+        b.box(X(14.2), 0, Z2(9), X(18.4), 0.76, Z2(10.4), "desk", { material: "wood", radar: "crate" });
+        for (const [x, z, sz] of [[21, 18, 1.2], [22.3, 18, 1], [26.5, 11, 1.2], [26.5, 12.3, 0.9], [24, 15, 1.1]]) b.crate(X(x), Z2(z), sz);
+        b.box(X(-18.6), 0, Z2(8.4), X(-17.8), 1.9, Z2(11), "darkSteel", { material: "metal", radar: "crate" });
+        for (let x = -7.4; x <= -1.4; x += 1.5) b.box(X(x), 0, Z2(15), X(x + 0.8), 2.1, Z2(18.8), "darkSteel", { material: "metal", radar: "crate" });
+        b.box(X(1), 0, Z2(18), X(7.6), 0.95, Z2(19.6), "desk", { material: "wood", radar: "crate" });
+        b.box(X(3), 0, Z2(11), X(6), 0.95, Z2(13), "desk", { material: "wood", radar: "crate" });
         for (const [x, z] of [[-26.8, -7.2], [-19.8, -7.2], [-8.8, 7.2]]) {
-          b.cyl(X(x), Z(z), 0.3, 0, 0.6, "darkSteel", { seg: 12, radar: "crate" });
+          b.cyl(X(x), Z2(z), 0.3, 0, 0.6, "darkSteel", { seg: 12, radar: "crate" });
           if (!b.dry) {
             const c = new THREE.ConeGeometry(0.55, 1.4, 10);
-            c.translate(X(x), 1.25, Z(z));
+            c.translate(X(x), 1.25, Z2(z));
             b.geo(c, "foliage");
           }
         }
-        b.light(X(-23.5), 3.3, Z(0), 16774374, 45, 18);
-        b.light(X(-13.5), 3.3, Z(0), 16774374, 40, 16);
+        b.light(X(-23.5), 3.3, Z2(0), 16774374, 45, 18);
+        b.light(X(-13.5), 3.3, Z2(0), 16774374, 40, 16);
         b.sign(s > 0 ? "ALPHA" : "BRAVO", s > 0 ? "#6fb6ff" : "#ff6a5f", X(-27.8), 3, 0, s > 0 ? Math.PI / 2 : -Math.PI / 2, 3.2, 0.8);
       });
       for (let x = -26; x <= 26; x += 4) for (let z = -18; z <= 18; z += 4) if (Math.abs(x) > 9 || Math.abs(z) > 9) b.panel(x, z, 3.6, 1.2, 0.6);
@@ -13181,13 +13213,13 @@ var MAPS = [
       b.box(-4.2, 0, 22.3, 4.2, 2, 30.7, "concreteWall", { radar: "building" });
       b.box(-3, 2, 23.5, 3, 4.5, 29.5, null, { radar: false });
       b.sym((s) => {
-        const X = /* @__PURE__ */ __name((x) => x * s, "X"), Z = /* @__PURE__ */ __name((z) => z * s, "Z");
-        b.sandbags(X(-20), Z(11.6), X(-14), Z(12.4));
-        b.sandbags(X(-11), Z(11.6), X(-4), Z(12.4));
-        b.sandbags(X(-26), Z(-3.4), X(-25.2), Z(3.4));
-        b.sandbags(X(-36), Z(-10), X(-30), Z(-9.2));
-        b.sandbags(X(-36), Z(9.2), X(-30), Z(10));
-        b.room(Math.min(X(-32), X(-22)), Math.min(Z(14), Z(21)), Math.max(X(-32), X(-22)), Math.max(Z(14), Z(21)), {
+        const X = /* @__PURE__ */ __name((x) => x * s, "X"), Z2 = /* @__PURE__ */ __name((z) => z * s, "Z");
+        b.sandbags(X(-20), Z2(11.6), X(-14), Z2(12.4));
+        b.sandbags(X(-11), Z2(11.6), X(-4), Z2(12.4));
+        b.sandbags(X(-26), Z2(-3.4), X(-25.2), Z2(3.4));
+        b.sandbags(X(-36), Z2(-10), X(-30), Z2(-9.2));
+        b.sandbags(X(-36), Z2(9.2), X(-30), Z2(10));
+        b.room(Math.min(X(-32), X(-22)), Math.min(Z2(14), Z2(21)), Math.max(X(-32), X(-22)), Math.max(Z2(14), Z2(21)), {
           h: 3.2,
           t: 0.25,
           mat: "sidingTan",
@@ -13195,32 +13227,32 @@ var MAPS = [
           eave: 0.3,
           open: s > 0 ? { s: [{ a: -28.8, b: -27.2 }], e: [{ a: 16.6, b: 18.2, y0: 1.1, y1: 2.1 }] } : { n: [{ a: 27.2, b: 28.8 }], w: [{ a: -18.2, b: -16.6, y0: 1.1, y1: 2.1 }] }
         });
-        b.box(X(-31.5), 0, Z(19.4), X(-27), 0.55, Z(20.6), "wood", { material: "wood", radar: "crate" });
-        b.box(X(-34), 0, Z(-22), X(-26), 3.4, Z(-15), "sidingTan", { radar: "building" });
-        b.deco(X(-34.3), 3.4, Z(-22.3), X(-25.7), 3.6, Z(-14.7), "roof");
-        for (const [x, z] of [[-37.5, 14.5], [-34.5, 14.5], [-37.5, 17.5], [-34.5, 17.5]]) b.box(X(x) - 0.12, 0, Z(z) - 0.12, X(x) + 0.12, 3.8, Z(z) + 0.12, "darkSteel", { radar: false });
-        b.slab(X(-37.6), Z(14.4), X(-34.4), Z(17.6), 4, 0.2, "wood", { radar: "catwalk", material: "wood" });
-        b.stairs({ axis: "z", from: Z(10.5), dir: s, a0: Math.min(X(-37.4), X(-36.2)), a1: Math.max(X(-37.4), X(-36.2)), steps: 13, rise: 4 / 13, run: 0.3, mat: "wood", nosing: "darkSteel" });
-        for (const [x0, z0, x1, z1] of [[-37.6, 17.5, -34.4, 17.6], [-37.6, 14.4, -37.5, 17.6], [-34.5, 14.4, -34.4, 17.6], [-36.1, 14.4, -34.4, 14.5]]) b.box(X(x0), 4, Z(z0), X(x1), 5, Z(z1), "wood", { material: "wood", radar: false, penetrable: true });
-        b.deco(X(-37.8), 6.4, Z(14.2), X(-34.2), 6.6, Z(17.8), "roof");
-        b.cyl(X(-15), Z(21), 2, 0, 5, "whiteSteel", { seg: 24 });
-        b.cyl(X(-9.5), Z(23), 1.6, 0, 4, "whiteSteel", { seg: 24 });
-        b.car(X(-20), Z(-6), 0.3, "darkSteel");
-        b.car(X(-40), Z(-18), Math.PI / 2 + 0.2, "darkSteel");
-        b.box(X(-40.5), 0, Z(-8), X(-39.7), 2.4, Z(-0.5), "concreteWall", { radar: "wall" });
-        b.box(X(-37.3), 0, Z(-1.5), X(-36.5), 2.4, Z(8), "concreteWall", { radar: "wall" });
-        for (const [x, z, sz] of [[-22, -12, 1.2], [-22, -13.3, 0.9], [-12, -18, 1.2], [-28, 6, 1.1], [-5, -12, 1.1], [-44, 14, 1.1], [-44, -12, 1.1]]) b.crate(X(x), Z(z), sz);
+        b.box(X(-31.5), 0, Z2(19.4), X(-27), 0.55, Z2(20.6), "wood", { material: "wood", radar: "crate" });
+        b.box(X(-34), 0, Z2(-22), X(-26), 3.4, Z2(-15), "sidingTan", { radar: "building" });
+        b.deco(X(-34.3), 3.4, Z2(-22.3), X(-25.7), 3.6, Z2(-14.7), "roof");
+        for (const [x, z] of [[-37.5, 14.5], [-34.5, 14.5], [-37.5, 17.5], [-34.5, 17.5]]) b.box(X(x) - 0.12, 0, Z2(z) - 0.12, X(x) + 0.12, 3.8, Z2(z) + 0.12, "darkSteel", { radar: false });
+        b.slab(X(-37.6), Z2(14.4), X(-34.4), Z2(17.6), 4, 0.2, "wood", { radar: "catwalk", material: "wood" });
+        b.stairs({ axis: "z", from: Z2(10.5), dir: s, a0: Math.min(X(-37.4), X(-36.2)), a1: Math.max(X(-37.4), X(-36.2)), steps: 13, rise: 4 / 13, run: 0.3, mat: "wood", nosing: "darkSteel" });
+        for (const [x0, z0, x1, z1] of [[-37.6, 17.5, -34.4, 17.6], [-37.6, 14.4, -37.5, 17.6], [-34.5, 14.4, -34.4, 17.6], [-36.1, 14.4, -34.4, 14.5]]) b.box(X(x0), 4, Z2(z0), X(x1), 5, Z2(z1), "wood", { material: "wood", radar: false, penetrable: true });
+        b.deco(X(-37.8), 6.4, Z2(14.2), X(-34.2), 6.6, Z2(17.8), "roof");
+        b.cyl(X(-15), Z2(21), 2, 0, 5, "whiteSteel", { seg: 24 });
+        b.cyl(X(-9.5), Z2(23), 1.6, 0, 4, "whiteSteel", { seg: 24 });
+        b.car(X(-20), Z2(-6), 0.3, "darkSteel");
+        b.car(X(-40), Z2(-18), Math.PI / 2 + 0.2, "darkSteel");
+        b.box(X(-40.5), 0, Z2(-8), X(-39.7), 2.4, Z2(-0.5), "concreteWall", { radar: "wall" });
+        b.box(X(-37.3), 0, Z2(-1.5), X(-36.5), 2.4, Z2(8), "concreteWall", { radar: "wall" });
+        for (const [x, z, sz] of [[-22, -12, 1.2], [-22, -13.3, 0.9], [-12, -18, 1.2], [-28, 6, 1.1], [-5, -12, 1.1], [-44, 14, 1.1], [-44, -12, 1.1]]) b.crate(X(x), Z2(z), sz);
         for (const [x, z, r] of [[-17, -24, 3.2], [-30, 26, 3.6], [-8, 16, 2.4], [-40, 3.5, 2.2]]) {
-          b.box(X(x) - r * 0.55, 0, Z(z) - r * 0.55, X(x) + r * 0.55, r * 0.9, Z(z) + r * 0.55, null, { material: "concrete", radar: "solid" });
+          b.box(X(x) - r * 0.55, 0, Z2(z) - r * 0.55, X(x) + r * 0.55, r * 0.9, Z2(z) + r * 0.55, null, { material: "concrete", radar: "solid" });
           if (!b.dry) {
             const g = new THREE.DodecahedronGeometry(r * 0.75, 1);
             g.scale(1, 0.62, 1);
-            g.translate(X(x), r * 0.36, Z(z));
+            g.translate(X(x), r * 0.36, Z2(z));
             b.geo(g, "concreteWall");
           }
         }
-        for (const [x, z] of [[-46, 26], [-40, 29], [-30, -29], [-20, 29], [-46, -26]]) b.tree(X(x), Z(z), "pine", 7);
-        b.light(X(-30), 3, Z(17.5), 16767144, 25, 12);
+        for (const [x, z] of [[-46, 26], [-40, 29], [-30, -29], [-20, 29], [-46, -26]]) b.tree(X(x), Z2(z), "pine", 7);
+        b.light(X(-30), 3, Z2(17.5), 16767144, 25, 12);
       });
       b.paintRect(-48.4, -8, -42.2, 8, 0.14, 3818576);
       b.paintRect(42.2, -8, 48.4, 8, 0.14, 3818576);
@@ -13300,84 +13332,84 @@ var MAPS = [
       b.ladder(3, -1.8, T2, TW, "+x", { mat: "wood", rail: 0.9 });
       b.box(-0.45, T2, -0.45, 0.45, T2 + 0.6, 0.45, "ruinDark", { radar: "crate", tile: 1 });
       b.sym((s) => {
-        const X = /* @__PURE__ */ __name((x) => x * s, "X"), Z = /* @__PURE__ */ __name((z) => z * s, "Z");
-        const BX = /* @__PURE__ */ __name((x0, y0, z0, x1, y1, z1, m, o) => b.box(Math.min(X(x0), X(x1)), y0, Math.min(Z(z0), Z(z1)), Math.max(X(x0), X(x1)), y1, Math.max(Z(z0), Z(z1)), m, o), "BX");
+        const X = /* @__PURE__ */ __name((x) => x * s, "X"), Z2 = /* @__PURE__ */ __name((z) => z * s, "Z");
+        const BX = /* @__PURE__ */ __name((x0, y0, z0, x1, y1, z1, m, o) => b.box(Math.min(X(x0), X(x1)), y0, Math.min(Z2(z0), Z2(z1)), Math.max(X(x0), X(x1)), y1, Math.max(Z2(z0), Z2(z1)), m, o), "BX");
         const F = /* @__PURE__ */ __name((f) => s > 0 ? f : { "+x": "-x", "-x": "+x", "+z": "-z", "-z": "+z" }[f], "F");
-        const ROOM = /* @__PURE__ */ __name((x0, z0, x1, z1, o) => b.room(Math.min(X(x0), X(x1)), Math.min(Z(z0), Z(z1)), Math.max(X(x0), X(x1)), Math.max(Z(z0), Z(z1)), o), "ROOM");
-        const OP = /* @__PURE__ */ __name((list, alongX) => list.map((o) => Object.assign({}, o, { a: Math.min((alongX ? X : Z)(o.a), (alongX ? X : Z)(o.b)), b: Math.max((alongX ? X : Z)(o.a), (alongX ? X : Z)(o.b)) })), "OP");
+        const ROOM = /* @__PURE__ */ __name((x0, z0, x1, z1, o) => b.room(Math.min(X(x0), X(x1)), Math.min(Z2(z0), Z2(z1)), Math.max(X(x0), X(x1)), Math.max(Z2(z0), Z2(z1)), o), "ROOM");
+        const OP = /* @__PURE__ */ __name((list, alongX) => list.map((o) => Object.assign({}, o, { a: Math.min((alongX ? X : Z2)(o.a), (alongX ? X : Z2)(o.b)), b: Math.max((alongX ? X : Z2)(o.a), (alongX ? X : Z2)(o.b)) })), "OP");
         const OPEN = /* @__PURE__ */ __name((o) => s > 0 ? o : { n: OP(o.s || [], true), s: OP(o.n || [], true), e: OP(o.w || [], false), w: OP(o.e || [], false) }, "OPEN");
-        b.ladder(X(-26), Z(11), 0, T1, F("-x"), { mat: "wood" });
-        b.ladder(X(-15), Z(20), 0, T1, F("+z"), { mat: "wood" });
-        b.ladder(X(-15), Z(-5), T1, T2, F("-x"), { mat: "wood" });
-        for (const [x, z, h, br] of [[-11, -5.5, 4.2, 0], [-11, 5.5, 2.4, 1], [-3, 9.5, 4.2, 0], [3.2, 9.5, 2.9, 1], [-13.4, 0, 1.8, 1]]) b.column(X(x), Z(z), 0.42, h, { y0: T2, broken: !!br });
-        b.ruinWall(X(-8), Z(-6.5), X(-8), Z(-2.5), 2.3, 0.6, { y0: T2 });
-        b.ruinWall(X(-8), Z(3.2), X(-8), Z(6.5), 1.6, 0.6, { y0: T2 });
-        b.ruinWall(X(-4.5), Z(-6.8), X(1.5), Z(-6.8), 1.3, 0.6, { y0: T2 });
-        b.fallenColumn(X(-10.5), Z(-9.4), 3.2, 0.4, "x", T2);
-        b.fallenColumn(X(-18.5), Z(-12), 3.2, 0.4, "z", T1);
-        b.ruinWall(X(-24.2), Z(-14), X(-24.2), Z(-7), 1.25, 0.7, { y0: T1 });
-        b.ruinWall(X(-21.5), Z(18.3), X(-17.5), Z(18.3), 1.2, 0.7, { y0: T1 });
-        b.ruinWall(X(12), Z(18.3), X(20), Z(18.3), 1.3, 0.7, { y0: T1 });
-        for (const [x, z, r] of [[-20, -13, 1.1], [-19, 10.5, 0.9], [18, 13.5, 1]]) b.boulder(X(x), Z(z), r, { y0: T1 });
-        b.broadleaf(X(-21), Z(13), 5.2, T1);
-        for (const [x, z, r] of [[-26.5, -10, 1.7], [-26.3, 6.5, 1.4], [-22.5, 20.6, 1.6], [-3, 20.8, 1.5], [15, 20.7, 1.3], [-27.4, -15, 1.9]]) b.boulder(X(x), Z(z), r);
+        b.ladder(X(-26), Z2(11), 0, T1, F("-x"), { mat: "wood" });
+        b.ladder(X(-15), Z2(20), 0, T1, F("+z"), { mat: "wood" });
+        b.ladder(X(-15), Z2(-5), T1, T2, F("-x"), { mat: "wood" });
+        for (const [x, z, h, br] of [[-11, -5.5, 4.2, 0], [-11, 5.5, 2.4, 1], [-3, 9.5, 4.2, 0], [3.2, 9.5, 2.9, 1], [-13.4, 0, 1.8, 1]]) b.column(X(x), Z2(z), 0.42, h, { y0: T2, broken: !!br });
+        b.ruinWall(X(-8), Z2(-6.5), X(-8), Z2(-2.5), 2.3, 0.6, { y0: T2 });
+        b.ruinWall(X(-8), Z2(3.2), X(-8), Z2(6.5), 1.6, 0.6, { y0: T2 });
+        b.ruinWall(X(-4.5), Z2(-6.8), X(1.5), Z2(-6.8), 1.3, 0.6, { y0: T2 });
+        b.fallenColumn(X(-10.5), Z2(-9.4), 3.2, 0.4, "x", T2);
+        b.fallenColumn(X(-18.5), Z2(-12), 3.2, 0.4, "z", T1);
+        b.ruinWall(X(-24.2), Z2(-14), X(-24.2), Z2(-7), 1.25, 0.7, { y0: T1 });
+        b.ruinWall(X(-21.5), Z2(18.3), X(-17.5), Z2(18.3), 1.2, 0.7, { y0: T1 });
+        b.ruinWall(X(12), Z2(18.3), X(20), Z2(18.3), 1.3, 0.7, { y0: T1 });
+        for (const [x, z, r] of [[-20, -13, 1.1], [-19, 10.5, 0.9], [18, 13.5, 1]]) b.boulder(X(x), Z2(z), r, { y0: T1 });
+        b.broadleaf(X(-21), Z2(13), 5.2, T1);
+        for (const [x, z, r] of [[-26.5, -10, 1.7], [-26.3, 6.5, 1.4], [-22.5, 20.6, 1.6], [-3, 20.8, 1.5], [15, 20.7, 1.3], [-27.4, -15, 1.9]]) b.boulder(X(x), Z2(z), r);
         const baseOps = [{ a: -14, b: -10.5, y1: 4.2 }, { a: -1.75, b: 1.75, y1: 3.6 }, { a: 10.5, b: 14, y1: 4.2 }];
         b.wallZ(X(-77.5), -18, 18, 0, 7, 1, "concreteWall", baseOps, { radar: "wall" });
         BX(-100, 0, 17.5, -77, 7, 18.5, "concreteWall", { radar: "wall" });
         BX(-100, 0, -18.5, -77, 7, -17.5, "concreteWall", { radar: "wall" });
         BX(-74.6, 0, -4.6, -73.6, 4.2, 4.6, "concreteWall", { radar: "wall" });
         for (const zz of [-18, 18]) for (const xx of [-99, -88, -77.5]) BX(xx - 0.6, 7, zz - 0.6, xx + 0.6, 8.2, zz + 0.6, "concreteWall", { radar: false });
-        b.container(X(-94), Z(-14.2), "x", 1, s > 0 ? 1 : 5);
-        b.container(X(-94), Z(14.2), "x", 2, s > 0 ? 3 : 6);
-        b.container(X(-81), Z(-7.5), "z", 1, s > 0 ? 2 : 4);
-        b.sandbags(X(-80.5), Z(-12.8), X(-79.7), Z(-9));
-        b.sandbags(X(-80.5), Z(9), X(-79.7), Z(12.8));
-        b.sandbags(X(-72.4), Z(6.5), X(-70), Z(7.3));
-        for (const [x, z, sz] of [[-86, 14.4, 1.2], [-84.8, 14.6, 0.9], [-97.5, -9.8, 1.2], [-97.5, -8.5, 1.1], [-82.5, 5.5, 1.1], [-71, -11, 1.2], [-71.2, -12.3, 0.9]]) b.crate(X(x), Z(z), sz);
-        b.car(X(-90), Z(-11.2), Math.PI / 2, "darkSteel");
+        b.container(X(-94), Z2(-14.2), "x", 1, s > 0 ? 1 : 5);
+        b.container(X(-94), Z2(14.2), "x", 2, s > 0 ? 3 : 6);
+        b.container(X(-81), Z2(-7.5), "z", 1, s > 0 ? 2 : 4);
+        b.sandbags(X(-80.5), Z2(-12.8), X(-79.7), Z2(-9));
+        b.sandbags(X(-80.5), Z2(9), X(-79.7), Z2(12.8));
+        b.sandbags(X(-72.4), Z2(6.5), X(-70), Z2(7.3));
+        for (const [x, z, sz] of [[-86, 14.4, 1.2], [-84.8, 14.6, 0.9], [-97.5, -9.8, 1.2], [-97.5, -8.5, 1.1], [-82.5, 5.5, 1.1], [-71, -11, 1.2], [-71.2, -12.3, 0.9]]) b.crate(X(x), Z2(z), sz);
+        b.car(X(-90), Z2(-11.2), Math.PI / 2, "darkSteel");
         BX(-99.4, 0, -4, -96.8, 2.6, 4, "sidingTan", { radar: "building" });
         BX(-99.6, 2.6, -4.3, -96.6, 2.8, 4.3, "roof", { radar: false });
         b.paintRect(Math.min(X(-92), X(-84)), -4, Math.max(X(-92), X(-84)), 4, 0.18, s > 0 ? 3832024 : 13124922);
-        b.ruinWall(X(-62), Z(-8), X(-57), Z(-8), 1.9);
-        b.ruinWall(X(-51), Z(-8), X(-46), Z(-8), 1.6);
-        b.ruinWall(X(-62), Z(8), X(-57), Z(8), 1.6);
-        b.ruinWall(X(-51), Z(8), X(-46), Z(8), 1.9);
-        b.ruinWall(X(-62), Z(-8), X(-62), Z(-3), 1.7);
-        b.ruinWall(X(-62), Z(3), X(-62), Z(8), 1.5);
-        b.ruinWall(X(-46), Z(-8), X(-46), Z(-3), 1.5);
-        b.ruinWall(X(-46), Z(3), X(-46), Z(8), 1.8);
-        b.fallenColumn(X(-58), Z(5.2), 3, 0.42, "x");
-        b.column(X(-50.5), Z(-5.2), 0.42, 2.6, { broken: true });
-        b.boulder(X(-68), Z(-2), 1.5);
-        b.boulder(X(-40), Z(10), 1.7);
-        b.boulder(X(-39), Z(-12), 1.3);
-        b.sandbags(X(-66.5), Z(10.5), X(-64), Z(11.3));
-        b.sandbags(X(-42), Z(-3.5), X(-41.2), Z(-0.6));
-        b.car(X(-70), Z(-14), 0.4, "rust");
-        b.crate(X(-66), Z(-5), 1.2);
-        b.crate(X(-44), Z(12.5), 1.1);
-        b.broadleaf(X(-70), Z(4.5), 5.5);
-        b.broadleaf(X(-37), Z(16), 5);
-        b.broadleaf(X(-49), Z(15), 4.6);
-        b.box(X(-2.6), 0, Math.min(Z(39.4), Z(44.6)), X(2.6), 0.3, Math.max(Z(39.4), Z(44.6)), "ruinDark", { radar: false, tile: 1.5 });
+        b.ruinWall(X(-62), Z2(-8), X(-57), Z2(-8), 1.9);
+        b.ruinWall(X(-51), Z2(-8), X(-46), Z2(-8), 1.6);
+        b.ruinWall(X(-62), Z2(8), X(-57), Z2(8), 1.6);
+        b.ruinWall(X(-51), Z2(8), X(-46), Z2(8), 1.9);
+        b.ruinWall(X(-62), Z2(-8), X(-62), Z2(-3), 1.7);
+        b.ruinWall(X(-62), Z2(3), X(-62), Z2(8), 1.5);
+        b.ruinWall(X(-46), Z2(-8), X(-46), Z2(-3), 1.5);
+        b.ruinWall(X(-46), Z2(3), X(-46), Z2(8), 1.8);
+        b.fallenColumn(X(-58), Z2(5.2), 3, 0.42, "x");
+        b.column(X(-50.5), Z2(-5.2), 0.42, 2.6, { broken: true });
+        b.boulder(X(-68), Z2(-2), 1.5);
+        b.boulder(X(-40), Z2(10), 1.7);
+        b.boulder(X(-39), Z2(-12), 1.3);
+        b.sandbags(X(-66.5), Z2(10.5), X(-64), Z2(11.3));
+        b.sandbags(X(-42), Z2(-3.5), X(-41.2), Z2(-0.6));
+        b.car(X(-70), Z2(-14), 0.4, "rust");
+        b.crate(X(-66), Z2(-5), 1.2);
+        b.crate(X(-44), Z2(12.5), 1.1);
+        b.broadleaf(X(-70), Z2(4.5), 5.5);
+        b.broadleaf(X(-37), Z2(16), 5);
+        b.broadleaf(X(-49), Z2(15), 4.6);
+        b.box(X(-2.6), 0, Math.min(Z2(39.4), Z2(44.6)), X(2.6), 0.3, Math.max(Z2(39.4), Z2(44.6)), "ruinDark", { radar: false, tile: 1.5 });
         for (const [a, c] of [[-9, -2.2], [2.2, 9]]) {
-          b.ruinWall(X(a), Z(49), X(c), Z(49), 2.1);
-          b.ruinWall(X(a), Z(35), X(c), Z(35), 1.6);
+          b.ruinWall(X(a), Z2(49), X(c), Z2(49), 2.1);
+          b.ruinWall(X(a), Z2(35), X(c), Z2(35), 1.6);
         }
         for (const [a, c] of [[35, 39.6], [44.4, 49]]) {
-          b.ruinWall(X(-9), Z(a), X(-9), Z(c), 1.8);
-          b.ruinWall(X(9), Z(a), X(9), Z(c), 1.5);
+          b.ruinWall(X(-9), Z2(a), X(-9), Z2(c), 1.8);
+          b.ruinWall(X(9), Z2(a), X(9), Z2(c), 1.5);
         }
-        b.column(X(-6.2), Z(38), 0.42, 3.6);
-        b.column(X(6.2), Z(46), 0.42, 2.3, { broken: true });
-        b.column(X(6.2), Z(38), 0.42, 1.6, { broken: true });
-        b.fallenColumn(X(-5), Z(46.3), 3.2, 0.42, "x");
-        for (const [x, z, r] of [[-15, 41, 1.8], [14, 44, 1.6], [3, 29.5, 1.2], [-4, 55, 2.2], [17, 36, 1.4]]) b.boulder(X(x), Z(z), r);
-        b.broadleaf(X(-13), Z(50), 5.6);
-        b.sandbags(X(-2.5), Z(31.2), X(1.5), Z(32));
+        b.column(X(-6.2), Z2(38), 0.42, 3.6);
+        b.column(X(6.2), Z2(46), 0.42, 2.3, { broken: true });
+        b.column(X(6.2), Z2(38), 0.42, 1.6, { broken: true });
+        b.fallenColumn(X(-5), Z2(46.3), 3.2, 0.42, "x");
+        for (const [x, z, r] of [[-15, 41, 1.8], [14, 44, 1.6], [3, 29.5, 1.2], [-4, 55, 2.2], [17, 36, 1.4]]) b.boulder(X(x), Z2(z), r);
+        b.broadleaf(X(-13), Z2(50), 5.6);
+        b.sandbags(X(-2.5), Z2(31.2), X(1.5), Z2(32));
         for (const [a, c] of [[-74, -67], [-61, -50], [-45, -37], [-33, -29]]) {
-          b.ruinWall(X(a), Z(21.5), X(c), Z(21.5), 2.5, 0.7);
-          b.ruinWall(X(a + 2), Z(-21.5), X(c + 1), Z(-21.5), 2.5, 0.7);
+          b.ruinWall(X(a), Z2(21.5), X(c), Z2(21.5), 2.5, 0.7);
+          b.ruinWall(X(a + 2), Z2(-21.5), X(c + 1), Z2(-21.5), 2.5, 0.7);
         }
         ROOM(-72, 27, -62, 35, {
           h: 3.3,
@@ -13387,7 +13419,7 @@ var MAPS = [
           roofT: 0.3,
           open: OPEN({ s: [{ a: -68, b: -66 }], n: [{ a: -70.5, b: -68.5, y0: 1.2, y1: 2.1 }], e: [{ a: 29, b: 33, y0: 1.1, y1: 2.1 }], w: [] })
         });
-        b.ladder(X(-72), Z(32.5), 0, 3.6, F("-x"), { mat: "wood" });
+        b.ladder(X(-72), Z2(32.5), 0, 3.6, F("-x"), { mat: "wood" });
         ROOM(-54, 40, -44, 48, {
           h: 2.8,
           t: 0.4,
@@ -13402,36 +13434,36 @@ var MAPS = [
           eave: 0.3,
           open: OPEN({ w: [{ a: 29, b: 31 }], e: [{ a: 28.2, b: 30, y0: 1.1, y1: 2 }], n: [{ a: -37.5, b: -35.5 }], s: [] })
         });
-        b.cyl(X(-58), Z(52), 1.1, 0, 0.95, "ruinStone", { seg: 16 });
-        for (const [x, z] of [[-80, 44], [-62, 56], [-30, 50], [-24, 40], [-58, 38]]) b.broadleaf(X(x), Z(z), 5.4);
-        for (const [x, z] of [[-90, 30], [-88, 50], [-20, 54]]) b.tree(X(x), Z(z), "pine", 8);
-        b.ruinWall(X(-84), Z(24), X(-76), Z(24), 1.2, 0.5);
-        b.sandbags(X(-58), Z(30), X(-55), Z(30.8));
-        b.crate(X(-45), Z(34), 1.2);
-        b.crate(X(-46.2), Z(34.2), 0.9);
-        b.car(X(-26), Z(30), 0.2, "rust");
+        b.cyl(X(-58), Z2(52), 1.1, 0, 0.95, "ruinStone", { seg: 16 });
+        for (const [x, z] of [[-80, 44], [-62, 56], [-30, 50], [-24, 40], [-58, 38]]) b.broadleaf(X(x), Z2(z), 5.4);
+        for (const [x, z] of [[-90, 30], [-88, 50], [-20, 54]]) b.tree(X(x), Z2(z), "pine", 8);
+        b.ruinWall(X(-84), Z2(24), X(-76), Z2(24), 1.2, 0.5);
+        b.sandbags(X(-58), Z2(30), X(-55), Z2(30.8));
+        b.crate(X(-45), Z2(34), 1.2);
+        b.crate(X(-46.2), Z2(34.2), 0.9);
+        b.car(X(-26), Z2(30), 0.2, "rust");
         const TX = -48, TZ = -44;
         for (const [dx, dz] of [[-2, -2], [2, -2], [-2, 2], [2, 2]]) BX(TX + dx - 0.12, 0, TZ + dz - 0.12, TX + dx + 0.12, 3.4, TZ + dz + 0.12, "wood", { radar: false, material: "wood" });
         BX(TX - 2.1, 3.4, TZ - 2.1, TX + 2.1, 3.6, TZ + 2.1, "wood", { radar: "catwalk", material: "wood" });
         BX(TX - 2, 0, TZ + 1.9, TX + 2, 3.4, TZ + 2.1, "wood", { radar: "wall", material: "wood", penetrable: true });
-        b.ladder(X(TX), Z(TZ + 2.1), 0, 3.6, F("+z"), { mat: "wood" });
+        b.ladder(X(TX), Z2(TZ + 2.1), 0, 3.6, F("+z"), { mat: "wood" });
         BX(TX - 2.1, 3.6, TZ - 2.1, TX + 2.1, 4.6, TZ - 1.95, "wood", { radar: false, material: "wood", penetrable: true });
         BX(TX - 2.1, 3.6, TZ - 1.95, TX - 1.95, 4.6, TZ + 2.1, "wood", { radar: false, material: "wood", penetrable: true });
         BX(TX + 1.95, 3.6, TZ - 1.95, TX + 2.1, 4.6, TZ + 2.1, "wood", { radar: false, material: "wood", penetrable: true });
         BX(TX - 2.1, 5.8, TZ - 2.3, TX + 2.1, 5.95, TZ + 2.3, "roof", { radar: false, physics: false });
         for (const [x0, z0, x1, z1] of [[-66, -40, -58, -39.5], [-66, -48, -58, -47.5], [-66, -48, -65.5, -39.5], [-58.5, -48, -58, -44]]) BX(x0, 0, z0, x1, 0.35, z1, "ruinDark", { radar: false });
-        for (const [x, z, r] of [[-72, -36, 2.4], [-76, -46, 3.2], [-60, -54, 2.6], [-38, -34, 2.2], [-34, -50, 3], [-84, -30, 2], [-52, -30, 1.6], [-28, -40, 2.4], [-88, -54, 3.4], [-44, -56, 2.4]]) b.boulder(X(x), Z(z), r);
-        b.fallenColumn(X(-62), Z(-43.5), 3.6, 0.45, "z");
-        b.column(X(-40), Z(-44), 0.45, 3.2, { broken: true });
-        b.column(X(-36), Z(-44), 0.45, 4.2);
+        for (const [x, z, r] of [[-72, -36, 2.4], [-76, -46, 3.2], [-60, -54, 2.6], [-38, -34, 2.2], [-34, -50, 3], [-84, -30, 2], [-52, -30, 1.6], [-28, -40, 2.4], [-88, -54, 3.4], [-44, -56, 2.4]]) b.boulder(X(x), Z2(z), r);
+        b.fallenColumn(X(-62), Z2(-43.5), 3.6, 0.45, "z");
+        b.column(X(-40), Z2(-44), 0.45, 3.2, { broken: true });
+        b.column(X(-36), Z2(-44), 0.45, 4.2);
         BX(-56, 0, -36, -52, 2.2, -33, "canvasBlue", { radar: "building", material: "sandbag" });
         BX(-80, 0, -52, -76, 2.2, -49, "canvasRed", { radar: "building", material: "sandbag" });
-        for (const [x, z, sz] of [[-54, -38, 1.1], [-53, -39.4, 0.9], [-70, -30, 1.2], [-31, -30, 1.1], [-66, -52, 1.2]]) b.crate(X(x), Z(z), sz);
-        b.sandbags(X(-44), Z(-38), X(-41), Z(-37.2));
-        b.sandbags(X(-30), Z(-46), X(-29.2), Z(-42));
-        for (const [x, z] of [[-86, -40], [-24, -52], [-66, -58]]) b.tree(X(x), Z(z), "pine", 7.5);
-        for (let x = -92; x <= 92; x += 23) b.boulder(X(x), Z(-58.6), 2.6 + Math.abs(x) % 3);
-        for (const z of [-40, -26, 26, 40]) b.boulder(X(-98.4), Z(z), 2.8);
+        for (const [x, z, sz] of [[-54, -38, 1.1], [-53, -39.4, 0.9], [-70, -30, 1.2], [-31, -30, 1.1], [-66, -52, 1.2]]) b.crate(X(x), Z2(z), sz);
+        b.sandbags(X(-44), Z2(-38), X(-41), Z2(-37.2));
+        b.sandbags(X(-30), Z2(-46), X(-29.2), Z2(-42));
+        for (const [x, z] of [[-86, -40], [-24, -52], [-66, -58]]) b.tree(X(x), Z2(z), "pine", 7.5);
+        for (let x = -92; x <= 92; x += 23) b.boulder(X(x), Z2(-58.6), 2.6 + Math.abs(x) % 3);
+        for (const z of [-40, -26, 26, 40]) b.boulder(X(-98.4), Z2(z), 2.8);
       });
       b.plane(-77, -3, -36, 3, 4e-3, "dirt");
       b.plane(36, -3, 77, 3, 4e-3, "dirt");
@@ -13485,8 +13517,8 @@ var MAPS = [
       const FY = 16.6;
       b.box(-0.5, FY, -0.5, 0.5, FY + 0.55, 0.5, "ruinDark", { radar: "crate", tile: 1 });
       b.sym((s) => {
-        const X = /* @__PURE__ */ __name((x) => x * s, "X"), Z = /* @__PURE__ */ __name((z) => z * s, "Z"), G = /* @__PURE__ */ __name((x, z) => b.gy(X(x), Z(z)), "G");
-        const BX = /* @__PURE__ */ __name((x0, y0, z0, x1, y1, z1, m, o) => b.box(Math.min(X(x0), X(x1)), y0, Math.min(Z(z0), Z(z1)), Math.max(X(x0), X(x1)), y1, Math.max(Z(z0), Z(z1)), m, o), "BX");
+        const X = /* @__PURE__ */ __name((x) => x * s, "X"), Z2 = /* @__PURE__ */ __name((z) => z * s, "Z"), G = /* @__PURE__ */ __name((x, z) => b.gy(X(x), Z2(z)), "G");
+        const BX = /* @__PURE__ */ __name((x0, y0, z0, x1, y1, z1, m, o) => b.box(Math.min(X(x0), X(x1)), y0, Math.min(Z2(z0), Z2(z1)), Math.max(X(x0), X(x1)), y1, Math.max(Z2(z0), Z2(z1)), m, o), "BX");
         const F = /* @__PURE__ */ __name((f) => s > 0 ? f : { "+x": "-x", "-x": "+x", "+z": "-z", "-z": "+z" }[f], "F");
         const MS = { n: "s", s: "n", e: "w", w: "e" };
         const BLD = /* @__PURE__ */ __name((o) => {
@@ -13495,24 +13527,24 @@ var MAPS = [
           return b.building(Object.assign({}, o, {
             x0: Math.min(X(o.x0), X(o.x1)),
             x1: Math.max(X(o.x0), X(o.x1)),
-            z0: Math.min(Z(o.z0), Z(o.z1)),
-            z1: Math.max(Z(o.z0), Z(o.z1)),
+            z0: Math.min(Z2(o.z0), Z2(o.z1)),
+            z1: Math.max(Z2(o.z0), Z2(o.z1)),
             doors,
             ladder: o.ladder && { side: s > 0 ? o.ladder.side : MS[o.ladder.side], at: o.ladder.at * s }
           }));
         }, "BLD");
         const ROOM = /* @__PURE__ */ __name((x0, z0, x1, z1, o) => {
-          const op = o.open || {}, m = /* @__PURE__ */ __name((list, alongX) => (list || []).map((q) => Object.assign({}, q, { a: Math.min((alongX ? X : Z)(q.a), (alongX ? X : Z)(q.b)), b: Math.max((alongX ? X : Z)(q.a), (alongX ? X : Z)(q.b)) })), "m");
-          b.room(Math.min(X(x0), X(x1)), Math.min(Z(z0), Z(z1)), Math.max(X(x0), X(x1)), Math.max(Z(z0), Z(z1)), Object.assign({}, o, { open: s > 0 ? { n: m(op.n, true), s: m(op.s, true), e: m(op.e, false), w: m(op.w, false) } : { n: m(op.s, true), s: m(op.n, true), e: m(op.w, false), w: m(op.e, false) } }));
+          const op = o.open || {}, m = /* @__PURE__ */ __name((list, alongX) => (list || []).map((q) => Object.assign({}, q, { a: Math.min((alongX ? X : Z2)(q.a), (alongX ? X : Z2)(q.b)), b: Math.max((alongX ? X : Z2)(q.a), (alongX ? X : Z2)(q.b)) })), "m");
+          b.room(Math.min(X(x0), X(x1)), Math.min(Z2(z0), Z2(z1)), Math.max(X(x0), X(x1)), Math.max(Z2(z0), Z2(z1)), Object.assign({}, o, { open: s > 0 ? { n: m(op.n, true), s: m(op.s, true), e: m(op.e, false), w: m(op.w, false) } : { n: m(op.s, true), s: m(op.n, true), e: m(op.w, false), w: m(op.e, false) } }));
         }, "ROOM");
-        const footMin = /* @__PURE__ */ __name((x, z, r) => b.gyMin(Math.min(X(x - r), X(x + r)), Math.min(Z(z - r), Z(z + r)), Math.max(X(x - r), X(x + r)), Math.max(Z(z - r), Z(z + r))), "footMin");
-        const ROCK = /* @__PURE__ */ __name((x, z, r, sy = 0.7) => b.boulder(X(x), Z(z), r, { y0: footMin(x, z, r * 0.6) - r * 0.18, sy }), "ROCK");
-        const PINE = /* @__PURE__ */ __name((x, z, h = 8) => b.tree(X(x), Z(z), "pine", h, G(x, z) - 0.25), "PINE");
-        const OAK = /* @__PURE__ */ __name((x, z, h = 5.4) => b.broadleaf(X(x), Z(z), h, G(x, z) - 0.2), "OAK");
-        const BAGS = /* @__PURE__ */ __name((x0, z0, x1, z1, h = 1.05) => b.sandbags(X(x0), Z(z0), X(x1), Z(z1), h + 0.12, b.gyMin(Math.min(X(x0), X(x1)), Math.min(Z(z0), Z(z1)), Math.max(X(x0), X(x1)), Math.max(Z(z0), Z(z1))) - 0.12), "BAGS");
-        const CRATE = /* @__PURE__ */ __name((x, z, sz) => b.crate(X(x), Z(z), sz, footMin(x, z, sz / 2) - 0.03), "CRATE");
-        const CAR = /* @__PURE__ */ __name((x, z, rot, m) => b.car(X(x), Z(z), rot, m, footMin(x, z, 2) - 0.05), "CAR");
-        const WP = /* @__PURE__ */ __name((x, z, y) => b.waypoint(X(x), Z(z), y), "WP");
+        const footMin = /* @__PURE__ */ __name((x, z, r) => b.gyMin(Math.min(X(x - r), X(x + r)), Math.min(Z2(z - r), Z2(z + r)), Math.max(X(x - r), X(x + r)), Math.max(Z2(z - r), Z2(z + r))), "footMin");
+        const ROCK = /* @__PURE__ */ __name((x, z, r, sy = 0.7) => b.boulder(X(x), Z2(z), r, { y0: footMin(x, z, r * 0.6) - r * 0.18, sy }), "ROCK");
+        const PINE = /* @__PURE__ */ __name((x, z, h = 8) => b.tree(X(x), Z2(z), "pine", h, G(x, z) - 0.25), "PINE");
+        const OAK = /* @__PURE__ */ __name((x, z, h = 5.4) => b.broadleaf(X(x), Z2(z), h, G(x, z) - 0.2), "OAK");
+        const BAGS = /* @__PURE__ */ __name((x0, z0, x1, z1, h = 1.05) => b.sandbags(X(x0), Z2(z0), X(x1), Z2(z1), h + 0.12, b.gyMin(Math.min(X(x0), X(x1)), Math.min(Z2(z0), Z2(z1)), Math.max(X(x0), X(x1)), Math.max(Z2(z0), Z2(z1))) - 0.12), "BAGS");
+        const CRATE = /* @__PURE__ */ __name((x, z, sz) => b.crate(X(x), Z2(z), sz, footMin(x, z, sz / 2) - 0.03), "CRATE");
+        const CAR = /* @__PURE__ */ __name((x, z, rot, m) => b.car(X(x), Z2(z), rot, m, footMin(x, z, 2) - 0.05), "CAR");
+        const WP = /* @__PURE__ */ __name((x, z, y) => b.waypoint(X(x), Z2(z), y), "WP");
         const tint = s > 0 ? "canvasBlue" : "canvasRed";
         const WT = FY + 3.4;
         BX(-12.8, FY, -12.8, -12, WT, 0.5, "concreteWall", { radar: "wall" });
@@ -13530,15 +13562,15 @@ var MAPS = [
         BX(-12.7, TT, 9.6, -12, TT + 1, 9.9, "concreteWall", { radar: false });
         BX(-10.4, TT, 9.6, -9.6, TT + 1, 9.9, "concreteWall", { radar: false });
         BX(-9.9, TT, 9.9, -9.6, TT + 1, 12.7, "concreteWall", { radar: false });
-        b.ladder(X(-11.2), Z(9.6), FY, TT, F("-z"), { mat: "darkSteel" });
-        b.navRegion(Math.min(X(-12.5), X(-10.1)), Math.min(Z(10.2), Z(12.4)), Math.max(X(-12.5), X(-10.1)), Math.max(Z(10.2), Z(12.4)), TT, 1.1);
+        b.ladder(X(-11.2), Z2(9.6), FY, TT, F("-z"), { mat: "darkSteel" });
+        b.navRegion(Math.min(X(-12.5), X(-10.1)), Math.min(Z2(10.2), Z2(12.4)), Math.max(X(-12.5), X(-10.1)), Math.max(Z2(10.2), Z2(12.4)), TT, 1.1);
         BLD({ x0: -9.2, z0: 3, x1: -1.4, z1: 9.8, y0: FY + 0.15, floors: 2, mat: "concreteWall", doors: { s: [-5.8], e: [6.4] }, ladder: { side: "w", at: 6.4 } });
         BAGS(-6.5, -3.2, -3.5, -2.4);
         BAGS(-9.5, -8.5, -8.7, -5.5);
         CRATE(-3, -8.5, 1.2);
         CRATE(-4.3, -8.7, 0.9);
         CRATE(-10.6, -1.6, 1.1);
-        b.container(X(-7.5), Z(-9.6), "x", 1, s > 0 ? 2 : 5, FY);
+        b.container(X(-7.5), Z2(-9.6), "x", 1, s > 0 ? 2 : 5, FY);
         WP(-6, -6, FY);
         WP(-10, 1.5, FY);
         WP(-15.5, 3, G(-15.5, 3));
@@ -13559,7 +13591,7 @@ var MAPS = [
         BLD({ x0: -71, z0: 41, x1: -61, z1: 49.5, y0: VY + 0.15, floors: 3, mat: "plaster", doors: { s: [-66], w: [45] }, ladder: { side: "e", at: 47 } });
         BLD({ x0: -55, z0: 41.5, x1: -46, z1: 49, y0: VY + 0.15, floors: 2, mat: "plasterRed", doors: { s: [-50.5], e: [45.2] }, ladder: { side: "w", at: 43.4 } });
         ROOM(-72, 30.5, -65, 35.8, { y0: VY, h: 2.8, t: 0.25, mat: "plasterWhite", roof: "roof", eave: 0.3, open: { n: [{ a: -69.5, b: -67.5 }], e: [{ a: 32, b: 34.5, y0: VY + 1, y1: VY + 2 }], s: [], w: [] } });
-        b.cyl(X(-52), Z(34), 1.1, VY, VY + 0.95, "ruinStone", { seg: 16 });
+        b.cyl(X(-52), Z2(34), 1.1, VY, VY + 0.95, "ruinStone", { seg: 16 });
         CAR(-46, 33, 0.3, "rust");
         CRATE(-60, 38.5, 1.1);
         CRATE(-61.2, 38.7, 0.9);
@@ -13578,14 +13610,14 @@ var MAPS = [
         for (const [dx, dz] of [[-2, -2], [2, -2], [-2, 2], [2, 2]]) BX(TX + dx - 0.13, TY, TZ + dz - 0.13, TX + dx + 0.13, TY + 4.4, TZ + dz + 0.13, "wood", { radar: false, material: "wood" });
         BX(TX - 2.15, TY + 4.4, TZ - 2.15, TX + 2.15, TY + 4.6, TZ + 2.15, "wood", { radar: "catwalk", material: "wood" });
         BX(TX - 2, TY, TZ - 2.15, TX + 2, TY + 4.4, TZ - 1.95, "wood", { radar: "wall", material: "wood", penetrable: true });
-        b.ladder(X(TX), Z(TZ - 2.15), TY, TY + 4.6, F("-z"), { mat: "wood" });
+        b.ladder(X(TX), Z2(TZ - 2.15), TY, TY + 4.6, F("-z"), { mat: "wood" });
         BX(TX - 2.15, TY + 4.6, TZ + 1.95, TX + 2.15, TY + 5.6, TZ + 2.15, "wood", { radar: false, material: "wood", penetrable: true });
         BX(TX - 2.15, TY + 4.6, TZ - 1.95, TX - 1.95, TY + 5.6, TZ + 1.95, "wood", { radar: false, material: "wood", penetrable: true });
         BX(TX + 1.95, TY + 4.6, TZ - 1.95, TX + 2.15, TY + 5.6, TZ + 1.95, "wood", { radar: false, material: "wood", penetrable: true });
         BX(TX - 2.15, TY + 4.6, TZ - 2.15, TX - 0.7, TY + 5.6, TZ - 1.95, "wood", { radar: false, material: "wood", penetrable: true });
         BX(TX + 0.7, TY + 4.6, TZ - 2.15, TX + 2.15, TY + 5.6, TZ - 1.95, "wood", { radar: false, material: "wood", penetrable: true });
         BX(TX - 2.3, TY + 6.9, TZ - 2.4, TX + 2.3, TY + 7.05, TZ + 2.4, "roof", { radar: false, physics: false });
-        b.navRegion(Math.min(X(TX - 1.4), X(TX + 1.4)), Math.min(Z(TZ - 1.4), Z(TZ + 1.4)), Math.max(X(TX - 1.4), X(TX + 1.4)), Math.max(Z(TZ - 1.4), Z(TZ + 1.4)), TY + 4.6, 1.2);
+        b.navRegion(Math.min(X(TX - 1.4), X(TX + 1.4)), Math.min(Z2(TZ - 1.4), Z2(TZ + 1.4)), Math.max(X(TX - 1.4), X(TX + 1.4)), Math.max(Z2(TZ - 1.4), Z2(TZ + 1.4)), TY + 4.6, 1.2);
         BAGS(-80.5, 54.5, -80, 57.5);
         BAGS(-72, 61.5, -71.5, 64);
         WP(-76, 54, TY);
@@ -13597,9 +13629,9 @@ var MAPS = [
         for (const [dx, dz] of [[-1.3, -1.3], [1.3, -1.3], [-1.3, 1.3], [1.3, 1.3]]) BX(SX + dx - 0.1, QY, SZ + dz - 0.1, SX + dx + 0.1, QY + 3.4, SZ + dz + 0.1, "yellowSteel", { radar: false, material: "metal" });
         BX(SX - 1.5, QY + 3.4, SZ - 1.5, SX + 1.5, QY + 3.58, SZ + 1.5, "plate", { radar: "catwalk", material: "metal" });
         BX(SX - 1.4, QY, SZ + 1.3, SX + 1.4, QY + 3.4, SZ + 1.5, "plate", { radar: "wall", material: "metal" });
-        b.ladder(X(SX), Z(SZ + 1.5), QY, QY + 3.58, F("+z"), { mat: "yellowSteel" });
-        b.railing(Math.min(X(SX - 1.5), X(SX + 1.5)), Z(SZ - 1.5), Math.max(X(SX - 1.5), X(SX + 1.5)), Z(SZ - 1.5), QY + 3.58, "yellowSteel");
-        b.navRegion(Math.min(X(SX - 1), X(SX + 1)), Math.min(Z(SZ - 1), Z(SZ + 1)), Math.max(X(SX - 1), X(SX + 1)), Math.max(Z(SZ - 1), Z(SZ + 1)), QY + 3.58, 1);
+        b.ladder(X(SX), Z2(SZ + 1.5), QY, QY + 3.58, F("+z"), { mat: "yellowSteel" });
+        b.railing(Math.min(X(SX - 1.5), X(SX + 1.5)), Z2(SZ - 1.5), Math.max(X(SX - 1.5), X(SX + 1.5)), Z2(SZ - 1.5), QY + 3.58, "yellowSteel");
+        b.navRegion(Math.min(X(SX - 1), X(SX + 1)), Math.min(Z2(SZ - 1), Z2(SZ + 1)), Math.max(X(SX - 1), X(SX + 1)), Math.max(Z2(SZ - 1), Z2(SZ + 1)), QY + 3.58, 1);
         CAR(-66, -43, 0, "yellowSteel");
         CRATE(-58.5, -46.8, 1.1);
         for (const [x, z, r] of [[-78.5, -41, 2.4], [-54, -40, 2.1], [-79, -56, 2.6], [-70, -38.5, 1.8], [-52.5, -47, 1.6]]) ROCK(x, z, r);
@@ -13623,7 +13655,7 @@ var MAPS = [
         const AY = 8;
         BLD({ x0: -10.2, z0: 74.6, x1: -2.4, z1: 80.6, y0: AY + 0.15, floors: 2, mat: "brick", doors: { s: [-6.3], e: [77.6] }, ladder: { side: "w", at: 77.6 } });
         for (const [x0, z0, x1, z1] of [[-4.5, 64.6, -1.5, 65.2], [2, 67, 2.6, 70], [4.5, 76, 7.5, 76.6], [-9, 67.5, -8.4, 70.5]]) BX(x0, AY, z0, x1, AY + 1.1, z1, "concrete", { radar: "sandbag", tile: 1.5 });
-        b.container(X(6.5), Z(80.5), "x", 1, s > 0 ? 3 : 6, AY);
+        b.container(X(6.5), Z2(80.5), "x", 1, s > 0 ? 3 : 6, AY);
         BAGS(-1.2, 69, 1.2, 69.8);
         CRATE(8.5, 66, 1.2);
         CRATE(9.6, 66.4, 0.9);
@@ -13757,21 +13789,21 @@ var MAPS = [
       }
       L(0, 3.2, 0, glb ? 12575999 : 13625087, glb ? 30 : 40, 16);
       b.sym((s) => {
-        const X = /* @__PURE__ */ __name((x) => x * s, "X"), Z = /* @__PURE__ */ __name((z) => z * s, "Z"), bx = /* @__PURE__ */ __name((x0, y0, z0, x1, y1, z1, m, o) => b.box(Math.min(X(x0), X(x1)), y0, Math.min(Z(z0), Z(z1)), Math.max(X(x0), X(x1)), y1, Math.max(Z(z0), Z(z1)), m, o), "bx");
-        for (const [x, z, sz] of [[-33, 5.2, 1.1], [-33, -5.2, 1.1], [-38.5, 5.5, 1.2], [-38.5, -5.5, 1.2]]) b.crate(X(x), Z(z), sz);
+        const X = /* @__PURE__ */ __name((x) => x * s, "X"), Z2 = /* @__PURE__ */ __name((z) => z * s, "Z"), bx = /* @__PURE__ */ __name((x0, y0, z0, x1, y1, z1, m, o) => b.box(Math.min(X(x0), X(x1)), y0, Math.min(Z2(z0), Z2(z1)), Math.max(X(x0), X(x1)), y1, Math.max(Z2(z0), Z2(z1)), m, o), "bx");
+        for (const [x, z, sz] of [[-33, 5.2, 1.1], [-33, -5.2, 1.1], [-38.5, 5.5, 1.2], [-38.5, -5.5, 1.2]]) b.crate(X(x), Z2(z), sz);
         bx(-36.5, 0, -1.4, -35, 1.1, 1.4, "yellowSteel", { material: "metal", radar: "crate" });
         for (const z of [15, 20.5]) for (const x of [-18.5, -15.5]) bx(x, 0, z, x + 2.2, 2.1, z + 0.8, "darkSteel", { material: "metal", radar: "crate" });
         bx(-11.5, 0, 14, -9.5, 0.8, 16.5, "desk", { material: "wood", radar: "crate", penetrable: true });
         for (const x of [-16.5, -11.5]) bx(x, 0, -20.5, x + 2.6, 1.6, -15.5, "darkSteel", { material: "metal", radar: "crate" });
-        b.barrel(X(-19), Z(-23), true);
-        b.barrel(X(-18), Z(-23.2), false);
+        b.barrel(X(-19), Z2(-23), true);
+        b.barrel(X(-18), Z2(-23.2), false);
         bx(-3.5, 0, 22.2, 1, 1.05, 23, "desk", { material: "wood", radar: "crate", penetrable: true });
         bx(-3.5, 0, 19.5, -2.7, 1.05, 22.2, "desk", { material: "wood", radar: "crate", penetrable: true });
         for (let x = 1.6; x < 4.8; x += 0.8) bx(x, 0, 24.3, x + 0.7, 2.1, 25, "whiteSteel", { material: "metal", radar: "crate" });
-        b.crate(X(-25.5), Z(10), 1);
-        b.crate(X(-22), Z(0), 1);
-        b.crate(X(-15), Z(3.6), 0.9);
-        b.crate(X(-25.5), Z(-10.5), 1);
+        b.crate(X(-25.5), Z2(10), 1);
+        b.crate(X(-22), Z2(0), 1);
+        b.crate(X(-15), Z2(3.6), 0.9);
+        b.crate(X(-25.5), Z2(-10.5), 1);
         bx(-6.5, 0, -1.2, -5.7, 1.1, 1.2, glb ? null : "darkSteel", { material: "metal", radar: "crate" });
         bx(-1.2, 0, 5.7, 1.2, 1.1, 6.5, glb ? null : "darkSteel", { material: "metal", radar: "crate" });
         L(X(-36), 3.2, 0, 14674175, 30, 14);
@@ -13865,45 +13897,45 @@ var MAPS = [
       }
       for (const z of [-3, 3]) for (const x of [-1.45, 1.45]) b.cyl(x, z, 0.55, 0, 1.1, "darkSteel", { seg: 12, radar: false });
       b.sym((s) => {
-        const X = /* @__PURE__ */ __name((x) => x * s, "X"), Z = /* @__PURE__ */ __name((z) => z * s, "Z"), bx = /* @__PURE__ */ __name((x0, y0, z0, x1, y1, z1, m, o) => b.box(Math.min(X(x0), X(x1)), y0, Math.min(Z(z0), Z(z1)), Math.max(X(x0), X(x1)), y1, Math.max(Z(z0), Z(z1)), m, o), "bx");
+        const X = /* @__PURE__ */ __name((x) => x * s, "X"), Z2 = /* @__PURE__ */ __name((z) => z * s, "Z"), bx = /* @__PURE__ */ __name((x0, y0, z0, x1, y1, z1, m, o) => b.box(Math.min(X(x0), X(x1)), y0, Math.min(Z2(z0), Z2(z1)), Math.max(X(x0), X(x1)), y1, Math.max(Z2(z0), Z2(z1)), m, o), "bx");
         b.building({
           x0: Math.min(X(-24), X(-15)),
-          z0: Math.min(Z(23), Z(29)),
+          z0: Math.min(Z2(23), Z2(29)),
           x1: Math.max(X(-24), X(-15)),
-          z1: Math.max(Z(23), Z(29)),
+          z1: Math.max(Z2(23), Z2(29)),
           y0: 0,
           floors: 2,
           fh: 3.2,
           mat: "sidingTan",
           slab: "wood",
-          doors: s > 0 ? { s: [X(-19.5)], e: [Z(26)] } : { n: [X(-19.5)], w: [Z(26)] }
+          doors: s > 0 ? { s: [X(-19.5)], e: [Z2(26)] } : { n: [X(-19.5)], w: [Z2(26)] }
         });
         b.building({
           x0: Math.min(X(-31), X(-24)),
-          z0: Math.min(Z(-21), Z(-14)),
+          z0: Math.min(Z2(-21), Z2(-14)),
           x1: Math.max(X(-31), X(-24)),
-          z1: Math.max(Z(-21), Z(-14)),
+          z1: Math.max(Z2(-21), Z2(-14)),
           y0: 0,
           floors: 1,
           fh: 4.4,
           mat: "wood",
           slab: "wood",
           doors: s > 0 ? { n: [X(-27.5)] } : { s: [X(-27.5)] },
-          ladder: { side: s > 0 ? "e" : "w", at: Z(-17.5) },
+          ladder: { side: s > 0 ? "e" : "w", at: Z2(-17.5) },
           ladderMat: "wood"
         });
         for (const [dx, dz] of [[-1.2, -1.2], [1.2, -1.2], [-1.2, 1.2], [1.2, 1.2]]) bx(-10 + dx - 0.15, 0, 27 + dz - 0.15, -10 + dx + 0.15, 5, 27 + dz + 0.15, "wood", { radar: false });
-        b.cyl(X(-10), Z(27), 1.9, 5, 7.6, "wood", { seg: 16, radar: "crate" });
+        b.cyl(X(-10), Z2(27), 1.9, 5, 7.6, "wood", { seg: 16, radar: "crate" });
         bx(-33.2, 0, -7, -32.8, 2.2, -1.6, "wood", { penetrable: true, radar: "fence" });
         bx(-33.2, 0, 1.6, -32.8, 2.2, 7, "wood", { penetrable: true, radar: "fence" });
         bx(-30, 0, -2.6, -27.6, 2.6, 2.6, "sand", { penetrable: true, radar: "crate" });
         for (const [x, z, w, d, h] of [[-21, -6, 2.4, 1.2, 1.2], [-17, 8, 1.2, 2.4, 1.2], [-12, -12, 2.4, 1.2, 2.4], [-9, 4, 1.2, 1.2, 1.2], [-24, 15, 2.4, 1.2, 1.2], [-6, -18, 2.4, 1.2, 1.2], [-14, 18, 1.2, 1.2, 1.2]])
           bx(x, 0, z, x + w, h, z + d, "sand", { penetrable: true, radar: "crate" });
-        b.car(X(-19), Z(-2.5), s > 0 ? Math.PI / 2 : -Math.PI / 2, "barrelRed");
+        b.car(X(-19), Z2(-2.5), s > 0 ? Math.PI / 2 : -Math.PI / 2, "barrelRed");
         bx(-8, 0, 11, -5, 1, 12.6, "wood", { penetrable: true, radar: "crate" });
         for (const [x0, z0, x1, z1] of [[-26, -10, -26, -4], [-26, 4, -26, 10], [-12, 13, -4, 13], [-12, -14, -4, -14]]) bx(x0 - 0.06, 0, z0 - 0.06, x1 + 0.06, 1.1, z1 + 0.06, "wood", { penetrable: true, radar: "fence" });
         b.sign(s > 0 ? "ALPHA" : "BRAVO", s > 0 ? "#6fb6ff" : "#ff6a5f", X(-44.4), 2.4, 0, s > 0 ? Math.PI / 2 : -Math.PI / 2, 3.2, 0.8);
-        for (const [x, z] of [[-18, -25], [-12, -25], [-21, -26.5], [-9, -26.5]]) b.broadleaf(X(x), Z(z), 5);
+        for (const [x, z] of [[-18, -25], [-12, -25], [-21, -26.5], [-9, -26.5]]) b.broadleaf(X(x), Z2(z), 5);
       });
       b.spawnZone("alpha", -44, -7, -38, 7, -Math.PI / 2);
       b.spawnZone("bravo", 38, -7, 44, 7, Math.PI / 2);
@@ -13988,19 +14020,19 @@ var MAPS = [
       }
       b.plane(-4, -30, 4, 30, CREST + 3e-3, "concrete");
       b.sym((s) => {
-        const X = /* @__PURE__ */ __name((x) => x * s, "X"), Z = /* @__PURE__ */ __name((z) => z * s, "Z"), bx = /* @__PURE__ */ __name((x0, y0, z0, x1, y1, z1, m, o) => b.box(Math.min(X(x0), X(x1)), y0, Math.min(Z(z0), Z(z1)), Math.max(X(x0), X(x1)), y1, Math.max(Z(z0), Z(z1)), m, o), "bx");
+        const X = /* @__PURE__ */ __name((x) => x * s, "X"), Z2 = /* @__PURE__ */ __name((z) => z * s, "Z"), bx = /* @__PURE__ */ __name((x0, y0, z0, x1, y1, z1, m, o) => b.box(Math.min(X(x0), X(x1)), y0, Math.min(Z2(z0), Z2(z1)), Math.max(X(x0), X(x1)), y1, Math.max(Z2(z0), Z2(z1)), m, o), "bx");
         bx(-4, CREST, -30, -3.7, CREST + 1.05, -14.4, "concreteWall", { radar: false });
         bx(-4, CREST, -11.4, -3.7, CREST + 1.05, 30, "concreteWall", { radar: false });
-        b.stairs({ axis: "z", from: Z(-0.5), dir: -s, a0: Math.min(X(-5.8), X(-4)), a1: Math.max(X(-5.8), X(-4)), steps: 27, rise: CREST / 27, run: 0.42, mat: "concrete", nosing: "yellowSteel" });
+        b.stairs({ axis: "z", from: Z2(-0.5), dir: -s, a0: Math.min(X(-5.8), X(-4)), a1: Math.max(X(-5.8), X(-4)), steps: 27, rise: CREST / 27, run: 0.42, mat: "concrete", nosing: "yellowSteel" });
         bx(-5.8, CREST - 0.3, -14.4, -4, CREST, -11.8, "concrete", { radar: "catwalk" });
         bx(-6, CREST, -14.4, -5.8, CREST + 1, -11.8, "yellowSteel", { radar: false });
         bx(-6, CREST, -14.6, -4, CREST + 1, -14.4, "yellowSteel", { radar: false });
-        b.sandbags(Math.min(X(-9), X(-7)), Math.min(Z(13), Z(17)), Math.max(X(-9), X(-7)), Math.max(Z(13), Z(17)), 1.05);
+        b.sandbags(Math.min(X(-9), X(-7)), Math.min(Z2(13), Z2(17)), Math.max(X(-9), X(-7)), Math.max(Z2(13), Z2(17)), 1.05);
         b.building({
           x0: Math.min(X(-27), X(-18)),
-          z0: Math.min(Z(22.5), Z(28.5)),
+          z0: Math.min(Z2(22.5), Z2(28.5)),
           x1: Math.max(X(-27), X(-18)),
-          z1: Math.max(Z(22.5), Z(28.5)),
+          z1: Math.max(Z2(22.5), Z2(28.5)),
           y0: 0,
           floors: 2,
           fh: 3.2,
@@ -14012,18 +14044,18 @@ var MAPS = [
           if (!b.dry) {
             const c = new THREE.CylinderGeometry(0.9, 0.9, 14, 18);
             c.rotateZ(Math.PI / 2);
-            c.translate(X(-14), 0.9, Z(z));
+            c.translate(X(-14), 0.9, Z2(z));
             b.geo(c, "darkSteel");
           }
           bx(-21, 0, z - 0.9, -7, 1.8, z + 0.9, null, { radar: "crate", material: "metal" });
         }
-        for (const [x, z, r] of [[-28, -6, 2], [-20, 8, 1.6], [-14, -12, 1.8], [-24, 16, 1.4], [-10, 4, 1.3]]) b.boulder(X(x), Z(z), r);
-        for (const [x, z, sz] of [[-17, -2, 1.1], [-17.2, -0.8, 0.9], [-31, 4, 1.1], [-12, 18, 1]]) b.crate(X(x), Z(z), sz);
+        for (const [x, z, r] of [[-28, -6, 2], [-20, 8, 1.6], [-14, -12, 1.8], [-24, 16, 1.4], [-10, 4, 1.3]]) b.boulder(X(x), Z2(z), r);
+        for (const [x, z, sz] of [[-17, -2, 1.1], [-17.2, -0.8, 0.9], [-31, 4, 1.1], [-12, 18, 1]]) b.crate(X(x), Z2(z), sz);
         bx(-24, 0, -1.5, -21.5, 2.2, 1.5, "darkSteel", { material: "metal", radar: "crate" });
         bx(-34, 0, -7.5, -33.4, 2.4, -2.5, "concreteWall", { radar: "wall" });
         bx(-34, 0, 2.5, -33.4, 2.4, 7.5, "concreteWall", { radar: "wall" });
         bx(-30.5, 0, -1.6, -29.9, 2.6, 1.6, "concreteWall", { radar: "wall" });
-        b.lamp(X(-6.5), Z(-1), 6.5);
+        b.lamp(X(-6.5), Z2(-1), 6.5);
         b.sign(s > 0 ? "ALPHA" : "BRAVO", s > 0 ? "#6fb6ff" : "#ff6a5f", X(-44.6), 2.6, 0, s > 0 ? Math.PI / 2 : -Math.PI / 2, 3.2, 0.8);
       });
       b.sign("DAM 07", "#e8e2d0", -4.02, 5.6, 0, -Math.PI / 2, 5, 1.2);
@@ -14128,27 +14160,27 @@ var MAPS = [
       b.box(9, 4.6, -0.2, 11.5, 8.2, 0.2, "whiteSteel", { radar: false });
       for (const [x, z] of [[-6, -1.4], [-6, 1.4], [6, -1.4], [6, 1.4], [0, -4], [0, 4]]) b.cyl(x, z, 0.32, 0, 1.7, "darkSteel", { seg: 10, radar: "crate" });
       b.sym((s) => {
-        const X = /* @__PURE__ */ __name((x) => x * s, "X"), Z = /* @__PURE__ */ __name((z) => z * s, "Z"), bx = /* @__PURE__ */ __name((x0, y0, z0, x1, y1, z1, m, o) => b.box(Math.min(X(x0), X(x1)), y0, Math.min(Z(z0), Z(z1)), Math.max(X(x0), X(x1)), y1, Math.max(Z(z0), Z(z1)), m, o), "bx");
+        const X = /* @__PURE__ */ __name((x) => x * s, "X"), Z2 = /* @__PURE__ */ __name((z) => z * s, "Z"), bx = /* @__PURE__ */ __name((x0, y0, z0, x1, y1, z1, m, o) => b.box(Math.min(X(x0), X(x1)), y0, Math.min(Z2(z0), Z2(z1)), Math.max(X(x0), X(x1)), y1, Math.max(Z2(z0), Z2(z1)), m, o), "bx");
         bx(-17.5, 0, -1.6, -16.6, 2.6, 1.6, "darkSteel", { material: "metal", radar: "crate" });
-        for (const [x, z, sz] of [[-15, 6.5, 1.2], [-15, 8, 1], [-13, -7, 1.2], [-8, 9.5, 1.1], [-4, -9, 1]]) b.crate(X(x), Z(z), sz);
+        for (const [x, z, sz] of [[-15, 6.5, 1.2], [-15, 8, 1], [-13, -7, 1.2], [-8, 9.5, 1.1], [-4, -9, 1]]) b.crate(X(x), Z2(z), sz);
         bx(-15, 0, -3, -13.2, 1.1, -1.2, "yellowSteel", { material: "metal", radar: "crate" });
         bx(-16, 3.75, 9.4, 8, 4, HZ - 0.2, "plate", { radar: "catwalk" });
-        b.railing(Math.min(X(-15.6), X(8)), Z(9.4), Math.max(X(-15.6), X(8)), Z(9.4), 4, "yellowSteel");
-        b.stairs({ axis: "x", from: X(-19.6), dir: s, a0: Math.min(Z(10), Z(11.6)), a1: Math.max(Z(10), Z(11.6)), steps: 13, rise: 4 / 13, run: 0.3, mat: "plate", nosing: "yellowSteel" });
-        b.container(X(-22), Z(19), "x", 1, 3893900);
-        b.container(X(-8), Z(22), "x", 1, 9190192);
-        b.container(X(-14), Z(16.5), "z", 2, 5925690);
-        for (const [x, z] of [[-27, 15], [-3, 16], [-18, 24]]) b.pallet(X(x), Z(z), 0, 1);
-        b.barrel(X(-25), Z(-14), true);
-        b.barrel(X(-24.2), Z(-14.6), false);
+        b.railing(Math.min(X(-15.6), X(8)), Z2(9.4), Math.max(X(-15.6), X(8)), Z2(9.4), 4, "yellowSteel");
+        b.stairs({ axis: "x", from: X(-19.6), dir: s, a0: Math.min(Z2(10), Z2(11.6)), a1: Math.max(Z2(10), Z2(11.6)), steps: 13, rise: 4 / 13, run: 0.3, mat: "plate", nosing: "yellowSteel" });
+        b.container(X(-22), Z2(19), "x", 1, 3893900);
+        b.container(X(-8), Z2(22), "x", 1, 9190192);
+        b.container(X(-14), Z2(16.5), "z", 2, 5925690);
+        for (const [x, z] of [[-27, 15], [-3, 16], [-18, 24]]) b.pallet(X(x), Z2(z), 0, 1);
+        b.barrel(X(-25), Z2(-14), true);
+        b.barrel(X(-24.2), Z2(-14.6), false);
         bx(-31, 0, -3, -30.3, 2.4, 3, "concreteWall", { radar: "wall" });
         bx(-37, 0, -8, -36.3, 2.2, -4, "concreteWall", { radar: "wall" });
         bx(-37, 0, 4, -36.3, 2.2, 8, "concreteWall", { radar: "wall" });
-        b.lamp(X(-26), Z(11), 7);
-        b.lamp(X(-26), Z(-11), 7);
+        b.lamp(X(-26), Z2(11), 7);
+        b.lamp(X(-26), Z2(-11), 7);
         b.sign(s > 0 ? "ALPHA" : "BRAVO", s > 0 ? "#6fb6ff" : "#ff6a5f", X(-46.6), 2.6, 0, s > 0 ? Math.PI / 2 : -Math.PI / 2, 3.2, 0.8);
         b.sign(s > 0 ? "HANGAR 2" : "HANGAR 2", "#e8e2d0", X(-HX - 0.22), 7.6, 0, s > 0 ? -Math.PI / 2 : Math.PI / 2, 6, 1.4);
-        b.light(X(-10), 8.5, Z(-6), 16773854, 28, 20);
+        b.light(X(-10), 8.5, Z2(-6), 16773854, 28, 20);
       });
       b.paint(-HX + 1, -0.15, HX - 1, 0.15, 14266396);
       b.spawnZone("alpha", -46, -8, -40, 8, -Math.PI / 2);
@@ -14230,19 +14262,19 @@ var MAPS = [
       for (const z of [-3, 3]) for (const x of [-1.35, 1.35]) b.cyl(x, z, 0.5, 0, 1, "darkSteel", { seg: 12, radar: false });
       const mud = { penetrable: true, material: "wood", radar: "wall" };
       b.sym((s) => {
-        const X = /* @__PURE__ */ __name((x) => x * s, "X"), Z = /* @__PURE__ */ __name((z) => z * s, "Z"), bx = /* @__PURE__ */ __name((x0, y0, z0, x1, y1, z1, m, o) => b.box(Math.min(X(x0), X(x1)), y0, Math.min(Z(z0), Z(z1)), Math.max(X(x0), X(x1)), y1, Math.max(Z(z0), Z(z1)), m, o), "bx");
-        b.car(X(-30), Z(-3.2), 0, "steel");
-        b.car(X(-30), Z(3.2), 0, "steel");
+        const X = /* @__PURE__ */ __name((x) => x * s, "X"), Z2 = /* @__PURE__ */ __name((z) => z * s, "Z"), bx = /* @__PURE__ */ __name((x0, y0, z0, x1, y1, z1, m, o) => b.box(Math.min(X(x0), X(x1)), y0, Math.min(Z2(z0), Z2(z1)), Math.max(X(x0), X(x1)), y1, Math.max(Z2(z0), Z2(z1)), m, o), "bx");
+        b.car(X(-30), Z2(-3.2), 0, "steel");
+        b.car(X(-30), Z2(3.2), 0, "steel");
         bx(-33.6, 0, -2.2, -33, 2.4, 2.2, "ruinStone", { radar: "wall" });
         bx(-33.6, 0, 4.4, -33, 2.4, 7.4, "ruinStone", { radar: "wall" });
         bx(-33.6, 0, -7.4, -33, 2.4, -4.4, "ruinStone", { radar: "wall" });
         bx(-30.9, 1.05, -4.6, -29.1, 1.9, -1.8, "steel", { material: "metal", radar: false });
         bx(-30.9, 1.05, 1.8, -29.1, 1.9, 4.6, "steel", { material: "metal", radar: false });
-        for (const z of [-15, -9, 9, 15]) b.column(X(-20), Z(z), 0.55, 5.2);
+        for (const z of [-15, -9, 9, 15]) b.column(X(-20), Z2(z), 0.55, 5.2);
         bx(-21, 5.2, -16, -19, 5.8, -8, "ruinStone", { radar: false });
         bx(-21, 5.2, 8, -19, 5.8, 16, "ruinStone", { radar: false });
         const hut = /* @__PURE__ */ __name((x0, z0, x1, z1, doors) => {
-          const a = Math.min(X(x0), X(x1)), c = Math.max(X(x0), X(x1)), e = Math.min(Z(z0), Z(z1)), f = Math.max(Z(z0), Z(z1)), d = /* @__PURE__ */ __name((side, lo, hi) => (doors[side] || []).map(([p, q]) => s > 0 ? { a: p, b: q } : { a: -q, b: -p }), "d");
+          const a = Math.min(X(x0), X(x1)), c = Math.max(X(x0), X(x1)), e = Math.min(Z2(z0), Z2(z1)), f = Math.max(Z2(z0), Z2(z1)), d = /* @__PURE__ */ __name((side, lo, hi) => (doors[side] || []).map(([p, q]) => s > 0 ? { a: p, b: q } : { a: -q, b: -p }), "d");
           const sn = s > 0 ? ["s", "n"] : ["n", "s"], we = s > 0 ? ["w", "e"] : ["e", "w"];
           b.wallX(e + 0.15, a, c, 0, 3, 0.3, "plaster", d(sn[0]), mud);
           b.wallX(f - 0.15, a, c, 0, 3, 0.3, "plaster", d(sn[1]), mud);
@@ -14256,20 +14288,20 @@ var MAPS = [
         bx(-24, 0, -6, -23.6, 1.2, -1.5, "plaster", mud);
         bx(-8, 0, -4, -7.6, 1.2, 2, "plaster", mud);
         bx(-18, 0, 1.5, -13, 1.2, 1.9, "plaster", mud);
-        b.fallenColumn(X(-16), Z(-4), 4, 0.5, "x");
-        b.fallenColumn(X(-5), Z(16), 3.5, 0.45, "z");
-        for (const [x, z, sz] of [[-26, -12, 1.1], [-25, -10.8, 0.9], [-4, -13, 1], [-18, 19, 1]]) b.crate(X(x), Z(z), sz);
-        b.sandbags(Math.min(X(-6), X(-3)), Math.min(Z(-9), Z(-8)), Math.max(X(-6), X(-3)), Math.max(Z(-9), Z(-8)), 1);
+        b.fallenColumn(X(-16), Z2(-4), 4, 0.5, "x");
+        b.fallenColumn(X(-5), Z2(16), 3.5, 0.45, "z");
+        for (const [x, z, sz] of [[-26, -12, 1.1], [-25, -10.8, 0.9], [-4, -13, 1], [-18, 19, 1]]) b.crate(X(x), Z2(z), sz);
+        b.sandbags(Math.min(X(-6), X(-3)), Math.min(Z2(-9), Z2(-8)), Math.max(X(-6), X(-3)), Math.max(Z2(-9), Z2(-8)), 1);
         bx(-18, 0, 22.5, -12, 0.8, 26.5, "ruinStone", { radar: "wall" });
-        b.cyl(X(-15), Z(24.5), 1.5, 0.8, 3.4, "ruinStone", { seg: 14, radar: "wall" });
+        b.cyl(X(-15), Z2(24.5), 1.5, 0.8, 3.4, "ruinStone", { seg: 14, radar: "wall" });
         if (!b.dry) {
           const g = new THREE.SphereGeometry(1.6, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2);
-          g.translate(X(-15), 3.4, Z(24.5));
+          g.translate(X(-15), 3.4, Z2(24.5));
           b.geo(g, "ruinStone");
         }
-        b.broadleaf(X(-30), Z(18), 6);
-        b.broadleaf(X(-10), Z(-24), 5.5);
-        b.broadleaf(X(-24), Z(-18), 5);
+        b.broadleaf(X(-30), Z2(18), 6);
+        b.broadleaf(X(-10), Z2(-24), 5.5);
+        b.broadleaf(X(-24), Z2(-18), 5);
         b.sign(s > 0 ? "ALPHA" : "BRAVO", s > 0 ? "#6fb6ff" : "#ff6a5f", X(-42.6), 2.6, 0, s > 0 ? Math.PI / 2 : -Math.PI / 2, 3.2, 0.8);
       });
       b.spawnZone("alpha", -42, -7, -36, 7, -Math.PI / 2);
@@ -14329,34 +14361,34 @@ var MAPS = [
       b.grass();
       for (const [x0, z0, x1, z1] of [[-82, -58, 82, -56], [-82, 56, 82, 58], [-82, -56, -80, 56], [80, -56, 82, 56]]) b.box(x0, -20, z0, x1, 60, z1, null, { blocksShot: false, radar: false });
       b.sym((s) => {
-        const X = /* @__PURE__ */ __name((x) => x * s, "X"), Z = /* @__PURE__ */ __name((z) => z * s, "Z"), G = /* @__PURE__ */ __name((x, z) => b.gy(X(x), Z(z)), "G");
-        const footMin = /* @__PURE__ */ __name((x, z, r) => b.gyMin(Math.min(X(x - r), X(x + r)), Math.min(Z(z - r), Z(z + r)), Math.max(X(x - r), X(x + r)), Math.max(Z(z - r), Z(z + r))), "footMin");
-        const ROCK = /* @__PURE__ */ __name((x, z, r) => b.boulder(X(x), Z(z), r, { y0: footMin(x, z, r * 0.6) - r * 0.2, sy: 0.7 }), "ROCK");
-        const CRATE = /* @__PURE__ */ __name((x, z, sz) => b.crate(X(x), Z(z), sz, footMin(x, z, sz / 2) - 0.03), "CRATE");
-        const BAGS = /* @__PURE__ */ __name((x0, z0, x1, z1, h = 1.05) => b.sandbags(X(x0), Z(z0), X(x1), Z(z1), h + 0.12, b.gyMin(Math.min(X(x0), X(x1)), Math.min(Z(z0), Z(z1)), Math.max(X(x0), X(x1)), Math.max(Z(z0), Z(z1))) - 0.12), "BAGS");
+        const X = /* @__PURE__ */ __name((x) => x * s, "X"), Z2 = /* @__PURE__ */ __name((z) => z * s, "Z"), G = /* @__PURE__ */ __name((x, z) => b.gy(X(x), Z2(z)), "G");
+        const footMin = /* @__PURE__ */ __name((x, z, r) => b.gyMin(Math.min(X(x - r), X(x + r)), Math.min(Z2(z - r), Z2(z + r)), Math.max(X(x - r), X(x + r)), Math.max(Z2(z - r), Z2(z + r))), "footMin");
+        const ROCK = /* @__PURE__ */ __name((x, z, r) => b.boulder(X(x), Z2(z), r, { y0: footMin(x, z, r * 0.6) - r * 0.2, sy: 0.7 }), "ROCK");
+        const CRATE = /* @__PURE__ */ __name((x, z, sz) => b.crate(X(x), Z2(z), sz, footMin(x, z, sz / 2) - 0.03), "CRATE");
+        const BAGS = /* @__PURE__ */ __name((x0, z0, x1, z1, h = 1.05) => b.sandbags(X(x0), Z2(z0), X(x1), Z2(z1), h + 0.12, b.gyMin(Math.min(X(x0), X(x1)), Math.min(Z2(z0), Z2(z1)), Math.max(X(x0), X(x1)), Math.max(Z2(z0), Z2(z1))) - 0.12), "BAGS");
         const BOX = /* @__PURE__ */ __name((x0, z0, x1, z1, h, m, o = {}) => {
-          const y = b.gyMin(Math.min(X(x0), X(x1)), Math.min(Z(z0), Z(z1)), Math.max(X(x0), X(x1)), Math.max(Z(z0), Z(z1))) - 0.1;
-          b.box(Math.min(X(x0), X(x1)), y, Math.min(Z(z0), Z(z1)), Math.max(X(x0), X(x1)), y + h, Math.max(Z(z0), Z(z1)), m, o);
+          const y = b.gyMin(Math.min(X(x0), X(x1)), Math.min(Z2(z0), Z2(z1)), Math.max(X(x0), X(x1)), Math.max(Z2(z0), Z2(z1))) - 0.1;
+          b.box(Math.min(X(x0), X(x1)), y, Math.min(Z2(z0), Z2(z1)), Math.max(X(x0), X(x1)), y + h, Math.max(Z2(z0), Z2(z1)), m, o);
         }, "BOX");
         const tint = s > 0 ? "canvasBlue" : "canvasRed";
         BOX(-68, -46, -64, -42, 2.6, tint, { radar: "building", material: "sandbag" });
         BOX(-60, -47, -56, -44, 2.6, tint, { radar: "building", material: "sandbag" });
         CRATE(-66, -36, 1.2);
         CRATE(-64.8, -35.6, 0.9);
-        b.car(X(-57), Z(-37), s > 0 ? 0.9 : 0.9 + Math.PI, "sidingTan", footMin(-57, -37, 2) - 0.05);
+        b.car(X(-57), Z2(-37), s > 0 ? 0.9 : 0.9 + Math.PI, "sidingTan", footMin(-57, -37, 2) - 0.05);
         BAGS(-52, -36, -50, -33.5);
         BAGS(-60, -30, -57, -29.2);
         b.building({
           x0: Math.min(X(-26), X(-19)),
-          z0: Math.min(Z(37), Z(41.5)),
+          z0: Math.min(Z2(37), Z2(41.5)),
           x1: Math.max(X(-26), X(-19)),
-          z1: Math.max(Z(37), Z(41.5)),
+          z1: Math.max(Z2(37), Z2(41.5)),
           y0: footMin(-22.5, 39.2, 3.5) + 0.05,
           floors: 1,
           fh: 3.2,
           mat: "plaster",
           doors: s > 0 ? { s: [X(-22.5)] } : { n: [X(-22.5)] },
-          ladder: { side: s > 0 ? "e" : "w", at: Z(39.2) }
+          ladder: { side: s > 0 ? "e" : "w", at: Z2(39.2) }
         });
         BAGS(-17, 30, -14, 30.8);
         BAGS(-28, 29, -27.2, 32);
@@ -14367,7 +14399,7 @@ var MAPS = [
         BOX(-58, -20, -55, -17, 2.4, "wood", { radar: "building", material: "wood", penetrable: true });
         ROCK(-42, -49, 2);
         ROCK(-14, -36, 1.6);
-        b.car(X(-27), Z(-47), 0.4, "rust", footMin(-27, -47, 2) - 0.05);
+        b.car(X(-27), Z2(-47), 0.4, "rust", footMin(-27, -47, 2) - 0.05);
         CRATE(-5, -20, 1);
         BAGS(-8, -5, -5, -4.2);
         BAGS(-10, 3, -9.2, 6);
@@ -14380,7 +14412,7 @@ var MAPS = [
         CRATE(-60, 0, 1.1);
         ROCK(-65, -24, 1.6);
         ROCK(-44, 22, 1.5);
-        b.sign(s > 0 ? "ALPHA" : "BRAVO", s > 0 ? "#6fb6ff" : "#ff6a5f", X(-70), G(-70, -40) + 2.6, Z(-40), s > 0 ? Math.PI / 2 : -Math.PI / 2, 3.2, 0.8);
+        b.sign(s > 0 ? "ALPHA" : "BRAVO", s > 0 ? "#6fb6ff" : "#ff6a5f", X(-70), G(-70, -40) + 2.6, Z2(-40), s > 0 ? Math.PI / 2 : -Math.PI / 2, 3.2, 0.8);
       });
       b.cyl(0, 0, 1.3, b.gy(0, 0) - 0.2, b.gy(0, 0) + 0.9, "ruinStone", { seg: 16, radar: "crate" });
       b.car(4.5, -3.5, 0.5, "rust", b.gyMin(2, -6, 7, -1) - 0.05);
@@ -14457,13 +14489,13 @@ var MAPS = [
       b.railing(-11.5, 2, 11.5, 2, 3.2, "wood");
       b.navRegion(-11, -1.6, 11, 1.6, 3.2);
       b.sym((s) => {
-        const X = /* @__PURE__ */ __name((x) => x * s, "X"), Z = /* @__PURE__ */ __name((z) => z * s, "Z"), G = /* @__PURE__ */ __name((x, z) => b.gy(X(x), Z(z)), "G");
-        const footMin = /* @__PURE__ */ __name((x, z, r) => b.gyMin(Math.min(X(x - r), X(x + r)), Math.min(Z(z - r), Z(z + r)), Math.max(X(x - r), X(x + r)), Math.max(Z(z - r), Z(z + r))), "footMin");
-        const ROCK = /* @__PURE__ */ __name((x, z, r) => b.boulder(X(x), Z(z), r, { y0: footMin(x, z, r * 0.6) - r * 0.2, sy: 0.7 }), "ROCK");
-        const CRATE = /* @__PURE__ */ __name((x, z, sz) => b.crate(X(x), Z(z), sz, footMin(x, z, sz / 2) - 0.03), "CRATE");
-        const BAGS = /* @__PURE__ */ __name((x0, z0, x1, z1, h = 1.05) => b.sandbags(X(x0), Z(z0), X(x1), Z(z1), h + 0.12, b.gyMin(Math.min(X(x0), X(x1)), Math.min(Z(z0), Z(z1)), Math.max(X(x0), X(x1)), Math.max(Z(z0), Z(z1))) - 0.12), "BAGS");
-        const PINE = /* @__PURE__ */ __name((x, z, h = 8) => b.tree(X(x), Z(z), "pine", h, G(x, z) - 0.25), "PINE");
-        const OAK = /* @__PURE__ */ __name((x, z, h = 5.4) => b.broadleaf(X(x), Z(z), h, G(x, z) - 0.2), "OAK");
+        const X = /* @__PURE__ */ __name((x) => x * s, "X"), Z2 = /* @__PURE__ */ __name((z) => z * s, "Z"), G = /* @__PURE__ */ __name((x, z) => b.gy(X(x), Z2(z)), "G");
+        const footMin = /* @__PURE__ */ __name((x, z, r) => b.gyMin(Math.min(X(x - r), X(x + r)), Math.min(Z2(z - r), Z2(z + r)), Math.max(X(x - r), X(x + r)), Math.max(Z2(z - r), Z2(z + r))), "footMin");
+        const ROCK = /* @__PURE__ */ __name((x, z, r) => b.boulder(X(x), Z2(z), r, { y0: footMin(x, z, r * 0.6) - r * 0.2, sy: 0.7 }), "ROCK");
+        const CRATE = /* @__PURE__ */ __name((x, z, sz) => b.crate(X(x), Z2(z), sz, footMin(x, z, sz / 2) - 0.03), "CRATE");
+        const BAGS = /* @__PURE__ */ __name((x0, z0, x1, z1, h = 1.05) => b.sandbags(X(x0), Z2(z0), X(x1), Z2(z1), h + 0.12, b.gyMin(Math.min(X(x0), X(x1)), Math.min(Z2(z0), Z2(z1)), Math.max(X(x0), X(x1)), Math.max(Z2(z0), Z2(z1))) - 0.12), "BAGS");
+        const PINE = /* @__PURE__ */ __name((x, z, h = 8) => b.tree(X(x), Z2(z), "pine", h, G(x, z) - 0.25), "PINE");
+        const OAK = /* @__PURE__ */ __name((x, z, h = 5.4) => b.broadleaf(X(x), Z2(z), h, G(x, z) - 0.2), "OAK");
         const MS = { n: "s", s: "n", e: "w", w: "e" };
         const BLD = /* @__PURE__ */ __name((o) => {
           const doors = {};
@@ -14471,15 +14503,15 @@ var MAPS = [
           return b.building(Object.assign({}, o, {
             x0: Math.min(X(o.x0), X(o.x1)),
             x1: Math.max(X(o.x0), X(o.x1)),
-            z0: Math.min(Z(o.z0), Z(o.z1)),
-            z1: Math.max(Z(o.z0), Z(o.z1)),
+            z0: Math.min(Z2(o.z0), Z2(o.z1)),
+            z1: Math.max(Z2(o.z0), Z2(o.z1)),
             doors,
             ladder: o.ladder && { side: s > 0 ? o.ladder.side : MS[o.ladder.side], at: o.ladder.at * s }
           }));
         }, "BLD");
         BLD({ x0: -22, z0: 6, x1: -15, z1: 11, y0: footMin(-18.5, 8.5, 3.5) + 0.05, floors: 2, mat: "plaster", doors: { s: [-18.5], e: [8.5] }, ladder: { side: "w", at: 8.5 } });
         BLD({ x0: -26, z0: -3, x1: -21, z1: 1.5, y0: footMin(-23.5, -0.8, 2.5) + 0.05, floors: 1, fh: 3, mat: "plasterWhite", doors: { e: [-0.8] } });
-        b.cyl(X(-13), Z(-1), 1, G(-13, -1) - 0.2, G(-13, -1) + 0.9, "ruinStone", { seg: 14, radar: "crate" });
+        b.cyl(X(-13), Z2(-1), 1, G(-13, -1) - 0.2, G(-13, -1) + 0.9, "ruinStone", { seg: 14, radar: "crate" });
         BAGS(-11, 5, -10.2, 8);
         CRATE(-14, 10, 1.1);
         CRATE(-12.8, 10.3, 0.9);
@@ -14487,7 +14519,7 @@ var MAPS = [
         ROCK(11, 22, 1.3);
         ROCK(19, 31, 1.2);
         ROCK(9, 31, 1);
-        b.box(Math.min(X(16), X(19.5)), G(17, 22) - 0.2, Math.min(Z(21), Z(23)), Math.max(X(16), X(19.5)), G(17, 22) + 0.8, Math.max(Z(21), Z(23)), "wood", { radar: "crate", material: "wood", penetrable: true });
+        b.box(Math.min(X(16), X(19.5)), G(17, 22) - 0.2, Math.min(Z2(21), Z2(23)), Math.max(X(16), X(19.5)), G(17, 22) + 0.8, Math.max(Z2(21), Z2(23)), "wood", { radar: "crate", material: "wood", penetrable: true });
         BAGS(-14, 45.5, -11, 46.3);
         BAGS(-11.6, 46.3, -10.8, 49);
         PINE(-46, 60, 8.5);
@@ -14499,13 +14531,13 @@ var MAPS = [
         ROCK(-34, -20, 1.5);
         OAK(-60, 26, 5.5);
         OAK(-38, -26, 5.8);
-        b.box(Math.min(X(-22), X(-18)), G(-20, -30) - 0.2, Math.min(Z(-33), Z(-29)), Math.max(X(-22), X(-18)), G(-20, -30) + 2.6, Math.max(Z(-33), Z(-29)), "wood", { radar: "building", material: "wood", penetrable: true });
+        b.box(Math.min(X(-22), X(-18)), G(-20, -30) - 0.2, Math.min(Z2(-33), Z2(-29)), Math.max(X(-22), X(-18)), G(-20, -30) + 2.6, Math.max(Z2(-33), Z2(-29)), "wood", { radar: "building", material: "wood", penetrable: true });
         const tint = s > 0 ? "canvasBlue" : "canvasRed";
-        b.box(Math.min(X(-70), X(-66)), G(-68, 40) - 0.1, Math.min(Z(38), Z(42)), Math.max(X(-70), X(-66)), G(-68, 40) + 2.6, Math.max(Z(38), Z(42)), tint, { radar: "building", material: "sandbag" });
+        b.box(Math.min(X(-70), X(-66)), G(-68, 40) - 0.1, Math.min(Z2(38), Z2(42)), Math.max(X(-70), X(-66)), G(-68, 40) + 2.6, Math.max(Z2(38), Z2(42)), tint, { radar: "building", material: "sandbag" });
         CRATE(-58, 40, 1.2);
         CRATE(-57, 41, 0.9);
         BAGS(-56, 33, -54, 32.2);
-        b.sign(s > 0 ? "ALPHA" : "BRAVO", s > 0 ? "#6fb6ff" : "#ff6a5f", X(-72.5), G(-72, 36) + 2.6, Z(36), s > 0 ? Math.PI / 2 : -Math.PI / 2, 3.2, 0.8);
+        b.sign(s > 0 ? "ALPHA" : "BRAVO", s > 0 ? "#6fb6ff" : "#ff6a5f", X(-72.5), G(-72, 36) + 2.6, Z2(36), s > 0 ? Math.PI / 2 : -Math.PI / 2, 3.2, 0.8);
       });
       b.spawnZone("alpha", -68, 32, -60, 40, Math.atan2(-64, 36));
       b.spawnZone("bravo", 60, -40, 68, -32, Math.atan2(64, -36));
@@ -14586,18 +14618,18 @@ var MAPS = [
       b.building({ x0: -4.5, z0: -3.5, x1: 4.5, z1: 3.5, y0: b.gyMin(-5, -4, 5, 4) + 0.05, floors: 2, fh: 3.2, mat: "concreteWall", doors: { w: [0], e: [0], n: [-2], s: [2] }, ladder: { side: "n", at: 2.5 } });
       b.snowfall(-75, -55, 75, 55, 900);
       b.sym((s) => {
-        const X = /* @__PURE__ */ __name((x) => x * s, "X"), Z = /* @__PURE__ */ __name((z) => z * s, "Z"), G = /* @__PURE__ */ __name((x, z) => b.gy(X(x), Z(z)), "G");
-        const footMin = /* @__PURE__ */ __name((x, z, r) => b.gyMin(Math.min(X(x - r), X(x + r)), Math.min(Z(z - r), Z(z + r)), Math.max(X(x - r), X(x + r)), Math.max(Z(z - r), Z(z + r))), "footMin");
-        const ROCK = /* @__PURE__ */ __name((x, z, r) => b.boulder(X(x), Z(z), r, { y0: footMin(x, z, r * 0.6) - r * 0.2, sy: 0.7 }), "ROCK");
-        const CRATE = /* @__PURE__ */ __name((x, z, sz) => b.crate(X(x), Z(z), sz, footMin(x, z, sz / 2) - 0.03), "CRATE");
-        const BAGS = /* @__PURE__ */ __name((x0, z0, x1, z1, h = 1.05) => b.sandbags(X(x0), Z(z0), X(x1), Z(z1), h + 0.12, b.gyMin(Math.min(X(x0), X(x1)), Math.min(Z(z0), Z(z1)), Math.max(X(x0), X(x1)), Math.max(Z(z0), Z(z1))) - 0.12), "BAGS");
-        const PINE = /* @__PURE__ */ __name((x, z, h = 8) => b.tree(X(x), Z(z), "pine", h, G(x, z) - 0.25), "PINE");
-        b.box(Math.min(X(-11), X(-7.5)), G(-9, 6) - 0.1, Math.min(Z(4.5), Z(7.5)), Math.max(X(-11), X(-7.5)), G(-9, 6) + 2.6, Math.max(Z(4.5), Z(7.5)), "siding", { radar: "building" });
-        b.cyl(X(8), Z(-6.5), 1.1, G(8, -6.5) - 0.1, G(8, -6.5) + 2.2, "whiteSteel", { seg: 16, radar: "crate" });
+        const X = /* @__PURE__ */ __name((x) => x * s, "X"), Z2 = /* @__PURE__ */ __name((z) => z * s, "Z"), G = /* @__PURE__ */ __name((x, z) => b.gy(X(x), Z2(z)), "G");
+        const footMin = /* @__PURE__ */ __name((x, z, r) => b.gyMin(Math.min(X(x - r), X(x + r)), Math.min(Z2(z - r), Z2(z + r)), Math.max(X(x - r), X(x + r)), Math.max(Z2(z - r), Z2(z + r))), "footMin");
+        const ROCK = /* @__PURE__ */ __name((x, z, r) => b.boulder(X(x), Z2(z), r, { y0: footMin(x, z, r * 0.6) - r * 0.2, sy: 0.7 }), "ROCK");
+        const CRATE = /* @__PURE__ */ __name((x, z, sz) => b.crate(X(x), Z2(z), sz, footMin(x, z, sz / 2) - 0.03), "CRATE");
+        const BAGS = /* @__PURE__ */ __name((x0, z0, x1, z1, h = 1.05) => b.sandbags(X(x0), Z2(z0), X(x1), Z2(z1), h + 0.12, b.gyMin(Math.min(X(x0), X(x1)), Math.min(Z2(z0), Z2(z1)), Math.max(X(x0), X(x1)), Math.max(Z2(z0), Z2(z1))) - 0.12), "BAGS");
+        const PINE = /* @__PURE__ */ __name((x, z, h = 8) => b.tree(X(x), Z2(z), "pine", h, G(x, z) - 0.25), "PINE");
+        b.box(Math.min(X(-11), X(-7.5)), G(-9, 6) - 0.1, Math.min(Z2(4.5), Z2(7.5)), Math.max(X(-11), X(-7.5)), G(-9, 6) + 2.6, Math.max(Z2(4.5), Z2(7.5)), "siding", { radar: "building" });
+        b.cyl(X(8), Z2(-6.5), 1.1, G(8, -6.5) - 0.1, G(8, -6.5) + 2.2, "whiteSteel", { seg: 16, radar: "crate" });
         CRATE(-8, -5, 1.2);
         CRATE(-6.8, -5.3, 0.9);
         BAGS(-11, -2, -10.2, 1);
-        b.car(X(6), Z(6.8), Math.PI / 2, "yellowSteel", footMin(6, 6.8, 2) - 0.05);
+        b.car(X(6), Z2(6.8), Math.PI / 2, "yellowSteel", footMin(6, 6.8, 2) - 0.05);
         BAGS(-50, 3, -48, 3.8);
         BAGS(-37, 8.6, -35, 9.4);
         CRATE(-44, 1, 1);
@@ -14608,7 +14640,7 @@ var MAPS = [
         ROCK(-16, -48, 1.5);
         ROCK(-14, -30, 1.4);
         ROCK(4, -40, 1.6);
-        b.box(Math.min(X(22), X(25)), G(23.5, -24) - 0.1, Math.min(Z(-25.5), Z(-22.5)), Math.max(X(22), X(25)), G(23.5, -24) + 2.4, Math.max(Z(-25.5), Z(-22.5)), "wood", { radar: "building", material: "wood", penetrable: true });
+        b.box(Math.min(X(22), X(25)), G(23.5, -24) - 0.1, Math.min(Z2(-25.5), Z2(-22.5)), Math.max(X(22), X(25)), G(23.5, -24) + 2.4, Math.max(Z2(-25.5), Z2(-22.5)), "wood", { radar: "building", material: "wood", penetrable: true });
         CRATE(12, -27, 1);
         ROCK(24, -35, 1.3);
         PINE(-52, -46, 9);
@@ -14616,11 +14648,11 @@ var MAPS = [
         PINE(-30, -40, 8);
         PINE(-20, 36, 8);
         const tint = s > 0 ? "canvasBlue" : "canvasRed";
-        b.box(Math.min(X(-68), X(-64)), G(-66, -42) - 0.1, Math.min(Z(-44), Z(-40)), Math.max(X(-68), X(-64)), G(-66, -42) + 2.6, Math.max(Z(-44), Z(-40)), tint, { radar: "building", material: "sandbag" });
+        b.box(Math.min(X(-68), X(-64)), G(-66, -42) - 0.1, Math.min(Z2(-44), Z2(-40)), Math.max(X(-68), X(-64)), G(-66, -42) + 2.6, Math.max(Z2(-44), Z2(-40)), tint, { radar: "building", material: "sandbag" });
         CRATE(-54, -40, 1.2);
         CRATE(-53, -39, 0.9);
         BAGS(-52, -32, -50, -31.2);
-        b.sign(s > 0 ? "ALPHA" : "BRAVO", s > 0 ? "#6fb6ff" : "#ff6a5f", X(-69.5), G(-69, -36) + 2.6, Z(-36), s > 0 ? Math.PI / 2 : -Math.PI / 2, 3.2, 0.8);
+        b.sign(s > 0 ? "ALPHA" : "BRAVO", s > 0 ? "#6fb6ff" : "#ff6a5f", X(-69.5), G(-69, -36) + 2.6, Z2(-36), s > 0 ? Math.PI / 2 : -Math.PI / 2, 3.2, 0.8);
       });
       b.spawnZone("alpha", -64, -40, -56, -32, Math.atan2(-60, -36));
       b.spawnZone("bravo", 56, 32, 64, 40, Math.atan2(60, 36));
@@ -16225,15 +16257,15 @@ var SkyMechanisms = class {
     let hour = G && G.getObjectByName("CLOCK_H"), min = G && G.getObjectByName("CLOCK_M");
     if (hour) hour.matrixAutoUpdate = min.matrixAutoUpdate = true;
     if (!hour) {
-      const Z = SKY.TOWER.z, Y = SKY.TOWER.clockY, face = new THREE.Mesh(new THREE.CircleGeometry(4.2, 48), new THREE.MeshStandardMaterial({ color: 15854296, roughness: 0.8 }));
-      face.position.set(0, Y, Z - 0.4);
+      const Z2 = SKY.TOWER.z, Y = SKY.TOWER.clockY, face = new THREE.Mesh(new THREE.CircleGeometry(4.2, 48), new THREE.MeshStandardMaterial({ color: 15854296, roughness: 0.8 }));
+      face.position.set(0, Y, Z2 - 0.4);
       face.rotation.y = Math.PI;
       sc.add(face);
       const hand = /* @__PURE__ */ __name((len, w) => {
         const g = new THREE.BoxGeometry(w, len, 0.1);
         g.translate(0, len / 2, 0);
         const m = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ color: 2760728, metalness: 0.4 }));
-        m.position.set(0, Y, Z - 0.5);
+        m.position.set(0, Y, Z2 - 0.5);
         sc.add(m);
         return m;
       }, "hand");
@@ -22802,8 +22834,8 @@ var WeaponSystem = class extends Arsenal {
     this.threatOn = !!(OT && OT.threat && this.ads && this.adsT > 0.5 && p.alive);
     this.threatRange = OT && OT.threat || 0;
     const vert = /* @__PURE__ */ __name((h) => 2 * Math.atan(Math.tan(h * Math.PI / 360) / this.camera.aspect) * 180 / Math.PI, "vert");
-    const Z = w.def.apexZooms, az = /* @__PURE__ */ __name((z) => 2 * Math.atan(Math.tan(this.baseFov * Math.PI / 360) * Math.tan(z * Math.PI / 360) / Math.tan(35 * Math.PI / 180)) * 180 / Math.PI, "az");
-    const target = this.ads && Z ? az(Z[clamp(this.zoomLevel, 1, Z.length) - 1]) : this.ads ? w.scoped ? this.scopedIn ? w.def.zoomHFovs ? vert(w.def.zoomHFovs[this.zoomLevel - 1]) : w.def.zoomFovs[this.zoomLevel - 1] : this.baseFov * 0.82 : w.def.vmAdsHFov ? vert(w.def.adsFov) : w.def.adsFov : this.baseFov;
+    const Z2 = w.def.apexZooms, az = /* @__PURE__ */ __name((z) => 2 * Math.atan(Math.tan(this.baseFov * Math.PI / 360) * Math.tan(z * Math.PI / 360) / Math.tan(35 * Math.PI / 180)) * 180 / Math.PI, "az");
+    const target = this.ads && Z2 ? az(Z2[clamp(this.zoomLevel, 1, Z2.length) - 1]) : this.ads ? w.scoped ? this.scopedIn ? w.def.zoomHFovs ? vert(w.def.zoomHFovs[this.zoomLevel - 1]) : w.def.zoomFovs[this.zoomLevel - 1] : this.baseFov * 0.82 : w.def.vmAdsHFov ? vert(w.def.adsFov) : w.def.adsFov : this.baseFov;
     this.fov = THREE.MathUtils.lerp(this.fov, target, 1 - Math.exp(-(w.scoped ? 32 : w.def.adsSpeed * 1.4 || 28) * dt));
     if (Math.abs(this.fov - target) < 0.01 || w.scoped && this.scopedIn) this.fov = target;
     const fovNow = this.fov + p.fovPunch;
@@ -23221,7 +23253,7 @@ var Human = class extends Combatant {
       this.holdE = false;
       return;
     }
-    const frozen = !g.canMove(), btn = frozen ? 0 : cmd.btn;
+    const frozen = !g.canMove() || !!this.downed, btn = frozen ? this.downed && g.canMove() ? cmd.btn & BTN.USE : 0 : cmd.btn;
     this.holdE = g.canAct() && !!(btn & BTN.USE);
     const traversal = !!g.def.traversal;
     if (m.grounded || m.climbing) this.airJumpUsed = false;
@@ -23276,7 +23308,7 @@ var Human = class extends Combatant {
       const facing = -s * -lad.nx + -c * -lad.nz;
       m.climbInput = f * (facing < -0.3 ? -1 : 1);
     } else m.climbInput = 0;
-    const crouchKey = !!(btn & BTN.CROUCH);
+    const crouchKey = !!(btn & BTN.CROUCH) || !!this.downed;
     m.setCrouch(crouchKey);
     const shift = !!(btn & BTN.SPRINT);
     const ws = this.gear(), w = ws.current;
@@ -24713,7 +24745,156 @@ function soldierCorpse(model, warm = false) {
 }
 __name(soldierCorpse, "soldierCorpse");
 
+// src/13c_zombies.js
+var ZOMBIE = { reach: 1.45, hitCd: 1, repath: 0.5, brutes: 2 };
+function zombieLook(c, brute) {
+  const M = c.model;
+  if (!M) return;
+  if (M.gun) M.gun.visible = false;
+  M.root.traverse((o) => {
+    if (!o.isMesh || !o.material || o.userData.zMat) return;
+    const z = /* @__PURE__ */ __name((m) => {
+      const n = m.clone();
+      if (n.color) n.color.multiply(new THREE.Color(0.62, 0.78, 0.55));
+      if (n.emissive) n.emissive.setRGB(0.02, 0.05, 0.01);
+      return n;
+    }, "z");
+    o.material = Array.isArray(o.material) ? o.material.map(z) : z(o.material);
+    o.userData.zMat = true;
+  });
+  if (brute) M.root.scale.multiplyScalar(1.3);
+  c.zombie = true;
+  c.brute = !!brute;
+  c.name = brute ? "巨型感染者" : "感染者";
+}
+__name(zombieLook, "zombieLook");
+var ZombieAI = class {
+  static {
+    __name(this, "ZombieAI");
+  }
+  constructor(bot, game) {
+    this.bot = bot;
+    this.game = game;
+    this.reset();
+  }
+  reset() {
+    this.wishX = this.wishZ = this.wishSpeed = 0;
+    this.wantJump = false;
+    this.wantAirJump = false;
+    this.crouchT = 0;
+    this.path = [];
+    this.pathIdx = 0;
+    this.target = null;
+    this.repathT = 0;
+    this.hitCd = rand(0.2, 0.8);
+    this.growlT = rand(1, 4);
+    this.stuckT = 0;
+    this.lastPos = this.bot.motor.pos.clone();
+    this.state = "HUNT";
+    this.blindT = 0;
+  }
+  hear() {
+  }
+  onDamaged() {
+  }
+  onSuppressed() {
+  }
+  blind(d) {
+    this.blindT = Math.max(this.blindT, d * 0.5);
+  }
+  // (a flashbang slows them, briefly)
+  _pick() {
+    const g = this.game, me = this.bot.motor.pos;
+    let best = null, bd = Infinity;
+    for (const c of g.combatants) {
+      if (!c.alive || c.downed || c.team === this.bot.team || c.removed) continue;
+      const d = c.motor.pos.distanceToSquared(me);
+      if (d < bd) {
+        bd = d;
+        best = c;
+      }
+    }
+    return best;
+  }
+  update(dt) {
+    const g = this.game, bot = this.bot, m = bot.motor;
+    this.wishX = this.wishZ = this.wishSpeed = 0;
+    if (!g.canMove()) return;
+    this.hitCd -= dt;
+    this.repathT -= dt;
+    this.growlT -= dt;
+    if (this.blindT > 0) {
+      this.blindT -= dt;
+      return;
+    }
+    if (this.growlT <= 0) {
+      this.growlT = rand(3, 7);
+      g.audio.zombie(m.pos, "idle", bot.brute);
+    }
+    if (!this.target || !this.target.alive || this.target.downed || this.repathT <= 0) {
+      const t2 = this._pick();
+      if (t2 !== this.target) this.path = [];
+      this.target = t2;
+      if (!t2) return;
+    }
+    const t = this.target, tp = t.motor.pos, dx = tp.x - m.pos.x, dz = tp.z - m.pos.z, dy = tp.y - m.pos.y, d = Math.hypot(dx, dz);
+    const speed = CFG.bot.runSpeed * (bot.zSpeed || 1);
+    bot.yaw = Math.atan2(-dx, -dz);
+    bot.aimPitch = clamp(Math.atan2(dy + 0.4, d), -0.6, 0.6);
+    if (d < ZOMBIE.reach && Math.abs(dy) < 1.3) {
+      if (this.hitCd <= 0) {
+        this.hitCd = ZOMBIE.hitCd * (bot.brute ? 1.4 : 1);
+        g.zombieHit(bot, t);
+      }
+      if (d > 0.7) {
+        this.wishX = dx / d;
+        this.wishZ = dz / d;
+        this.wishSpeed = speed * 0.4;
+      }
+      return;
+    }
+    const direct = d < 6 && Math.abs(dy) < 1 && g.collision.segmentClear(m.pos.clone().setY(m.pos.y + 0.9), tp.clone().setY(tp.y + 0.9));
+    if (direct) {
+      this.wishX = dx / d;
+      this.wishZ = dz / d;
+      this.wishSpeed = speed;
+    } else {
+      if (this.repathT <= 0 || this.pathIdx >= this.path.length) {
+        this.repathT = ZOMBIE.repath;
+        this.path = g.nav.findPath(m.pos, tp, 0);
+        this.pathIdx = 0;
+      }
+      while (this.pathIdx < this.path.length) {
+        const w = this.path[this.pathIdx], wx = w.x - m.pos.x, wz = w.z - m.pos.z, wy = w.y - m.pos.y;
+        if (wx * wx + wz * wz < 0.4 && Math.abs(wy) < 1.6) {
+          this.pathIdx++;
+          continue;
+        }
+        const l = Math.hypot(wx, wz) || 1;
+        this.wishX = wx / l;
+        this.wishZ = wz / l;
+        this.wishSpeed = speed;
+        m.climbInput = w.ladder ? wy > 0.02 ? 1 : -1 : 0;
+        break;
+      }
+      if (this.pathIdx >= this.path.length && d > 0.1) {
+        this.wishX = dx / d;
+        this.wishZ = dz / d;
+        this.wishSpeed = speed;
+      }
+    }
+    this.stuckT += dt;
+    if (this.stuckT > 0.8) {
+      if (m.pos.distanceTo(this.lastPos) < 0.3 && this.wishSpeed > 0) this.wantJump = true;
+      this.stuckT = 0;
+      this.lastPos.copy(m.pos);
+    }
+    if (this.repathT <= 0) this.repathT = ZOMBIE.repath;
+  }
+};
+
 // src/13b_netplayers.js
+var IDLE_CMD = new UserCmd();
 var NetPlayer = class _NetPlayer extends Human {
   static {
     __name(this, "NetPlayer");
@@ -24822,7 +25003,7 @@ var NetPlayer = class _NetPlayer extends Human {
       this.curSeq = cmd.seq;
       this.viewT = cmd.vt;
       this.fixedUpdate(h, cmd);
-      this.arsenal.tick(h, cmd);
+      this.arsenal.tick(h, this.downed ? IDLE_CMD : cmd);
       if (cmd.btn & BTN.INTERACT) this.game.netInteract(this);
       this.ackSeq = cmd.seq;
     }
@@ -24915,6 +25096,11 @@ var Ghost = class extends Combatant {
     this.alive = false;
     this.model.root.visible = false;
     this.life = -1;
+    if (info.z) {
+      zombieLook(this, info.z === 2);
+      if (this.tag) this.tag.visible = false;
+      this.growlT = rand(1, 5);
+    }
     if (info.team === game.player.team) this.tag = Bot.prototype._makeTag.call(this);
   }
   get def() {
@@ -24989,6 +25175,13 @@ var Ghost = class extends Combatant {
     const M = this.model;
     M.root.position.copy(m.pos);
     M.root.rotation.y = this.yaw;
+    if (this.zombie) {
+      if (M.gun) M.gun.visible = false;
+      if ((this.growlT -= dt) <= 0) {
+        this.growlT = rand(3, 7);
+        this.game.audio.zombie(m.pos, "idle", this.brute);
+      }
+    }
     animateSoldier(this, dt, Math.min(this.speed, 9), m.crouching, this.aimPitch, (k < 0.5 ? a : c).reload);
     if (this.tag) {
       this.tag.position.set(m.pos.x, m.pos.y + 2.1, m.pos.z);
@@ -25428,7 +25621,7 @@ var HUD = class {
     const tt = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
     this._set("tm", this.el.timer, "text", tt);
     this._set("tmB", this.el.timerBot, "text", tt.padStart(5, "0"));
-    this._set("tg", this.el.target, "text", rounds ? `第 ${m.round} 回合 · 搶 ${m.target} 勝` : `${RULES[m.rule].name} · 目標 ${m.target} 分`);
+    this._set("tg", this.el.target, "text", rounds ? `第 ${m.round} 回合 · 搶 ${m.target} 勝` : `${RULES[m.rule].name} · 目標 ${m.target} ${RULES[m.rule].unit || "分"}`);
     this._set("md", this.el.mode, "text", rounds ? `存活 ${m.aliveCount("alpha")} vs ${m.aliveCount("bravo")}${m.rule === "relic" ? m.player.team === "alpha" ? " · 進攻" : " · 防守" : ""}` : MODES[m.mode].name);
     this._set("ba", this.el.barA, "width", clamp(a / m.target, 0, 1) * 50 + "%");
     this._set("bb", this.el.barB, "width", clamp(b / m.target, 0, 1) * 50 + "%");
@@ -27320,7 +27513,369 @@ var CaptureRule = class extends Rule {
     return { kind: "tower", text, prompt: "", role: "佔領模式" };
   }
 };
+var Z = { breakT: 12, bleedT: 30, reviveT: 3, reviveR: 1.8, pool: 16, cash0: 500, kill: 100, head: 50, brute: 500, revive: 150, wave: 300 };
+var SHOP_GUNS = {
+  sf2: ["mp5", "ump45", "p90", "m4a1", "ak47", "g36c", "scarh", "m249", "remington870", "awp"],
+  apex: ["apex_r99", "apex_prowler", "apex_r301", "apex_flatline", "apex_hemlok", "apex_spitfire", "apex_eva8", "apex_peacekeeper", "apex_longbow"]
+};
+var GUN_PRICE = { smg: 800, assault: 1200, rifle: 1200, lmg: 1800, shotgun: 1e3, sniper: 1500 };
+var SHOP_ITEMS = [["ammo", "彈藥補滿", 200], ["heal", "回復滿血", 250], ["nade", "手榴彈 +1", 300]];
+var ZombieRule = class extends Rule {
+  static {
+    __name(this, "ZombieRule");
+  }
+  constructor(m) {
+    super(m);
+    this.wave = 0;
+    this.ph = "break";
+    this.breakLeft = Z.breakT;
+    this.toSpawn = 0;
+    this.left = 0;
+    this.cash = Z.cash0;
+    this.shop = null;
+    this.page = 0;
+    this.downIds = [];
+  }
+  get coop() {
+    return true;
+  }
+  get respawns() {
+    return false;
+  }
+  get humansList() {
+    const m = this.m, H = [m.player, ...m.humans || []].filter((c) => !c.removed);
+    for (const c of H) if (c.cash === void 0) c.cash = Z.cash0;
+    return H;
+  }
+  // (a friend who joins later starts with the same money)
+  init() {
+    const m = this.m;
+    this.pool = m.bots.filter((b) => b.team === "bravo");
+    this.pool.forEach((b, i) => {
+      zombieLook(b, i >= this.pool.length - ZOMBIE.brutes);
+      b.ai = new ZombieAI(b, m);
+      if (b.tag) b.tag.visible = false;
+      b.alive = false;
+      b.respawnT = Infinity;
+      b.model.root.visible = false;
+    });
+    for (const c of this.humansList) c.cash = Z.cash0;
+    this.keyFn = null;
+  }
+  startRound() {
+    this.ph = "break";
+    this.breakLeft = Z.breakT;
+  }
+  canScore() {
+    return true;
+  }
+  timeUp() {
+  }
+  // a human at 0 HP goes down instead of dying (not twice, not from bleeding out)
+  onLethal(c, opts) {
+    if (c.team !== "alpha" || c.isBot || c.downed || opts.bleed) return false;
+    c.downed = true;
+    c.bleedT = Z.bleedT;
+    c.reviveT = 0;
+    c.hp = 1;
+    this.m.app.hud.toast(`${c.isPlayer ? "你" : c.name} 倒地了！`);
+    return true;
+  }
+  onDeath(c, killer, head) {
+    c.downed = false;
+    if (c.zombie) {
+      c.respawnT = Infinity;
+      if (killer && killer.team === "alpha") this._pay(killer, c.brute ? Z.brute : Z.kill + (head ? Z.head : 0));
+    }
+  }
+  _pay(c, n) {
+    if (c.cash === void 0) return;
+    c.cash += n;
+    if (c.isPlayer) this.cash = c.cash;
+  }
+  _wavePlan(n) {
+    const hum = Math.max(1, this.humansList.length), total = Math.round((6 + 4 * n) * (0.75 + 0.25 * hum));
+    return { total, maxAlive: Math.min(this.pool.length, 6 + 2 * n), hp: 60 + 20 * n, speed: Math.min(1.35, 0.92 + 0.03 * n), dmg: 12 + 2 * n, brutes: n >= 5 ? 2 : 0 };
+  }
+  _startWave() {
+    const m = this.m;
+    this.wave++;
+    this.ph = "wave";
+    this.plan = this._wavePlan(this.wave);
+    this.toSpawn = this.plan.total;
+    this.brutesLeft = this.plan.brutes;
+    this.spawnT = 0;
+    for (const c of [...this.humansList, ...m.bots.filter((b) => b.team === "alpha")]) if (!c.alive) {
+      const sp = m.pickSpawn("alpha");
+      c.respawn(sp, sp.spawnYaw ?? m.spawns.alpha.yaw);
+      if (c.isPlayer) {
+        m.app.hud.showDeath(false);
+        m.player.setSpectate(null);
+      }
+    }
+    m.app.hud.announce(`第 ${this.wave} 波`, this.wave >= 5 && this.plan.brutes ? "巨型感染者出現" : "感染者來襲");
+    m.audio.zombie(null, "wave");
+  }
+  _spawnPoint() {
+    const m = this.m, N = m.nav.groundNodes || [], H = m.combatants.filter((c) => c.team === "alpha" && c.alive);
+    const ok = [];
+    for (let i = 0; i < 40 && N.length; i++) {
+      const n = N[Math.random() * N.length | 0];
+      let near = Infinity;
+      for (const c of H) near = Math.min(near, c.motor.pos.distanceTo(n.p));
+      if (near > 20 && near < 80) ok.push(n.p);
+      if (ok.length >= 4) break;
+    }
+    if (ok.length) return ok[Math.random() * ok.length | 0].clone();
+    return m.pickSpawn("bravo");
+  }
+  tick(dt) {
+    const m = this.m;
+    if (m.phase !== "live") return;
+    if (this.ph === "break") {
+      this.breakLeft -= dt;
+      if (this.breakLeft <= 0) this._startWave();
+    } else if (this.ph === "wave") {
+      const alive = this.pool.filter((b) => b.alive).length;
+      this.spawnT -= dt;
+      if (this.toSpawn > 0 && alive < this.plan.maxAlive && this.spawnT <= 0) {
+        this.spawnT = 0.35;
+        const P = this.plan, wantBrute = this.brutesLeft > 0, b = this.pool.find((x) => !x.alive && x.brute === wantBrute) || this.pool.find((x) => !x.alive && !x.brute);
+        if (b) {
+          const sp = this._spawnPoint();
+          b.respawn(sp, rand(-3, 3));
+          b.spawnProtect = 0;
+          b.hp = P.hp * (b.brute ? 5 : 1);
+          b.helmet = false;
+          b.model.helmet.visible = false;
+          b.zSpeed = (b.brute ? 0.7 : 1) * P.speed * rand(0.9, 1.1);
+          b.zDmg = P.dmg * (b.brute ? 2.5 : 1);
+          this.toSpawn--;
+          if (b.brute) this.brutesLeft--;
+        }
+      }
+      this.left = this.toSpawn + this.pool.filter((b) => b.alive).length;
+      if (this.left === 0) {
+        for (const c of this.humansList) if (c.alive) this._pay(c, Z.wave);
+        if (this.wave >= m.target) {
+          m.endMatch("alpha");
+          return;
+        }
+        this.ph = "break";
+        this.breakLeft = Z.breakT;
+        m.app.hud.announce(`第 ${this.wave} 波 清除`, `+$${Z.wave} · ${Z.breakT} 秒後下一波 · B 商店`);
+        m.audio.uxCue("challenge");
+      }
+    }
+    for (const d of this.humansList) {
+      if (!d.alive || !d.downed) continue;
+      const r = this.humansList.find((c) => c !== d && c.alive && !c.downed && c.holdE && c.motor.pos.distanceTo(d.motor.pos) < Z.reviveR);
+      if (r) {
+        d.reviveT += dt;
+        d.reviver = r;
+        if (d.reviveT >= Z.reviveT) {
+          d.downed = false;
+          d.hp = 50;
+          d.reviveT = 0;
+          d.reviver = null;
+          this._pay(r, Z.revive);
+          m.app.hud.toast(`${r.isPlayer ? "你" : r.name} 救起了 ${d.isPlayer ? "你" : d.name}（+$${Z.revive}）`);
+        }
+      } else {
+        d.reviveT = 0;
+        d.reviver = null;
+        d.bleedT -= dt;
+        if (d.bleedT <= 0) {
+          d.spawnProtect = 0;
+          m.applyDamage(d, 999, "chest", null, WEAPON_DEFS.knife, new THREE.Vector3(0, 0, 1), null, { bleed: true });
+        }
+      }
+    }
+    this.downIds = this.humansList.filter((c) => c.alive && c.downed).map((c) => c.netId);
+    this.check();
+  }
+  check() {
+    const m = this.m, H = this.humansList;
+    if (m.phase === "live" && H.length && H.every((c) => !c.alive || c.downed)) m.endMatch("bravo");
+  }
+  // friendly bots hunt the infected (no objective)
+  botGoal() {
+    return null;
+  }
+  /* ---------------- shop ---------------- */
+  _guns() {
+    return (SHOP_GUNS[this.m.gunSet] || SHOP_GUNS.sf2).filter((id) => WEAPON_DEFS[id]);
+  }
+  _price(item) {
+    const d = WEAPON_DEFS[item];
+    if (d) return GUN_PRICE[d.type] || GUN_PRICE[d.kind] || 1e3;
+    const s = SHOP_ITEMS.find((x) => x[0] === item);
+    return s ? s[2] : Infinity;
+  }
+  // on the host, for anyone: take the money, give the goods; true if bought
+  buyFor(c, item) {
+    const price = this._price(item);
+    if (!c.alive || c.cash === void 0 || c.cash < price || item === "heal" && (c.downed || c.hp >= 100)) return false;
+    c.cash -= price;
+    if (c.isPlayer) this.cash = c.cash;
+    if (c.isPlayer) this._apply(item);
+    else {
+      this._applyRemote(c, item);
+      if (this.m.net) this.m.net.t.send(c.peer, { k: "rule", t: "bought", item });
+    }
+    return true;
+  }
+  // the goods on the soldier this computer plays (the host's own, or a friend's own once the host confirms)
+  async _apply(item) {
+    const m = this.m, p = m.player, ws = m.weapons;
+    if (item === "ammo") ws.resetLoadout();
+    else if (item === "heal") p.hp = 100;
+    else if (item === "nade") {
+      const g = ws.weapons.find((w) => w.kind === "grenade" && w.def.gtype === "he");
+      if (g) g.count++;
+    } else if (WEAPON_DEFS[item]) {
+      const sec = (ws.weapons.find((w) => w.def.slot === "secondary") || {}).def, defs = loadoutDefs(m.mode, { primary: item, secondary: sec ? sec.id : "p226" });
+      await ensureGunModels(defs);
+      ws.rebuild(defs);
+      ws.setEnvironment && ws.setEnvironment(m.vmEnv || m.scene.environment);
+    }
+    m.audio.uxCue("buy");
+  }
+  _applyRemote(c, item) {
+    const m = this.m, A = c.arsenal;
+    if (item === "ammo") A.resetLoadout();
+    else if (item === "heal") c.hp = 100;
+    else if (item === "nade") {
+      const g = A.weapons.find((w) => w.kind === "grenade" && w.def.gtype === "he");
+      if (g) g.count++;
+    } else if (WEAPON_DEFS[item]) {
+      const sec = (A.weapons.find((w) => w.def.slot === "secondary") || {}).def;
+      c.loadout = { primary: item, secondary: sec ? sec.id : "p226" };
+      A.rebuild(loadoutDefs(m.mode, c.loadout));
+    }
+  }
+  netMsg(np, d) {
+    if (d.t === "buy" && typeof d.item === "string") this.buyFor(np, d.item.slice(0, 32));
+  }
+  clientMsg(d) {
+    if (d.t === "bought" && typeof d.item === "string") this._apply(d.item.slice(0, 32));
+  }
+  _order(item) {
+    const m = this.m;
+    if (!m.player.alive) return;
+    if (this._price(item) > this.cash) {
+      m.app.hud.toast("金錢不足");
+      m.audio.mech("dry");
+      return;
+    }
+    if (m.isClient) m.net.t.send(m.net.hostId, { k: "rule", t: "buy", item });
+    else if (!this.buyFor(m.player, item)) m.audio.mech("dry");
+  }
+  onKey(code) {
+    if (code === "KeyB") {
+      this.shop = !this.shop;
+      this.page = 0;
+      this._drawShop();
+      return true;
+    }
+    if (!this.shop) return false;
+    if (code === "Escape") {
+      this.shop = false;
+      this._drawShop();
+      return true;
+    }
+    const dg = /^Digit([0-9])$/.exec(code);
+    if (!dg) return false;
+    const k = +dg[1];
+    if (this.page === 0) {
+      if (k >= 1 && k <= 3) this._order(SHOP_ITEMS[k - 1][0]);
+      else if (k === 4) {
+        this.page = 1;
+        this._drawShop();
+      }
+    } else {
+      const G = this._guns();
+      if (k === 0) {
+        this.page = 0;
+        this._drawShop();
+      } else if (G[k - 1]) {
+        this._order(G[k - 1]);
+        this.shop = false;
+        this._drawShop();
+      }
+    }
+    return true;
+  }
+  _drawShop() {
+    let el = document.getElementById("zshop");
+    if (!this.shop) {
+      if (el) el.remove();
+      return;
+    }
+    if (!el) {
+      el = document.createElement("div");
+      el.id = "zshop";
+      document.body.appendChild(el);
+    }
+    const row = /* @__PURE__ */ __name((k, name, price) => `<div class="zr${price > this.cash ? " no" : ""}"><b>${k}</b><span>${name}</span><i>$${price}</i></div>`, "row");
+    el.innerHTML = `<h3>商店 · $${this.cash}</h3>` + (this.page === 0 ? SHOP_ITEMS.map(([id, n, p], i) => row(i + 1, n, p)).join("") + `<div class="zr"><b>4</b><span>武器 ▸</span><i></i></div>` : this._guns().map((id, i) => row(i + 1, WEAPON_DEFS[id].name, this._price(id))).join("") + `<div class="zr"><b>0</b><span>◂ 返回</span><i></i></div>`) + `<p>數字鍵購買 · B／Esc 關閉</p>`;
+  }
+  /* ---------------- network + HUD ---------------- */
+  netState(np) {
+    return { w: this.wave, ph: this.ph === "break" ? 0 : 1, t: +this.breakLeft.toFixed(1), l: this.left, c: np.cash | 0, dn: np.downed ? 1 : 0, bl: +(np.bleedT || 0).toFixed(1), rv: +(np.reviveT || 0).toFixed(2), dd: this.downIds.slice(0, 8) };
+  }
+  applyNet(s) {
+    const m = this.m, p = m.player;
+    this.wave = s.w | 0;
+    this.ph = s.ph ? "wave" : "break";
+    this.breakLeft = +s.t || 0;
+    this.left = s.l | 0;
+    this.downIds = Array.isArray(s.dd) ? s.dd : [];
+    if (this.cash !== (s.c | 0)) {
+      this.cash = s.c | 0;
+      if (this.shop) this._drawShop();
+    }
+    const was = p.downed;
+    p.downed = !!s.dn;
+    p.bleedT = +s.bl || 0;
+    p.reviveT = +s.rv || 0;
+    if (p.downed && !was) m.app.hud.toast("你倒地了！");
+  }
+  netTick() {
+    if (this.ph === "break") this.breakLeft = Math.max(0, this.breakLeft - 1 / 60);
+  }
+  markers(out) {
+    const m = this.m;
+    for (const id of this.downIds) {
+      const c = m.net && m.net.byId ? m.net.byId(id) : m.combatants.find((x) => x.netId === id);
+      if (c && c !== m.player) out.push({ pos: c.motor.pos.clone().setY(c.motor.pos.y + 1.2), color: 16761402, label: "救援", team: "alpha" });
+    }
+    return out;
+  }
+  hudState() {
+    const m = this.m, p = m.player, cash = `$${this.cash}`;
+    let text;
+    if (p.downed) text = `你倒地了 · ${Math.ceil(p.bleedT || 0)} 秒內等隊友救援${p.reviveT > 0 ? `（救援中 ${Math.round(p.reviveT / Z.reviveT * 100)}%）` : ""}`;
+    else if (this.ph === "break") text = `第 ${this.wave + 1} 波 ${Math.ceil(this.breakLeft)} 秒後開始 · ${cash} · B 商店`;
+    else text = `第 ${this.wave} 波 · 剩餘 ${this.left} 隻 · ${cash} · B 商店`;
+    let prompt = "";
+    if (p.alive && !p.downed) for (const id of this.downIds) {
+      const c = m.net && m.net.byId ? m.net.byId(id) : m.combatants.find((x) => x.netId === id);
+      if (c && c !== p && c.motor.pos.distanceTo(p.motor.pos) < Z.reviveR) {
+        prompt = `按住 E 救援 ${c.name}`;
+        break;
+      }
+    }
+    if (prompt) m.app.hud.interact(prompt);
+    return { kind: "zombie", text, prompt, role: "殭屍生存" };
+  }
+  dispose() {
+    this.shop = false;
+    this._drawShop();
+  }
+};
 function createRule(kind, m) {
+  if (kind === "zombie") return new ZombieRule(m);
   if (kind === "tower") return new CaptureRule(m);
   if (kind === "rounds") return new RoundsRule(m);
   if (kind === "relic") return new RelicRule(m);
@@ -27330,6 +27885,7 @@ function createRule(kind, m) {
 __name(createRule, "createRule");
 
 // src/16_match.js
+var IDLE_CMD2 = new UserCmd();
 var Match = class _Match {
   static {
     __name(this, "Match");
@@ -27466,7 +28022,8 @@ var Match = class _Match {
     this.combatants.push(this.player);
     if (!this.isClient) {
       for (let i = 0; i < this.config.allies - 1; i++) this.bots.push(new Bot(this, "alpha", i, this.botWeapon()));
-      for (let i = 0; i < this.config.enemies; i++) this.bots.push(new Bot(this, "bravo", i, this.botWeapon()));
+      if (this.rule === "zombie") for (let i = 0; i < 16; i++) this.bots.push(new Bot(this, "bravo", i, "knife"));
+      else for (let i = 0; i < this.config.enemies; i++) this.bots.push(new Bot(this, "bravo", i, this.botWeapon()));
     }
     this.combatants.push(...this.bots);
     for (const b of this.bots) this.wantGun(b.def);
@@ -27765,6 +28322,11 @@ var Match = class _Match {
     this.player.setSpectate(null);
     for (const c of this.combatants) c.alive = false;
     for (const c of this.combatants) {
+      if (c.zombie) {
+        c.model.root.visible = false;
+        if (c.tag) c.tag.visible = false;
+        continue;
+      }
       const p = this.pickSpawn(c.team, taken, false);
       taken.push(p);
       if (c.isBot && rb) c.setWeapon(this.botWeapon());
@@ -27964,6 +28526,7 @@ var Match = class _Match {
     }
     if (!victim.isPlayer && victim.team !== this.player.team) victim.spottedT = this.time;
     victim.onDamaged(dmg, attacker, attacker ? attacker.motor.pos : point || victim.motor.pos);
+    if (victim.hp <= 0 && this.rules.onLethal && this.rules.onLethal(victim, opts)) return true;
     if (victim.hp <= 0) this.onKill(victim, attacker, def, part, dir || new THREE.Vector3(0, 0, 1), opts);
     return true;
   }
@@ -28293,7 +28856,7 @@ var Match = class _Match {
     const head = part === "head" && def.kind !== "grenade", hud = this.app.hud, p = this.player;
     if (this.net && this.net.role === "host") this.net.onKill(victim, killer, def, head, dir, opts);
     victim.deaths++;
-    this.rules.onDeath(victim);
+    this.rules.onDeath(victim, killer, head);
     this.dropOnDeath(victim, dir);
     this._die(victim, killer, def, dir);
     const valid = killer && killer !== victim && killer.team !== victim.team;
@@ -28387,6 +28950,13 @@ var Match = class _Match {
     this.phase = "over";
     this.winner = winner;
     this.app.onMatchEnd(this);
+  }
+  // v67p an infected's claw (ZombieAI): the host's call
+  zombieHit(z, t) {
+    if (this.isClient) return;
+    const d = new THREE.Vector3(t.motor.pos.x - z.motor.pos.x, 0, t.motor.pos.z - z.motor.pos.z).normalize();
+    this.audio.zombie(z.motor.pos, "hit", z.brute);
+    this.applyDamage(t, z.zDmg || 15, "chest", z, WEAPON_DEFS.knife, d, t.motor.pos.clone().setY(t.motor.pos.y + 1.1), { melee: true });
   }
   emitNoise(pos, radius, team, kind = "noise") {
     for (const b of this.bots) if (b.alive && b.team !== team) b.ai.hear(pos, radius, kind);
@@ -28845,7 +29415,7 @@ var Match = class _Match {
       this.runTimers();
       const cmd = this.app.cmds.build(p, this.weapons, !this.app.chatOpen);
       p.fixedUpdate(h, cmd);
-      this.weapons.tick(h, cmd);
+      this.weapons.tick(h, p.downed ? IDLE_CMD2 : cmd);
       if (cmd.btn & BTN.INTERACT && p.alive && this.canMove()) this.onInteract();
       if (this.net) {
         if (client) this.net.afterLocalStep(cmd);
@@ -29270,6 +29840,13 @@ var NetHost = class {
       this.t.send(from, { k: "pong", t: d.t });
       const np = this.peers.get(from);
       if (np) np.heardT = this.m.time;
+    } else if (d.k === "rule") {
+      const np = this.peers.get(from);
+      if (np && this.m.rules.netMsg) try {
+        this.m.rules.netMsg(np, d);
+      } catch (e) {
+        console.warn("[net] rule msg", e);
+      }
     }
   }
   get players() {
@@ -29290,7 +29867,7 @@ var NetHost = class {
         this.t.send(from, { k: "reject", why: "這場對戰已經結束" });
         return;
       }
-      const team = d.team === "alpha" || d.team === "bravo" ? d.team : this._balance();
+      const team = m.rules.coop ? "alpha" : d.team === "alpha" || d.team === "bravo" ? d.team : this._balance();
       const bot = m.bots.filter((b) => b.team === team).pop();
       if (bot) this._removeBot(bot);
       const np2 = new NetPlayer(m, team, safeName(d.name, "Friend"), from, d);
@@ -29325,7 +29902,7 @@ var NetHost = class {
   }
   _info(c) {
     const def = c.isPlayer ? this.m.weapons.current.def : c.def;
-    return { id: c.netId, team: c.team, name: c.name, kind: c.isBot ? "bot" : "human", w: NET_WI[def.id] ?? 0 };
+    return { id: c.netId, team: c.team, name: c.name, kind: c.isBot ? "bot" : "human", w: NET_WI[def.id] ?? 0, z: c.zombie ? c.brute ? 2 : 1 : 0 };
   }
   _removeBot(b) {
     const m = this.m;
@@ -29636,6 +30213,12 @@ var NetClient = class {
     } else if (d.k === "mech") {
       const mc = m.builder.mechs[0];
       if (mc) mc.applyNet(d.s);
+    } else if (d.k === "rule") {
+      if (m.rules.clientMsg) try {
+        m.rules.clientMsg(d);
+      } catch (e) {
+        console.warn("[net] rule msg", e);
+      }
     } else if (d.k === "nade") m.clientNade(d);
     else if (d.k === "boom") m.clientBoom(d);
     else if (d.k === "drop") m.clientDrop(d);
@@ -32440,6 +33023,7 @@ var App = class {
         this.openChat(false);
         return;
       }
+      if (this.state === "playing" && m && m.rules.onKey && m.rules.onKey(code)) return;
       if (this.state !== "playing" || !m || !m.player.alive) return;
       const C = this.cmds, dg = /^Digit([1-9])$/.exec(code);
       if (code === "Space") C.press(BTN.JUMP);

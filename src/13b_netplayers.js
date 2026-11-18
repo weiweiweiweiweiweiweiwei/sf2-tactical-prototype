@@ -1,9 +1,11 @@
 import { CFG, THREE, TMP_V3, TMP_V4, WEAPON_DATABASE, WEAPON_DEFS, damp, lerp, loadoutDefs, rand, wrapAngle } from './01_core.js';
-import { BTN } from './12b_cmd.js';
 import { NET_WEAPONS, safeName } from './12c_netutil.js';
 import { Arsenal } from './11_weaponsystem.js';
 import { Combatant, Human } from './12_player.js';
 import { Bot, animateSoldier } from './13_bots.js';
+import { zombieLook } from './13c_zombies.js';
+import { BTN, UserCmd } from './12b_cmd.js';
+const IDLE_CMD = new UserCmd(); // v67p
 /* =====================================================================
    v25 NETWORK SOLDIERS
    NetPlayer — a friend's soldier inside the HOST's match. Steered by the UserCmds his client sends: the same Human
@@ -73,7 +75,7 @@ class NetPlayer extends Human {
       if (this.alive) { this.yaw = cmd.yaw; this.pitch = cmd.pitch; this.aimPitch = cmd.pitch; this.aimDY = cmd.ay; this.aimDP = cmd.ap; }
       this.curSeq = cmd.seq; this.viewT = cmd.vt; // the command being simulated (tests compare it with the client's) · v29: its view time
       this.fixedUpdate(h, cmd);
-      this.arsenal.tick(h, cmd);
+      this.arsenal.tick(h, this.downed ? IDLE_CMD : cmd); // (v67p downed)
       if (cmd.btn & BTN.INTERACT) this.game.netInteract(this); // v30: E — relic / weapon pickup, decided here on the host
       this.ackSeq = cmd.seq;
     }
@@ -117,6 +119,7 @@ class Ghost extends Combatant {
     this.aimPitch = 0; this.walkPhase = Math.random() * 6; this.buf = []; this.speed = 0; this.weaponId = NET_WEAPONS[info.w] || 'm4a1';
     this.model = game.app.soldiers.create(info.team, WEAPON_DEFS[this.weaponId].model || this.weaponId); this.model.root.scale.setScalar(game.def.traversal ? 1 : CFG.player.bodyScale); /* (v66j SF2's 1.56 m soldier) */ game.scene.add(this.model.root); // (v67l as above: a ghost was never drawn)
     this.alive = false; this.model.root.visible = false; this.life = -1;
+    if (info.z) { zombieLook(this, info.z === 2); if (this.tag) this.tag.visible = false; this.growlT = rand(1, 5); } // v67p
     if (info.team === game.player.team) this.tag = Bot.prototype._makeTag.call(this);
   }
   get def() { return WEAPON_DEFS[this.weaponId]; }
@@ -148,6 +151,7 @@ class Ghost extends Combatant {
     const ka = Math.min(k, 1); this.yaw = a.yaw + wrapAngle(c.yaw - a.yaw) * ka; this.aimPitch = lerp(a.pitch, c.pitch, ka); // (the view is not carried on)
     this.speed = damp(this.speed, Math.hypot(m.pos.x - ox, m.pos.z - oz) / Math.max(1e-3, dt), 10, dt);
     const M = this.model; M.root.position.copy(m.pos); M.root.rotation.y = this.yaw;
+    if (this.zombie) { if (M.gun) M.gun.visible = false; if ((this.growlT -= dt) <= 0) { this.growlT = rand(3, 7); this.game.audio.zombie(m.pos, 'idle', this.brute); } }
     animateSoldier(this, dt, Math.min(this.speed, 9), m.crouching, this.aimPitch, (k < 0.5 ? a : c).reload);
     if (this.tag) { this.tag.position.set(m.pos.x, m.pos.y + 2.1, m.pos.z); this.tag.visible = this.tag.position.distanceTo(this.game.camera.position) < 70; }
   }

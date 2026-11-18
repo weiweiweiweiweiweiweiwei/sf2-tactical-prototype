@@ -1,4 +1,6 @@
-import { POINTS, THREE, TMP_V1, clamp, rand } from './01_core.js';
+import { POINTS, THREE, TMP_V1, WEAPON_DEFS, clamp, loadoutDefs, rand } from './01_core.js';
+import { ensureGunModels } from './09_models.js';
+import { ZOMBIE, ZombieAI, zombieLook } from './13c_zombies.js';
 import { v3arr } from './12c_netutil.js';
 import { TEAM_CSS } from './14b_emblems.js';
 /* =====================================================================
@@ -462,7 +464,196 @@ class CaptureRule extends Rule {
   }
 }
 
+/* ------------------------------------------------------------------
+   v67p ZOMBIE SURVIVAL (co-op; user 11-18 B: the full version). Every human is on Blue (alpha); Red (bravo) is a pool of
+   infected (src/13c_zombies.js) the rule wakes wave by wave. Designed after SF2's survival modes
+   (docs/research/sf2/modes-endcam.md §2) with our own numbers:
+     · waves: a 12 s break (the shop is open all the time), then 6 + 4n infected (×0.75 + 0.25 a human), at most 6 + 2n
+       up at once, tougher and faster every wave, two brutes from wave 5; survive the room's target number of waves to win
+     · downed, not dead: a human at 0 HP goes down for 30 s; a teammate who holds E beside them for 3 s brings them back at
+       50 HP; bleed out = dead until the next wave starts; everyone down or dead = the match is lost
+     · money: start $500; a kill $100 (+$50 head, brute $500), a revive $150, a cleared wave $300 each
+     · shop (B): ammo, a heal, a grenade, or a gun of the room's gun set (it replaces the primary; lost on death)
+   Online the host runs it all: each friend's own view (wave, his cash, downed state) goes out in netState; his shop
+   orders come in as { k: 'rule', t: 'buy' } and a purchase goes back as { k: 'rule', t: 'bought' } (src/18_net.js).
+   ------------------------------------------------------------------ */
+const Z = { breakT: 12, bleedT: 30, reviveT: 3, reviveR: 1.8, pool: 16, cash0: 500, kill: 100, head: 50, brute: 500, revive: 150, wave: 300 };
+const SHOP_GUNS = { sf2: ['mp5', 'ump45', 'p90', 'm4a1', 'ak47', 'g36c', 'scarh', 'm249', 'remington870', 'awp'],
+  apex: ['apex_r99', 'apex_prowler', 'apex_r301', 'apex_flatline', 'apex_hemlok', 'apex_spitfire', 'apex_eva8', 'apex_peacekeeper', 'apex_longbow'] };
+const GUN_PRICE = { smg: 800, assault: 1200, rifle: 1200, lmg: 1800, shotgun: 1000, sniper: 1500 };
+const SHOP_ITEMS = [['ammo', '彈藥補滿', 200], ['heal', '回復滿血', 250], ['nade', '手榴彈 +1', 300]];
+
+class ZombieRule extends Rule {
+  constructor(m) { super(m); this.wave = 0; this.ph = 'break'; this.breakLeft = Z.breakT; this.toSpawn = 0; this.left = 0; this.cash = Z.cash0; this.shop = null; this.page = 0; this.downIds = []; }
+  get coop() { return true; }
+  get respawns() { return false; }
+  get humansList() { const m = this.m, H = [m.player, ...(m.humans || [])].filter((c) => !c.removed); for (const c of H) if (c.cash === undefined) c.cash = Z.cash0; return H; } // (a friend who joins later starts with the same money)
+  init() {
+    const m = this.m;
+    this.pool = m.bots.filter((b) => b.team === 'bravo');
+    this.pool.forEach((b, i) => {
+      zombieLook(b, i >= this.pool.length - ZOMBIE.brutes); b.ai = new ZombieAI(b, m); if (b.tag) b.tag.visible = false;
+      b.alive = false; b.respawnT = Infinity; b.model.root.visible = false;
+    });
+    for (const c of this.humansList) c.cash = Z.cash0;
+    this.keyFn = null;
+  }
+  startRound() { this.ph = 'break'; this.breakLeft = Z.breakT; }
+  canScore() { return true; }
+  timeUp() {}
+  // a human at 0 HP goes down instead of dying (not twice, not from bleeding out)
+  onLethal(c, opts) {
+    if (c.team !== 'alpha' || c.isBot || c.downed || opts.bleed) return false;
+    c.downed = true; c.bleedT = Z.bleedT; c.reviveT = 0; c.hp = 1;
+    this.m.app.hud.toast(`${c.isPlayer ? '你' : c.name} 倒地了！`);
+    return true;
+  }
+  onDeath(c, killer, head) {
+    c.downed = false;
+    if (c.zombie) { c.respawnT = Infinity; if (killer && killer.team === 'alpha') this._pay(killer, c.brute ? Z.brute : Z.kill + (head ? Z.head : 0)); }
+  }
+  _pay(c, n) { if (c.cash === undefined) return; c.cash += n; if (c.isPlayer) this.cash = c.cash; }
+  _wavePlan(n) {
+    const hum = Math.max(1, this.humansList.length), total = Math.round((6 + 4 * n) * (0.75 + 0.25 * hum));
+    return { total, maxAlive: Math.min(this.pool.length, 6 + 2 * n), hp: 60 + 20 * n, speed: Math.min(1.35, 0.92 + 0.03 * n), dmg: 12 + 2 * n, brutes: n >= 5 ? 2 : 0 };
+  }
+  _startWave() {
+    const m = this.m; this.wave++; this.ph = 'wave'; this.plan = this._wavePlan(this.wave); this.toSpawn = this.plan.total; this.brutesLeft = this.plan.brutes; this.spawnT = 0;
+    // everyone dead since the last wave is back
+    for (const c of [...this.humansList, ...m.bots.filter((b) => b.team === 'alpha')]) if (!c.alive) {
+      const sp = m.pickSpawn('alpha'); c.respawn(sp, sp.spawnYaw ?? m.spawns.alpha.yaw); if (c.isPlayer) { m.app.hud.showDeath(false); m.player.setSpectate(null); }
+    }
+    m.app.hud.announce(`第 ${this.wave} 波`, this.wave >= 5 && this.plan.brutes ? '巨型感染者出現' : '感染者來襲'); m.audio.zombie(null, 'wave');
+  }
+  _spawnPoint() {
+    const m = this.m, N = m.nav.groundNodes || [], H = m.combatants.filter((c) => c.team === 'alpha' && c.alive);
+    const ok = []; for (let i = 0; i < 40 && N.length; i++) { const n = N[(Math.random() * N.length) | 0]; let near = Infinity; for (const c of H) near = Math.min(near, c.motor.pos.distanceTo(n.p)); if (near > 20 && near < 80) ok.push(n.p); if (ok.length >= 4) break; }
+    if (ok.length) return ok[(Math.random() * ok.length) | 0].clone();
+    return m.pickSpawn('bravo');
+  }
+  tick(dt) {
+    const m = this.m; if (m.phase !== 'live') return;
+    if (this.ph === 'break') { this.breakLeft -= dt; if (this.breakLeft <= 0) this._startWave(); }
+    else if (this.ph === 'wave') {
+      const alive = this.pool.filter((b) => b.alive).length; this.spawnT -= dt;
+      if (this.toSpawn > 0 && alive < this.plan.maxAlive && this.spawnT <= 0) {
+        this.spawnT = 0.35;
+        const P = this.plan, wantBrute = this.brutesLeft > 0, b = this.pool.find((x) => !x.alive && x.brute === wantBrute) || this.pool.find((x) => !x.alive && !x.brute);
+        if (b) {
+          const sp = this._spawnPoint(); b.respawn(sp, rand(-3, 3)); b.spawnProtect = 0; b.hp = P.hp * (b.brute ? 5 : 1); b.helmet = false; b.model.helmet.visible = false;
+          b.zSpeed = (b.brute ? 0.7 : 1) * P.speed * rand(0.9, 1.1); b.zDmg = P.dmg * (b.brute ? 2.5 : 1); this.toSpawn--; if (b.brute) this.brutesLeft--;
+        }
+      }
+      this.left = this.toSpawn + this.pool.filter((b) => b.alive).length;
+      if (this.left === 0) { // wave cleared
+        for (const c of this.humansList) if (c.alive) this._pay(c, Z.wave);
+        if (this.wave >= m.target) { m.endMatch('alpha'); return; }
+        this.ph = 'break'; this.breakLeft = Z.breakT; m.app.hud.announce(`第 ${this.wave} 波 清除`, `+$${Z.wave} · ${Z.breakT} 秒後下一波 · B 商店`); m.audio.uxCue('challenge');
+      }
+    }
+    // downed: bleeding out, or a teammate holding E beside them
+    for (const d of this.humansList) {
+      if (!d.alive || !d.downed) continue;
+      const r = this.humansList.find((c) => c !== d && c.alive && !c.downed && c.holdE && c.motor.pos.distanceTo(d.motor.pos) < Z.reviveR);
+      if (r) { d.reviveT += dt; d.reviver = r; if (d.reviveT >= Z.reviveT) { d.downed = false; d.hp = 50; d.reviveT = 0; d.reviver = null; this._pay(r, Z.revive); m.app.hud.toast(`${r.isPlayer ? '你' : r.name} 救起了 ${d.isPlayer ? '你' : d.name}（+$${Z.revive}）`); } }
+      else { d.reviveT = 0; d.reviver = null; d.bleedT -= dt; if (d.bleedT <= 0) { d.spawnProtect = 0; m.applyDamage(d, 999, 'chest', null, WEAPON_DEFS.knife, new THREE.Vector3(0, 0, 1), null, { bleed: true }); } }
+    }
+    this.downIds = this.humansList.filter((c) => c.alive && c.downed).map((c) => c.netId);
+    this.check();
+  }
+  check() {
+    const m = this.m, H = this.humansList;
+    if (m.phase === 'live' && H.length && H.every((c) => !c.alive || c.downed)) m.endMatch('bravo');
+  }
+  // friendly bots hunt the infected (no objective)
+  botGoal() { return null; }
+
+  /* ---------------- shop ---------------- */
+  _guns() { return (SHOP_GUNS[this.m.gunSet] || SHOP_GUNS.sf2).filter((id) => WEAPON_DEFS[id]); }
+  _price(item) { const d = WEAPON_DEFS[item]; if (d) return GUN_PRICE[d.type] || GUN_PRICE[d.kind] || 1000; const s = SHOP_ITEMS.find((x) => x[0] === item); return s ? s[2] : Infinity; }
+  // on the host, for anyone: take the money, give the goods; true if bought
+  buyFor(c, item) {
+    const price = this._price(item);
+    if (!c.alive || c.cash === undefined || c.cash < price || (item === 'heal' && (c.downed || c.hp >= 100))) return false;
+    c.cash -= price; if (c.isPlayer) this.cash = c.cash;
+    if (c.isPlayer) this._apply(item); else { this._applyRemote(c, item); if (this.m.net) this.m.net.t.send(c.peer, { k: 'rule', t: 'bought', item }); }
+    return true;
+  }
+  // the goods on the soldier this computer plays (the host's own, or a friend's own once the host confirms)
+  async _apply(item) {
+    const m = this.m, p = m.player, ws = m.weapons;
+    if (item === 'ammo') ws.resetLoadout();
+    else if (item === 'heal') p.hp = 100;
+    else if (item === 'nade') { const g = ws.weapons.find((w) => w.kind === 'grenade' && w.def.gtype === 'he'); if (g) g.count++; }
+    else if (WEAPON_DEFS[item]) {
+      const sec = (ws.weapons.find((w) => w.def.slot === 'secondary') || {}).def, defs = loadoutDefs(m.mode, { primary: item, secondary: sec ? sec.id : 'p226' });
+      await ensureGunModels(defs); ws.rebuild(defs); ws.setEnvironment && ws.setEnvironment(m.vmEnv || m.scene.environment);
+    }
+    m.audio.uxCue('buy');
+  }
+  _applyRemote(c, item) {
+    const m = this.m, A = c.arsenal;
+    if (item === 'ammo') A.resetLoadout();
+    else if (item === 'heal') c.hp = 100;
+    else if (item === 'nade') { const g = A.weapons.find((w) => w.kind === 'grenade' && w.def.gtype === 'he'); if (g) g.count++; }
+    else if (WEAPON_DEFS[item]) { const sec = (A.weapons.find((w) => w.def.slot === 'secondary') || {}).def; c.loadout = { primary: item, secondary: sec ? sec.id : 'p226' }; A.rebuild(loadoutDefs(m.mode, c.loadout)); }
+  }
+  netMsg(np, d) { if (d.t === 'buy' && typeof d.item === 'string') this.buyFor(np, d.item.slice(0, 32)); }
+  clientMsg(d) { if (d.t === 'bought' && typeof d.item === 'string') this._apply(d.item.slice(0, 32)); }
+  _order(item) {
+    const m = this.m; if (!m.player.alive) return;
+    if (this._price(item) > this.cash) { m.app.hud.toast('金錢不足'); m.audio.mech('dry'); return; }
+    if (m.isClient) m.net.t.send(m.net.hostId, { k: 'rule', t: 'buy', item }); else if (!this.buyFor(m.player, item)) m.audio.mech('dry');
+  }
+  onKey(code) {
+    if (code === 'KeyB') { this.shop = !this.shop; this.page = 0; this._drawShop(); return true; }
+    if (!this.shop) return false;
+    if (code === 'Escape') { this.shop = false; this._drawShop(); return true; }
+    const dg = /^Digit([0-9])$/.exec(code); if (!dg) return false;
+    const k = +dg[1];
+    if (this.page === 0) { if (k >= 1 && k <= 3) this._order(SHOP_ITEMS[k - 1][0]); else if (k === 4) { this.page = 1; this._drawShop(); } }
+    else { const G = this._guns(); if (k === 0) { this.page = 0; this._drawShop(); } else if (G[k - 1]) { this._order(G[k - 1]); this.shop = false; this._drawShop(); } }
+    return true;
+  }
+  _drawShop() {
+    let el = document.getElementById('zshop');
+    if (!this.shop) { if (el) el.remove(); return; }
+    if (!el) { el = document.createElement('div'); el.id = 'zshop'; document.body.appendChild(el); }
+    const row = (k, name, price) => `<div class="zr${price > this.cash ? ' no' : ''}"><b>${k}</b><span>${name}</span><i>$${price}</i></div>`;
+    el.innerHTML = `<h3>商店 · $${this.cash}</h3>` + (this.page === 0
+      ? SHOP_ITEMS.map(([id, n, p], i) => row(i + 1, n, p)).join('') + `<div class="zr"><b>4</b><span>武器 ▸</span><i></i></div>`
+      : this._guns().map((id, i) => row(i + 1, WEAPON_DEFS[id].name, this._price(id))).join('') + `<div class="zr"><b>0</b><span>◂ 返回</span><i></i></div>`) + `<p>數字鍵購買 · B／Esc 關閉</p>`;
+  }
+
+  /* ---------------- network + HUD ---------------- */
+  netState(np) { return { w: this.wave, ph: this.ph === 'break' ? 0 : 1, t: +this.breakLeft.toFixed(1), l: this.left, c: np.cash | 0, dn: np.downed ? 1 : 0, bl: +(np.bleedT || 0).toFixed(1), rv: +(np.reviveT || 0).toFixed(2), dd: this.downIds.slice(0, 8) }; }
+  applyNet(s) {
+    const m = this.m, p = m.player; this.wave = s.w | 0; this.ph = s.ph ? 'wave' : 'break'; this.breakLeft = +s.t || 0; this.left = s.l | 0; this.downIds = Array.isArray(s.dd) ? s.dd : [];
+    if (this.cash !== (s.c | 0)) { this.cash = s.c | 0; if (this.shop) this._drawShop(); }
+    const was = p.downed; p.downed = !!s.dn; p.bleedT = +s.bl || 0; p.reviveT = +s.rv || 0; if (p.downed && !was) m.app.hud.toast('你倒地了！');
+  }
+  netTick() { if (this.ph === 'break') this.breakLeft = Math.max(0, this.breakLeft - 1 / 60); }
+  markers(out) {
+    const m = this.m;
+    for (const id of this.downIds) { const c = m.net && m.net.byId ? m.net.byId(id) : m.combatants.find((x) => x.netId === id); if (c && c !== m.player) out.push({ pos: c.motor.pos.clone().setY(c.motor.pos.y + 1.2), color: 0xffc23a, label: '救援', team: 'alpha' }); }
+    return out;
+  }
+  hudState() {
+    const m = this.m, p = m.player, cash = `$${this.cash}`; let text;
+    if (p.downed) text = `你倒地了 · ${Math.ceil(p.bleedT || 0)} 秒內等隊友救援${p.reviveT > 0 ? `（救援中 ${Math.round(p.reviveT / Z.reviveT * 100)}%）` : ''}`;
+    else if (this.ph === 'break') text = `第 ${this.wave + 1} 波 ${Math.ceil(this.breakLeft)} 秒後開始 · ${cash} · B 商店`;
+    else text = `第 ${this.wave} 波 · 剩餘 ${this.left} 隻 · ${cash} · B 商店`;
+    // a downed teammate beside you: the revive prompt
+    let prompt = '';
+    if (p.alive && !p.downed) for (const id of this.downIds) { const c = m.net && m.net.byId ? m.net.byId(id) : m.combatants.find((x) => x.netId === id); if (c && c !== p && c.motor.pos.distanceTo(p.motor.pos) < Z.reviveR) { prompt = `按住 E 救援 ${c.name}`; break; } }
+    if (prompt) m.app.hud.interact(prompt);
+    return { kind: 'zombie', text, prompt, role: '殭屍生存' };
+  }
+  dispose() { this.shop = false; this._drawShop(); }
+}
+
 function createRule(kind, m) {
+  if (kind === 'zombie') return new ZombieRule(m);
   if (kind === 'tower') return new CaptureRule(m);
   if (kind === 'rounds') return new RoundsRule(m);
   if (kind === 'relic') return new RelicRule(m);
