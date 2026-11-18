@@ -15,3 +15,9 @@
 - 其他鏡子：Dragunov 13、K14 winter 14、Kar98k 15、PM2 16（`mic_ScopeView_01`）、PM50 17（`_03`）。
 - 匯出：UModel `-export -png common_sight` 匯出到 `tools/out/sf2/reticle/common_sight/`。對照圖在 `tools/out/sniper_reticles.png`。
 - 尚未查明：`SightType` 編號（12、18、21…）可能決定鏡筒外框或倍率，還沒找到用它的程式碼。
+
+## 2026-11-18 補充：開鏡畫面的組成、開鏡靈敏度
+- 開鏡畫面＝鏡子零件的 `ScopeMesh`（`sni_scope_zin` 或 `sni_scope_a`，3D 鏡身）＋ `common_sight.skm_SightCrosshair`（巴雷特另有 `skm_SightCrosshair_barret`）蓋在畫面上，材質 `mat_Scope_Reticle_lv1` 用 `tex_scope_Circle_Alpha` 當圓形遮罩，十字貼圖換 `Reticle` 參數。所以各槍開鏡的差別就是十字（上表），外框圓形都一樣；遊戲的 `sf2Reticle`（mil / mil1 / mil3 / zeiss / bender）已經照這張表。
+- `Scope_Reticle_01/02/04/05/steampunk` 是造型槍的鏡子（屬性繼承自原型類別，這次的讀法讀不到是哪幾把）。
+- 狙擊槍基底 `fLagSpeed 0`、AWP `vLagMaxDegreeWhenZoomed 0`：開鏡時沒有武器延遲；`fBobDecRateForZoom 0.1`：開鏡晃動剩 10%。
+- 靈敏度：`PlayerInput.PlayerInput` → `FOVScale = GetFOVAngleForMouseSensitivity() / FOVScalingBasis(90)`；`SFPlayerInput.AdjustMouseSensitivity`：開鏡且勾選「開鏡靈敏度」時 × `MouseSensitivityinZoom × FOVScale`。

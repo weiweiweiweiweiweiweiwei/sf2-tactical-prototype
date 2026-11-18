@@ -131,7 +131,6 @@ class NetHost {
     else if (d.k === 'leave') this._drop(from, '離開了房間');
     else if (d.k === 'loadout') { const np = this.peers.get(from); if (np) np.nextLoadout = NetPlayer.validLoadout(d, np.game && np.game.gunSet); }
     else if (d.k === 'ping') { this.t.send(from, { k: 'pong', t: d.t }); const np = this.peers.get(from); if (np) np.heardT = this.m.time; }
-    else if (d.k === 'rule') { const np = this.peers.get(from); if (np && this.m.rules.netMsg) try { this.m.rules.netMsg(np, d); } catch (e) { console.warn('[net] rule msg', e); } } // v67p
   }
   get players() { return 1 + this.peers.size; }
   _balance() { const n = (t) => this.m.combatants.filter((c) => !c.isBot && c.team === t).length; return n('bravo') <= n('alpha') ? 'bravo' : 'alpha'; }
@@ -140,7 +139,7 @@ class NetHost {
     const m = this.m;
     if (!this.peers.has(from)) {
       if (m.phase === 'over') { this.t.send(from, { k: 'reject', why: '這場對戰已經結束' }); return; } // v29: every mode works online
-      const team = m.rules.coop ? 'alpha' : d.team === 'alpha' || d.team === 'bravo' ? d.team : this._balance(); // (v67p co-op: everyone on Blue)
+      const team = d.team === 'alpha' || d.team === 'bravo' ? d.team : this._balance();
       const bot = m.bots.filter((b) => b.team === team).pop(); if (bot) this._removeBot(bot); // a friend takes a bot's place
       const np = new NetPlayer(m, team, safeName(d.name, 'Friend'), from, d);
       np.netId = ++m.netSeq; np.heardT = m.time; m.humans.push(np); m.combatants.push(np); this.peers.set(from, np);
@@ -155,7 +154,7 @@ class NetHost {
       cfg: { map: c.map, mode: c.mode, rule: c.rule, ruleCfg: c.ruleCfg, difficulty: c.difficulty, allies: c.allies, enemies: c.enemies, opts: c.opts }, // v58: room options too (damage model, ff, pickup)
       roster: m.combatants.filter((x) => x !== np && !x.removed).map((x) => this._info(x)), phase: m.phase, time: m.time });
   }
-  _info(c) { const def = c.isPlayer ? this.m.weapons.current.def : c.def; return { id: c.netId, team: c.team, name: c.name, kind: c.isBot ? 'bot' : 'human', w: NET_WI[def.id] ?? 0, z: c.zombie ? (c.brute ? 2 : 1) : 0 }; }
+  _info(c) { const def = c.isPlayer ? this.m.weapons.current.def : c.def; return { id: c.netId, team: c.team, name: c.name, kind: c.isBot ? 'bot' : 'human', w: NET_WI[def.id] ?? 0 }; }
   _removeBot(b) {
     const m = this.m; b.removed = true; b.alive = false; b.respawnT = Infinity; m.scene.remove(b.model.root); if (b.tag) m.scene.remove(b.tag); if (b.glint) m.scene.remove(b.glint);
     m.bots.splice(m.bots.indexOf(b), 1); m.combatants.splice(m.combatants.indexOf(b), 1);
@@ -300,7 +299,6 @@ class NetClient {
     else if (d.k === 'roster') { if (d.add) this._ghost(d.add); if (d.remove) this._unghost(d.remove); }
     else if (d.k === 'round') { if (d.ev === 'start') m.clientRoundStart(d.n | 0); else if (d.ev === 'end') m.clientRoundEnd(d.w === 'alpha' || d.w === 'bravo' ? d.w : null, String(d.why || '').slice(0, 30)); }
     else if (d.k === 'mech') { const mc = m.builder.mechs[0]; if (mc) mc.applyNet(d.s); } // v46 trams / drawbridge
-    else if (d.k === 'rule') { if (m.rules.clientMsg) try { m.rules.clientMsg(d); } catch (e) { console.warn('[net] rule msg', e); } } // v67p
     else if (d.k === 'nade') m.clientNade(d);
     else if (d.k === 'boom') m.clientBoom(d);
     else if (d.k === 'drop') m.clientDrop(d);

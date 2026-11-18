@@ -825,7 +825,6 @@ class App {
       if (fk && m && (this.state === 'playing' || this.state === 'paused')) { m.queueLoadout(parseInt(fk[1], 10) - 1); return; } // works while dead too
       if (code === 'F4' && m && (this.state === 'playing' || this.state === 'paused')) { m.toggleAIDebug(); return; } // v63a
       if (this.state === 'playing' && m && (code === 'Enter' || code === 'NumpadEnter') && this.room && this.room.online) { this.openChat(false); return; } // v31: chat (Tab in the box: team only)
-      if (this.state === 'playing' && m && m.rules.onKey && m.rules.onKey(code)) return; // v67p
       if (this.state !== 'playing' || !m || !m.player.alive) return;
       const C = this.cmds, dg = /^Digit([1-9])$/.exec(code);
       if (code === 'Space') C.press(BTN.JUMP);

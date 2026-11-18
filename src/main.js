@@ -23,7 +23,6 @@ import './12c_netutil.js';
 import './11_weaponsystem.js';
 import './12_player.js';
 import './13_bots.js';
-import './13c_zombies.js';
 import './13b_netplayers.js';
 import './14b_emblems.js';
 import './14c_aidebug.js';

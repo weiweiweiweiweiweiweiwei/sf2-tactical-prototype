@@ -111,7 +111,7 @@ class Human extends Combatant {
   fixedUpdate(h, cmd) {
     const m = this.motor, P = CFG.player, g = this.game;
     if (!this.alive) { m.step(h, 0, 0, 0); this.holdE = false; return; }
-    const frozen = !g.canMove() || !!this.downed, btn = frozen ? (this.downed && g.canMove() ? cmd.btn & BTN.USE : 0) : cmd.btn; // (v67p downed: still, low)
+    const frozen = !g.canMove(), btn = frozen ? 0 : cmd.btn;
     this.holdE = g.canAct() && !!(btn & BTN.USE);
     const traversal = !!g.def.traversal;
     if (m.grounded || m.climbing) this.airJumpUsed = false;
@@ -141,7 +141,7 @@ class Human extends Combatant {
     // ladders: W/S drive the vertical axis (facing away from the ladder inverts W, so walking off the top climbs down)
     const lad = g.collision.ladders.length ? g.collision.ladderAt(m.pos.x, m.pos.y, m.pos.z, m.radius) : null;
     if (lad) { const facing = -s * -lad.nx + -c * -lad.nz; m.climbInput = f * (facing < -0.3 ? -1 : 1); } else m.climbInput = 0;
-    const crouchKey = !!(btn & BTN.CROUCH) || !!this.downed;
+    const crouchKey = !!(btn & BTN.CROUCH);
     // v59: no slide (user: SF2 has none) — crouch is crouch, also while sprinting
     m.setCrouch(crouchKey);
     const shift = !!(btn & BTN.SPRINT);
@@ -198,7 +198,12 @@ class Player extends Human {
     if (!this.alive) return;
     const ws = this.game.weapons, cam = this.game.camera;
     let k = Settings.data.sens * 0.022 * THREE.MathUtils.DEG2RAD;
-    if (ws.ads) k *= Math.tan(THREE.MathUtils.degToRad(cam.fov / 2)) / Math.tan(THREE.MathUtils.degToRad(ws.baseFov / 2)) * Settings.data.zoomSens;
+    // v67q SF2 (PlayerInput.PlayerInput: FOVScale = FOV / FOVScalingBasis 90, linear in the HORIZONTAL fov; SFPlayerInput.AdjustMouseSensitivity
+    // × MouseSensitivityinZoom when zoomed — our zoomSens): aimed / scoped turns at hip × zoom hfov / 90 (was a tan ratio against our vertical
+    // 75°, ≈ 38–45 % slower than SF2 through a sniper scope — user 11-18 "scoped side to side feels off")
+    // (snipers only for now: the rifles' aimed speed would rise ≈ 60 % too — the user's call, docs/TODO.md)
+    if (ws.ads && ws.current.scoped) { const hf = 2 * Math.atan(Math.tan(THREE.MathUtils.degToRad(cam.fov / 2)) * cam.aspect); k *= Math.min(1, THREE.MathUtils.radToDeg(hf) / 90) * Settings.data.zoomSens; }
+    else if (ws.ads) k *= Math.tan(THREE.MathUtils.degToRad(cam.fov / 2)) / Math.tan(THREE.MathUtils.degToRad(ws.baseFov / 2)) * Settings.data.zoomSens;
     // SPRAY CONTROL: pulling the mouse against the recoil first cancels the recoil offset (so the view does not
     // sink below your target when the recoil recovers after you let go); any extra movement aims normally.
     let dp = -dy * k, dyaw = -dx * k;
