@@ -17277,12 +17277,15 @@ var Sf2Riser = class {
   constructor(b, mesh, R) {
     this.m = b.game;
     this.col = b.col;
-    this.mesh = mesh;
+    this.meshes = [].concat(mesh);
     this.R = R;
     this.t = 0;
     this.y = 0;
-    mesh.geometry.computeBoundingBox();
-    const bb = mesh.geometry.boundingBox;
+    const bb = new THREE.Box3();
+    for (const ms of this.meshes) {
+      ms.geometry.computeBoundingBox();
+      bb.union(ms.geometry.boundingBox);
+    }
     this.box = b.col.addBox(bb.min.clone(), bb.max.clone().setY(bb.max.y - 0.04), { material: "metal", surface: "metal" });
   }
   _at(t) {
@@ -17295,7 +17298,10 @@ var Sf2Riser = class {
     const y = this._at(this.t), d = y - this.y;
     if (Math.abs(d) < 1e-5) return;
     this.y = y;
-    this.mesh.position.y = y;
+    for (const ms of this.meshes) {
+      ms.position.y = y;
+      ms.updateMatrix();
+    }
     this.col.moveBox(this.box, 0, d, 0);
     const B = this.box;
     for (const c of m.combatants || []) {
@@ -17520,9 +17526,27 @@ function sf2TriMap(def) {
       sf2Ladders(b, ladders, def.ladderNav);
       for (const list of groups.values()) b.scene.add(sf2Merge(list, this._s2.lm, def));
       if (riser.length) {
-        const rm = sf2Merge(riser, this._s2.lm, def);
-        b.scene.add(rm);
-        b.mechs.push(new Sf2Riser(b, rm, def.riser));
+        const byMat = /* @__PURE__ */ new Map();
+        for (const r of riser) (byMat.get(r.m.material.uuid) || byMat.set(r.m.material.uuid, []).get(r.m.material.uuid)).push(r);
+        const fb = def.lmFallback || [0.5, 0.5, 0.5], parts = [];
+        for (const list of byMat.values()) {
+          const rm = sf2Merge(list, this._s2.lm, def), G = rm.geometry;
+          b.scene.add(rm);
+          parts.push(rm);
+          for (const [k, v] of [["lmN", fb], ["lmM", [1, 1, 1]]]) {
+            const A = G.getAttribute(k);
+            if (A) {
+              for (let n = 0; n < A.count; n++) A.setXYZ(n, v[0], v[1], v[2]);
+              A.needsUpdate = true;
+            }
+          }
+          const T = G.getAttribute("lmT");
+          if (T) {
+            T.array.fill(0);
+            T.needsUpdate = true;
+          }
+        }
+        b.mechs.push(new Sf2Riser(b, parts, def.riser));
       }
       for (const t of this._s2.terrains || []) b.scene.add(t);
       if (this._s2.meta.decals) for (const m of sf2Decals(this._s2.meta.decals.list, this._s2.dtex)) b.scene.add(m);

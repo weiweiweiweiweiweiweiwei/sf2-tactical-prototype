@@ -251,8 +251,8 @@ function sf2Decals(list, dtex) {
    Counted from the start of play like CaptureRule's opening; the host's clock is sent to clients (the 'mech' message). */
 class Sf2Riser {
   constructor(b, mesh, R) {
-    this.m = b.game; this.col = b.col; this.mesh = mesh; this.R = R; this.t = 0; this.y = 0;
-    mesh.geometry.computeBoundingBox(); const bb = mesh.geometry.boundingBox;
+    this.m = b.game; this.col = b.col; this.meshes = [].concat(mesh); this.R = R; this.t = 0; this.y = 0;
+    const bb = new THREE.Box3(); for (const ms of this.meshes) { ms.geometry.computeBoundingBox(); bb.union(ms.geometry.boundingBox); }
     this.box = b.col.addBox(bb.min.clone(), bb.max.clone().setY(bb.max.y - 0.04), { material: 'metal', surface: 'metal' });
   }
   _at(t) { // Hermite: rest → dy, the end tangent the Matinee's (×dur)
@@ -262,7 +262,7 @@ class Sf2Riser {
   tick(h) {
     const m = this.m; if (m.phase === 'live' && !m.isClient) this.t += h;
     const y = this._at(this.t), d = y - this.y; if (Math.abs(d) < 1e-5) return;
-    this.y = y; this.mesh.position.y = y; this.col.moveBox(this.box, 0, d, 0);
+    this.y = y; for (const ms of this.meshes) { ms.position.y = y; ms.updateMatrix(); } this.col.moveBox(this.box, 0, d, 0); // (sf2Merge's meshes are matrixAutoUpdate false — v67w: it moved in code, not on screen)
     const B = this.box; // whoever stands on its top goes up with it
     for (const c of m.combatants || []) { const p = c.alive && c.motor && c.motor.pos; if (p && p.x > B.min.x - 0.3 && p.x < B.max.x + 0.3 && p.z > B.min.z - 0.3 && p.z < B.max.z + 0.3 && p.y < B.max.y && p.y > B.max.y - 1.3) p.y = B.max.y; }
   }
@@ -390,7 +390,17 @@ function sf2TriMap(def) {
       // material and sheet (nothing raycasts the drawn map: shots and bodies use the triangle soup)
       sf2Ladders(b, ladders, def.ladderNav);
       for (const list of groups.values()) b.scene.add(sf2Merge(list, this._s2.lm, def));
-      if (riser.length) { const rm = sf2Merge(riser, this._s2.lm, def); b.scene.add(rm); b.mechs.push(new Sf2Riser(b, rm, def.riser)); }
+      if (riser.length) { // (v67w one merged mesh per material — the console's body and its screen; all of them rise together)
+        const byMat = new Map(); for (const r of riser) (byMat.get(r.m.material.uuid) || byMat.set(r.m.material.uuid, []).get(r.m.material.uuid)).push(r);
+        const fb = def.lmFallback || [0.5, 0.5, 0.5], parts = [];
+        for (const list of byMat.values()) {
+          const rm = sf2Merge(list, this._s2.lm, def), G = rm.geometry; b.scene.add(rm); parts.push(rm);
+          // its bake was made down in its pit (black): lit by the map's mean light instead
+          for (const [k, v] of [['lmN', fb], ['lmM', [1, 1, 1]]]) { const A = G.getAttribute(k); if (A) { for (let n = 0; n < A.count; n++) A.setXYZ(n, v[0], v[1], v[2]); A.needsUpdate = true; } }
+          const T = G.getAttribute('lmT'); if (T) { T.array.fill(0); T.needsUpdate = true; }
+        }
+        b.mechs.push(new Sf2Riser(b, parts, def.riser));
+      }
       for (const t of this._s2.terrains || []) b.scene.add(t);
       if (this._s2.meta.decals) for (const m of sf2Decals(this._s2.meta.decals.list, this._s2.dtex)) b.scene.add(m);
     },
