@@ -1063,10 +1063,16 @@ const RULES = {
 };
 const FREEZE_TIME = 5;
 
+// v67v SF2's own four AI levels (docs/research/sf2/bot-ai.md, user 11-24 1A): BattleLevel 0–3 indexes its tables —
+// aimErr = 0.04 × SpreadAdjust (2.0 / 1.2 / 0.7 / 0.3); reactBy = SFAggroSystem.AwaitDefList near / mid / far (s, bands at SF2's
+// EnemyDistance_Short 6.5 m / _Medium 14 m); chase = AggroChaseTime (s a lost target is still hunted); hear = AINoiseLevelList;
+// turn ∝ √BattleRotationRate (1 / 2 / 4 / 8, ours 6 at level 1); tactic = TacticMoveDelays (a planted beat before each new stride,
+// base ± variation). react = the mid wait (other uses: melee, re-engage). The rest are ours, carried over and extended to level 4.
 const DIFFICULTY = [
-  { name: '簡單', react: 0.7, aimErr: 0.07, headChance: 0.03, turn: 4.0, burst: [2, 4], burstGap: [0.6, 1.0], strafe: 0.0, view: 42, nade: 0.12, settle: 1.1, track: 4 },
-  { name: '普通', react: 0.45, aimErr: 0.048, headChance: 0.08, turn: 6.0, burst: [3, 5], burstGap: [0.4, 0.75], strafe: 0.5, view: 55, nade: 0.25, settle: 0.8, track: 7 },
-  { name: '困難', react: 0.28, aimErr: 0.032, headChance: 0.15, turn: 9.0, burst: [3, 6], burstGap: [0.28, 0.55], strafe: 1.0, view: 75, nade: 0.4, settle: 0.55, track: 11 },
+  { name: '簡單', react: 0.8, reactBy: [0.6, 0.8, 1.0], chase: 7, hear: 0.8, tactic: [1.0, 0.5], aimErr: 0.08, headChance: 0.03, turn: 4.2, burst: [2, 4], burstGap: [0.6, 1.0], strafe: 0.0, view: 42, nade: 0.12, settle: 1.1, track: 4 },
+  { name: '普通', react: 0.6, reactBy: [0.4, 0.6, 0.8], chase: 10, hear: 1.0, tactic: [0.2, 0.1], aimErr: 0.048, headChance: 0.08, turn: 6.0, burst: [3, 5], burstGap: [0.4, 0.75], strafe: 0.5, view: 55, nade: 0.25, settle: 0.8, track: 7 },
+  { name: '困難', react: 0.4, reactBy: [0.2, 0.4, 0.6], chase: 14, hear: 1.2, tactic: [0.1, 0.1], aimErr: 0.028, headChance: 0.15, turn: 8.5, burst: [3, 6], burstGap: [0.28, 0.55], strafe: 1.0, view: 75, nade: 0.4, settle: 0.55, track: 11 },
+  { name: '專家', react: 0.2, reactBy: [0.1, 0.2, 0.4], chase: 18, hear: 1.5, tactic: [0, 0], aimErr: 0.012, headChance: 0.22, turn: 12, burst: [4, 7], burstGap: [0.22, 0.45], strafe: 1.2, view: 85, nade: 0.5, settle: 0.4, track: 14 },
 ];
 
 const TIPS = [

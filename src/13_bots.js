@@ -201,7 +201,7 @@ class BotAI {
   hear(pos, radius, kind = 'noise') {
     if (!this.bot.alive || this.state === 'ENGAGE' || this.state === 'MELEE' || this.state === 'COVER' || this.state === 'FLANK' || this.bot.carrying) return;
     const d = this.bot.motor.pos.distanceTo(pos);
-    if (d > radius || (this.state === 'OBJECTIVE' && d > 22)) return; // on an objective run, only nearby contacts matter
+    if (d > radius * (this.D.hear || 1) || (this.state === 'OBJECTIVE' && d > 22)) return; // on an objective run, only nearby contacts matter (v67v × SF2's AINoiseLevelList)
     const err = clamp(d * (kind === 'step' ? 0.2 : 0.3), 1.2, 12), a = Math.random() * Math.PI * 2, r = err * Math.sqrt(Math.random());
     const est = new THREE.Vector3(pos.x + Math.cos(a) * r, pos.y, pos.z + Math.sin(a) * r);
     if (this.state === 'INVESTIGATE' && this.goal && this.goal.distanceTo(est) < 6) return;
@@ -308,7 +308,8 @@ class BotAI {
     if (!found) return;
     if (found !== this.target || (this.state !== 'ENGAGE' && this.state !== 'MELEE' && this.state !== 'COVER')) {
       const dist = bot.motor.pos.distanceTo(found.motor.pos), moving = found.motor.horizontalSpeed() > 2 ? 0.85 : 1.15, crouch = found.motor.crouching ? 1.15 : 1;
-      this.reactT = this.D.react * rand(0.8, 1.3) * moving * crouch + dist * 0.005; this.engageT = 0; this.burstLeft = 0; this.burstGapT = 0; this.settleT = this.D.settle * rand(0.8, 1.2);
+      const RB = this.D.reactBy, w = RB ? RB[dist < 6.5 ? 0 : dist < 14 ? 1 : 2] : this.D.react + dist * 0.005; // (v67v SF2's wait by range)
+      this.reactT = w * rand(0.85, 1.2) * moving * crouch; this.engageT = 0; this.burstLeft = 0; this.burstGapT = 0; this.settleT = this.D.settle * rand(0.8, 1.2);
       if (dist > 9 && dist < 26 && Math.random() < this.D.nade * 0.6) { this.lastKnown.copy(found.motor.pos); this._maybeNade(true); }
     }
     this.target = found; this.lastKnown.copy(found.motor.pos); this.lastSeenT = g.time; this.nadeChecked = false; this.pendingSound = null;
@@ -469,7 +470,11 @@ class BotAI {
         break;
       case 'SEARCH':
         this.wishX = this.wishZ = this.wishSpeed = 0; this._scan(dt, 1.4);
-        this.searchT -= dt; if (this.searchT <= 0) { this.state = 'PATROL'; this.path = []; this.goal = null; }
+        this.searchT -= dt;
+        if (this.searchT <= 0) { // v67v SF2's AggroChaseTime: a target lost less than D.chase s ago is still hunted (toward where he is now)
+          const t = this.target; if (t && t.alive && this.goalKind === 'lost' && this.game.time - this.lastSeenT < (this.D.chase || 0)) { this.lastKnown.copy(t.motor.pos); this.state = 'INVESTIGATE'; this.setPath(this.lastKnown, false); }
+          else { this.state = 'PATROL'; this.path = []; this.goal = null; }
+        }
         break;
       case 'RIDE': if (!this.ride || !this.ride.step(this, dt)) { this.ride = null; this.state = 'PATROL'; this.path = []; this.goal = null; } break;
       case 'MELEE': this._melee(dt); break;
@@ -548,12 +553,14 @@ class BotAI {
           const plant = this.strafeDir !== 0 && Math.random() < 0.25;
           this.strafeT = (plant ? rand(0.5, 1.1) : rand(0.8, 1.8)) * (kind === 'sniper' ? 1.5 : 1);
           this.strafeDir = plant ? 0 : this.lastStrafe && Math.random() < 0.5 ? this.lastStrafe : -(this.lastStrafe || (Math.random() < 0.5 ? -1 : 1));
+          const TD = this.D.tactic; if (TD && TD[0] > 0 && this.strafeDir) this.tacticT = Math.max(0, TD[0] + TD[1] * Math.random() * (Math.random() < 0.5 ? -1 : 1)); // v67v SF2's TacticMoveDelays: a beat before each new stride
           if (this.strafeDir) this.lastStrafe = this.strafeDir;
         }
         const sx = Math.cos(bot.yaw) * this.strafeDir, sz = -Math.sin(bot.yaw) * this.strafeDir, want = (rMin + rMax) / 2, radial = clamp((dist - want) / want, -0.45, 0.45);
         let wx = sx - Math.sin(bot.yaw) * radial, wz = sz - Math.cos(bot.yaw) * radial; const wl = Math.hypot(wx, wz) || 1; wx /= wl; wz /= wl;
         const av = this._avoidance(wx, wz);
-        this.wishX = wx + av.x; this.wishZ = wz + av.z; this.wishSpeed = this.strafeDir === 0 ? (Math.abs(radial) > 0.3 ? 1.2 : 0) : kind === 'sniper' ? 1.2 : 1.8 + D.strafe * 1.4; // v63b strafe m/s: easy 1.8, normal 2.5, hard 3.2 (spec: ≥ 2.5)
+        if (this.tacticT > 0) { this.tacticT -= dt; wx = wz = 0; }
+        this.wishX = wx + av.x; this.wishZ = wz + av.z; this.wishSpeed = this.tacticT > 0 ? 0 : this.strafeDir === 0 ? (Math.abs(radial) > 0.3 ? 1.2 : 0) : kind === 'sniper' ? 1.2 : 1.8 + D.strafe * 1.4; // v63b strafe m/s: easy 1.8, normal 2.5, hard 3.2 (spec: ≥ 2.5)
       }
       this.reactT -= dt;
       if (dist < 1.4 && this.meleeCd <= 0 && this.reactT <= 0) { this.meleeCd = 1.3; if (Math.random() < 0.65) this._grab(t); }
