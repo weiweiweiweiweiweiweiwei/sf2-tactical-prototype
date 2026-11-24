@@ -2171,3 +2171,4 @@
 ### v67s（本機，2026-11-24）：網站圖示改用爪痕 logo
 - 使用者 11-24：先畫了 20 款左輪彈巢（`assets/logo/concepts/`），再改成爪痕 12 款（`assets/logo/claw/`，透明底，總覽框內用 Chrome 深色書籤列的 `#35363a` 模擬）。選定 **CL10 冰藍**（`#e3f6ff → #4facfe`）。
 - 套用：`assets/favicon.svg`，加上 `favicon-32.png`、`favicon-180.png`（Apple 觸控圖示）、`favicon-512.png`；`src/00_head.html` 加 icon 連結。產生程式 `tools/logo/make_claw.py`、`tools/logo/png.mjs`。
+- （同日，使用者：「放大到頂天立地」）`assets/favicon.svg` 的畫布裁到四道爪痕的外框（viewBox 136 130 723.4²，原本 1000²），圖案佔滿圖示，PNG 重新產生。
