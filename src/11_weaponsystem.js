@@ -394,7 +394,7 @@ class WeaponSystem extends Arsenal {
       const kx = lerp(1, dx, this.adsT), kz = lerp(1, dz, this.adsT);
       bx = Math.sin(mux * this.sf2BobT) * wid / 100 * this.bobAmt * kx; by = Math.sin(2 * mux * this.sf2BobT) * hgt / 100 * this.bobAmt * kz;
     }
-    const swayK = 1 - this.adsT * 0.75;
+    const swayK = 1 - this.adsT; // v67u SF2: every gun class has fLagSpeed 0 (no weapon lag) — aimed, the sight stays centred (was 25 % of the hip sway: a reflex dot swung ≈ 75 px on a fast turn, user 11-24)
     this.swayX = damp(this.swayX, clamp(-mouse.x * 0.00032, -0.035, 0.035) * swayK, 9, dt);
     this.swayY = damp(this.swayY, clamp(mouse.y * 0.00032, -0.035, 0.035) * swayK, 9, dt);
     const localX = m.vel.x * Math.cos(p.yaw) - m.vel.z * Math.sin(p.yaw);

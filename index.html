@@ -22488,7 +22488,7 @@ var WeaponSystem = class extends Arsenal {
       bx = Math.sin(mux * this.sf2BobT) * wid / 100 * this.bobAmt * kx;
       by = Math.sin(2 * mux * this.sf2BobT) * hgt / 100 * this.bobAmt * kz;
     }
-    const swayK = 1 - this.adsT * 0.75;
+    const swayK = 1 - this.adsT;
     this.swayX = damp(this.swayX, clamp(-mouse.x * 32e-5, -0.035, 0.035) * swayK, 9, dt);
     this.swayY = damp(this.swayY, clamp(mouse.y * 32e-5, -0.035, 0.035) * swayK, 9, dt);
     const localX = m.vel.x * Math.cos(p.yaw) - m.vel.z * Math.sin(p.yaw);
