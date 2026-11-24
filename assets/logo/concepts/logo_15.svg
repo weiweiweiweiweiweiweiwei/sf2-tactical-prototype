@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" width="1000" height="1000">
+<defs><mask id="m15" maskUnits="userSpaceOnUse" x="0" y="0" width="1000" height="1000"><rect width="1000" height="1000" fill="#000"/><polygon points="633.9,176.6 823.4,366.1 823.4,633.9 633.9,823.4 366.1,823.4 176.6,633.9 176.6,366.1 366.1,176.6" fill="#fff"/><circle cx="500.0" cy="290.0" r="59.5" fill="#000"/><circle cx="648.5" cy="351.5" r="59.5" fill="#000"/><circle cx="710.0" cy="500.0" r="59.5" fill="#000"/><circle cx="648.5" cy="648.5" r="59.5" fill="#000"/><circle cx="500.0" cy="710.0" r="59.5" fill="#000"/><circle cx="351.5" cy="648.5" r="59.5" fill="#000"/><circle cx="290.0" cy="500.0" r="59.5" fill="#000"/><circle cx="351.5" cy="351.5" r="59.5" fill="#000"/><polygon points="551.5,500.0 525.7,544.6 474.3,544.6 448.6,500.0 474.3,455.4 525.7,455.4" fill="#000"/></mask></defs>
+<rect width="1000" height="1000" fill="#ffffff"/>
+<g mask="url(#m15)"><rect width="1000" height="1000" fill="#3d3d3d"/></g>
+</svg>

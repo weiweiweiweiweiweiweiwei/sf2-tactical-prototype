@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" width="1000" height="1000">
+<defs><mask id="m3" maskUnits="userSpaceOnUse" x="0" y="0" width="1000" height="1000"><rect width="1000" height="1000" fill="#000"/><circle cx="500.0" cy="500.0" r="330.0" fill="#fff"/><circle cx="686.8" cy="176.5" r="103.0" fill="#000"/><circle cx="873.6" cy="500.0" r="103.0" fill="#000"/><circle cx="686.8" cy="823.5" r="103.0" fill="#000"/><circle cx="313.2" cy="823.5" r="103.0" fill="#000"/><circle cx="126.4" cy="500.0" r="103.0" fill="#000"/><circle cx="313.2" cy="176.5" r="103.0" fill="#000"/><circle cx="500.0" cy="318.5" r="66.0" fill="#000"/><circle cx="657.2" cy="409.2" r="66.0" fill="#000"/><circle cx="657.2" cy="590.8" r="66.0" fill="#000"/><circle cx="500.0" cy="681.5" r="66.0" fill="#000"/><circle cx="342.8" cy="590.8" r="66.0" fill="#000"/><circle cx="342.8" cy="409.3" r="66.0" fill="#000"/><circle cx="500.0" cy="500.0" r="46.2" fill="#000"/></mask></defs>
+<rect width="1000" height="1000" fill="#ffffff"/>
+<g mask="url(#m3)"><rect width="1000" height="1000" fill="#1b1f24"/></g>
+</svg>

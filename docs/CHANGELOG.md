@@ -2167,3 +2167,7 @@
 - 量使用者四張 SF2 截圖：鏡片半徑 57.5vh（原本 71vh）、外緣約 93vh，四角看得到外面。十字跟著鏡片縮放（100vh → 81vh）。
 - 邊境要塞（使用者選 A）：中央機台 `TW_Satellite_Trigger_001` 開打後 119 秒起 2 秒內升起 1 m，照 Matinee 曲線；碰撞箱跟著升、站在上面的人會被抬起；主機把時間同步給用戶端。
 - 待確認：機台升起後機器人的導航沒更新（會繞或卡）；機台升起沒有音效。
+
+### v67s（本機，2026-11-24）：網站圖示改用爪痕 logo
+- 使用者 11-24：先畫了 20 款左輪彈巢（`assets/logo/concepts/`），再改成爪痕 12 款（`assets/logo/claw/`，透明底，總覽框內用 Chrome 深色書籤列的 `#35363a` 模擬）。選定 **CL10 冰藍**（`#e3f6ff → #4facfe`）。
+- 套用：`assets/favicon.svg`，加上 `favicon-32.png`、`favicon-180.png`（Apple 觸控圖示）、`favicon-512.png`；`src/00_head.html` 加 icon 連結。產生程式 `tools/logo/make_claw.py`、`tools/logo/png.mjs`。

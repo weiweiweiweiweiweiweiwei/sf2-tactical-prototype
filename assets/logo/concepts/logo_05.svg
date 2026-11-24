@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" width="1000" height="1000">
+<defs><mask id="m5" maskUnits="userSpaceOnUse" x="0" y="0" width="1000" height="1000"><rect width="1000" height="1000" fill="#000"/><circle cx="500.0" cy="500.0" r="330.0" fill="#fff"/><circle cx="703.7" cy="219.7" r="79.2" fill="#000"/><circle cx="829.5" cy="607.1" r="79.2" fill="#000"/><circle cx="500.0" cy="846.5" r="79.2" fill="#000"/><circle cx="170.5" cy="607.1" r="79.2" fill="#000"/><circle cx="296.3" cy="219.7" r="79.2" fill="#000"/><circle cx="500.0" cy="318.5" r="66.0" fill="#000"/><circle cx="672.6" cy="443.9" r="66.0" fill="#000"/><circle cx="606.7" cy="646.8" r="66.0" fill="#000"/><circle cx="393.3" cy="646.8" r="66.0" fill="#000"/><circle cx="327.4" cy="443.9" r="66.0" fill="#000"/><polygon points="500.0,439.9 514.1,480.6 557.1,481.4 522.8,507.4 535.3,548.6 500.0,524.0 464.7,548.6 477.2,507.4 442.9,481.4 485.9,480.6" fill="#000"/></mask></defs>
+<rect width="1000" height="1000" fill="#ffffff"/>
+<g mask="url(#m5)"><rect width="1000" height="1000" fill="#c8102e"/></g>
+</svg>

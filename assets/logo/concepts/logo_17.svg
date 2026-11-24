@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" width="1000" height="1000">
+<defs><linearGradient id="g17" x1="0" y1="0" x2="0" y2="1"><stop offset="0.00" stop-color="#4facfe"/><stop offset="1.00" stop-color="#00184d"/></linearGradient><mask id="m17" maskUnits="userSpaceOnUse" x="0" y="0" width="1000" height="1000"><rect width="1000" height="1000" fill="#000"/><circle cx="500.0" cy="500.0" r="330.0" fill="#fff"/><circle cx="721.7" cy="194.8" r="111.5" fill="#000"/><circle cx="858.7" cy="616.6" r="111.5" fill="#000"/><circle cx="500.0" cy="877.2" r="111.5" fill="#000"/><circle cx="141.3" cy="616.6" r="111.5" fill="#000"/><circle cx="278.3" cy="194.8" r="111.5" fill="#000"/><circle cx="500.0" cy="318.5" r="66.0" fill="#000"/><circle cx="672.6" cy="443.9" r="66.0" fill="#000"/><circle cx="606.7" cy="646.8" r="66.0" fill="#000"/><circle cx="393.3" cy="646.8" r="66.0" fill="#000"/><circle cx="327.4" cy="443.9" r="66.0" fill="#000"/><circle cx="500.0" cy="500.0" r="46.2" fill="#000"/></mask></defs>
+<rect width="1000" height="1000" fill="#ffffff"/>
+<g mask="url(#m17)"><rect width="1000" height="1000" fill="url(#g17)"/></g>
+</svg>
