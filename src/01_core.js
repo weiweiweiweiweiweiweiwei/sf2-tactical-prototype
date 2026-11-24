@@ -93,18 +93,6 @@ const WEAPON_DATABASE = {
       domDefault: 0.25, domZoomDefault: 0, domInc: 0.13, domMax: 2, domMin: 0.1, domDec: 6, maxMovingValue: 0.7, mulValueRun: 0.8, mulValueJump: 6,
       zoomMod: 0.6, crouchMod: 0.9 },
   },
-  g36c: {
-    name: 'G36C 黃金 消音', type: 'assault', slot: 'primary', damageNear: 25, damageFar: 19, falloffStart: 25, falloffEnd: 60, fireRate: 0.08,
-    recoilPitch: 0.011, recoilYaw: 0.012, recoilRecovery: 10,
-    hipSpread: 0.07, adsSpread: 0.0018, adsFov: 42, vmAdsFov: 17, adsVertical: 0.075, adsType: 'red_dot', mobility: 0.95, maxAmmo: 30, reloadTime: 2.0, modelUrl: null,
-    model: 'g36c', sound: 'g36s', suppressed: true, tracerEvery: 0, penetration: 1, desc: 'EOTech 全息瞄具 + 消音器，槍聲小、不暴露雷達。',
-  },
-  g36c_gold: { // v45: the same gold G36C (Blender model) with the G36 four-prong flash hider instead of the can
-    name: 'G36C 黃金', type: 'assault', slot: 'primary', damageNear: 25, damageFar: 19, falloffStart: 25, falloffEnd: 60, fireRate: 0.08,
-    recoilPitch: 0.011, recoilYaw: 0.012, recoilRecovery: 10,
-    hipSpread: 0.07, adsSpread: 0.0018, adsFov: 42, vmAdsFov: 17, adsVertical: 0.075, adsType: 'red_dot', mobility: 0.95, maxAmmo: 30, reloadTime: 2.0, modelUrl: null,
-    model: 'g36c', sound: 'g36', tracerEvery: 2, penetration: 1, desc: 'EOTech 全息瞄具 + 四叉消焰器，5.56 清脆槍聲，開火會上敵方雷達。',
-  },
   // v62h Special Force 2's own (black) G36C, its flip-up iron sight on the 'Sight' socket; timing / recoil from Default__SFCWeaponG36C.
   // Damage on the balance rules, as the gold ones.
   g36c_sf2: {
@@ -117,12 +105,6 @@ const WEAPON_DATABASE = {
       zoomMod: 0.35, crouchMod: 0.9 },
     sf2ZoomIn: [2.4, -0.002, 0.3], sf2ReloadSounds: [[0.12, 'magout'], [0.32, 'magin'], [0.76, 'charge']], sf2ReloadAnim: 2.5, // v64m SF2's ReloadBlendTime (the Reload clip's length; rounds in at reloadTime)
     desc: 'SF2 原版 G36C：5.56mm、輕巧，後座力小、開鏡穩，翻轉式機械瞄具。',
-  },
-  mp5: {
-    name: 'MP5', type: 'smg', slot: 'primary', damageNear: 25, damageFar: 16, falloffStart: 10, falloffEnd: 35, fireRate: 0.07,
-    recoilPitch: 0.008, recoilYaw: 0.008, recoilRecovery: 12,
-    hipSpread: 0.055, adsSpread: 0.003, adsFov: 58, adsType: '3d_sight', mobility: 1.02, maxAmmo: 30, reloadTime: 2.0, modelUrl: null,
-    model: 'mp5', sound: 'mp5', range: 170, tracerEvery: 3, desc: '經典衝鋒槍，腰射較穩定。',
   },
   mp5k: { // v62z (loop H3) Special Force 2's own MP5K (tools/sf2_rig_build.mjs mp5k): damage on the MP5's balance; timing, lenses and
     // recoil from its SF2 class (SF2_WEAPONS below, tools/sf2_weapon_table.py)
@@ -143,12 +125,6 @@ const WEAPON_DATABASE = {
     hipSpread: 0.11, adsSpread: 0.075, adsFov: 65, adsType: 'none', mobility: 0.9, maxAmmo: 8, reloadTime: 3.5, modelUrl: null,
     model: 'm870', sound: 'm870', range: 60, shellReload: 0.44, tracerEvery: 0, desc: '泵動式散彈槍，8 顆彈丸，貼身一槍致命。',
   },
-  m249: {
-    name: 'M249', type: 'lmg', slot: 'primary', damageNear: 28, damageFar: 21, falloffStart: 30, falloffEnd: 80, fireRate: 0.075,
-    recoilPitch: 0.011, recoilYaw: 0.014, recoilRecovery: 8,
-    hipSpread: 0.09, adsSpread: 0.004, adsFov: 55, adsType: '3d_sight', mobility: 0.8, maxAmmo: 100, reloadTime: 5.5, modelUrl: null,
-    model: 'm249', sound: 'm249', penetration: 2, range: 300, adsSpeed: 10, reserveMult: 2, tracerEvery: 2, desc: '輕機槍：100 發彈鏈，換彈慢、移動慢。',
-  },
   cheytac_m200: {
     name: 'CheyTac M200', type: 'sniper', slot: 'primary', damageNear: 120, damageFar: 105, falloffStart: 60, falloffEnd: 200, fireRate: 1.2,
     recoilPitch: 0.075, recoilYaw: 0.01, recoilRecovery: 5,
@@ -168,11 +144,6 @@ const WEAPON_DATABASE = {
     model: 'deagle', sound: 'deagle', range: 180, penetration: 1, desc: '.50 大口徑，身體 3 槍、爆頭 2 槍。',
   },
   /* ------------------------------ v5 arsenal (31 guns, ≥5 per class) ------------------------------ */
-  ak47: {
-    name: 'AK-47', type: 'assault', slot: 'primary', damageNear: 34, damageFar: 25, falloffStart: 25, falloffEnd: 60, fireRate: 0.113, recoilPitch: 0.016, recoilYaw: 0.012, recoilRecovery: 7,
-    hipSpread: 0.08, adsSpread: 0.0028, adsFov: 58, adsType: '3d_sight', mobility: 0.93, maxAmmo: 30, reloadTime: 2.4, modelUrl: null, adsSpeed: 12,
-    sound: 'ak', penetration: 2, bloomPerShot: 0.005, bloomMax: 0.032, tp: { len: 0.9, body: 'wood', mag: 'curve' }, desc: '7.62mm 重火力，後座力大、穿透強，機械瞄具。', // v53 SF2 EU wiki (unverified): RPM/reload/ADS
-  },
   // v62h Special Force 2's own AK-103 (model, animation, sounds from the user's install; timing / recoil from Default__SFCWeaponAK103,
   // docs/research/sf2/client-data). Damage on the balance rules, as the AK-47 (same 7.62 mm).
   ak103: {
@@ -493,45 +464,15 @@ const WEAPON_DATABASE = {
     hipSpread: 0.055, adsSpread: 0.003, adsFov: 58, adsType: 'red_dot', mobility: 1.0, maxAmmo: 25, reloadTime: 2.1, modelUrl: null,
     sound: 'ump', range: 150, tp: { len: 0.62, body: 'dark', mag: 'box' }, desc: '.45 大口徑衝鋒槍，單發傷害高、射速慢。',
   },
-  vector: {
-    name: 'KRISS Vector', type: 'smg', slot: 'primary', damageNear: 20, damageFar: 12, falloffStart: 10, falloffEnd: 30, fireRate: 0.052, recoilPitch: 0.0055, recoilYaw: 0.006, recoilRecovery: 15,
-    hipSpread: 0.05, adsSpread: 0.0035, adsFov: 60, adsType: 'red_dot', mobility: 1.04, maxAmmo: 25, reloadTime: 1.9, modelUrl: null,
-    sound: 'vector', range: 130, tp: { len: 0.6, body: 'dark', mag: 'box' }, desc: 'Super V 減後座系統，1150 RPM 極速但彈匣小。',
-  },
   mp7: {
     name: 'MP7A1', type: 'smg', slot: 'primary', damageNear: 22, damageFar: 15, falloffStart: 10, falloffEnd: 35, fireRate: 0.063, recoilPitch: 0.0065, recoilYaw: 0.0065, recoilRecovery: 14,
     hipSpread: 0.048, adsSpread: 0.003, adsFov: 60, adsType: 'red_dot', mobility: 1.06, maxAmmo: 40, reloadTime: 2.0, modelUrl: null,
     sound: 'mp7', range: 160, penetration: 1, tp: { len: 0.52, body: 'dark', mag: 'none' }, desc: '4.6mm 穿甲彈，體積最小、機動性最高。',
   },
-  rpk: {
-    name: 'RPK', type: 'lmg', slot: 'primary', damageNear: 30, damageFar: 22, falloffStart: 30, falloffEnd: 80, fireRate: 0.1, recoilPitch: 0.013, recoilYaw: 0.012, recoilRecovery: 8,
-    hipSpread: 0.085, adsSpread: 0.0035, adsFov: 56, adsType: '3d_sight', mobility: 0.85, maxAmmo: 75, reloadTime: 4.2, modelUrl: null,
-    sound: 'ak', rate: 0.92, penetration: 2, reserveMult: 3, tp: { len: 1.04, body: 'wood', mag: 'drum' }, desc: 'AK 系重槍管機槍，75 發彈鼓，機械瞄具。',
-  },
-  negev: {
-    name: 'Negev', type: 'lmg', slot: 'primary', damageNear: 25, damageFar: 19, falloffStart: 30, falloffEnd: 80, fireRate: 0.066, recoilPitch: 0.01, recoilYaw: 0.015, recoilRecovery: 8,
-    hipSpread: 0.095, adsSpread: 0.0045, adsFov: 54, adsType: 'red_dot', mobility: 0.8, maxAmmo: 150, reloadTime: 5.8, modelUrl: null,
-    sound: 'm249', rate: 1.08, reserveMult: 2, tp: { len: 1.0, body: 'dark', mag: 'belt' }, desc: '150 發彈鏈、900 RPM 壓制火力，左右晃動大。',
-  },
-  pkm: {
-    name: 'PKM', type: 'lmg', slot: 'primary', damageNear: 32, damageFar: 25, falloffStart: 30, falloffEnd: 90, fireRate: 0.09, recoilPitch: 0.014, recoilYaw: 0.013, recoilRecovery: 7,
-    hipSpread: 0.09, adsSpread: 0.004, adsFov: 55, adsType: '3d_sight', mobility: 0.76, maxAmmo: 100, reloadTime: 6.2, modelUrl: null,
-    sound: 'pkm', penetration: 2, reserveMult: 2, tp: { len: 1.12, body: 'dark', mag: 'belt' }, desc: '7.62×54R 通用機槍，穿透與射程最佳，非常笨重。',
-  },
-  mg42: {
-    name: 'MG42', type: 'lmg', slot: 'primary', damageNear: 26, damageFar: 19, falloffStart: 30, falloffEnd: 80, fireRate: 0.05, recoilPitch: 0.012, recoilYaw: 0.018, recoilRecovery: 7,
-    hipSpread: 0.1, adsSpread: 0.005, adsFov: 56, adsType: '3d_sight', mobility: 0.74, maxAmmo: 50, reloadTime: 5.0, modelUrl: null,
-    sound: 'mg42', penetration: 2, reserveMult: 3, tp: { len: 1.18, body: 'dark', mag: 'drum' }, desc: '「希特勒電鋸」1200 RPM，散熱槍管套，極難控制。',
-  },
   benelli_m4: {
     name: 'Benelli M4', type: 'shotgun', slot: 'primary', damageNear: 15, damageFar: 3.5, falloffStart: 5, falloffEnd: 25, pellets: 8, fireRate: 0.26, recoilPitch: 0.06, recoilYaw: 0.02, recoilRecovery: 7,
     hipSpread: 0.1, adsSpread: 0.068, adsFov: 64, adsType: '3d_sight', mobility: 0.9, maxAmmo: 7, reloadTime: 3.3, modelUrl: null,
     sound: 'm870', rate: 1.06, pump: false, shellReload: 0.45, range: 55, tracerEvery: 0, tp: { len: 0.98, body: 'dark', mag: 'none' }, desc: '半自動散彈槍（戰術版伸縮托），連發速度快。',
-  },
-  m1014: {
-    name: 'M1014', type: 'shotgun', slot: 'primary', damageNear: 16, damageFar: 3.5, falloffStart: 5, falloffEnd: 25, pellets: 8, fireRate: 0.3, recoilPitch: 0.065, recoilYaw: 0.02, recoilRecovery: 7,
-    hipSpread: 0.105, adsSpread: 0.072, adsFov: 64, adsType: '3d_sight', mobility: 0.88, maxAmmo: 8, reloadTime: 3.8, modelUrl: null,
-    sound: 'm870', rate: 1.0, pump: false, shellReload: 0.46, range: 55, tracerEvery: 0, tp: { len: 1.02, body: 'tan', mag: 'none' }, desc: 'Benelli M4 的美軍版（固定托、沙色），8 發管式彈倉。',
   },
   saiga12: {
     name: 'Saiga-12', type: 'shotgun', slot: 'primary', damageNear: 13, damageFar: 3, falloffStart: 5, falloffEnd: 22, pellets: 9, fireRate: 0.22, recoilPitch: 0.07, recoilYaw: 0.022, recoilRecovery: 7,
@@ -558,20 +499,10 @@ const WEAPON_DATABASE = {
     hipSpread: 0.12, adsSpread: 0.0, adsFov: 28, adsType: '2d_scope_overlay', mobility: 0.9, maxAmmo: 5, reloadTime: 3.0, modelUrl: null,
     sound: 'kar98', zoomFovs: [28, 14], penetration: 2, range: 400, adsSpeed: 17, tracerEvery: 1, tp: { len: 1.1, body: 'wood', mag: 'none', scope: true }, desc: '二戰木製栓動步槍，低倍鏡、開鏡快、輕巧。',
   },
-  svd: {
-    name: 'SVD Dragunov', type: 'sniper', slot: 'primary', damageNear: 60, damageFar: 50, falloffStart: 50, falloffEnd: 180, fireRate: 0.32, recoilPitch: 0.045, recoilYaw: 0.012, recoilRecovery: 7,
-    hipSpread: 0.1, adsSpread: 0.0008, adsFov: 26, adsType: '2d_scope_overlay', mobility: 0.86, maxAmmo: 10, reloadTime: 3.0, modelUrl: null,
-    sound: 'svd', bolt: false, zoomFovs: [26, 13], penetration: 2, range: 400, adsSpeed: 16, tracerEvery: 1, tp: { len: 1.2, body: 'wood', mag: 'box', scope: true }, desc: '半自動精確射手步槍：身體 2 槍、爆頭 1 槍，射速快。',
-  },
   glock18: {
     name: 'Glock 18', type: 'pistol', slot: 'secondary', damageNear: 20, damageFar: 12, falloffStart: 8, falloffEnd: 30, fireRate: 0.05, recoilPitch: 0.018, recoilYaw: 0.014, recoilRecovery: 12,
     hipSpread: 0.035, adsSpread: 0.006, adsFov: 62, adsType: '3d_sight', mobility: 1.02, maxAmmo: 20, reloadTime: 1.6, modelUrl: null,
     sound: 'p226', rate: 1.12, auto: true, range: 120, tp: { len: 0.2, body: 'dark', pistol: true }, desc: '全自動手槍，1200 RPM，爆頭 2 槍。',
-  },
-  usp: {
-    name: 'USP-S', type: 'pistol', slot: 'secondary', damageNear: 26, damageFar: 17, falloffStart: 10, falloffEnd: 35, fireRate: 0.16, recoilPitch: 0.024, recoilYaw: 0.006, recoilRecovery: 12,
-    hipSpread: 0.026, adsSpread: 0.0035, adsFov: 60, adsType: '3d_sight', mobility: 1.0, maxAmmo: 12, reloadTime: 1.7, modelUrl: null,
-    sound: 'usp', suppressed: true, range: 170, tp: { len: 0.34, body: 'dark', pistol: true }, desc: '消音手槍：安靜、不暴露雷達、最精準的副武器。',
   },
   m1911: {
     name: 'Colt M1911', type: 'pistol', slot: 'secondary', damageNear: 34, damageFar: 22, falloffStart: 10, falloffEnd: 35, fireRate: 0.2, recoilPitch: 0.04, recoilYaw: 0.01, recoilRecovery: 9,
@@ -641,16 +572,6 @@ const WEAPON_DATABASE = {
     hipSpread: 0.07, adsSpread: 0.0017, adsFov: 44, adsType: 'red_dot', mobility: 0.96, maxAmmo: 30, reloadTime: 2.6, modelUrl: null,
     sound: 'm4', rate: 1.08, penetration: 1, tp: { len: 0.78, body: 'dark', mag: 'box', bull: true }, desc: '無托步槍，槍身短、開鏡穩定。',
   },
-  pp2000: {
-    name: 'PP-2000', type: 'smg', slot: 'primary', damageNear: 21, damageFar: 14, falloffStart: 10, falloffEnd: 32, fireRate: 0.06, recoilPitch: 0.0075, recoilYaw: 0.0075, recoilRecovery: 13,
-    hipSpread: 0.05, adsSpread: 0.0035, adsFov: 60, adsType: 'red_dot', mobility: 1.07, maxAmmo: 44, reloadTime: 2.1, modelUrl: null,
-    sound: 'mp7', rate: 0.94, range: 150, tp: { len: 0.48, body: 'dark', mag: 'none' }, desc: '俄製輕量衝鋒槍，44 發長彈匣，跑打靈活。',
-  },
-  vz61: {
-    name: 'Scorpion vz.61', type: 'smg', slot: 'primary', damageNear: 19, damageFar: 12, falloffStart: 8, falloffEnd: 28, fireRate: 0.056, recoilPitch: 0.008, recoilYaw: 0.009, recoilRecovery: 13,
-    hipSpread: 0.044, adsSpread: 0.0045, adsFov: 62, adsType: '3d_sight', mobility: 1.09, maxAmmo: 20, reloadTime: 1.7, modelUrl: null,
-    sound: 'p90', rate: 1.15, range: 130, tp: { len: 0.42, body: 'dark', mag: 'none' }, desc: '蠍式衝鋒槍：極輕、射速高，彈匣小、換彈快。',
-  },
   m40a1: {
     name: 'M40A1', type: 'sniper', slot: 'primary', damageNear: 110, damageFar: 96, falloffStart: 60, falloffEnd: 200, fireRate: 1.35, recoilPitch: 0.065, recoilYaw: 0.01, recoilRecovery: 6,
     hipSpread: 0.14, adsSpread: 0.0, adsFov: 20, adsType: '2d_scope_overlay', mobility: 0.82, maxAmmo: 5, reloadTime: 3.3, modelUrl: null,
@@ -691,11 +612,6 @@ const WEAPON_DATABASE = {
     hipSpread: 0.09, adsSpread: 0.0042, adsFov: 55, adsType: '3d_sight', mobility: 0.81, maxAmmo: 100, reloadTime: 5.3, modelUrl: null,
     sound: 'm249', rate: 0.98, penetration: 2, range: 300, adsSpeed: 10, reserveMult: 2, tracerEvery: 2, tp: { len: 1.02, body: 'dark', mag: 'box' }, desc: '韓國制式輕機槍，穩定的 100 發火力。',
   },
-  aa12: {
-    name: 'AA-12', type: 'shotgun', slot: 'primary', damageNear: 11, damageFar: 2.5, falloffStart: 4, falloffEnd: 20, pellets: 8, fireRate: 0.2, recoilPitch: 0.05, recoilYaw: 0.02, recoilRecovery: 8,
-    hipSpread: 0.12, adsSpread: 0.085, adsFov: 64, adsType: '3d_sight', mobility: 0.88, maxAmmo: 20, reloadTime: 3.4, modelUrl: null,
-    sound: 'saiga', rate: 1.08, pump: false, auto: true, range: 45, tracerEvery: 0, tp: { len: 0.98, body: 'dark', mag: 'box' }, desc: '全自動散彈槍，20 發彈鼓，貼身壓制無敵。',
-  },
   m92fs: {
     name: 'Beretta M92FS', type: 'pistol', slot: 'secondary', damageNear: 27, damageFar: 18, falloffStart: 10, falloffEnd: 35, fireRate: 0.17, recoilPitch: 0.028, recoilYaw: 0.006, recoilRecovery: 12,
     hipSpread: 0.03, adsSpread: 0.004, adsFov: 60, adsType: '3d_sight', mobility: 1.0, maxAmmo: 15, reloadTime: 1.6, modelUrl: null,
@@ -726,11 +642,6 @@ const WEAPON_DATABASE = {
     name: 'Howa Type 89', type: 'assault', slot: 'primary', damageNear: 26, damageFar: 20, falloffStart: 25, falloffEnd: 65, fireRate: 0.103, recoilPitch: 0.0098, recoilYaw: 0.0078, recoilRecovery: 11,
     hipSpread: 0.07, adsSpread: 0.0019, adsFov: 54, adsType: '3d_sight', mobility: 0.95, maxAmmo: 30, reloadTime: 2.3, modelUrl: null, adsSpeed: 10,
     sound: 'm4', rate: 1.06, penetration: 1, tp: { len: 0.92, body: 'dark', mag: 'box' }, desc: '日本自衛隊步槍，後座低、連射穩定。', // v53 SF2 EU wiki (unverified): RPM/reload/ADS
-  },
-  l86a1: {
-    name: 'L86A1 LSW', type: 'lmg', slot: 'primary', damageNear: 27, damageFar: 22, falloffStart: 35, falloffEnd: 85, fireRate: 0.085, recoilPitch: 0.009, recoilYaw: 0.008, recoilRecovery: 10,
-    hipSpread: 0.085, adsSpread: 0.0016, adsFov: 42, adsType: 'red_dot', mobility: 0.86, maxAmmo: 30, reloadTime: 2.8, modelUrl: null,
-    sound: 'm4', rate: 0.97, penetration: 2, range: 300, adsSpeed: 13, tracerEvery: 2, tp: { len: 0.9, body: 'dark', mag: 'box', bull: true }, desc: '英軍無托輕機槍：彈匣只有 30 發，但精準度是機槍裡最高的。',
   },
   hk23e: {
     name: 'HK23E', type: 'lmg', slot: 'primary', damageNear: 28, damageFar: 22, falloffStart: 30, falloffEnd: 80, fireRate: 0.072, recoilPitch: 0.0115, recoilYaw: 0.014, recoilRecovery: 8,
@@ -804,18 +715,18 @@ function compileWeapon(id, s) {
 /* v64r SF2's weapon weights [equip, unequip] (SFGameContent; tools/sf2_weight_table.py) — the load in hand sets the walking speed
    (src/12_player.js sf2Speed). No SF2 class of their own: mp5 ≈ MP7A1, ak47 ≈ AK103, negev ≈ Ultimax, pkm ≈ FNMAG, mg42 ≈ MG4, m1014 ≈ BNLLI, usp ≈ P226. */
 const SF2_WEIGHT = {
-  m4a1: [4.1, 2.05], g36c: [3.5, 1.75], g36c_gold: [3.5, 1.75], g36c_sf2: [3.5, 1.75], g36c_eo: [3.5, 1.75], g36c_circuit: [3.5, 1.75],
-  famas_blaze: [3.4, 1.7], p90_grinch: [2.4, 1.4], m4a1_thor: [4.1, 2.05], mg4_gold: [7.8, 3.9], mp5: [2.25, 1.25], mp5k: [1.9, 0.9],
-  p90: [2.4, 1.4], remington870: [2.8, 1.8], m249: [7.5, 3.75], cheytac_m200: [9.5, 4.75], p226: [1.0, 0.0], deagle: [1.0, 0.0],
-  ak47: [5.7, 2.85], ak103: [5.7, 2.85], scarl: [4.6, 2.3], scarl_eo: [4.6, 2.3], famas: [3.4, 1.7], aug: [4.3, 2.15],
-  ump45: [1.96, 0.98], vector: [2.0, 1.0], mp7: [2.25, 1.25], rpk: [7.7, 3.85], negev: [7.0, 3.5], pkm: [6.8, 3.4],
-  mg42: [7.8, 3.9], benelli_m4: [2.5, 1.5], m1014: [2.5, 1.5], saiga12: [3.0, 2.0], ksg: [2.4, 1.2], awp: [8.1, 4.05],
-  barrett: [9.9, 4.95], kar98k: [5.6, 2.8], svd: [5.8, 2.9], glock18: [1.0, 0.0], usp: [1.0, 0.0], m1911: [1.0, 0.0],
+  m4a1: [4.1, 2.05], g36c_sf2: [3.5, 1.75], g36c_eo: [3.5, 1.75], g36c_circuit: [3.5, 1.75],
+  famas_blaze: [3.4, 1.7], p90_grinch: [2.4, 1.4], m4a1_thor: [4.1, 2.05], mg4_gold: [7.8, 3.9], mp5k: [1.9, 0.9],
+  p90: [2.4, 1.4], remington870: [2.8, 1.8], cheytac_m200: [9.5, 4.75], p226: [1.0, 0.0], deagle: [1.0, 0.0],
+  ak103: [5.7, 2.85], scarl: [4.6, 2.3], scarl_eo: [4.6, 2.3], famas: [3.4, 1.7], aug: [4.3, 2.15],
+  ump45: [1.96, 0.98], mp7: [2.25, 1.25], 
+  benelli_m4: [2.5, 1.5], saiga12: [3.0, 2.0], ksg: [2.4, 1.2], awp: [8.1, 4.05],
+  barrett: [9.9, 4.95], kar98k: [5.6, 2.8], glock18: [1.0, 0.0], m1911: [1.0, 0.0],
   m16a3: [5.8, 2.9], k2: [4.0, 2.0], xm8: [3.2, 1.6], galil: [5.6, 2.8], sg551: [4.2, 2.1], hk417: [4.5, 2.25],
-  scarh: [4.8, 2.4], hk417_rs: [4.2, 2.1], qbz97: [4.3, 2.15], pp2000: [2.9, 1.9], vz61: [2.8, 1.8], m40a1: [5.7, 2.85],
-  k14: [7.6, 3.8], sr25: [7.0, 3.5], psg1: [7.0, 3.5], mg4: [7.8, 3.9], k3: [6.8, 3.4], aa12: [4.0, 2.0],
+  scarh: [4.8, 2.4], hk417_rs: [4.2, 2.1], qbz97: [4.3, 2.15], m40a1: [5.7, 2.85],
+  k14: [7.6, 3.8], sr25: [7.0, 3.5], psg1: [7.0, 3.5], mg4: [7.8, 3.9], k3: [6.8, 3.4], 
   m92fs: [1.0, 0.0], cz75: [1.0, 0.0], jericho: [1.0, 0.0], sw60: [1.0, 0.0], m14ebr: [6.1, 3.05], type89: [4.7, 2.35],
-  l86a1: [7.2, 3.6], hk23e: [7.9, 3.95], frf2: [6.3, 3.15], cz700: [7.5, 3.75], trg: [7.3, 3.65], usas12: [5.4, 2.7],
+  hk23e: [7.9, 3.95], frf2: [6.3, 3.15], cz700: [7.5, 3.75], trg: [7.3, 3.65], usas12: [5.4, 2.7],
   magnum44: [1.0, 0.0], wildey: [1.0, 0.0], strikeone: [1.0, 0.0], maxim9: [1.2, 0.0], luger: [1.0, 0.0], k5: [1.0, 0.0],
   ultimax: [7.0, 3.5], minimispw: [7.5, 3.75], fnmag: [6.8, 3.4], svch: [5.7, 2.85], msr: [7.7, 3.85], fnar: [5.7, 2.85],
   uzipro: [1.9, 0.95], sigmpx: [2.0, 0.98], mx4: [2.0, 1.0], mp40: [2.2, 1.1], krissv: [2.0, 1.0], k1: [2.35, 1.225],
@@ -1046,13 +957,9 @@ const WEAPON_ICONS = {}; // id → line-art dataURL (generated at boot)
 // v20 armory card intros (one line, role-focused; SF2-style list supplied by the user where the gun matches).
 const WEAPON_BLURBS = {
   m4a1: '泛用性最高的標準步槍，後座力易控。',
-  g36c: '緊湊型步槍，機動性佳；消音器讓你不上敵方雷達。',
-  g36c_gold: '緊湊型步槍，機動性佳；沒有消音器，槍聲大但清脆好控。',
-  ak47: '單發破壞力極高，但後座力大，需要精準的點射技巧。',
   scarl: '單發傷害與穿透力優異的模組化步槍。',
   famas: '高射速的犢牛式步槍，近距離爆發力強。',
   aug: '內建基礎瞄具，適合中遠距離穩定輸出。',
-  mp5: '經典衝鋒槍，腰射穩定、容錯率高。',
   mp5k: '短槍管 MP5，射速快、近距離靈活。',
   g36c_eo: '緊湊型步槍加全息瞄具與消音器，不上敵方雷達。',
   g36c_circuit: '魔術迴路迷彩的 G36C EOTech 消音：電路紋路流動，擊殺時閃出電光。',
@@ -1064,27 +971,18 @@ const WEAPON_BLURBS = {
   trg: '芬蘭 Sako 栓動狙擊槍，Zeiss 鏡，細十字貫穿視野。',
   p90: '50 發大彈匣，適合持續火力壓制與近距離掃射。',
   ump45: '衝鋒槍中單發傷害較高的一把，射速偏慢但穩定。',
-  vector: '利用特殊槍機設計將後座力降至最低，近戰秒傷極高。',
   mp7: '極高的射速與極佳的機動性，跑動射擊的首選。',
-  m249: '標準輕機槍，擁有 100 發彈鏈，適合架點與穿透障礙物。',
-  rpk: '以 AK 為基礎延伸的機槍，單發傷害不俗。',
-  negev: '高射速彈鏈機槍，壓制力強但左右晃動大。',
-  pkm: '重型通用機槍，射程與穿透最佳，但極其笨重。',
-  mg42: '德製高射速機槍，連射時的壓制力極強，也極難控制。',
   remington870: '泵動式散彈槍，貼身一槍致命，節奏要算準。',
   benelli_m4: '半自動散彈槍，連發速度快，近距離清點利器。',
-  m1014: '美軍制式半自動散彈槍，容量大、表現穩定。',
   saiga12: 'AK 系統彈匣供彈散彈槍，換彈最快。',
   ksg: '雙彈倉泵動散彈槍，14 發容量，持久作戰。',
   cheytac_m200: '重型反器材狙擊槍，穿透力與傷害封頂。',
   awp: '經典重型狙擊槍，擁有極高的致死率（一發斃命）。',
   barrett: '反器材狙擊槍，打到哪裡都倒，後座驚人。',
   kar98k: '二戰經典栓動步槍，開鏡快、輕巧靈活。',
-  svd: '經典蘇聯連發狙擊槍，射速快。',
   p226: '標準副武器，穩定可靠的半自動手槍。',
   deagle: '大口徑手槍，單發威力驚人，但後座大。',
   glock18: '全自動手槍，近距離秒傷媲美衝鋒槍。',
-  usp: '消音手槍，安靜不上雷達，最精準的副武器。',
   m1911: '經典 .45 手槍，單發威力可靠。',
   m16a3: '射程與精度出色的長槍管步槍。',
   k2: '平衡好用的韓國步槍。',
@@ -1094,21 +992,17 @@ const WEAPON_BLURBS = {
   hk417: '7.62mm 戰鬥步槍，一槍一槍打得重。',
   scarh: '高傷害高穿透的 7.62mm SCAR。',
   qbz97: '槍身短的無托步槍。',
-  pp2000: '44 發長彈匣的輕巧衝鋒槍。',
-  vz61: '最輕的衝鋒槍，換彈極快。',
   m40a1: '靈活的栓動狙擊槍。',
   sr25: '20 發半自動狙擊。',
   psg1: '最精準的半自動狙擊。',
   mg4: '輕巧高射速的輕機槍。',
   k3: '穩定的 100 發輕機槍。',
-  aa12: '全自動散彈槍，貼身無敵。',
   m92fs: '經典 9mm 手槍。',
   cz75: '射速快的 16 發手槍。',
   jericho: '單發較重的 9mm 手槍。',
   sw60: '5 發左輪，單發威力大。',
   m14ebr: '射速最快的半自動狙擊。',
   type89: '後座低的日本步槍。',
-  l86a1: '最精準的機槍，30 發彈匣。',
   hk23e: '100 發彈鏈機槍。',
   frf2: '10 發栓動狙擊槍。',
   cz700: '拉栓快的輕巧狙擊槍。',
@@ -1154,9 +1048,9 @@ const MODES = {
   knife: { name: '小刀戰', desc: '全員只能拿刀，貼身肉搏', slots: ['knife'] },
 };
 const BOT_POOLS = {
-  general: ['usas12', 'ultimax', 'minimispw', 'fnmag', 'uzipro', 'sigmpx', 'mx4', 'mp40', 'krissv', 'k1', 'cz3a1', 'csls06', 'bizon', 'tar21', 't91', 't65k2', 't65k1', 'stg44', 'madsenlar', 'sar21', 'mrr', 'madsenlar', 'k2c1', 'fnf2000', 'cm901', 'arx160', 'ak104', 'an94', 'an94', 'an94', 'an94', 'an94', 'an94', 'an94', 'an94', 'm4a1', 'acr', 'ak47', 'g36c', 'g36c_gold', 'g36c_eo', 'g36c_circuit', 'hk417_rs', 'scarl_eo', 'scarl', 'famas', 'aug', 'mp5', 'mp5k', 'p90', 'ump45', 'vector', 'mp7', 'remington870', 'benelli_m4', 'saiga12', 'm249', 'rpk', 'negev', 'pkm', 'trg', 'cheytac_m200', 'k14', 'awp', 'svd', 'kar98k', 'm16a3', 'k2', 'xm8', 'galil', 'sg551', 'hk417', 'scarh', 'qbz97', 'pp2000', 'vz61', 'aa12', 'mg4', 'k3', 'm40a1', 'sr25', 'psg1', 'm14ebr', 'type89', 'l86a1', 'hk23e', 'frf2', 'cz700'],
-  rifle: ['m4a1', 'ak47', 'g36c', 'g36c_gold', 'g36c_eo', 'g36c_circuit', 'famas_blaze', 'p90_grinch', 'm4a1_thor', 'mg4_gold', 'hk417_rs', 'scarl_eo', 'scarl', 'famas', 'aug', 'mp5', 'mp5k', 'p90', 'ump45', 'vector', 'mp7', 'm249', 'rpk', 'negev', 'pkm', 'mg42', 'm16a3', 'k2', 'xm8', 'galil', 'sg551', 'hk417', 'scarh', 'qbz97', 'pp2000', 'vz61', 'mg4', 'k3', 'type89', 'l86a1', 'hk23e'],
-  sniper: ['svch', 'msr', 'fnar', 'trg', 'cheytac_m200', 'cheytac_m200_circuit', 'k14', 'k14_circuit', 'awp_circuit', 'cz700_circuit', 'awp', 'barrett', 'kar98k', 'svd', 'm40a1', 'sr25', 'psg1', 'm14ebr', 'frf2', 'cz700'], pistol: ['p226', 'deagle', 'glock18', 'usp', 'm1911', 'm92fs', 'cz75', 'jericho', 'sw60', 'infinity'], knife: ['knife'],
+  general: ['usas12', 'ultimax', 'minimispw', 'fnmag', 'uzipro', 'sigmpx', 'mx4', 'mp40', 'krissv', 'k1', 'cz3a1', 'csls06', 'bizon', 'tar21', 't91', 't65k2', 't65k1', 'stg44', 'madsenlar', 'sar21', 'mrr', 'madsenlar', 'k2c1', 'fnf2000', 'cm901', 'arx160', 'ak104', 'an94', 'an94', 'an94', 'an94', 'an94', 'an94', 'an94', 'an94', 'm4a1', 'acr', 'g36c_eo', 'g36c_circuit', 'hk417_rs', 'scarl_eo', 'scarl', 'famas', 'aug', 'mp5k', 'p90', 'ump45', 'mp7', 'remington870', 'benelli_m4', 'saiga12', 'trg', 'cheytac_m200', 'k14', 'awp', 'kar98k', 'm16a3', 'k2', 'xm8', 'galil', 'sg551', 'hk417', 'scarh', 'qbz97', 'mg4', 'k3', 'm40a1', 'sr25', 'psg1', 'm14ebr', 'type89', 'hk23e', 'frf2', 'cz700'],
+  rifle: ['m4a1', 'g36c_eo', 'g36c_circuit', 'famas_blaze', 'p90_grinch', 'm4a1_thor', 'mg4_gold', 'hk417_rs', 'scarl_eo', 'scarl', 'famas', 'aug', 'mp5k', 'p90', 'ump45', 'mp7', 'm16a3', 'k2', 'xm8', 'galil', 'sg551', 'hk417', 'scarh', 'qbz97', 'mg4', 'k3', 'type89', 'hk23e'],
+  sniper: ['svch', 'msr', 'fnar', 'trg', 'cheytac_m200', 'cheytac_m200_circuit', 'k14', 'k14_circuit', 'awp_circuit', 'cz700_circuit', 'awp', 'barrett', 'kar98k', 'm40a1', 'sr25', 'psg1', 'm14ebr', 'frf2', 'cz700'], pistol: ['p226', 'deagle', 'glock18', 'm1911', 'm92fs', 'cz75', 'jericho', 'sw60', 'infinity'], knife: ['knife'],
 };
 
 // Match rules (state-machine classes live in the match module).

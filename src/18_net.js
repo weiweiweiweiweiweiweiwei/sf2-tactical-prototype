@@ -11,7 +11,7 @@ import { Ghost, NetPlayer } from './13b_netplayers.js';
      testing; WebRTC + a signalling service take its place in v26 with the same send / onMessage interface; from v27 a
      match talks through its room's RoomLink (18c_room.js), so the connection outlives the match.
    ===================================================================== */
-const NET_VERSION = 32; // v67l a snapshot's shots carry their time and a number (SHOT_SIZE 29) · (31: v64c room ready check)
+const NET_VERSION = 33; // v67t the 17 code-drawn guns removed (the weapon table shifted) · // v67l a snapshot's shots carry their time and a number (SHOT_SIZE 29) · (31: v64c room ready check)
 const NET_PHASES = ['loading', 'freeze', 'live', 'roundEnd', 'over'];
 const NET_SNAP_HZ = 30, NET_CMD_EVERY = 1, NET_INTERP = 0.1; // snapshots / s · send a cmd packet every tick (60 Hz, v63g) · ghosts drawn 100 ms behind (the start; then NetClient.interp)
 // v67l the delay follows the link: one snapshot interval + how unevenly they arrive, 60–150 ms (was 100 ms for everyone — on a

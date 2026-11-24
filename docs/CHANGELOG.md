@@ -2172,3 +2172,9 @@
 - 使用者 11-24：先畫了 20 款左輪彈巢（`assets/logo/concepts/`），再改成爪痕 12 款（`assets/logo/claw/`，透明底，總覽框內用 Chrome 深色書籤列的 `#35363a` 模擬）。選定 **CL10 冰藍**（`#e3f6ff → #4facfe`）。
 - 套用：`assets/favicon.svg`，加上 `favicon-32.png`、`favicon-180.png`（Apple 觸控圖示）、`favicon-512.png`；`src/00_head.html` 加 icon 連結。產生程式 `tools/logo/make_claw.py`、`tools/logo/png.mjs`。
 - （同日，使用者：「放大到頂天立地」）`assets/favicon.svg` 的畫布裁到四道爪痕的外框（viewBox 136 130 723.4²，原本 1000²），圖案佔滿圖示，PNG 重新產生。
+
+### v67t（本機，2026-11-24）：刪除程式繪製的槍枝
+- 使用者 11-24「刪除所有不是 SF2 或 Apex 的槍枝」：逐把建模型檢查，刪掉 17 把用程式畫的槍（G36C、G36C 金、MP5、M249、AK-47、Vector、RPK、Negev、PKM、MG42、M1014、SVD、USP-S、PP-2000、vz.61、AA-12、L86A1），連同機器人武器池、重量表、說明。M4A1、G36C（SF2）、AK-103 用的是 SF2 原版骨架，保留。
+- 剩 129 把：SF2 原版骨架 100、Apex 29。存檔裡配到被刪槍的配裝自動換回 M4A1／P226。NET_VERSION 33（武器編號表變了）。
+- 順手修：G36C（SF2）的骨架只有在舊 G36C 一起載入時才會載到，單獨使用會退回程式畫的模型——`gunGlbIds` 加上 `g36c_sf2 → g36c_sf2_rig`。
+- 程式畫槍的建模函式（`09_models.js`、`09b_gunparts.js`）還在：SF2／Apex 模型載入失敗時的備援。

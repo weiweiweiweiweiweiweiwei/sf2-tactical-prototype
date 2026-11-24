@@ -72,7 +72,7 @@ function loadGunModels() {
   if (loadGunModels.p) return loadGunModels.p;
   return (loadGunModels.p = Promise.all([window.GUN_INDEX ? null : gunScript('assets/guns/index.js'), window.SF2_FX ? null : gunScript('assets/fx_sf2.js'), window.SF2_CAMO ? null : gunScript('assets/camo_sf2.js')]).then(() => {})); // (v64o SF2's weapon camos, v62m its muzzle-flash textures)
 }
-const gunGlbIds = (def) => { const I = window.GUN_INDEX || []; return [def.sf2Rig && def.sf2Rig + '_sf2_rig', def.sf2Rig && def.sf2Rig + '_sf2_ovl', def.model, def.id, def.id + '_sf2_rig', def.model + '_sf2_rig', def.optic && 'apexopt_' + def.optic].filter((k, i, a) => k && a.indexOf(k) === i && I.includes(k)); };
+const gunGlbIds = (def) => { const I = window.GUN_INDEX || []; return [def.sf2Rig && def.sf2Rig + '_sf2_rig', def.sf2Rig && def.sf2Rig + '_sf2_ovl', def.model, def.id, def.id + '_sf2_rig', def.model + '_sf2_rig', def.model && def.model.replace(/_sf2$/, '') + '_sf2_rig', def.optic && 'apexopt_' + def.optic].filter((k, i, a) => k && a.indexOf(k) === i && I.includes(k)); };
 function gunModelReady(def) { return !!def && gunGlbIds(def).every((k) => GUN_LOAD.parsed.has(k)); }
 async function parseGunGlb(id) {
   const L = parseGunGlb.L || (parseGunGlb.L = (() => { const L = new GLTFLoader(), D = new DRACOLoader(); D.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/libs/draco/gltf/'); L.setDRACOLoader(D); return L; })()); // (v49 gunlib GLBs are Draco)
