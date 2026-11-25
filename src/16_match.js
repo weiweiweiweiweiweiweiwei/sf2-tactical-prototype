@@ -739,6 +739,7 @@ class Match {
     for (const mc of this.builder.mechs) if (mc.interact(np)) return; // v46 GO boxes first
     const st = this.rules.hudState ? this.rules.hudState() : null;
     if (st && st.kind === 'relic') { this.rules.interactPressed(np); }
+    if (st && st.kind === 'tower' && this.rules.interactPressed(np)) return; // v67x E at the point takes it
     const ars = np.arsenal, f = np.lookDir(TMP_V1); let best = null, bs = Infinity;
     for (const d of this.drops) {
       const b = d.body, dx = b.position.x - np.motor.pos.x, dz = b.position.z - np.motor.pos.z, dist = Math.hypot(dx, dz), dy = b.position.y - np.motor.pos.y;
@@ -813,7 +814,7 @@ class Match {
     if (this.isClient) return; // v29/v30: the host decides pickups — the E press reaches it in our commands (Match.netInteract)
     for (const mc of this.builder.mechs) if (mc.interact(this.player)) return; // v46 GO boxes (bridge / trams)
     const st = this.rules.hudState ? this.rules.hudState() : null;
-    if (st && st.kind === 'relic' && st.prompt) { this.rules.interactPressed(this.player); return; }
+    if (st && (st.kind === 'relic' || st.kind === 'tower') && st.prompt) { this.rules.interactPressed(this.player); return; } // (v67x the point before a gun on the floor)
     if (this.pickTarget) { this.pickup(this.pickTarget); return; }
     this.rules.interactPressed(this.player);
   }
@@ -1070,7 +1071,7 @@ class Match {
     hud.nadeWarnings(warns);
     const pickPrompt = this.updateDrops(dt), ost = this.rules.hudState();
     hud.objective(ost, this);
-    if (pickPrompt && !(ost && ost.prompt && ost.kind === 'relic')) hud.interact(pickPrompt);
+    if (pickPrompt && !(ost && ost.prompt && (ost.kind === 'relic' || ost.kind === 'tower'))) hud.interact(pickPrompt);
     if (p.alive) for (const mc of this.builder.mechs) { const mp = mc.prompt(p); if (mp) hud.interact(mp); }
     hud.markers(this.rules.markers([]), this.camera);
     hud.scoreboard(input.down('Tab') ? this : null);

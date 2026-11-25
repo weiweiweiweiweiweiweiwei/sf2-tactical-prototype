@@ -403,7 +403,7 @@ class CaptureRule extends Rule {
     const ring = new THREE.Mesh(new THREE.RingGeometry(this.r - 0.2, this.r, 64), this.ringMat); ring.rotation.x = -Math.PI / 2; ring.position.y = 0.04;
     this.beamMat = new THREE.MeshBasicMaterial({ color: TEAM_HEX.none, transparent: true, opacity: 0.14, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide });
     const beam = new THREE.Mesh(new THREE.CylinderGeometry(this.r, this.r, 40, 32, 1, true), this.beamMat); beam.position.y = 20;
-    g.add(ring, beam); g.traverse((c) => { c.userData.noAO = true; }); m.scene.add(g);
+    g.add(ring); g.traverse((c) => { c.userData.noAO = true; }); m.scene.add(g); // (v67x the blue light column is gone, user 11-25; beamMat stays for its colour calls)
   }
   get open() { return this.openAt !== undefined && this.m.time >= this.openAt; }
   startRound() {}
@@ -417,11 +417,18 @@ class CaptureRule extends Rule {
     if (by) { by.score += POINTS.capture; m.addTeam(team, 10); if (by.isPlayer) m.app.hud.points(`+${POINTS.capture}  佔領據點`); m.app.hud.killfeed(by.name, team, '佔領據點', '', team, false, by.isPlayer); }
     else if (prev !== team) m.app.hud.killfeed(mine ? '我方' : '敵方', team, '佔領據點', '', team, false, false);
   }
-  netState() { const T = (t) => (t === 'alpha' ? 1 : t === 'bravo' ? 2 : 0); return { o: T(this.owner), l: +this.left.toFixed(1), c: this.contested ? 1 : 0 }; }
+  netState() { const T = (t) => (t === 'alpha' ? 1 : t === 'bravo' ? 2 : 0); return { o: T(this.owner), l: +this.left.toFixed(1), c: this.contested ? 1 : 0, op: this.open ? 1 : 0 }; }
   applyNet(s) {
     const own = [null, 'alpha', 'bravo'][s.o | 0] || null;
     if (own !== this.owner) this._setOwner(own, null);
     this.left = clamp(+s.l || 0, 0, CAP_HOLD); this.contested = !!s.c;
+    if (s.op && !this.open) this.openAt = this.m.time; // (v67x the client learns the point is open — its own clock never started one)
+  }
+  // v67x (user 11-25) a soldier takes the point by pressing E at it (the host decides); bots still take it by standing there 1 s
+  interactPressed(c) {
+    const m = this.m; if (m.isClient || m.phase !== 'live' || !this.open || !this.inside(c) || this.owner === c.team) return false;
+    for (const o of m.combatants) if (o.team !== c.team && this.inside(o)) { if (c.isPlayer) m.app.hud.toast('敵人在據點內，無法佔領'); return true; }
+    this.takeT = 0; this._setOwner(c.team, c); return true;
   }
   tick(dt) {
     const m = this.m;
@@ -431,7 +438,8 @@ class CaptureRule extends Rule {
     let a = 0, b = 0, first = null; for (const c of m.combatants) if (this.inside(c)) { if (c.team === 'alpha') a++; else b++; if (!first) first = c; }
     this.contested = a > 0 && b > 0;
     const team = !this.contested && (a || b) ? (a ? 'alpha' : 'bravo') : null;
-    if (team && team !== this.owner) { this.takeT += dt; if (this.takeT >= CAP_TAKE) { this.takeT = 0; this._setOwner(team, first); } } else this.takeT = 0;
+    const bot = team && m.combatants.find((c) => c.isBot && c.team === team && this.inside(c)); // (v67x people press E; a bot holding it 1 s takes it)
+    if (bot && team !== this.owner) { this.takeT += dt; if (this.takeT >= CAP_TAKE) { this.takeT = 0; this._setOwner(team, bot); } } else this.takeT = 0;
     if (!this.owner) return;
     this.left -= dt;
     for (const w of [20, 5]) if (this.left <= w && this.warned < w && this.warned !== 5) { // (SF2: CaptureWarningTime 20, the timer's last warning at 5)
@@ -458,7 +466,8 @@ class CaptureRule extends Rule {
     if (this.openAt === undefined || !this.open) text = `據點 ${s(Math.max(0, (this.openAt ?? m.time + CAP_OPEN) - m.time))} 後開放`;
     else if (!this.owner) text = '據點已開放 · 站上據點佔領';
     else text = `${mine ? '我方佔領中 · 守住' : '敵方佔領中 · 奪回據點'} · 倒數 ${Math.ceil(this.left)} 秒${this.contested ? '（爭奪中）' : ''}`;
-    return { kind: 'tower', text, prompt: '', role: '佔領模式' };
+    const can = p.alive && this.open && this.owner !== p.team && this.inside(p);
+    return { kind: 'tower', text, prompt: can ? '按 E 佔領據點' : '', role: '佔領模式' };
   }
 }
 

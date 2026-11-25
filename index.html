@@ -26844,7 +26844,7 @@ var CaptureRule = class extends Rule {
     this.beamMat = new THREE.MeshBasicMaterial({ color: TEAM_HEX.none, transparent: true, opacity: 0.14, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide });
     const beam = new THREE.Mesh(new THREE.CylinderGeometry(this.r, this.r, 40, 32, 1, true), this.beamMat);
     beam.position.y = 20;
-    g.add(ring, beam);
+    g.add(ring);
     g.traverse((c) => {
       c.userData.noAO = true;
     });
@@ -26879,13 +26879,26 @@ var CaptureRule = class extends Rule {
   }
   netState() {
     const T = /* @__PURE__ */ __name((t) => t === "alpha" ? 1 : t === "bravo" ? 2 : 0, "T");
-    return { o: T(this.owner), l: +this.left.toFixed(1), c: this.contested ? 1 : 0 };
+    return { o: T(this.owner), l: +this.left.toFixed(1), c: this.contested ? 1 : 0, op: this.open ? 1 : 0 };
   }
   applyNet(s) {
     const own = [null, "alpha", "bravo"][s.o | 0] || null;
     if (own !== this.owner) this._setOwner(own, null);
     this.left = clamp(+s.l || 0, 0, CAP_HOLD);
     this.contested = !!s.c;
+    if (s.op && !this.open) this.openAt = this.m.time;
+  }
+  // v67x (user 11-25) a soldier takes the point by pressing E at it (the host decides); bots still take it by standing there 1 s
+  interactPressed(c) {
+    const m = this.m;
+    if (m.isClient || m.phase !== "live" || !this.open || !this.inside(c) || this.owner === c.team) return false;
+    for (const o of m.combatants) if (o.team !== c.team && this.inside(o)) {
+      if (c.isPlayer) m.app.hud.toast("敵人在據點內，無法佔領");
+      return true;
+    }
+    this.takeT = 0;
+    this._setOwner(c.team, c);
+    return true;
   }
   tick(dt) {
     const m = this.m;
@@ -26901,11 +26914,12 @@ var CaptureRule = class extends Rule {
     }
     this.contested = a > 0 && b > 0;
     const team = !this.contested && (a || b) ? a ? "alpha" : "bravo" : null;
-    if (team && team !== this.owner) {
+    const bot = team && m.combatants.find((c) => c.isBot && c.team === team && this.inside(c));
+    if (bot && team !== this.owner) {
       this.takeT += dt;
       if (this.takeT >= CAP_TAKE) {
         this.takeT = 0;
-        this._setOwner(team, first);
+        this._setOwner(team, bot);
       }
     } else this.takeT = 0;
     if (!this.owner) return;
@@ -26949,7 +26963,8 @@ var CaptureRule = class extends Rule {
     if (this.openAt === void 0 || !this.open) text = `據點 ${s(Math.max(0, (this.openAt ?? m.time + CAP_OPEN) - m.time))} 後開放`;
     else if (!this.owner) text = "據點已開放 · 站上據點佔領";
     else text = `${mine ? "我方佔領中 · 守住" : "敵方佔領中 · 奪回據點"} · 倒數 ${Math.ceil(this.left)} 秒${this.contested ? "（爭奪中）" : ""}`;
-    return { kind: "tower", text, prompt: "", role: "佔領模式" };
+    const can = p.alive && this.open && this.owner !== p.team && this.inside(p);
+    return { kind: "tower", text, prompt: can ? "按 E 佔領據點" : "", role: "佔領模式" };
   }
 };
 function createRule(kind, m) {
@@ -28104,6 +28119,7 @@ var Match = class _Match {
     if (st && st.kind === "relic") {
       this.rules.interactPressed(np);
     }
+    if (st && st.kind === "tower" && this.rules.interactPressed(np)) return;
     const ars = np.arsenal, f = np.lookDir(TMP_V1);
     let best = null, bs = Infinity;
     for (const d of this.drops) {
@@ -28203,7 +28219,7 @@ var Match = class _Match {
     if (this.isClient) return;
     for (const mc of this.builder.mechs) if (mc.interact(this.player)) return;
     const st = this.rules.hudState ? this.rules.hudState() : null;
-    if (st && st.kind === "relic" && st.prompt) {
+    if (st && (st.kind === "relic" || st.kind === "tower") && st.prompt) {
       this.rules.interactPressed(this.player);
       return;
     }
@@ -28573,7 +28589,7 @@ var Match = class _Match {
     hud.nadeWarnings(warns);
     const pickPrompt = this.updateDrops(dt), ost = this.rules.hudState();
     hud.objective(ost, this);
-    if (pickPrompt && !(ost && ost.prompt && ost.kind === "relic")) hud.interact(pickPrompt);
+    if (pickPrompt && !(ost && ost.prompt && (ost.kind === "relic" || ost.kind === "tower"))) hud.interact(pickPrompt);
     if (p.alive) for (const mc of this.builder.mechs) {
       const mp = mc.prompt(p);
       if (mp) hud.interact(mp);
