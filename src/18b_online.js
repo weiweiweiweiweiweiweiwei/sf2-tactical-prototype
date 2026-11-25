@@ -1,24 +1,87 @@
 import { NET_VERSION } from './18_net.js';
 /* =====================================================================
    v26 ONLINE — play with friends on other computers, free. (v27: rooms on top of this — see 18c_room.js)
-   · Supabase Realtime (project sf2-tactical, free plan) only helps two browsers FIND each other: the lobby channel lists
-     open rooms (presence), a room channel carries the WebRTC handshake (offer / answer / ICE candidates).
+   · The SF2 backend (server/, self-hosted Node.js, replaces Supabase since 11-25) only helps two browsers FIND each
+     other: the lobby channel lists open rooms (presence), a room channel carries the WebRTC handshake (offer / answer /
+     ICE candidates). One WebSocket (/ws) carries every channel; friends and TURN are plain HTTP POSTs (/api/...).
    · The game itself flows peer-to-peer over two WebRTC DataChannels per friend: 'r' reliable + ordered (events),
      'u' unreliable + unordered (commands, snapshots — a late copy is useless, the next one replaces it).
    · Both transports expose the LoopbackTransport interface (send / onMessage / onLeave), so NetHost / NetClient are
-     unchanged. A friend who cannot connect directly (strict NAT) needs a TURN relay: add one to ONLINE.ice.
+     unchanged. A friend who cannot connect directly (strict NAT) needs a TURN relay: the server hands one out (/api/turn).
    ===================================================================== */
+// Which backend: ?server=https://host (tests, trying a new server) → SERVER below → the page's own address when the
+// backend serves the game itself (anything but GitHub Pages, a double-clicked file or a localhost test page).
+const SERVER = ''; // e.g. 'https://sf2.example.com' — the friend's server, filled in once it is up
+function backendUrl() {
+  const q = /[?&]server=([^&#]+)/.exec(location.search);
+  if (q) return decodeURIComponent(q[1]).replace(/\/+$/, '');
+  if (SERVER) return SERVER.replace(/\/+$/, '');
+  if (/^https?:$/.test(location.protocol) && !/\.github\.io$|^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)) return location.origin; // (local test pages: ?server=)
+  return '';
+}
 const ONLINE = {
-  url: 'https://xdacaaxopfntdwpvrdky.supabase.co',
-  key: 'sb_publishable_MSc9txrWU-lZSOvIFpcyXw_gJns4kXO', // publishable key: made to be public, and this project grants it no table access
-  lib: 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/+esm',
+  url: backendUrl(),
   ice: [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] }, { urls: 'stun:stun.cloudflare.com:3478' }],
   maxPlayers: 8,
 };
-let _supa = null;
-function supa() {
-  if (!_supa) _supa = import(ONLINE.lib).then(({ createClient }) => createClient(ONLINE.url, ONLINE.key, { auth: { persistSession: false, autoRefreshToken: false }, realtime: { params: { eventsPerSecond: 40 } } }));
-  return _supa;
+
+// One WebSocket to the backend, shared by every channel; reconnects by itself and re-joins / re-tracks what was open.
+// The channel object keeps the shape the room / friends code was written against (on / subscribe / track / send …).
+class BackendSocket {
+  constructor(url) { this.url = url.replace(/^http/, 'ws') + '/ws'; this.ws = null; this.chans = new Map(); this.q = []; this.ref = 0; this.waits = new Map(); this.retry = 500; this._open(); }
+  _open() {
+    const ws = this.ws = new WebSocket(this.url);
+    ws.onopen = () => { this.retry = 500; for (const c of this.chans.values()) c._rejoin(); for (const m of this.q.splice(0)) ws.send(m); };
+    ws.onmessage = (e) => { let m; try { m = JSON.parse(e.data); } catch (x) { return; } this._on(m); };
+    ws.onclose = () => {
+      if (this.ws !== ws) return; this.ws = null; this.q.length = 0; // queued joins are re-sent by _rejoin, the rest is stale
+      for (const c of this.chans.values()) c.joined = false;
+      setTimeout(() => this._open(), this.retry); this.retry = Math.min(this.retry * 2, 8000);
+    };
+    ws.onerror = () => {};
+  }
+  _send(o) { const s = JSON.stringify(o); if (this.ws && this.ws.readyState === 1) this.ws.send(s); else if (this.q.length < 200) this.q.push(s); }
+  _req(o) { const ref = ++this.ref; return new Promise((res) => { this.waits.set(ref, res); this._send(Object.assign(o, { ref })); setTimeout(() => { if (this.waits.delete(ref)) res(); }, 5000); }); }
+  _on(m) {
+    if (m.ref && this.waits.has(m.ref)) { const r = this.waits.get(m.ref); this.waits.delete(m.ref); r(m); }
+    const c = this.chans.get(m.ch); if (!c) return;
+    if (m.op === 'joined') c._joined();
+    else if (m.op === 'error' && !c.joined) c._status('CHANNEL_ERROR');
+    else if (m.op === 'presence') { c.state = m.state || {}; c._emit('presence', 'sync', null); }
+    else if (m.op === 'msg') c._emit('broadcast', m.ev, { payload: m.payload });
+  }
+}
+class BackendChannel {
+  constructor(sock, name, config) { this.sock = sock; this.name = name; this.key = config && config.presence && config.presence.key; this.ls = []; this.state = {}; this.mine = null; this.joined = false; this.cb = null; }
+  on(type, filter, fn) { this.ls.push({ type, event: filter && filter.event, fn }); return this; }
+  _emit(type, event, arg) { for (const l of this.ls) if (l.type === type && l.event === event) l.fn(arg); }
+  _status(s) { if (this.cb) this.cb(s); }
+  subscribe(cb) { this.cb = cb; this.sock.chans.set(this.name, this); this._rejoin(); return this; }
+  _rejoin() { this.sock._send({ op: 'join', ch: this.name }); }
+  _joined() { const first = !this.joined; this.joined = true; if (this.mine) this.sock._send({ op: 'track', ch: this.name, key: this.key, data: this.mine }); if (first) this._status('SUBSCRIBED'); }
+  presenceState() { return this.state; }
+  async track(data) { this.mine = data; await this.sock._req({ op: 'track', ch: this.name, key: this.key, data }); }
+  async untrack() { this.mine = null; await this.sock._req({ op: 'untrack', ch: this.name }); }
+  async send({ event, payload }) { this.sock._send({ op: 'send', ch: this.name, ev: event, payload }); return 'ok'; }
+  unsubscribe() { if (this.sock.chans.get(this.name) === this) { this.sock.chans.delete(this.name); this.sock._send({ op: 'leave', ch: this.name }); } }
+}
+async function backendPost(path, body, opts = {}) {
+  if (!ONLINE.url) throw new Error('沒有設定連線伺服器');
+  const r = await fetch(ONLINE.url + path, Object.assign({ method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}) }, opts));
+  const d = await r.json().catch(() => null);
+  if (!r.ok) throw new Error((d && d.message) || 'HTTP ' + r.status);
+  return d;
+}
+let _backend = null;
+function backend() {
+  if (!_backend) _backend = ONLINE.url ? Promise.resolve((() => {
+    const sock = new BackendSocket(ONLINE.url);
+    return {
+      channel: (name, config) => new BackendChannel(sock, name, config),
+      rpc: (fn, args) => backendPost('/api/rpc/' + fn, args).then((data) => ({ data, error: null }), (e) => ({ data: null, error: { message: e.message } })),
+    };
+  })()) : Promise.reject(new Error('沒有設定連線伺服器'));
+  return _backend;
 }
 // v27: 6 digits like a Kahoot PIN (easier to type than letters) · never starts with 0 · shown as "482 913"
 const roomCode = () => String(Math.floor(100000 + Math.random() * 900000));
@@ -27,7 +90,7 @@ const fmtCode = (c) => (c ? c.slice(0, 3) + ' ' + c.slice(3) : '——— ——
 function parseCode(s) { s = String(s || ''); const m = /room=(\d{6})/.exec(s), d = m ? m[1] : s.replace(/\D/g, ''); return d.length === 6 ? d : null; }
 const netRid = () => Math.random().toString(36).slice(2, 10);
 const subscribed = (ch) => new Promise((res, rej) => { const to = setTimeout(() => rej(new Error('TIMED_OUT')), 15000); ch.subscribe((s) => { if (s === 'SUBSCRIBED') { clearTimeout(to); res(ch); } else if (s === 'CHANNEL_ERROR' || s === 'TIMED_OUT') { clearTimeout(to); rej(new Error(s)); } }); });
-// v32 TURN relay: the Edge Function "turn" (supabase/functions/turn) hands out short-lived Cloudflare TURN credentials.
+// v32 TURN relay: the backend's /api/turn hands out short-lived TURN credentials (coturn, Metered or Cloudflare).
 // Not configured (or unreachable within 3.5 s) → STUN only, as before. ?relay=1 forces relayed connections (tests).
 ONLINE.relayOnly = /[?&]relay=1(&|$)/.test(location.search); ONLINE.turn = false;
 let _iceP = null, _iceAt = 0;
@@ -37,8 +100,7 @@ function iceServers() {
   _iceP = (async () => {
     try {
       const ctl = new AbortController(), to = setTimeout(() => ctl.abort(), 3500);
-      const r = await fetch(ONLINE.url + '/functions/v1/turn', { method: 'POST', headers: { apikey: ONLINE.key, 'Content-Type': 'application/json' }, body: '{}', signal: ctl.signal });
-      clearTimeout(to); const d = await r.json();
+      const d = await backendPost('/api/turn', {}, { signal: ctl.signal }); clearTimeout(to);
       const turn = (Array.isArray(d.iceServers) ? d.iceServers : []).map((s) => ({ urls: [].concat(s && s.urls).filter((u) => typeof u === 'string' && /^turns?:/.test(u)), username: String(s.username || ''), credential: String(s.credential || '') })).filter((s) => s.urls.length);
       ONLINE.turn = turn.length > 0;
       return [...ONLINE.ice, ...turn];
@@ -66,7 +128,7 @@ class RoomDirectory {
   constructor() { this.ch = null; this.rooms = []; this.onChange = null; this.mine = null; this.opening = null; }
   open() {
     if (!this.opening) this.opening = (async () => {
-      const sb = await supa(), ch = sb.channel('sf2:lobby', { config: { presence: { key: netRid() } } });
+      const sb = await backend(), ch = sb.channel('sf2:lobby', { config: { presence: { key: netRid() } } });
       ch.on('presence', { event: 'sync' }, () => {
         const all = Object.values(ch.presenceState()).flat().filter((r) => r && r.code && r.v === NET_VERSION);
         this.rooms = all.filter((r) => !this.mine || r.code !== this.mine.code).sort((a, b) => b.t - a.t);
@@ -101,7 +163,7 @@ class RtcHostTransport {
     this.probing = !!opts.probe; this.ready = this._open();
   }
   async _open() {
-    const [sb, ice] = await Promise.all([supa(), iceServers()]), ch = sb.channel('sf2:room:' + this.room, { config: { broadcast: { self: false } } }), nonce = netRid();
+    const [sb, ice] = await Promise.all([backend(), iceServers()]), ch = sb.channel('sf2:room:' + this.room, { config: { broadcast: { self: false } } }), nonce = netRid();
     this.iceList = ice;
     let taken = null;
     ch.on('broadcast', { event: 'sig' }, ({ payload }) => {
@@ -169,7 +231,7 @@ class RtcClientTransport {
   }
   async start() {
     this._status('連線到配對伺服器…');
-    const [sb, ice] = await Promise.all([supa(), iceServers()]), ch = sb.channel('sf2:room:' + this.room, { config: { broadcast: { self: false } } });
+    const [sb, ice] = await Promise.all([backend(), iceServers()]), ch = sb.channel('sf2:room:' + this.room, { config: { broadcast: { self: false } } });
     this.iceList = ice; this.via = null;
     ch.on('broadcast', { event: 'sig' }, ({ payload }) => this._sig(payload).catch((e) => this._fail('連線交握失敗：' + e.message)));
     this.ch = await subscribed(ch);
@@ -231,4 +293,4 @@ class BackgroundTicker {
   set(active) { this.active = active; this.sync(active); }
 }
 
-export { BackgroundTicker, ONLINE, RoomDirectory, RtcClientTransport, RtcHostTransport, fmtCode, inviteLink, parseCode, roomCode, subscribed, supa };
+export { BackgroundTicker, ONLINE, RoomDirectory, RtcClientTransport, RtcHostTransport, fmtCode, inviteLink, parseCode, roomCode, subscribed, backend, backendPost };

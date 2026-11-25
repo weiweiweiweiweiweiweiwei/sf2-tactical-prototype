@@ -1,0 +1,21 @@
+# nginx 反向代理（HTTPS 終止在 nginx，憑證可用 certbot 申請）。遊戲在 https 網頁上，所以一定要 wss://，不能只開 http。
+server {
+    listen 443 ssl http2;
+    server_name sf2.example.com;
+    ssl_certificate     /etc/letsencrypt/live/sf2.example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/sf2.example.com/privkey.pem;
+
+    location / {
+        proxy_pass http://127.0.0.1:8787;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;      # WebSocket（/ws）必要
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_read_timeout 120s;                     # 伺服器每 25 秒 ping 一次，要大於它
+    }
+}
+# Caddy 更簡單（自動申請憑證），整個 Caddyfile 只要：
+#   sf2.example.com {
+#       reverse_proxy 127.0.0.1:8787
+#   }

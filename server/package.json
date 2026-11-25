@@ -1,0 +1,15 @@
+{
+  "name": "sf2-backend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "SF2 Tactical self-hosted backend: room list, WebRTC signalling, friends, TURN credentials (replaces Supabase).",
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "start": "node server.mjs",
+    "test": "node test.mjs"
+  },
+  "dependencies": {
+    "ws": "8.18.0"
+  }
+}
