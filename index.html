@@ -29480,20 +29480,173 @@ var NetClient = class {
 };
 
 // src/18b_online.js
+var SERVER = "https://sf2-api.famicade.com";
+function backendUrl() {
+  const q = /[?&]server=([^&#]+)/.exec(location.search);
+  if (q) return decodeURIComponent(q[1]).replace(/\/+$/, "");
+  if (SERVER) return SERVER.replace(/\/+$/, "");
+  if (/^https?:$/.test(location.protocol) && !/\.github\.io$|^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)) return location.origin;
+  return "";
+}
+__name(backendUrl, "backendUrl");
 var ONLINE = {
-  url: "https://xdacaaxopfntdwpvrdky.supabase.co",
-  key: "sb_publishable_MSc9txrWU-lZSOvIFpcyXw_gJns4kXO",
-  // publishable key: made to be public, and this project grants it no table access
-  lib: "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/+esm",
+  url: backendUrl(),
   ice: [{ urls: ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302"] }, { urls: "stun:stun.cloudflare.com:3478" }],
   maxPlayers: 8
 };
-var _supa = null;
-function supa() {
-  if (!_supa) _supa = import(ONLINE.lib).then(({ createClient }) => createClient(ONLINE.url, ONLINE.key, { auth: { persistSession: false, autoRefreshToken: false }, realtime: { params: { eventsPerSecond: 40 } } }));
-  return _supa;
+var BackendSocket = class {
+  static {
+    __name(this, "BackendSocket");
+  }
+  constructor(url) {
+    this.url = url.replace(/^http/, "ws") + "/ws";
+    this.ws = null;
+    this.chans = /* @__PURE__ */ new Map();
+    this.q = [];
+    this.ref = 0;
+    this.waits = /* @__PURE__ */ new Map();
+    this.retry = 500;
+    this._open();
+  }
+  _open() {
+    const ws = this.ws = new WebSocket(this.url);
+    ws.onopen = () => {
+      this.retry = 500;
+      for (const c of this.chans.values()) c._rejoin();
+      for (const m of this.q.splice(0)) ws.send(m);
+    };
+    ws.onmessage = (e) => {
+      let m;
+      try {
+        m = JSON.parse(e.data);
+      } catch (x) {
+        return;
+      }
+      this._on(m);
+    };
+    ws.onclose = () => {
+      if (this.ws !== ws) return;
+      this.ws = null;
+      this.q.length = 0;
+      for (const c of this.chans.values()) c.joined = false;
+      setTimeout(() => this._open(), this.retry);
+      this.retry = Math.min(this.retry * 2, 8e3);
+    };
+    ws.onerror = () => {
+    };
+  }
+  _send(o) {
+    const s = JSON.stringify(o);
+    if (this.ws && this.ws.readyState === 1) this.ws.send(s);
+    else if (this.q.length < 200) this.q.push(s);
+  }
+  _req(o) {
+    const ref = ++this.ref;
+    return new Promise((res) => {
+      this.waits.set(ref, res);
+      this._send(Object.assign(o, { ref }));
+      setTimeout(() => {
+        if (this.waits.delete(ref)) res();
+      }, 5e3);
+    });
+  }
+  _on(m) {
+    if (m.ref && this.waits.has(m.ref)) {
+      const r = this.waits.get(m.ref);
+      this.waits.delete(m.ref);
+      r(m);
+    }
+    const c = this.chans.get(m.ch);
+    if (!c) return;
+    if (m.op === "joined") c._joined();
+    else if (m.op === "error" && !c.joined) c._status("CHANNEL_ERROR");
+    else if (m.op === "presence") {
+      c.state = m.state || {};
+      c._emit("presence", "sync", null);
+    } else if (m.op === "msg") c._emit("broadcast", m.ev, { payload: m.payload });
+  }
+};
+var BackendChannel = class {
+  static {
+    __name(this, "BackendChannel");
+  }
+  constructor(sock, name, config) {
+    this.sock = sock;
+    this.name = name;
+    this.key = config && config.presence && config.presence.key;
+    this.ls = [];
+    this.state = {};
+    this.mine = null;
+    this.joined = false;
+    this.cb = null;
+  }
+  on(type, filter, fn) {
+    this.ls.push({ type, event: filter && filter.event, fn });
+    return this;
+  }
+  _emit(type, event, arg) {
+    for (const l of this.ls) if (l.type === type && l.event === event) l.fn(arg);
+  }
+  _status(s) {
+    if (this.cb) this.cb(s);
+  }
+  subscribe(cb) {
+    this.cb = cb;
+    this.sock.chans.set(this.name, this);
+    this._rejoin();
+    return this;
+  }
+  _rejoin() {
+    this.sock._send({ op: "join", ch: this.name });
+  }
+  _joined() {
+    const first = !this.joined;
+    this.joined = true;
+    if (this.mine) this.sock._send({ op: "track", ch: this.name, key: this.key, data: this.mine });
+    if (first) this._status("SUBSCRIBED");
+  }
+  presenceState() {
+    return this.state;
+  }
+  async track(data) {
+    this.mine = data;
+    await this.sock._req({ op: "track", ch: this.name, key: this.key, data });
+  }
+  async untrack() {
+    this.mine = null;
+    await this.sock._req({ op: "untrack", ch: this.name });
+  }
+  async send({ event, payload }) {
+    this.sock._send({ op: "send", ch: this.name, ev: event, payload });
+    return "ok";
+  }
+  unsubscribe() {
+    if (this.sock.chans.get(this.name) === this) {
+      this.sock.chans.delete(this.name);
+      this.sock._send({ op: "leave", ch: this.name });
+    }
+  }
+};
+async function backendPost(path, body, opts = {}) {
+  if (!ONLINE.url) throw new Error("沒有設定連線伺服器");
+  const r = await fetch(ONLINE.url + path, Object.assign({ method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body || {}) }, opts));
+  const d = await r.json().catch(() => null);
+  if (!r.ok) throw new Error(d && d.message || "HTTP " + r.status);
+  return d;
 }
-__name(supa, "supa");
+__name(backendPost, "backendPost");
+var _backend = null;
+function backend() {
+  if (!_backend) _backend = ONLINE.url ? Promise.resolve((() => {
+    const sock = new BackendSocket(ONLINE.url);
+    return {
+      channel: /* @__PURE__ */ __name((name, config) => new BackendChannel(sock, name, config), "channel"),
+      rpc: /* @__PURE__ */ __name((fn, args) => backendPost("/api/rpc/" + fn, args).then((data) => ({ data, error: null }), (e) => ({ data: null, error: { message: e.message } })), "rpc")
+    };
+  })()) : Promise.reject(new Error("沒有設定連線伺服器"));
+  return _backend;
+}
+__name(backend, "backend");
 var roomCode = /* @__PURE__ */ __name(() => String(Math.floor(1e5 + Math.random() * 9e5)), "roomCode");
 var fmtCode = /* @__PURE__ */ __name((c) => c ? c.slice(0, 3) + " " + c.slice(3) : "——— ———", "fmtCode");
 function parseCode(s) {
@@ -29525,9 +29678,8 @@ function iceServers() {
   _iceP = (async () => {
     try {
       const ctl = new AbortController(), to = setTimeout(() => ctl.abort(), 3500);
-      const r = await fetch(ONLINE.url + "/functions/v1/turn", { method: "POST", headers: { apikey: ONLINE.key, "Content-Type": "application/json" }, body: "{}", signal: ctl.signal });
+      const d = await backendPost("/api/turn", {}, { signal: ctl.signal });
       clearTimeout(to);
-      const d = await r.json();
       const turn = (Array.isArray(d.iceServers) ? d.iceServers : []).map((s) => ({ urls: [].concat(s && s.urls).filter((u) => typeof u === "string" && /^turns?:/.test(u)), username: String(s.username || ""), credential: String(s.credential || "") })).filter((s) => s.urls.length);
       ONLINE.turn = turn.length > 0;
       return [...ONLINE.ice, ...turn];
@@ -29573,7 +29725,7 @@ var RoomDirectory = class {
   }
   open() {
     if (!this.opening) this.opening = (async () => {
-      const sb = await supa(), ch = sb.channel("sf2:lobby", { config: { presence: { key: netRid() } } });
+      const sb = await backend(), ch = sb.channel("sf2:lobby", { config: { presence: { key: netRid() } } });
       ch.on("presence", { event: "sync" }, () => {
         const all = Object.values(ch.presenceState()).flat().filter((r) => r && r.code && r.v === NET_VERSION);
         this.rooms = all.filter((r) => !this.mine || r.code !== this.mine.code).sort((a, b) => b.t - a.t);
@@ -29645,7 +29797,7 @@ var RtcHostTransport = class {
     this.ready = this._open();
   }
   async _open() {
-    const [sb, ice] = await Promise.all([supa(), iceServers()]), ch = sb.channel("sf2:room:" + this.room, { config: { broadcast: { self: false } } }), nonce = netRid();
+    const [sb, ice] = await Promise.all([backend(), iceServers()]), ch = sb.channel("sf2:room:" + this.room, { config: { broadcast: { self: false } } }), nonce = netRid();
     this.iceList = ice;
     let taken = null;
     ch.on("broadcast", { event: "sig" }, ({ payload }) => {
@@ -29783,7 +29935,7 @@ var RtcClientTransport = class {
   }
   async start() {
     this._status("連線到配對伺服器…");
-    const [sb, ice] = await Promise.all([supa(), iceServers()]), ch = sb.channel("sf2:room:" + this.room, { config: { broadcast: { self: false } } });
+    const [sb, ice] = await Promise.all([backend(), iceServers()]), ch = sb.channel("sf2:room:" + this.room, { config: { broadcast: { self: false } } });
     this.iceList = ice;
     this.via = null;
     ch.on("broadcast", { event: "sig" }, ({ payload }) => this._sig(payload).catch((e) => this._fail("連線交握失敗：" + e.message)));
@@ -30383,7 +30535,7 @@ var Friends = class {
     return this.started;
   }
   async _init() {
-    this.sb = await supa();
+    this.sb = await backend();
     this.me = this._load() || await this._register();
     const ch = this.sb.channel("sf2:inbox:" + this.me.id, { config: { broadcast: { self: false } } });
     ch.on("broadcast", { event: "poke" }, () => this.pollSoon());
@@ -30500,10 +30652,8 @@ var Friends = class {
   // leaving the page: show offline at once (keepalive request survives the unload)
   bye() {
     if (!this.me) return;
-    try {
-      fetch(ONLINE.url + "/rest/v1/rpc/sf2_bye", { method: "POST", keepalive: true, headers: { apikey: ONLINE.key, "Content-Type": "application/json" }, body: JSON.stringify({ p_id: this.me.id, p_secret: this.me.secret }) });
-    } catch (e) {
-    }
+    backendPost("/api/rpc/sf2_bye", { p_id: this.me.id, p_secret: this.me.secret }, { keepalive: true }).catch(() => {
+    });
   }
   get friends() {
     return this.list.filter((f) => f.state === "friend").sort((a, b) => b.online - a.online || a.name.localeCompare(b.name));

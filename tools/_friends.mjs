@@ -1,11 +1,11 @@
-// v28 friends, end to end against the real Supabase project: two browser profiles (= two players / computers).
+// v28 friends, end to end against the SF2 backend (SERVER=http://127.0.0.1:8787, server/ since 11-25): two browser profiles (= two players / computers).
 // friend code → request → accept → online status → room invite pop-up → join → follow a friend's room → remove
-// node tools/_friends.mjs [shots]   — prints the two test player ids (delete them afterwards: supabase sf2_players)
+// node tools/_friends.mjs [shots]   — prints the two test player ids (they stay in the server's data/friends.json)
 import { chromium } from 'playwright'; import http from 'node:http'; import fs from 'node:fs'; import path from 'node:path';
 const ROOT = process.cwd(), T = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript' }, SHOTS = process.argv[2] === 'shots';
 const srv = http.createServer((q, s) => { const p = path.join(ROOT, decodeURIComponent(new URL(q.url, 'http://x').pathname)); if (!fs.existsSync(p) || fs.statSync(p).isDirectory()) { s.writeHead(404); s.end(); return; } s.writeHead(200, { 'Content-Type': T[path.extname(p)] || 'application/octet-stream' }); fs.createReadStream(p).pipe(s); });
 await new Promise((r) => srv.listen(0, '127.0.0.1', r));
-const base = `http://127.0.0.1:${srv.address().port}/index.html`, sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const base = `http://127.0.0.1:${srv.address().port}/index.html` + (process.env.SERVER ? '?server=' + encodeURIComponent(process.env.SERVER) : ''), sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const b = await chromium.launch({ channel: 'chrome', args: ['--use-angle=d3d11', '--enable-gpu', '--disable-renderer-backgrounding', '--disable-background-timer-throttling'] });
 const mk = async () => (await b.newContext({ viewport: { width: 1440, height: 860 } })).newPage();
 const A = await mk(), B = await mk(), errs = [];

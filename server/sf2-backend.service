@@ -1,0 +1,25 @@
+# systemd 服務（Ubuntu / Debian 等）：複製到 /etc/systemd/system/，改好路徑與使用者後
+#   sudo systemctl daemon-reload && sudo systemctl enable --now sf2-backend
+#   日誌：journalctl -u sf2-backend -f
+[Unit]
+Description=SF2 Tactical backend
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=sf2
+WorkingDirectory=/opt/sf2/server
+ExecStart=/usr/bin/node server.mjs
+Restart=always
+RestartSec=3
+Environment=NODE_ENV=production
+# 安全限制：只能寫 data 資料夾
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/sf2/server/data
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

@@ -1,16 +1,16 @@
 /* =====================================================================
    v28 FRIENDS — friend codes, online status, room invites. Free, no accounts.
    · The first time the friends panel is opened the game registers an anonymous player (id + random secret, kept in
-     this browser's localStorage) and gets an 8-digit friend code. Tables live in Supabase (sf2-tactical) and are closed
-     to the public API; every call goes through functions that check the secret (supabase/v28_friends.sql).
+     this browser's localStorage) and gets an 8-digit friend code. They live on the SF2 backend (server/friends.mjs,
+     one JSON file); every call checks the secret, so nobody can act as someone else or see anyone else's friends.
    · Every 5 s a heartbeat (sf2_poll) reports where we are (大廳 / 房間 / 對戰中, and our room code for friends to join)
      and returns the friend list with their status plus any room invites waiting for us.
-   · An invite / friend request also "pokes" the friend's inbox channel (Realtime broadcast), so his game asks the
+   · An invite / friend request also "pokes" the friend's inbox channel (a backend channel broadcast), so his game asks the
      server right away instead of within 5 s. A poke carries nothing — the server decides what is real.
    ===================================================================== */
 import { Settings } from './01_core.js';
 import { safeName } from './12c_netutil.js';
-import { ONLINE, parseCode, subscribed, supa } from './18b_online.js';
+import { backend, backendPost, parseCode, subscribed } from './18b_online.js';
 const FRIEND_ST = { hub: '在大廳', room: '在房間', playing: '對戰中' };
 const fmtFriend = (c) => (c ? c.slice(0, 4) + ' ' + c.slice(4) : '');
 const FRIEND_KEY = 'sf2.friendId';
@@ -28,7 +28,7 @@ class Friends {
     return this.started;
   }
   async _init() {
-    this.sb = await supa();
+    this.sb = await backend();
     this.me = this._load() || await this._register();
     const ch = this.sb.channel('sf2:inbox:' + this.me.id, { config: { broadcast: { self: false } } });
     ch.on('broadcast', { event: 'poke' }, () => this.pollSoon());
@@ -87,7 +87,7 @@ class Friends {
   // leaving the page: show offline at once (keepalive request survives the unload)
   bye() {
     if (!this.me) return;
-    try { fetch(ONLINE.url + '/rest/v1/rpc/sf2_bye', { method: 'POST', keepalive: true, headers: { apikey: ONLINE.key, 'Content-Type': 'application/json' }, body: JSON.stringify({ p_id: this.me.id, p_secret: this.me.secret }) }); } catch (e) { /* best effort */ }
+    backendPost('/api/rpc/sf2_bye', { p_id: this.me.id, p_secret: this.me.secret }, { keepalive: true }).catch(() => {}); // best effort
   }
   get friends() { return this.list.filter((f) => f.state === 'friend').sort((a, b) => (b.online - a.online) || a.name.localeCompare(b.name)); }
   get incoming() { return this.list.filter((f) => f.state === 'incoming'); }
