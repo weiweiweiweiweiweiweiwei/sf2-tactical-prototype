@@ -29480,7 +29480,7 @@ var NetClient = class {
 };
 
 // src/18b_online.js
-var SERVER = "";
+var SERVER = "https://sf2-api.famicade.com";
 function backendUrl() {
   const q = /[?&]server=([^&#]+)/.exec(location.search);
   if (q) return decodeURIComponent(q[1]).replace(/\/+$/, "");

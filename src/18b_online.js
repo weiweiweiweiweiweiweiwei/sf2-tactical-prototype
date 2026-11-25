@@ -11,7 +11,7 @@ import { NET_VERSION } from './18_net.js';
    ===================================================================== */
 // Which backend: ?server=https://host (tests, trying a new server) → SERVER below → the page's own address when the
 // backend serves the game itself (anything but GitHub Pages, a double-clicked file or a localhost test page).
-const SERVER = ''; // e.g. 'https://sf2.example.com' — the friend's server, filled in once it is up
+const SERVER = 'https://sf2-api.famicade.com'; // the friend's server (11-25)
 function backendUrl() {
   const q = /[?&]server=([^&#]+)/.exec(location.search);
   if (q) return decodeURIComponent(q[1]).replace(/\/+$/, '');
